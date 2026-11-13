@@ -421,7 +421,11 @@ function verifyWidget(el, { title, intro = "", onDone, placeholder = "Ex.: Atx B
     const name = form.querySelector(".vchar").value.trim().replace(/\s+/g, " ");
     if (!name) return;
     const btn = form.querySelector("button"); btn.disabled = true; form.querySelector(".verr").textContent = "";
-    try { showCode(await api("POST", "/api/verify/start", { character: name })); }
+    try {
+      const v = await api("POST", "/api/verify/start", { character: name });
+      if (v.token) await onDone(v);  // contato de confiança: o criador já definiu o main, sem código
+      else showCode(v);
+    }
     catch (err) { if (err.status !== 401) form.querySelector(".verr").textContent = err.message; }
     finally { btn.disabled = false; }
   });

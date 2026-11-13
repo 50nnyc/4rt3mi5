@@ -33,6 +33,7 @@ def main(argv: list[str] | None = None) -> None:
     rn.add_argument("--days", type=int, default=30)
     rs = keys.add_parser("reset", help="desvincular dono (personagens e aparelhos)")
     rs.add_argument("key")
+    sub.add_parser("admin-token", help="mostrar a senha do painel de administração")
     for name in ("hunts", "stacker"):
         d = sub.add_parser(name).add_subparsers(dest="action", required=True).add_parser("delete")
         d.add_argument("id", type=int)
@@ -67,6 +68,10 @@ def main(argv: list[str] | None = None) -> None:
         else:
             print("Chave apagada." if store.revoke_key(args.key) else "Chave não encontrada.")
         return
+    if args.cmd == "admin-token":
+        print(f"Painel: http://localhost:{CONFIG['port']}/admin")
+        print(f"Senha:  {CONFIG['admin_token']}")
+        return
     if args.cmd == "hunts":
         print("Hunt apagada." if store.delete_hunt(args.id) else "Hunt não encontrada.")
         return
@@ -80,6 +85,7 @@ def main(argv: list[str] | None = None) -> None:
     print("=" * 60)
     print(" 4rt3mi5 - servidor")
     print(f" Site:   http://localhost:{CONFIG['port']}/")
+    print(f" Painel: http://localhost:{CONFIG['port']}/admin   (senha: {CONFIG['admin_token']})")
     print(f" Config: {CONFIG_PATH}")
     print(f" Chaves válidas: {len(store.list_keys())}  (crie com: admin.bat create \"Nome\")")
     print("=" * 60)

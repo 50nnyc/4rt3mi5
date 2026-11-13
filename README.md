@@ -35,7 +35,17 @@ app desktop abre a mesma página numa janela própria.
 
 ## Administração
 
-Com Docker (recomendado):
+**Painel** (só no PC do servidor): dê dois cliques em `painel.bat` ou abra `http://localhost:8000/admin`.
+A senha aparece no `painel.bat` (ou `docker compose exec server python -m artemis.server admin-token`).
+Pela internet (ngrok) o painel é bloqueado, mesmo com a senha.
+
+- Criar código de 7, 15 ou 30 dias, com botão "Copiar convite" (código + links do app e do site).
+- Renovar por 7, 15 ou 30 dias a partir de hoje (mantém personagens e aparelhos).
+- **Forçar main (contato de confiança)**: define o main sem código de verificação; a pessoa entra só
+  com o código de acesso + nick do main. "Remover confiança" volta a exigir verificação.
+- Resetar dono e apagar código.
+
+Pela linha de comando, com Docker:
 
 ```powershell
 docker compose up -d --build                                               # liga (reinicia sozinho)

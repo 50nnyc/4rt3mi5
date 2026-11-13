@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS access_keys (
     label       TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL,
     expires_at  TEXT NOT NULL,
-    main_char   TEXT            -- definido na primeira verificação; prende o código ao dono
+    main_char   TEXT,           -- definido na primeira verificação; prende o código ao dono
+    trusted     INTEGER NOT NULL DEFAULT 0  -- contato de confiança: entra sem código de verificação
 );
 -- personagens comprovados (código de verificação no comentário) de cada código de acesso
 CREATE TABLE IF NOT EXISTS key_chars (
@@ -112,6 +113,8 @@ class Store:
         cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(access_keys)")}
         if "main_char" not in cols:  # banco criado pela versão 0.2.0
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN main_char TEXT")
+        if "trusted" not in cols:  # banco criado antes da 0.4.0
+            self._conn.execute("ALTER TABLE access_keys ADD COLUMN trusted INTEGER NOT NULL DEFAULT 0")
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
@@ -168,8 +171,43 @@ class Store:
         with self._lock:
             for table in ("key_chars", "devices", "verifications"):
                 self._conn.execute(f"DELETE FROM {table} WHERE key = ?", (key,))
-            self._conn.execute("UPDATE access_keys SET main_char = NULL WHERE key = ?", (key,))
+            self._conn.execute("UPDATE access_keys SET main_char = NULL, trusted = 0 WHERE key = ?", (key,))
             self._conn.commit()
+
+    def keys_overview(self) -> list[dict]:
+        """Para o painel de administração: chaves com personagens e nº de aparelhos."""
+        out = []
+        for k in self.list_keys():
+            k["trusted"] = bool(k.get("trusted"))
+            k["chars"] = self.key_chars(k["key"])
+            k["devices"] = self._conn.execute("SELECT COUNT(*) FROM devices WHERE key = ?", (k["key"],)).fetchone()[0]
+            out.append(k)
+        return out
+
+    def force_main(self, key: str, name: str) -> bool:
+        """Atalho do criador: define o main sem código de verificação e marca como contato de confiança."""
+        key = normalize_key(key)
+        if self.validate_key(key) is None:
+            return False
+        now = _iso(utcnow())
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO key_chars VALUES (?, ?, ?, ?)", (key, name_key(name), name, now))
+            self._conn.execute("UPDATE access_keys SET main_char = ?, trusted = 1 WHERE key = ?", (name, key))
+            self._conn.commit()
+        return True
+
+    def set_trusted(self, key: str, trusted: bool) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE access_keys SET trusted = ? WHERE key = ?", (int(trusted), normalize_key(key)))
+            self._conn.commit()
+
+    def issue_device(self, key: str, name: str) -> str:
+        token = secrets.token_urlsafe(32)
+        now = _iso(utcnow())
+        with self._lock:
+            self._conn.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?)", (token, key, name, now, now))
+            self._conn.commit()
+        return token
 
     # ------------------------------------------------------------------ personagens / aparelhos
     def key_chars(self, key: str) -> list[dict]:

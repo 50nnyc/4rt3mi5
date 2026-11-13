@@ -123,6 +123,42 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(data["lifetime"]["xp_per_hour"], round(7_684_000 / 1.5))
         self.assertEqual(self.client.get("/api/stacker/Ninguem", headers=self.h(token)).json()["lifetime"]["xp"], 0)
 
+    def test_admin_requires_token_and_local_access(self):
+        admin = {"X-Admin-Token": server.CONFIG["admin_token"]}
+        self.assertEqual(self.client.get("/api/admin/keys").status_code, 401)
+        self.assertEqual(self.client.get("/api/admin/keys", headers={"X-Admin-Token": "errada"}).status_code, 401)
+        # pela internet (ngrok manda X-Forwarded-For) é recusado mesmo com a senha certa
+        via_tunnel = self.client.get("/api/admin/keys", headers={**admin, "X-Forwarded-For": "1.2.3.4"})
+        self.assertEqual(via_tunnel.status_code, 403)
+        self.assertEqual(self.client.get("/admin", headers={"X-Forwarded-For": "1.2.3.4"}).status_code, 404)
+        self.assertEqual(self.client.get("/admin").status_code, 200)
+        self.assertEqual(self.client.get("/api/admin/keys", headers=admin).status_code, 200)
+
+    def test_admin_create_renew_and_trusted_contact(self):
+        admin = {"X-Admin-Token": server.CONFIG["admin_token"]}
+        k = self.client.post("/api/admin/keys", json={"label": "Amigo", "days": 7}, headers=admin).json()
+        self.assertEqual(self.client.post("/api/admin/keys", json={"days": 31}, headers=admin).status_code, 422)
+        r = self.client.post(f"/api/admin/keys/{k['key']}/renew", json={"days": 15}, headers=admin)
+        self.assertEqual(r.status_code, 200)
+        self.assertGreater(r.json()["expires_at"], k["expires_at"])
+        # forçar main: o contato entra só com código + nick, sem código de verificação
+        r = self.client.post(f"/api/admin/keys/{k['key']}/trust", json={"character": "hilay"}, headers=admin)
+        self.assertEqual(r.json(), {"key": k["key"], "main_char": "Hilay", "trusted": True})
+        h = {"X-Access-Key": k["key"]}
+        start = self.client.post("/api/verify/start", json={"character": "Hilay"}, headers=h).json()
+        self.assertIn("token", start)
+        self.assertEqual(self.client.get("/api/me", headers={**h, "X-Device-Token": start["token"]}).json()["main_char"], "Hilay")
+        # outro personagem continua bloqueado
+        self.assertEqual(self.client.post("/api/verify/start", json={"character": "Intruso"}, headers=h).status_code, 403)
+        overview = {x["key"]: x for x in self.client.get("/api/admin/keys", headers=admin).json()}[k["key"]]
+        self.assertTrue(overview["trusted"])
+        self.assertEqual(overview["devices"], 1)
+        # sem confiança volta a exigir código de verificação
+        self.client.post(f"/api/admin/keys/{k['key']}/untrust", headers=admin)
+        self.assertIn("code", self.client.post("/api/verify/start", json={"character": "Hilay"}, headers=h).json())
+        self.assertEqual(self.client.delete(f"/api/admin/keys/{k['key']}", headers=admin).status_code, 200)
+        self.assertEqual(self.client.post("/api/auth", headers=h).status_code, 401)
+
     def test_renew_keeps_chars(self):
         self.verify("Hilay")
         k = server.store.renew_key(self.key, 10)

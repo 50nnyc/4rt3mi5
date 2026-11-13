@@ -16,12 +16,13 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import secrets
 import sys
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -57,7 +58,8 @@ def load_config() -> dict:
     cfg = {"host": "0.0.0.0", "port": 8000}
     if CONFIG_PATH.exists():
         cfg.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
-    else:
+    if not cfg.get("admin_token"):  # senha do painel de administração (só do criador)
+        cfg["admin_token"] = secrets.token_urlsafe(18)
         CONFIG_PATH.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
     return cfg
 
@@ -167,6 +169,10 @@ def auth(session: tuple = Depends(optional_device)):
 def verify_start(body: CharIn, session: tuple = Depends(optional_device)):
     access, device = session
     ch = char_or_404(body.character)
+    # Contato de confiança (main forçado pelo criador): entra direto, sem código de verificação.
+    if access.get("trusted") and store.is_linked(access["key"], ch.name):
+        token = device or store.issue_device(access["key"], ch.name)
+        return {"token": token, "character": ch.name, "me": me_payload(access), "trusted": True}
     # Código já tem dono: um aparelho novo só pode verificar com um personagem já vinculado.
     if access.get("main_char") and device is None and not store.is_linked(access["key"], ch.name):
         raise HTTPException(403, KEY_TAKEN)
@@ -292,6 +298,94 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     name = require_uploader(body.nickname, access)
     row, created = store.add_solo(name, session.fingerprint(name), session.to_dict())
     return {"created": created, "session": row}
+
+
+# ------------------------------------------------------------------ administração (só o criador)
+ADMIN_REMOTE_BLOCKED = "O painel de administração só funciona no próprio PC do servidor (http://localhost:8000/admin)."
+_PROXY_HEADERS = ("x-forwarded-for", "x-forwarded-host", "x-real-ip", "forwarded", "ngrok-trace-id")
+
+
+def require_admin(request: Request, x_admin_token: str = Header(default="")) -> None:
+    # Tudo que chega pelo túnel (ngrok) traz cabeçalhos de proxy: o painel não aceita acesso pela internet.
+    if any(h in request.headers for h in _PROXY_HEADERS):
+        raise HTTPException(403, ADMIN_REMOTE_BLOCKED)
+    if not secrets.compare_digest(x_admin_token, CONFIG["admin_token"]):
+        raise HTTPException(401, "Senha de administrador inválida.")
+
+
+class NewKeyIn(BaseModel):
+    label: str = ""
+    days: int = 30
+
+
+class DaysIn(BaseModel):
+    days: int
+
+
+def _admin_key(key: str) -> dict:
+    k = store.validate_key(key)
+    if k is None:
+        raise HTTPException(404, "Código não encontrado (ou já vencido e apagado).")
+    return k
+
+
+@app.get("/api/admin/keys", dependencies=[Depends(require_admin)])
+def admin_keys():
+    store.purge_expired()
+    return store.keys_overview()
+
+
+@app.post("/api/admin/keys", dependencies=[Depends(require_admin)])
+def admin_create(body: NewKeyIn):
+    try:
+        return store.create_key(body.days, body.label.strip())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/admin/keys/{key}/renew", dependencies=[Depends(require_admin)])
+def admin_renew(key: str, body: DaysIn):
+    _admin_key(key)
+    try:
+        return store.renew_key(key, body.days)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/admin/keys/{key}/trust", dependencies=[Depends(require_admin)])
+def admin_force_main(key: str, body: CharIn):
+    _admin_key(key)
+    ch = char_or_404(body.character, fresh=True)
+    store.force_main(key, ch.name)
+    return {"key": normalize_key(key), "main_char": ch.name, "trusted": True}
+
+
+@app.post("/api/admin/keys/{key}/untrust", dependencies=[Depends(require_admin)])
+def admin_untrust(key: str):
+    _admin_key(key)
+    store.set_trusted(key, False)
+    return {"trusted": False}
+
+
+@app.post("/api/admin/keys/{key}/reset", dependencies=[Depends(require_admin)])
+def admin_reset(key: str):
+    _admin_key(key)
+    store.reset_key(key)
+    return {"reset": True}
+
+
+@app.delete("/api/admin/keys/{key}", dependencies=[Depends(require_admin)])
+def admin_revoke(key: str):
+    if not store.revoke_key(key):
+        raise HTTPException(404, "Código não encontrado.")
+    return {"deleted": True}
+
+
+@app.get("/admin", include_in_schema=False)
+def admin_page(request: Request):
+    if any(h in request.headers for h in _PROXY_HEADERS):
+        raise HTTPException(404)
+    return FileResponse(WEB_DIR / "admin.html", headers={"Cache-Control": "no-cache"})
 
 
 # ------------------------------------------------------------------ site
