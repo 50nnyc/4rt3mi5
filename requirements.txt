@@ -1,0 +1,5 @@
+# App desktop (janela nativa com WebView2)
+pywebview>=5.4
+# Servidor web
+fastapi>=0.115
+uvicorn>=0.32

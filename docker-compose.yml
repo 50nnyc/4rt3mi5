@@ -1,0 +1,32 @@
+# Só o servidor (rede local):   docker compose up -d --build
+# Com acesso pela internet:     docker compose --profile public up -d --build   (precisa do arquivo .env)
+# Códigos:   docker compose exec server python -m artemis.server keys create --label "Nome"
+#            docker compose exec server python -m artemis.server keys list
+# Logs:      docker compose logs -f
+services:
+  server:
+    build: .
+    image: artemis-server
+    container_name: artemis-server
+    restart: unless-stopped
+    environment:
+      TZ: "<-03>3"     # horário de Brasília (sem precisar instalar tzdata na imagem)
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data   # banco SQLite (data/artemis.db) fica na pasta do projeto
+
+  # Túnel ngrok: publica o servidor no seu domínio fixo grátis (ex.: https://nome.ngrok-free.app).
+  # Token e domínio ficam no arquivo .env (copie de .env.example) - o .env nunca vai para o GitHub.
+  ngrok:
+    image: ngrok/ngrok:3
+    container_name: artemis-ngrok
+    profiles: ["public"]
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Preencha NGROK_AUTHTOKEN no arquivo .env}
+    command: ["http", "server:8000", "--url=${NGROK_DOMAIN:?Preencha NGROK_DOMAIN no arquivo .env}"]
+    ports:
+      - "4040:4040"    # painel do ngrok em http://localhost:4040

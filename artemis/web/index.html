@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<title>4rt3mi5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
+<style>
+  :root {
+    --bg: #0b0d12; --card: #151821; --card2: #1d212d; --line: #2a2f3d;
+    --text: #e9ecf2; --muted: #98a1b3; --gold: #f2c94c; --gold2: #fff1c1;
+    --green: #4cd18a; --red: #ff7a6b; --accent: #7c8cff;
+    --logo: "Cinzel", "Trajan Pro", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; color: inherit; }
+  input, textarea { font: inherit; width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line);
+                    background: var(--card2); color: var(--text); outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { min-height: 170px; font: 12.5px/1.4 Consolas, ui-monospace, monospace; resize: vertical; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .gold { color: var(--gold); } .pos { color: var(--green); } .neg { color: var(--red); }
+  .btn { width: 100%; padding: 14px; margin-top: 12px; background: var(--accent); color: #fff; font-weight: 700; font-size: 16px; }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .link { background: none; color: var(--accent); padding: 4px 0; }
+  .err { color: var(--red); margin-top: 10px; min-height: 1.3em; font-size: 15px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* ---------- abertura ---------- */
+  #splash { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: radial-gradient(ellipse at 50% 40%, #1b2030 0%, var(--bg) 65%); transition: opacity .45s ease; padding: 24px; }
+  #splash.fade { opacity: 0; pointer-events: none; }
+  .logo { font-family: var(--logo); font-weight: 800; font-size: clamp(46px, 13vw, 96px); letter-spacing: .08em; display: flex; }
+  .logo span { display: inline-block; opacity: 0; transform: translateY(18px) scale(.92); filter: blur(8px);
+               background: linear-gradient(180deg, var(--gold2) 10%, var(--gold) 55%, #b8861b 100%);
+               -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #splash .logo { filter: drop-shadow(0 0 18px rgba(242, 201, 76, .22)); }
+  .play .logo span { animation: letter .7s cubic-bezier(.2, .8, .2, 1) forwards; }
+  @keyframes letter { to { opacity: 1; transform: none; filter: none; } }
+  .bar { height: 2px; width: 0; margin-top: 10px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  .play .bar { animation: bar 1s .55s ease forwards; }
+  @keyframes bar { to { width: min(320px, 70vw); } }
+  .tagline { margin-top: 14px; font-size: 12px; letter-spacing: .45em; text-transform: uppercase; color: var(--muted); opacity: 0; }
+  .play .tagline { animation: fadein .6s .9s forwards; }
+  @keyframes fadein { to { opacity: 1; } }
+  #splashMsg { margin-top: 34px; text-align: center; color: var(--text); max-width: 340px; min-height: 1.4em; }
+  #splashMsg .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--red); margin-right: 8px;
+                    animation: pulse 1.2s infinite; vertical-align: middle; }
+  @keyframes pulse { 50% { opacity: .25; } }
+
+  /* ---------- telas de entrada ---------- */
+  .gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .gate .box { width: 100%; max-width: 380px; text-align: center; }
+  .gate .logo { font-size: 40px; justify-content: center; margin-bottom: 4px; }
+  .gate .logo span { opacity: 1; transform: none; filter: none; }
+  .gate .card { text-align: left; margin-top: 18px; }
+
+  /* ---------- app ---------- */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  header.top { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 12px; padding: 10px 16px;
+               background: rgba(11, 13, 18, .92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  header.top .brand { font-family: var(--logo); font-weight: 800; color: var(--gold); letter-spacing: .06em; font-size: 20px; }
+  header.top .who { margin-left: auto; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .burger { background: var(--card2); width: 40px; height: 40px; font-size: 20px; border: 1px solid var(--line); flex: none; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px 16px 64px; }
+  h1 { font-size: 22px; margin: 6px 0 14px; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 10px; }
+  .row { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .big { font-size: 32px; font-weight: 800; letter-spacing: -.01em; line-height: 1.15; }
+
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .55); z-index: 40; opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  nav.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(300px, 84vw); z-index: 50; background: var(--card);
+               border-right: 1px solid var(--line); transform: translateX(-102%); transition: transform .22s ease;
+               display: flex; flex-direction: column; padding: 18px 12px; }
+  nav.drawer.open { transform: none; }
+  .drawer .me { padding: 6px 10px 16px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+  .drawer .me b { font-size: 18px; display: block; }
+  .drawer button.item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 13px 12px; background: none; font-size: 16px; }
+  .drawer button.item:hover, .drawer button.item.active { background: var(--card2); }
+  .drawer button.item.active { color: var(--gold); font-weight: 700; }
+  .drawer .foot { margin-top: auto; padding: 10px 12px 0; border-top: 1px solid var(--line); }
+
+  .action { border-radius: 12px; padding: 14px; margin-top: 14px; }
+  .action.pay { background: rgba(255, 122, 107, .1); border: 1px solid rgba(255, 122, 107, .4); }
+  .action.get { background: rgba(76, 209, 138, .1); border: 1px solid rgba(76, 209, 138, .4); }
+  .action.none { background: var(--card2); border: 1px solid var(--line); }
+  .action .title { font-size: 19px; font-weight: 800; }
+  .pay .title { color: var(--red); } .get .title { color: var(--green); }
+  .tx { padding: 10px 0; border-top: 1px solid var(--line); }
+  .tx:first-of-type { border-top: 0; }
+  code { font-size: 13px; color: var(--muted); word-break: break-all; }
+  .copy { background: var(--card2); padding: 6px 10px; font-size: 13px; border: 1px solid var(--line); flex: none; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 10px; }
+  th, td { padding: 7px 5px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; }
+  tr.me td { color: var(--gold); font-weight: 700; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
+  .stat b { display: block; font-size: 18px; overflow-wrap: anywhere; }
+  details > summary { cursor: pointer; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+  .banner { border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+  .banner.ok { background: rgba(76, 209, 138, .1); border: 1px solid rgba(76, 209, 138, .4); }
+  .banner.bad { background: rgba(255, 122, 107, .1); border: 1px solid rgba(255, 122, 107, .4); }
+  .codebox { font: 800 24px/1.2 Consolas, ui-monospace, monospace; letter-spacing: .06em; color: var(--gold);
+             background: var(--card2); border: 1px dashed var(--gold); border-radius: 10px; padding: 14px; text-align: center;
+             margin: 10px 0; user-select: all; overflow-wrap: anywhere; }
+  ol.steps { margin: 8px 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  .pill { font-size: 12px; background: rgba(242, 201, 76, .15); color: var(--gold); border-radius: 99px; padding: 2px 8px; margin-left: 6px; }
+  .btn2 { background: var(--card2); border: 1px solid var(--line); padding: 8px 12px; font-size: 14px; }
+  #update { position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 520px; margin: 0 auto; z-index: 60;
+            background: var(--card2); border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="logo" id="logo" aria-label="4rt3mi5"></div>
+  <div class="bar"></div>
+  <div class="tagline">hunt companion</div>
+  <div id="splashMsg"></div>
+</div>
+
+<section id="keyScreen" class="gate hidden">
+  <div class="box">
+    <div class="logo">4rt3mi5</div>
+    <div class="card">
+      <form id="keyForm">
+        <label class="muted" for="keyInput">Código de acesso</label>
+        <input id="keyInput" placeholder="ART-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" style="margin-top:6px; text-transform:uppercase">
+        <button class="btn" type="submit">Entrar</button>
+      </form>
+      <div class="err" id="keyErr"></div>
+      <div class="hint hidden" id="serverLine"></div>
+    </div>
+  </div>
+</section>
+
+<section id="verifyScreen" class="gate hidden">
+  <div class="box">
+    <div class="logo">4rt3mi5</div>
+    <div class="card" id="verifyBox"></div>
+    <button class="link" id="verifyBack" style="margin-top:8px">← usar outro código de acesso</button>
+  </div>
+</section>
+
+<section id="nickScreen" class="gate hidden">
+  <div class="box">
+    <div class="logo">4rt3mi5</div>
+    <div class="card">
+      <form id="nickForm">
+        <label class="muted" for="nickInput">Nome do personagem</label>
+        <input id="nickInput" placeholder="Ex.: Atx Buubo" autocomplete="off" autocapitalize="words" spellcheck="false" style="margin-top:6px">
+        <button class="btn" type="submit">Ver hunts</button>
+      </form>
+      <div class="err" id="nickErr"></div>
+    </div>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <header class="top">
+    <button class="burger" id="burger" aria-label="Abrir menu">☰</button>
+    <span class="brand">4rt3mi5</span>
+    <span class="who" id="topWho"></span>
+  </header>
+  <div class="scrim" id="scrim"></div>
+  <nav class="drawer" id="drawer" aria-label="Menu">
+    <div class="me"><b id="drawerName"></b><span class="muted" id="drawerInfo"></span></div>
+    <button class="item" data-page="home">🏠 Início</button>
+    <button class="item" data-page="loot">💰 Lootsplit</button>
+    <button class="item" data-page="stack">📈 Hunt Session Stacker</button>
+    <button class="item" data-page="chars">👤 Meus personagens</button>
+    <div style="height:10px"></div>
+    <button class="item" id="changeNick">🔁 Trocar personagem</button>
+    <button class="item" id="logout">🚪 Sair (apagar chave)</button>
+    <div class="foot muted" id="drawerFoot"></div>
+  </nav>
+
+  <main>
+    <div id="pageHome"></div>
+
+    <div id="pageLoot" class="hidden">
+      <h1>Lootsplit</h1>
+      <div class="card">
+        <label class="muted" for="lootText">Cole aqui o Party Hunt Analyser</label>
+        <textarea id="lootText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Loot Type: Leader&#10;..."></textarea>
+        <button class="btn" id="lootBtn">Calcular e enviar</button>
+        <div class="err" id="lootErr"></div>
+      </div>
+      <div id="lootResult"></div>
+    </div>
+
+    <div id="pageStack" class="hidden">
+      <h1>Hunt Session Stacker</h1>
+      <div class="card">
+        <label class="muted" for="stackText">Cole aqui o Hunt Analyser (sessão individual)</label>
+        <textarea id="stackText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Raw XP Gain: ...&#10;XP Gain: ..."></textarea>
+        <button class="btn" id="stackBtn">Adicionar sessão</button>
+        <div class="err" id="stackErr"></div>
+      </div>
+      <div id="stackResult"></div>
+    </div>
+
+    <div id="pageChars" class="hidden">
+      <h1>Meus personagens</h1>
+      <p class="muted">Personagens vinculados ao seu código de acesso. Você só pode enviar Lootsplit e sessões em nome deles.
+        Trocou de main? Vincule o novo personagem e toque em "Tornar main".</p>
+      <div id="charsList"></div>
+      <h2>Vincular outro personagem</h2>
+      <div class="card" id="linkBox"></div>
+    </div>
+  </main>
+</section>
+
+<div id="update" class="hidden"></div>
+
+<script>
+"use strict";
+const MSG_INVALID_KEY = "Chave de acesso inválida, envie mensagem ao criador.";
+const MSG_NO_INTERNET = "Sem conexão com a internet, conecte-se novamente.";
+const MSG_NO_SERVER = "Servidor do 4rt3mi5 indisponível. Tentando de novo a cada 10 segundos…";
+const RETRY_MS = 10000;
+
+const $ = (s) => document.querySelector(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const fmt = (n) => Number(n || 0).toLocaleString("pt-BR");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const kk = (n) => Math.abs(n) >= 1e6 ? (n / 1e6).toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "kk"
+                : Math.abs(n) >= 1e3 ? (n / 1e3).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "k" : String(n || 0);
+const dur = (s) => `${Math.floor((s || 0) / 3600)}h${String(Math.floor(((s || 0) % 3600) / 60)).padStart(2, "0")}`;
+const when = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const dayLabel = (d) => d ? d.split("-").reverse().join("/") : "—";
+
+const S = { api: "", desktop: false, key: null, token: null, keyExpires: null, me: null, nick: null, char: null, page: "home", offline: false };
+
+/* ---------- armazenamento (navegador ou app desktop) ---------- */
+const kv = {
+  async get(k) {
+    if (S.desktop) return await window.pywebview.api.kv_get(k);
+    try { return localStorage.getItem(k); } catch { return null; }
+  },
+  async set(k, v) {
+    if (S.desktop) return await window.pywebview.api.kv_set(k, v);
+    try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {}
+  },
+};
+
+function detectDesktop(ms) {
+  return new Promise((resolve) => {
+    if (window.pywebview && window.pywebview.api) return resolve(true);
+    let done = false;
+    window.addEventListener("pywebviewready", () => { if (!done) { done = true; resolve(true); } });
+    setTimeout(() => { if (!done) { done = true; resolve(!!(window.pywebview && window.pywebview.api)); } }, ms);
+  });
+}
+
+/* ---------- abertura ---------- */
+$("#logo").innerHTML = [..."4rt3mi5"].map((c, i) => `<span style="animation-delay:${i * 70}ms">${c}</span>`).join("");
+function splashShow(msg = "") {
+  const sp = $("#splash");
+  setSplashMsg(msg);
+  sp.classList.remove("hidden", "fade", "play");
+  void sp.offsetWidth; // reinicia a animação
+  sp.classList.add("play");
+}
+function setSplashMsg(msg) { $("#splashMsg").innerHTML = msg ? `<span class="dot"></span>${esc(msg)}` : ""; }
+async function splashHide() {
+  const sp = $("#splash");
+  sp.classList.add("fade");
+  await sleep(450);
+  sp.classList.add("hidden");
+}
+async function presentation(ms = 1800) { splashShow(); await sleep(ms); }
+
+/* ---------- conexão ---------- */
+async function timedFetch(url, opts = {}, ms = 7000) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ctl.signal, cache: "no-store" }); }
+  finally { clearTimeout(t); }
+}
+async function serverOk() {
+  try { return (await timedFetch(S.api + "/api/health", { headers: { "ngrok-skip-browser-warning": "1" } })).ok; } catch { return false; }
+}
+async function internetOk() {
+  if (navigator.onLine === false) return false;
+  try { await timedFetch("https://api.tibiadata.com/", { mode: "no-cors" }, 6000); return true; } catch { return false; }
+}
+/** Fica na tela de abertura, em loop a cada 10 s, até a conexão voltar. */
+async function waitOnline(splashAlreadyVisible) {
+  if (await serverOk()) return;
+  if (S.offline) { while (S.offline) await sleep(500); return; }
+  S.offline = true;
+  if (!splashAlreadyVisible) splashShow();
+  while (true) {
+    setSplashMsg((await internetOk()) ? MSG_NO_SERVER : MSG_NO_INTERNET);
+    await sleep(RETRY_MS);
+    if (await serverOk()) break;
+  }
+  S.offline = false;
+  if (!splashAlreadyVisible) await splashHide();
+  else setSplashMsg("");
+}
+function startMonitor() {
+  setInterval(() => { if (!S.offline) waitOnline(false); }, RETRY_MS);
+  window.addEventListener("offline", () => { if (!S.offline) waitOnline(false); });
+}
+
+/* ---------- API ---------- */
+class ApiError extends Error { constructor(msg, status, hint) { super(msg); this.status = status; this.hint = hint; } }
+async function api(method, path, body) {
+  let res;
+  try {
+    res = await timedFetch(S.api + path, {
+      method, headers: authHeaders(body ? { "Content-Type": "application/json" } : {}),
+      body: body ? JSON.stringify(body) : undefined,
+    }, 30000);
+  } catch {
+    waitOnline(false);
+    throw new ApiError("Sem conexão. Tente de novo quando voltar.", 0);
+  }
+  const data = await res.json().catch(() => ({}));
+  const d = data.detail;
+  if (res.status === 401) {
+    if (d && d.reason === "device") { await needVerification(d.message); throw new ApiError(d.message, 401); }
+    await lockOut(MSG_INVALID_KEY); throw new ApiError(MSG_INVALID_KEY, 401);
+  }
+  if (!res.ok) throw new ApiError(typeof d === "object" && d ? d.message : (d || `Erro ${res.status}`), res.status, d && d.hint);
+  return data;
+}
+// O ngrok (plano grátis) mostra uma página de aviso para navegadores; este cabeçalho pula o aviso.
+const NGROK = { "ngrok-skip-browser-warning": "1" };
+function authHeaders(extra = {}) { return { ...NGROK, "X-Access-Key": S.key || "", "X-Device-Token": S.token || "", ...extra }; }
+
+/* ---------- chave de acesso ---------- */
+/** null = sem conexão; false = chave inválida; objeto = {expires_at, claimed, device_verified} */
+async function checkKey(key, token) {
+  const res = await timedFetch(S.api + "/api/auth", { method: "POST", headers: { "ngrok-skip-browser-warning": "1", "X-Access-Key": key, "X-Device-Token": token || "" } }).catch(() => null);
+  if (!res) return null;
+  if (!res.ok) return false;
+  return res.json();
+}
+async function lockOut(msg) {
+  S.key = null; S.token = null; S.me = null;
+  await kv.set("key", null);
+  await kv.set("token", null);
+  closeDrawer();
+  showOnly("keyScreen");
+  $("#keyErr").textContent = msg || "";
+}
+$("#keyForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const key = $("#keyInput").value.replace(/\s+/g, "").toUpperCase();
+  if (!key) return;
+  const btn = e.currentTarget.querySelector("button"); btn.disabled = true; $("#keyErr").textContent = "";
+  const auth = await checkKey(key, null);
+  btn.disabled = false;
+  if (auth === null) { $("#keyErr").textContent = "Sem conexão com o servidor."; return waitOnline(false); }
+  if (!auth) { $("#keyErr").textContent = MSG_INVALID_KEY; return; }
+  S.key = key; S.keyExpires = auth.expires_at; S.token = null;
+  await kv.set("key", key);
+  await kv.set("token", null);
+  await presentation(1400);
+  showVerify();
+  await splashHide();
+});
+
+/* ---------- verificação do main character (código no comentário do tibia.com) ---------- */
+async function needVerification(msg) {
+  S.token = null; S.me = null;
+  await kv.set("token", null);
+  closeDrawer();
+  showVerify(msg);
+}
+function showVerify(msg = "") {
+  showOnly("verifyScreen");
+  verifyWidget($("#verifyBox"), {
+    title: "Informe o nick do main character:",
+    intro: msg,
+    onDone: async (r) => {
+      S.token = r.token; S.me = r.me;
+      await kv.set("token", r.token);
+      await kv.set("nick", r.me.main_char || r.character);
+      $("#nickInput").value = "";
+      await presentation(1400);
+      await showNick();
+      await splashHide();
+    },
+  });
+}
+$("#verifyBack").addEventListener("click", () => lockOut(""));
+
+/**
+ * Componente reaproveitado: pede o personagem, mostra o código de verificação e confere
+ * (no botão e sozinho a cada 30 s) se o código já aparece no comentário pelo TibiaData.
+ */
+function verifyWidget(el, { title, intro = "", onDone, placeholder = "Ex.: Atx Buubo" }) {
+  let timer = null;
+  const stop = () => { if (timer) clearInterval(timer); timer = null; };
+  stop();
+  el.innerHTML = `
+    <form class="vf">
+      <label class="muted">${esc(title)}</label>
+      ${intro ? `<div class="hint" style="margin:4px 0 0">${esc(intro)}</div>` : ""}
+      <input class="vchar" placeholder="${esc(placeholder)}" autocomplete="off" autocapitalize="words" spellcheck="false" style="margin-top:6px">
+      <button class="btn" type="submit">Gerar código de verificação</button>
+      <div class="err verr"></div>
+    </form>`;
+  const form = el.querySelector(".vf");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const name = form.querySelector(".vchar").value.trim().replace(/\s+/g, " ");
+    if (!name) return;
+    const btn = form.querySelector("button"); btn.disabled = true; form.querySelector(".verr").textContent = "";
+    try { showCode(await api("POST", "/api/verify/start", { character: name })); }
+    catch (err) { if (err.status !== 401) form.querySelector(".verr").textContent = err.message; }
+    finally { btn.disabled = false; }
+  });
+
+  function showCode(v) {
+    el.innerHTML = `
+      <div class="muted">Para confirmar que <b style="color:var(--text)">${esc(v.character)}</b> é seu, coloque este código no comentário do personagem:</div>
+      <div class="codebox">${esc(v.code)}</div>
+      <button class="btn2" data-copy="${esc(v.code)}">Copiar</button>
+      <ol class="steps">
+        <li>Entre na sua conta no tibia.com</li>
+        <li>Account Management → <b>Edit</b> no personagem → campo <b>Comment</b></li>
+        <li>Cole o código, salve e volte aqui</li>
+      </ol>
+      <div class="hint">Depois de verificado você pode apagar o código do comentário. O código vale por 1 hora.</div>
+      <button class="btn vcheck">Já coloquei, verificar</button>
+      <div class="hint vstatus" style="margin-top:8px">Vamos conferir sozinhos a cada 30 segundos.</div>
+      <div class="err verr"></div>
+      <button class="link vother">← usar outro personagem</button>`;
+    const status = el.querySelector(".vstatus"), err = el.querySelector(".verr"), btn = el.querySelector(".vcheck");
+    let busy = false;
+    async function check(manual) {
+      if (busy || !el.isConnected || el.closest(".hidden")) { if (!el.isConnected) stop(); return; }
+      busy = true; btn.disabled = true; err.textContent = "";
+      status.textContent = "Conferindo no TibiaData…";
+      try {
+        const r = await api("POST", "/api/verify/check", { code: v.code });
+        stop();
+        status.textContent = "Verificado ✔";
+        await onDone(r);
+      } catch (e) {
+        if (e.status === 410) { stop(); err.textContent = e.message; }
+        else if (e.status === 409) { status.textContent = `Última conferência: ${new Date().toLocaleTimeString("pt-BR")}`; if (manual) err.innerHTML = `${esc(e.message)}<div class="hint">${esc(e.hint || "")}</div>`; }
+        else if (e.status !== 401) { status.textContent = ""; if (manual) err.textContent = e.message; }
+      } finally { busy = false; btn.disabled = false; }
+    }
+    btn.addEventListener("click", () => check(true));
+    el.querySelector(".vother").addEventListener("click", () => { stop(); verifyWidget(el, { title, intro, onDone, placeholder }); });
+    timer = setInterval(() => check(false), 30000);
+  }
+}
+
+/* ---------- nickname ---------- */
+async function showNick(prefill = true) {
+  showOnly("nickScreen");
+  $("#nickErr").textContent = "";
+  const last = prefill ? ((await kv.get("nick")) || (S.me && S.me.main_char)) : null;
+  if (last && !$("#nickInput").value) $("#nickInput").value = last;
+  setTimeout(() => $("#nickInput").focus(), 50);
+}
+$("#nickForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = $("#nickInput").value.trim().replace(/\s+/g, " ");
+  if (!name) return;
+  const btn = e.currentTarget.querySelector("button"); btn.disabled = true; $("#nickErr").textContent = "";
+  try {
+    S.char = await api("GET", `/api/character/${encodeURIComponent(name)}`);
+    S.nick = S.char.name;
+    await kv.set("nick", S.nick);
+    openApp();
+  } catch (err) {
+    if (err.status !== 401) $("#nickErr").textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- app / menu ---------- */
+function showOnly(id) {
+  for (const s of ["keyScreen", "verifyScreen", "nickScreen", "app"]) $("#" + s).classList.toggle("hidden", s !== id);
+}
+function openApp() {
+  $("#topWho").textContent = S.nick;
+  $("#drawerName").textContent = S.nick;
+  $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
+  updateDrawerFoot();
+  $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = "";
+  showOnly("app");
+  go("home");
+}
+function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
+function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
+$("#burger").addEventListener("click", openDrawer);
+$("#scrim").addEventListener("click", closeDrawer);
+document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { closeDrawer(); go(b.dataset.page); }));
+$("#changeNick").addEventListener("click", () => { closeDrawer(); $("#nickInput").value = ""; showNick(false); });
+$("#logout").addEventListener("click", () => lockOut(""));
+
+function go(page) {
+  S.page = page;
+  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+  $("#pageHome").classList.toggle("hidden", page !== "home");
+  $("#pageLoot").classList.toggle("hidden", page !== "loot");
+  $("#pageStack").classList.toggle("hidden", page !== "stack");
+  $("#pageChars").classList.toggle("hidden", page !== "chars");
+  window.scrollTo(0, 0);
+  if (page === "home") loadHome();
+  if (page === "stack") loadStack();
+  if (page === "chars") loadChars();
+}
+function updateDrawerFoot() {
+  const exp = (S.me && S.me.expires_at) || S.keyExpires;
+  $("#drawerFoot").innerHTML = `${S.me && S.me.main_char ? "Main: <b>" + esc(S.me.main_char) + "</b><br>" : ""}`
+    + `${exp ? "Código válido até " + esc(new Date(exp).toLocaleDateString("pt-BR")) + "<br>" : ""}versão ${esc(S.version || "")}`;
+}
+
+/* ---------- meus personagens ---------- */
+function renderChars() {
+  const chars = (S.me && S.me.chars) || [];
+  $("#charsList").innerHTML = chars.map((c) => `<div class="card row">
+      <div><b>${esc(c.name)}</b>${c.is_main ? '<span class="pill">main</span>' : ""}
+        <div class="muted">verificado em ${esc(new Date(c.verified_at).toLocaleDateString("pt-BR"))}</div></div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end">
+        <button class="btn2" data-view="${esc(c.name)}">Ver</button>
+        ${c.is_main ? "" : `<button class="btn2" data-main="${esc(c.name)}">Tornar main</button>
+                            <button class="btn2" data-unlink="${esc(c.name)}">Remover</button>`}
+      </div></div>`).join("") || `<p class="muted">Nenhum personagem vinculado.</p>`;
+}
+async function loadChars() {
+  try { S.me = await api("GET", "/api/me"); } catch { return; }
+  renderChars();
+  updateDrawerFoot();
+  verifyWidget($("#linkBox"), {
+    title: "Nome do personagem para vincular",
+    onDone: async (r) => { S.me = r.me; renderChars(); updateDrawerFoot(); loadChars(); },
+  });
+}
+$("#charsList").addEventListener("click", async (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  try {
+    if (b.dataset.view) { S.char = await api("GET", `/api/character/${encodeURIComponent(b.dataset.view)}`); S.nick = S.char.name; await kv.set("nick", S.nick); openApp(); }
+    if (b.dataset.main) { S.me = await api("POST", "/api/chars/main", { character: b.dataset.main }); renderChars(); updateDrawerFoot(); }
+    if (b.dataset.unlink && confirm(`Remover ${b.dataset.unlink} dos seus personagens?`)) {
+      S.me = await api("DELETE", `/api/chars/${encodeURIComponent(b.dataset.unlink)}`); renderChars();
+    }
+  } catch (err) { if (err.status !== 401) alert(err.message); }
+});
+
+/* ---------- lootsplit: blocos visuais ---------- */
+function view(h, name) {
+  const key = name.toLowerCase();
+  const pays = h.transfers.filter((t) => t.payer.toLowerCase() === key);
+  const gets = h.transfers.filter((t) => t.receiver.toLowerCase() === key);
+  return { inParty: h.players.some((p) => p.name.toLowerCase() === key), pays, gets,
+           totalPay: pays.reduce((a, t) => a + t.amount, 0), totalGet: gets.reduce((a, t) => a + t.amount, 0) };
+}
+function actionBox(v) {
+  if (!v.inParty) return "";
+  if (v.totalPay > 0) return `<div class="action pay"><div class="title">Você deve transferir ${fmt(v.totalPay)} gp</div>
+    ${v.pays.map((t) => `<div class="tx"><div class="row"><span>para <b>${esc(t.receiver)}</b></span><b>${fmt(t.amount)}</b></div>
+      <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("")}</div>`;
+  if (v.totalGet > 0) return `<div class="action get"><div class="title">Você vai receber ${fmt(v.totalGet)} gp</div>
+    ${v.gets.map((t) => `<div class="tx row"><span>de <b>${esc(t.payer)}</b></span><b>${fmt(t.amount)}</b></div>`).join("")}</div>`;
+  return `<div class="action none"><div class="title">Nada a transferir nesta hunt</div></div>`;
+}
+function transfersBox(h) {
+  if (!h.transfers.length) return `<p class="muted">Ninguém precisa transferir.</p>`;
+  return h.transfers.map((t) => `<div class="tx"><div class="row"><span><b>${esc(t.payer)}</b> → <b>${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)}</b></div>
+    <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("");
+}
+function partyTable(h, name) {
+  const key = (name || "").toLowerCase();
+  return `<div class="table-wrap"><table><tr><th>Jogador</th><th>Loot</th><th>Supplies</th><th>Balance</th><th>Acerto</th></tr>
+    ${h.players.map((p) => `<tr class="${p.name.toLowerCase() === key ? "me" : ""}">
+      <td>${esc(p.name)}${p.is_leader ? " 👑" : ""}</td><td>${kk(p.loot)}</td><td>${kk(p.supplies)}</td><td>${kk(p.balance)}</td>
+      <td class="${p.diff > 0 ? "neg" : p.diff < 0 ? "pos" : ""}">${p.diff > 0 ? "paga " + kk(p.diff) : p.diff < 0 ? "recebe " + kk(-p.diff) : "—"}</td></tr>`).join("")}
+  </table></div>`;
+}
+function huntCard(h, name, title) {
+  const cls = h.profit_each >= 0 ? "gold" : "neg";
+  return `<div class="card">
+    <div class="muted">${esc(title)} · ${when(h.started_at)} · ${dur(h.duration_seconds)} · ${h.players_count} jogadores</div>
+    <div style="margin-top:10px" class="muted">Rendeu para cada um</div>
+    <div class="big ${cls}">${fmt(h.profit_each)} gp</div>
+    <div class="muted"><b class="${cls}">${fmt(h.profit_each_per_hour)} gp/h</b> por pessoa · total da PT ${fmt(h.balance)} gp</div>
+    ${actionBox(view(h, name))}
+    <details style="margin-top:12px"><summary class="link">Transferências e detalhes da PT ▾</summary>
+      <h2>Transferências</h2>${transfersBox(h)}
+      <h2>Jogadores</h2>${partyTable(h, name)}
+      <div class="muted" style="margin-top:8px">Loot ${fmt(h.loot)} · Supplies ${fmt(h.supplies)} · Loot type ${esc(h.loot_type || "—")}</div>
+    </details>
+  </div>`;
+}
+function historyItem(h, name) {
+  const v = view(h, name);
+  const tag = v.totalPay > 0 ? `<span class="neg">paga ${kk(v.totalPay)}</span>`
+            : v.totalGet > 0 ? `<span class="pos">recebe ${kk(v.totalGet)}</span>` : `<span class="muted">sem acerto</span>`;
+  return `<details class="card"><summary>
+      <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
+      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
+        <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
+    </summary>${actionBox(v)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}</details>`;
+}
+function statGrid(items) {
+  return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
+}
+
+/* ---------- página inicial ---------- */
+async function loadHome() {
+  const el = $("#pageHome");
+  el.innerHTML = `<p class="muted">Carregando hunts de ${esc(S.nick)}…</p>`;
+  let data;
+  try { data = await api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`); }
+  catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  const hunts = data.hunts;
+  const total = hunts.reduce((a, h) => a + h.profit_each, 0);
+  const secs = hunts.reduce((a, h) => a + h.duration_seconds, 0);
+  let toPay = 0, toGet = 0;
+  hunts.forEach((h) => { const v = view(h, S.nick); toPay += v.totalPay; toGet += v.totalGet; });
+  el.innerHTML = `
+    ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt")
+      : `<div class="card"><div class="muted">Última hunt</div><div class="big gold">0 gp</div>
+         <div class="muted">Nenhuma hunt registrada para ${esc(S.nick)} ainda. Use o menu ☰ → Lootsplit para enviar uma.</div></div>`}
+    <h2>Totais</h2>
+    ${statGrid([["Hunts", fmt(hunts.length)], ["Profit total", fmt(total) + " gp", total >= 0 ? "gold" : "neg"],
+                ["Tempo de hunt", dur(secs)], ["Média por hora", fmt(secs ? Math.round(total * 3600 / secs) : 0) + " gp"],
+                ["Total transferido", fmt(toPay) + " gp", toPay ? "neg" : ""], ["Total recebido", fmt(toGet) + " gp", toGet ? "pos" : ""]])}
+    <h2>Todas as hunts (${hunts.length})</h2>
+    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}`;
+}
+
+/* ---------- lootsplit ---------- */
+$("#lootBtn").addEventListener("click", async () => {
+  const raw = $("#lootText").value.trim();
+  if (!raw) return;
+  const btn = $("#lootBtn"); btn.disabled = true; $("#lootErr").textContent = ""; $("#lootResult").innerHTML = "";
+  try {
+    const r = await api("POST", "/api/lootsplit", { raw_text: raw, nickname: S.nick });
+    $("#lootResult").innerHTML = `<div class="banner ok">${r.created ? "Hunt enviada ✔ Todos da PT já podem ver no app." : "Essa hunt já estava salva ✔"}</div>`
+      + huntCard(r.hunt, S.nick, "Resultado");
+    $("#lootText").value = "";
+  } catch (err) {
+    if (err.status === 403) {
+      // mostra o cálculo mesmo assim, mas sem salvar
+      const preview = await api("POST", "/api/lootsplit/preview", { raw_text: raw, nickname: S.nick }).catch(() => null);
+      $("#lootResult").innerHTML = `<div class="banner bad"><b>${esc(err.message)}</b><div class="hint">${esc(err.hint || "")}</div>
+        <div class="hint">Cálculo abaixo apenas para conferência (não foi salvo).</div></div>` + (preview ? huntCard(preview, S.nick, "Prévia") : "");
+    } else if (err.status !== 401) {
+      $("#lootErr").textContent = err.message;
+    }
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- hunt session stacker ---------- */
+function soloStats(t) {
+  return statGrid([
+    ["XP", fmt(t.xp), "gold"], ["XP/h", fmt(t.xp_per_hour), "gold"],
+    ["Raw XP", fmt(t.raw_xp)], ["Raw XP/h", fmt(t.raw_xp_per_hour)],
+    ["Balance", fmt(t.balance) + " gp", t.balance >= 0 ? "pos" : "neg"], ["Balance/h", fmt(t.balance_per_hour) + " gp"],
+    ["Supplies", fmt(t.supplies) + " gp"], ["Tempo", dur(t.duration_seconds)],
+    ["Damage", fmt(t.damage)], ["Damage/h", fmt(t.damage_per_hour)],
+    ["Healing", fmt(t.healing)], ["Healing/h", fmt(t.healing_per_hour)],
+    ["Sessões", fmt(t.sessions)],
+  ]);
+}
+function soloItem(s) {
+  return `<details class="card"><summary>
+      <div class="row"><b>${when(s.started_at)}</b><span class="gold">${kk(s.xp)} XP</span></div>
+      <div class="row muted"><span>${dur(s.duration_seconds)}</span>
+        <span class="${s.balance >= 0 ? "pos" : "neg"}">balance ${kk(s.balance)}</span></div>
+    </summary>
+    <div style="margin-top:10px">${statGrid([
+      ["XP", fmt(s.xp)], ["Raw XP", fmt(s.raw_xp)], ["Balance", fmt(s.balance) + " gp"], ["Supplies", fmt(s.supplies) + " gp"],
+      ["Damage", fmt(s.damage)], ["Damage/h", fmt(s.damage_h)], ["Healing", fmt(s.healing)], ["Healing/h", fmt(s.healing_h)],
+    ])}</div></details>`;
+}
+async function loadStack() {
+  const el = $("#stackResult");
+  el.innerHTML = `<p class="muted">Carregando sessões de ${esc(S.nick)}…</p>`;
+  let d;
+  try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}`); }
+  catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  el.innerHTML = `
+    <h2>Totais do dia ${d.day ? dayLabel(d.day) : ""}</h2>${soloStats(d.day_totals)}
+    <h2>Totais de toda a vida</h2>${soloStats(d.lifetime)}
+    <h2>Sessões enviadas (${d.sessions.length})</h2>
+    ${d.sessions.length ? d.sessions.map(soloItem).join("") : `<p class="muted">Nenhuma sessão enviada para ${esc(S.nick)} ainda.</p>`}`;
+}
+$("#stackBtn").addEventListener("click", async () => {
+  const raw = $("#stackText").value.trim();
+  if (!raw) return;
+  const btn = $("#stackBtn"); btn.disabled = true; $("#stackErr").textContent = "";
+  try {
+    const r = await api("POST", "/api/stacker", { raw_text: raw, nickname: S.nick });
+    $("#stackText").value = "";
+    await loadStack();
+    $("#stackResult").insertAdjacentHTML("afterbegin",
+      `<div class="banner ok">${r.created ? "Sessão adicionada ✔" : "Essa sessão já estava salva ✔"}</div>`);
+  } catch (err) {
+    if (err.status === 403) $("#stackErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+    else if (err.status !== 401) $("#stackErr").textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+/* ---------- copiar ---------- */
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {}
+  const ta = Object.assign(document.createElement("textarea"), { value: text });
+  document.body.appendChild(ta); ta.select();
+  const ok = document.execCommand("copy"); ta.remove(); return ok;
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (!b) return;
+  e.preventDefault();
+  b.textContent = (await copyText(b.dataset.copy)) ? "Copiado!" : "Copie manualmente";
+  setTimeout(() => (b.textContent = "Copiar"), 1500);
+});
+
+/* ---------- app desktop: servidor e atualização ---------- */
+function setupDesktopExtras() {
+  const line = $("#serverLine");
+  line.classList.remove("hidden");
+  line.innerHTML = `Servidor: <span id="srv">${esc(S.api)}</span> · <button class="link" id="srvEdit" style="font-size:13px">alterar</button>`;
+  $("#srvEdit").addEventListener("click", async () => {
+    const url = prompt("Endereço do servidor do 4rt3mi5:", S.api);
+    if (!url) return;
+    S.api = (await window.pywebview.api.set_server(url.trim())).replace(/\/$/, "");
+    $("#srv").textContent = S.api;
+  });
+}
+async function checkUpdate() {
+  const info = await window.pywebview.api.check_update().catch(() => null);
+  if (!info) return;
+  const box = $("#update");
+  box.innerHTML = `<div class="row"><span>Nova versão <b>${esc(info.version)}</b> disponível.</span>
+    <button class="copy" id="doUpdate" style="border-color:var(--gold)">Atualizar</button></div>`;
+  box.classList.remove("hidden");
+  $("#doUpdate").addEventListener("click", async () => {
+    box.innerHTML = "Baixando atualização… o app vai fechar e abrir de novo sozinho.";
+    const err = await window.pywebview.api.install_update().catch((e) => String(e));
+    if (err) box.textContent = "Não foi possível atualizar: " + err;
+  });
+}
+
+/* ---------- início ---------- */
+async function boot() {
+  splashShow();
+  const [desktop] = await Promise.all([detectDesktop(1500), sleep(1900)]);
+  S.desktop = desktop;
+  if (desktop) {
+    const cfg = await window.pywebview.api.get_config();
+    S.api = cfg.api_base.replace(/\/$/, "");
+    S.version = cfg.version;
+    setupDesktopExtras();
+  } else {
+    S.api = "";
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+    fetch("/api/health").then((r) => r.json()).then((d) => (S.version = d.version)).catch(() => {});
+  }
+  await waitOnline(true);
+  S.key = await kv.get("key");
+  S.token = await kv.get("token");
+  let auth = S.key ? await checkKey(S.key, S.token) : false;
+  while (auth === null) { await sleep(2000); await waitOnline(true); auth = await checkKey(S.key, S.token); }
+  if (auth && auth.device_verified) {
+    S.keyExpires = auth.expires_at;
+    S.me = await api("GET", "/api/me").catch(() => null);
+    await showNick();
+  } else if (auth) {
+    S.keyExpires = auth.expires_at;
+    showVerify();
+  } else {
+    if (S.key) { await kv.set("key", null); await kv.set("token", null); }
+    showOnly("keyScreen");
+    $("#keyErr").textContent = S.key ? MSG_INVALID_KEY : "";
+    S.key = null; S.token = null;
+    setTimeout(() => $("#keyInput").focus(), 50);
+  }
+  await splashHide();
+  startMonitor();
+  if (desktop) checkUpdate();
+}
+boot();
+</script>
+</body>
+</html>
