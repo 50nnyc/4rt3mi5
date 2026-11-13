@@ -115,6 +115,9 @@ class Store:
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN main_char TEXT")
         if "trusted" not in cols:  # banco criado antes da 0.4.0
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN trusted INTEGER NOT NULL DEFAULT 0")
+        for table in ("hunts", "solo_sessions"):  # 0.5.0: quem enviou (só ele pode apagar)
+            if "uploader_key" not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
+                self._conn.execute(f"ALTER TABLE {table} ADD COLUMN uploader_key TEXT")
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
@@ -289,17 +292,20 @@ class Store:
     @staticmethod
     def _hunt(row: sqlite3.Row) -> dict:
         report = json.loads(row["report_json"])
-        report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"])
+        report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
+                      uploader_key=row["uploader_key"])
         return report
 
-    def add_hunt(self, report: dict, raw_text: str, submitted_by: str) -> tuple[dict, bool]:
+    def add_hunt(self, report: dict, raw_text: str, submitted_by: str, uploader_key: str | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM hunts WHERE fingerprint = ?", (report["fingerprint"],)).fetchone()
             if existing:
                 return self._hunt(existing), False
             cur = self._conn.execute(
-                "INSERT INTO hunts (fingerprint, started_at, submitted_by, created_at, raw_text, report_json) VALUES (?, ?, ?, ?, ?, ?)",
-                (report["fingerprint"], report["started_at"], submitted_by, _iso(utcnow()), raw_text, json.dumps(report)),
+                "INSERT INTO hunts (fingerprint, started_at, submitted_by, created_at, raw_text, report_json, uploader_key) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (report["fingerprint"], report["started_at"], submitted_by, _iso(utcnow()), raw_text, json.dumps(report),
+                 uploader_key),
             )
             hunt_id = cur.lastrowid
             self._conn.executemany(
@@ -324,7 +330,13 @@ class Store:
             return cur.rowcount > 0
 
     # ------------------------------------------------------------------ stacker
-    def add_solo(self, name: str, fingerprint: str, data: dict) -> tuple[dict, bool]:
+    def uploader_of(self, table: str, row_id: int) -> tuple[bool, str | None]:
+        """(existe?, código de acesso de quem enviou)."""
+        assert table in ("hunts", "solo_sessions")
+        row = self._conn.execute(f"SELECT uploader_key FROM {table} WHERE id = ?", (row_id,)).fetchone()
+        return (row is not None, row[0] if row else None)
+
+    def add_solo(self, name: str, fingerprint: str, data: dict, uploader_key: str | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM solo_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
             if existing:
@@ -332,8 +344,9 @@ class Store:
             cols = ", ".join(SOLO_COLUMNS)
             marks = ", ".join("?" for _ in SOLO_COLUMNS)
             cur = self._conn.execute(
-                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, {cols}) VALUES (?, ?, ?, ?, {marks})",
-                (fingerprint, name_key(name), name, _iso(utcnow()), *(data[c] for c in SOLO_COLUMNS)),
+                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, {cols}) "
+                f"VALUES (?, ?, ?, ?, ?, {marks})",
+                (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, *(data[c] for c in SOLO_COLUMNS)),
             )
             self._conn.commit()
             return dict(self._conn.execute("SELECT * FROM solo_sessions WHERE id = ?", (cur.lastrowid,)).fetchone()), True

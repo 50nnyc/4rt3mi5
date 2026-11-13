@@ -240,12 +240,33 @@ def _parse_party(raw: str) -> dict:
         raise HTTPException(422, str(e))
 
 
+def _public(row: dict, access: dict) -> dict:
+    """Esconde dados internos e diz se quem está vendo pode apagar (só quem enviou)."""
+    owner = row.pop("uploader_key", None)
+    for k in ("submitted_by", "fingerprint", "name_key"):
+        row.pop(k, None)
+    row["can_delete"] = bool(owner) and owner == access["key"]
+    return row
+
+
+def _delete_own(table: str, row_id: int, access: dict) -> None:
+    exists, owner = store.uploader_of(table, row_id)
+    if not exists:
+        raise HTTPException(404, "Não encontrado (talvez já tenha sido apagado).")
+    if owner != access["key"]:
+        raise HTTPException(403, "Só quem enviou pode apagar.")
+    (store.delete_hunt if table == "hunts" else store.delete_solo)(row_id)
+
+
 @app.get("/api/hunts/{name}")
-def player_hunts(name: str, _: dict = Depends(require_session)):
-    hunts = store.hunts_for_player(name)
-    for h in hunts:
-        h.pop("submitted_by", None)
-    return {"hunts": hunts}
+def player_hunts(name: str, access: dict = Depends(require_session)):
+    return {"hunts": [_public(h, access) for h in store.hunts_for_player(name)]}
+
+
+@app.delete("/api/hunt/{hunt_id}")
+def delete_hunt(hunt_id: int, access: dict = Depends(require_session)):
+    _delete_own("hunts", hunt_id, access)
+    return {"deleted": hunt_id}
 
 
 @app.post("/api/lootsplit/preview")
@@ -258,9 +279,8 @@ def lootsplit_preview(body: UploadIn, _: dict = Depends(require_session)):
 def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
     report = _parse_party(body.raw_text)
     uploader = require_uploader(body.nickname, access)
-    hunt, created = store.add_hunt(report, body.raw_text, uploader)
-    hunt.pop("submitted_by", None)
-    return {"created": created, "hunt": hunt}
+    hunt, created = store.add_hunt(report, body.raw_text, uploader, access["key"])
+    return {"created": created, "hunt": _public(hunt, access)}
 
 
 # ------------------------------------------------------------------ hunt session stacker
@@ -275,11 +295,8 @@ def _totals(sessions: list[dict]) -> dict:
 
 
 @app.get("/api/stacker/{name}")
-def stacker(name: str, _: dict = Depends(require_session)):
-    sessions = store.solo_for_player(name)
-    for s in sessions:
-        s.pop("fingerprint", None)
-        s.pop("name_key", None)
+def stacker(name: str, access: dict = Depends(require_session)):
+    sessions = [_public(s, access) for s in store.solo_for_player(name)]
     day = sessions[0]["started_at"][:10] if sessions else None
     return {
         "day": day,
@@ -296,8 +313,14 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     except ParseError as e:
         raise HTTPException(422, str(e))
     name = require_uploader(body.nickname, access)
-    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict())
-    return {"created": created, "session": row}
+    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"])
+    return {"created": created, "session": _public(row, access)}
+
+
+@app.delete("/api/stacker/session/{session_id}")
+def delete_solo(session_id: int, access: dict = Depends(require_session)):
+    _delete_own("solo_sessions", session_id, access)
+    return {"deleted": session_id}
 
 
 # ------------------------------------------------------------------ administração (só o criador)

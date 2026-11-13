@@ -116,6 +116,26 @@
   ol.steps { margin: 8px 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
   .pill { font-size: 12px; background: rgba(242, 201, 76, .15); color: var(--gold); border-radius: 99px; padding: 2px 8px; margin-left: 6px; }
   .btn2 { background: var(--card2); border: 1px solid var(--line); padding: 8px 12px; font-size: 14px; }
+  /* gráfico de contribuição (barras horizontais, uma métrica por vez) */
+  :root { --bar: #3987e5; --bar-me: #b8890f; --bar-neg: #e0614f; --track: #232836; }
+  .chart { margin-top: 10px; padding: 12px; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+  .seg button { background: none; border: 1px solid var(--line); padding: 5px 10px; font-size: 13px; color: var(--muted); }
+  .seg button.on { border-color: var(--text); color: var(--text); font-weight: 700; }
+  .bars { display: grid; grid-template-columns: minmax(70px, 30%) 1fr auto; gap: 8px 10px; align-items: center; font-size: 13px; }
+  .bars .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bars .nm.me { font-weight: 800; }
+  .bars .val { text-align: right; white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .bars .val b { color: var(--text); font-weight: 700; }
+  .track { position: relative; height: 12px; background: var(--track); border-radius: 0 4px 4px 0; }
+  .track .fill { position: absolute; top: 0; bottom: 0; left: 0; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .track .fill.me { background: var(--bar-me); }
+  .track.div { border-radius: 4px; }
+  .track.div::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--muted); }
+  .track.div .fill.pos { left: 50%; }
+  .track.div .fill.neg { left: auto; right: 50%; background: var(--bar-neg); border-radius: 4px 0 0 4px; }
+  .chart-note { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .danger-link { background: none; color: var(--red); padding: 4px 0; font-size: 14px; }
   #update { position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 520px; margin: 0 auto; z-index: 60;
             background: var(--card2); border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px; }
 </style>
@@ -587,9 +607,10 @@ function transfersBox(h) {
 }
 function partyTable(h, name) {
   const key = (name || "").toLowerCase();
-  return `<div class="table-wrap"><table><tr><th>Jogador</th><th>Loot</th><th>Supplies</th><th>Balance</th><th>Acerto</th></tr>
+  return `<div class="table-wrap"><table><tr><th>Jogador</th><th>Loot</th><th>Supplies</th><th>Balance</th><th>Damage</th><th>Healing</th><th>Acerto</th></tr>
     ${h.players.map((p) => `<tr class="${p.name.toLowerCase() === key ? "me" : ""}">
       <td>${esc(p.name)}${p.is_leader ? " 👑" : ""}</td><td>${kk(p.loot)}</td><td>${kk(p.supplies)}</td><td>${kk(p.balance)}</td>
+      <td>${kk(p.damage)}</td><td>${kk(p.healing)}</td>
       <td class="${p.diff > 0 ? "neg" : p.diff < 0 ? "pos" : ""}">${p.diff > 0 ? "paga " + kk(p.diff) : p.diff < 0 ? "recebe " + kk(-p.diff) : "—"}</td></tr>`).join("")}
   </table></div>`;
 }
@@ -601,12 +622,57 @@ function huntCard(h, name, title) {
     <div class="big ${cls}">${fmt(h.profit_each)} gp</div>
     <div class="muted"><b class="${cls}">${fmt(h.profit_each_per_hour)} gp/h</b> por pessoa · total da PT ${fmt(h.balance)} gp</div>
     ${actionBox(view(h, name))}
-    <details style="margin-top:12px"><summary class="link">Transferências e detalhes da PT ▾</summary>
+    ${chartToggle(h, name)}
+    <details style="margin-top:4px"><summary class="link">Transferências e detalhes da PT ▾</summary>
       <h2>Transferências</h2>${transfersBox(h)}
       <h2>Jogadores</h2>${partyTable(h, name)}
       <div class="muted" style="margin-top:8px">Loot ${fmt(h.loot)} · Supplies ${fmt(h.supplies)} · Loot type ${esc(h.loot_type || "—")}</div>
+      ${deleteButton(h)}
     </details>
   </div>`;
+}
+
+/* ---------- gráfico de contribuição: escondido até clicar em "Gráfico" ---------- */
+const METRICS = [["damage", "Damage"], ["healing", "Healing"], ["supplies", "Supplies"], ["loot", "Loot"], ["balance", "Balance"]];
+const CHART_HUNTS = new Map();
+let chartSeq = 0;
+function chartToggle(h, name) {
+  const id = "c" + (++chartSeq);
+  CHART_HUNTS.set(id, { h, name });
+  return `<button class="link" data-chart-toggle="${id}" style="margin-top:10px">📊 Gráfico</button>
+    <div class="chart hidden" id="${id}"></div>`;
+}
+function renderChart(id, metric = "damage") {
+  const { h, name } = CHART_HUNTS.get(id);
+  const key = name.toLowerCase();
+  const label = METRICS.find(([k]) => k === metric)[1];
+  const rows = h.players.map((p) => ({ n: p.name, v: p[metric] || 0, me: p.name.toLowerCase() === key }))
+    .sort((a, b) => b.v - a.v);
+  const seg = `<div class="seg" role="tablist">${METRICS.map(([k, t]) =>
+    `<button data-metric="${k}" data-chart="${id}" class="${k === metric ? "on" : ""}" role="tab" aria-selected="${k === metric}">${t}</button>`).join("")}</div>`;
+  const nm = (r) => `<span class="nm ${r.me ? "me" : ""}" title="${esc(r.n)}">${esc(r.n)}${r.me ? " (você)" : ""}</span>`;
+  let body, note;
+  if (metric === "balance") {
+    const maxAbs = Math.max(...rows.map((r) => Math.abs(r.v)), 1);
+    body = rows.map((r) => `${nm(r)}
+      <div class="track div" title="${esc(r.n)}: ${fmt(r.v)} gp"><div class="fill ${r.v < 0 ? "neg" : "pos"}" style="width:${(Math.abs(r.v) / maxAbs) * 50}%"></div></div>
+      <span class="val"><b>${r.v < 0 ? "−" : ""}${kk(Math.abs(r.v))}</b></span>`).join("");
+    note = `Balance de cada um antes da divisão (azul = positivo, vermelho = negativo). Total da PT: ${fmt(h.balance)} gp.`;
+  } else {
+    const total = rows.reduce((a, r) => a + Math.max(r.v, 0), 0);
+    if (!total) return (document.getElementById(id).innerHTML = seg + `<p class="muted">Sem ${label.toLowerCase()} registrado nesta hunt.</p>`);
+    body = rows.map((r) => {
+      const pct = (Math.max(r.v, 0) / total) * 100;
+      return `${nm(r)}
+        <div class="track" title="${esc(r.n)}: ${fmt(r.v)} (${pct.toFixed(1)}%)"><div class="fill ${r.me ? "me" : ""}" style="width:${pct}%"></div></div>
+        <span class="val"><b>${pct.toFixed(0)}%</b> · ${kk(r.v)}</span>`;
+    }).join("");
+    note = `Parte de cada jogador no ${label.toLowerCase()} total da hunt (${fmt(total)}).`;
+  }
+  document.getElementById(id).innerHTML = `${seg}<div class="bars">${body}</div><div class="chart-note">${note}</div>`;
+}
+function deleteButton(h) {
+  return h.can_delete && h.id ? `<div style="margin-top:12px"><button class="danger-link" data-del-hunt="${h.id}">🗑 Apagar esta hunt</button></div>` : "";
 }
 function historyItem(h, name) {
   const v = view(h, name);
@@ -616,7 +682,7 @@ function historyItem(h, name) {
       <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
       <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
-    </summary>${actionBox(v)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}</details>`;
+    </summary>${actionBox(v)}${chartToggle(h, name)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${deleteButton(h)}</details>`;
 }
 function statGrid(items) {
   return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
@@ -689,7 +755,7 @@ function soloItem(s) {
     <div style="margin-top:10px">${statGrid([
       ["XP", fmt(s.xp)], ["Raw XP", fmt(s.raw_xp)], ["Balance", fmt(s.balance) + " gp"], ["Supplies", fmt(s.supplies) + " gp"],
       ["Damage", fmt(s.damage)], ["Damage/h", fmt(s.damage_h)], ["Healing", fmt(s.healing)], ["Healing/h", fmt(s.healing_h)],
-    ])}</div></details>`;
+    ])}</div>${s.can_delete ? `<div style="margin-top:10px"><button class="danger-link" data-del-solo="${s.id}">🗑 Apagar esta sessão</button></div>` : ""}</details>`;
 }
 async function loadStack() {
   const el = $("#stackResult");
@@ -717,6 +783,35 @@ $("#stackBtn").addEventListener("click", async () => {
     if (err.status === 403) $("#stackErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
     else if (err.status !== 401) $("#stackErr").textContent = err.message;
   } finally { btn.disabled = false; }
+});
+
+/* ---------- gráfico (mostrar/esconder, trocar métrica) e apagar ---------- */
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-chart-toggle],[data-metric],[data-del-hunt],[data-del-solo]");
+  if (!t) return;
+  e.preventDefault();
+  if (t.dataset.chartToggle) {
+    const box = document.getElementById(t.dataset.chartToggle);
+    const opening = box.classList.contains("hidden");
+    if (opening && !box.innerHTML) renderChart(t.dataset.chartToggle);
+    box.classList.toggle("hidden", !opening);
+    t.textContent = opening ? "📊 Ocultar gráfico" : "📊 Gráfico";
+    return;
+  }
+  if (t.dataset.metric) return renderChart(t.dataset.chart, t.dataset.metric);
+  const isHunt = !!t.dataset.delHunt;
+  if (!confirm(isHunt ? "Apagar esta hunt para todos da PT? Isso não pode ser desfeito." : "Apagar esta sessão do Stacker? Isso não pode ser desfeito.")) return;
+  t.disabled = true;
+  try {
+    if (isHunt) {
+      await api("DELETE", `/api/hunt/${t.dataset.delHunt}`);
+      if (S.page === "loot") $("#lootResult").innerHTML = `<div class="banner ok">Hunt apagada.</div>`;
+      else loadHome();
+    } else {
+      await api("DELETE", `/api/stacker/session/${t.dataset.delSolo}`);
+      loadStack();
+    }
+  } catch (err) { if (err.status !== 401) alert(err.message); t.disabled = false; }
 });
 
 /* ---------- copiar ---------- */

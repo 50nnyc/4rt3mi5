@@ -159,6 +159,28 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/admin/keys/{k['key']}", headers=admin).status_code, 200)
         self.assertEqual(self.client.post("/api/auth", headers=h).status_code, 401)
 
+    def test_only_uploader_can_delete(self):
+        token = self.verify("Hilay")[1].json()["token"]
+        r = self.client.post("/api/lootsplit", json={"raw_text": EXAMPLE, "nickname": "Hilay"}, headers=self.h(token)).json()
+        hunt = r["hunt"]
+        self.assertTrue(hunt["can_delete"])
+        self.assertNotIn("uploader_key", hunt)
+        self.assertEqual({p["name"]: p["damage"] for p in hunt["players"]}["Jioe"], 16_215_326)  # damage guardado
+        # outra pessoa (outro código) vê a hunt, mas não pode apagar
+        other_key = server.store.create_key(30, "outro")["key"]
+        other_token = server.store.issue_device(other_key, "Jioe")
+        other = {"X-Access-Key": other_key, "X-Device-Token": other_token}
+        seen = self.client.get("/api/hunts/Jioe", headers=other).json()["hunts"]
+        self.assertFalse(next(h for h in seen if h["id"] == hunt["id"])["can_delete"])
+        self.assertEqual(self.client.delete(f"/api/hunt/{hunt['id']}", headers=other).status_code, 403)
+        self.assertEqual(self.client.delete(f"/api/hunt/{hunt['id']}", headers=self.h(token)).status_code, 200)
+        self.assertEqual(self.client.delete(f"/api/hunt/{hunt['id']}", headers=self.h(token)).status_code, 404)
+        # stacker igual
+        s = self.client.post("/api/stacker", json={"raw_text": SOLO, "nickname": "Hilay"}, headers=self.h(token)).json()["session"]
+        self.assertTrue(s["can_delete"])
+        self.assertEqual(self.client.delete(f"/api/stacker/session/{s['id']}", headers=other).status_code, 403)
+        self.assertEqual(self.client.delete(f"/api/stacker/session/{s['id']}", headers=self.h(token)).status_code, 200)
+
     def test_renew_keeps_chars(self):
         self.verify("Hilay")
         k = server.store.renew_key(self.key, 10)
