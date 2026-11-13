@@ -29,7 +29,7 @@ if ($LASTEXITCODE -ne 0) { throw "Inno Setup falhou" }
 
 $setup = "dist\4rt3mi5-Setup-$version.exe"
 $sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
-if (-not $DownloadBaseUrl) { $DownloadBaseUrl = "https://github.com/SEU_USUARIO/4rt3mi5/releases/download/v$version" }
+if (-not $DownloadBaseUrl) { $DownloadBaseUrl = "https://github.com/50nnyc/4rt3mi5/releases/download/v$version" }
 $manifest = [ordered]@{
     version = $version
     url     = "$DownloadBaseUrl/4rt3mi5-Setup-$version.exe"

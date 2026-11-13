@@ -9,10 +9,10 @@ from pathlib import Path
 CONFIG_DIR = Path(os.environ.get("APPDATA", Path.home())) / "4rt3mi5"
 CONFIG_PATH = CONFIG_DIR / "config.json"
 
-# Endereço público do servidor (ex.: o do Cloudflare Tunnel). Pode ser trocado na tela da chave.
-DEFAULT_SERVER_URL = "http://localhost:8000"
-# Troque SEU_USUARIO pelo seu usuário do GitHub.
-DEFAULT_UPDATE_URL = "https://github.com/SEU_USUARIO/4rt3mi5/releases/latest/download/latest.json"
+# Endereço público do servidor (domínio fixo do ngrok). Pode ser trocado na tela do código de acesso.
+DEFAULT_SERVER_URL = "https://quiver-procedure-resolved.ngrok-free.dev"
+# Manifesto da última Release no GitHub (atualização automática).
+DEFAULT_UPDATE_URL = "https://github.com/50nnyc/4rt3mi5/releases/latest/download/latest.json"
 
 
 @dataclass
