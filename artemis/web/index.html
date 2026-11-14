@@ -93,6 +93,12 @@
   .drawer button.item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 13px 12px; background: none; font-size: 16px; }
   .drawer button.item:hover, .drawer button.item.active { background: var(--card2); }
   .drawer button.item.active { color: var(--gold); font-weight: 700; }
+  .drawer button.item.sub { padding-left: 38px; font-size: 14px; color: var(--muted); }
+  .drawer button.item.sub.active { color: var(--gold); }
+  .boss-class { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }
+  .boss-class.nemesis { color: var(--red); border-color: rgba(255,122,107,.4); }
+  .boss-class.archfoe { color: var(--gold); border-color: rgba(242,201,76,.4); }
+  .boss-class.bane { color: var(--accent); border-color: rgba(124,140,255,.4); }
   .drawer .foot { margin-top: auto; padding: 10px 12px 0; border-top: 1px solid var(--line); }
 
   .action { border-radius: 12px; padding: 14px; margin-top: 14px; }
@@ -213,6 +219,7 @@
   .sound button:focus-visible, .sound input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .sound input { width: 74px; padding: 0; border: 0; background: none; accent-color: var(--gold); height: 20px; }
   .sound.muted input { opacity: .45; }
+  .sound.locked input { display: none; }
   header.top .who { margin-left: auto; }
   @media (max-width: 480px) {
     .sound input { width: 56px; }
@@ -387,6 +394,9 @@
     <button class="item" data-page="home">🏠 Início</button>
     <button class="item" data-page="loot">💰 Lootsplit</button>
     <button class="item" data-page="stack">📈 Hunt Session Stacker</button>
+    <button class="item" data-page="boss" data-btab="all">👑 Rotação de bosses</button>
+    <button class="item sub" data-page="boss" data-btab="solo">↳ Solo</button>
+    <button class="item sub" data-page="boss" data-btab="party">↳ Party</button>
     <button class="item" data-page="hunts">🗺️ Hunts</button>
     <button class="item" data-page="ach">🏆 Conquistas</button>
     <button class="item" data-page="chars">👤 Meus personagens</button>
@@ -425,6 +435,23 @@
         <div class="err" id="stackErr"></div>
       </div>
       <div id="stackResult"></div>
+    </div>
+
+    <div id="pageBoss" class="hidden">
+      <h1>Rotação de bosses</h1>
+      <p class="muted" style="margin-top:-4px">🔒 Só você vê seus bosses. Os lootsplits de boss aparecem só para quem estava na PT.</p>
+      <div class="seg" role="tablist" id="bossTabs">
+        <button data-btab="solo" role="tab">Solo</button><button data-btab="party" role="tab">Party</button>
+      </div>
+      <div class="card" id="bossForm">
+        <label class="muted" for="bossText" id="bossLabel">Cole aqui o Hunt Session Analyser do boss</label>
+        <textarea id="bossText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 00:25h&#10;Raw XP Gain: ...&#10;Killed Monsters:&#10;  1x Grand Master Oberon"></textarea>
+        <button class="btn2 paste-btn" data-paste-into="bossText" data-paste-err="bossErr" type="button">📋 Colar da área de transferência</button>
+        <button class="btn" id="bossBtn">Enviar sessão de boss</button>
+        <div class="err" id="bossErr"></div>
+      </div>
+      <div id="bossAsk"></div>
+      <div id="bossResult"></div>
     </div>
 
     <div id="pageHunts" class="hidden">
@@ -478,7 +505,7 @@
 
 <div id="sound" class="sound floating">
   <button id="soundBtn" type="button" aria-label="Silenciar música" title="Silenciar música">🔉</button>
-  <input id="soundVol" type="range" min="0" max="100" step="1" value="30" aria-label="Volume da música">
+  <input id="soundVol" type="range" min="0" max="100" step="1" value="25" aria-label="Volume da música">
 </div>
 
 <div id="celebrate" class="celebrate hidden" role="status" aria-live="polite">
@@ -780,7 +807,7 @@ function openApp() {
   $("#drawerName").textContent = S.nick;
   $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
   updateDrawerFoot();
-  $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = "";
+  $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = ""; $("#bossResult").innerHTML = ""; $("#bossAsk").innerHTML = "";
   showOnly("app");
   S.navStack = [];
   S.page = null;
@@ -791,7 +818,12 @@ function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classLis
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
-document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { closeDrawer(); go(b.dataset.page); }));
+document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => {
+  closeDrawer();
+  if (b.dataset.btab && b.dataset.btab !== "all") S.btab = b.dataset.btab;
+  if (b.dataset.page === "boss" && S.page === "boss") { showBossTab(S.btab); return; }
+  go(b.dataset.page);
+}));
 $("#changeNick").addEventListener("click", () => { closeDrawer(); $("#nickInput").value = ""; showNick(false); });
 $("#nickBack").addEventListener("click", () => showOnly("app"));
 $("#brandHome").addEventListener("click", () => { closeDrawer(); if (S.page !== "home") go("home"); else window.scrollTo(0, 0); });
@@ -830,8 +862,10 @@ function go(page, opts = {}) {
   if (!opts.noPush && page !== S.page) pushNav();
   S.page = page;
   updateBack();
-  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page
+    && (!b.dataset.btab || b.dataset.btab === "all" || b.dataset.btab === S.btab)));
   $("#pageHome").classList.toggle("hidden", page !== "home");
+  $("#pageBoss").classList.toggle("hidden", page !== "boss");
   $("#pageLoot").classList.toggle("hidden", page !== "loot");
   $("#pageStack").classList.toggle("hidden", page !== "stack");
   $("#pageChars").classList.toggle("hidden", page !== "chars");
@@ -844,6 +878,7 @@ function go(page, opts = {}) {
   window.scrollTo(0, 0);
   if (page === "home") loadHome();
   if (page === "stack") { initStackPicker(); loadStack(); }
+  if (page === "boss") { showBossTab(S.btab); loadBoss(); }
   if (page === "hunts") loadHunts();
   if (page === "chars") loadChars();
 }
@@ -976,7 +1011,10 @@ function renderChart(id, metric = "damage") {
   ensureVocations(h.players.map((p) => p.name)).then((changed) => { if (changed) renderChart(id, metric); });
 }
 function deleteButton(h) {
-  return h.can_delete && h.id ? `<div style="margin-top:12px"><button class="danger-link" data-del-hunt="${h.id}">🗑 Apagar esta hunt</button></div>` : "";
+  if (!h.can_delete || !h.id) return "";
+  return h.kind === "boss"
+    ? `<div style="margin-top:12px"><button class="danger-link" data-del-boss-hunt="${h.id}">🗑 Apagar este lootsplit de boss</button></div>`
+    : `<div style="margin-top:12px"><button class="danger-link" data-del-hunt="${h.id}">🗑 Apagar esta hunt</button></div>`;
 }
 function historyItem(h, name) {
   const v = view(h, name);
@@ -1228,6 +1266,203 @@ async function loadStack(opts = {}) {
 }
 
 /* ---------- avisos de venda, metas, previsão, recordes, lista de venda ---------- */
+/* ---------- 👑 rotação de bosses (solo / party) ---------- */
+S.btab = "solo";
+function showBossTab(tab) {
+  S.btab = tab === "party" ? "party" : "solo";
+  document.querySelectorAll("#bossTabs [data-btab]").forEach((b) => {
+    const on = b.dataset.btab === S.btab;
+    b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on));
+  });
+  document.querySelectorAll(".drawer [data-btab]").forEach((b) =>
+    b.classList.toggle("active", S.page === "boss" && (b.dataset.btab === "all" || b.dataset.btab === S.btab)));
+  $("#bossLabel").textContent = S.btab === "party"
+    ? "Cole aqui o SEU Hunt Session Analyser do boss em party (depois você escolhe se faz o lootsplit)"
+    : "Cole aqui o Hunt Session Analyser do boss (solo)";
+  $("#bossAsk").innerHTML = "";
+}
+$("#bossTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-btab]"); if (b) showBossTab(b.dataset.btab); });
+
+const BOSS_CLASS = { Nemesis: "nemesis", Archfoe: "archfoe", Bane: "bane" };
+function bossTag(b) {
+  return `<span style="display:inline-flex; align-items:center; gap:6px">${creatureImg(b.key || b.name)}<b>${esc(b.name)}</b>`
+    + `${b.class ? `<span class="boss-class ${BOSS_CLASS[b.class] || ""}">${esc(b.class)}</span>` : ""}</span>`;
+}
+function bossChips(list) {
+  return list.length ? `<div class="chips">${list.map((b) => `<span class="chip" style="display:inline-flex; align-items:center; gap:6px">${creatureImg(b.key || b.name)}${fmt(b.count)}x ${esc(b.name)}</span>`).join("")}</div>`
+    : `<span class="muted">nenhum boss reconhecido</span>`;
+}
+function bossTable(list) {
+  if (!list.length) return `<p class="muted">Nenhum boss reconhecido ainda.</p>`;
+  return `<div class="table-wrap"><table><tr><th>Boss</th><th>Kills</th><th>Loot</th><th>Último</th></tr>
+    ${list.map((b) => `<tr><td>${bossTag(b)}${b.from_hunts ? `<div class="muted" style="font-size:12px">${b.from_hunts} em hunts do Stacker</div>` : ""}</td>
+      <td>${fmt(b.kills)}</td><td>${b.value ? kk(b.value) : "—"}</td><td>${b.last ? esc(dayLabel(b.last.slice(0, 10))) : "—"}</td></tr>`).join("")}
+  </table></div>`;
+}
+function bossSessionItem(s) {
+  const party = s.party ? `<div class="muted" style="font-size:13px">👥 Lootsplit da party: <b class="${s.party.profit_each >= 0 ? "gold" : "neg"}">${kk(s.party.profit_each)} para cada</b> (${s.party.players_count} jogadores)</div>`
+    : s.mode === "party" ? `<div class="muted" style="font-size:13px">👥 Party sem lootsplit (guardada só para você)</div>` : "";
+  return `<details class="card"><summary>
+      <div class="row"><b>${when(s.started_at)}</b><span class="pill">${s.mode === "party" ? "party" : "solo"}</span></div>
+      <div style="margin-top:4px">${bossChips(s.bosses)}</div>
+      <div class="row muted"><span>${dur(s.duration_seconds)}${s.loot_value ? " · loot ≈ " + kk(s.loot_value) : ""}</span>
+        <span class="${s.balance >= 0 ? "pos" : "neg"}">balance ${kk(s.balance)}</span></div>
+      ${party}
+    </summary>
+    <div style="margin-top:10px">${statGrid([
+      ["XP", fmt(s.xp)], ["Balance", fmt(s.balance) + " gp"], ["Supplies", fmt(s.supplies) + " gp"],
+      ["Lucro líquido real", fmt(s.net_profit) + " gp", s.net_profit >= 0 ? "pos" : "neg"],
+      ["Damage", fmt(s.damage)], ["Healing", fmt(s.healing)],
+    ])}</div>
+    ${s.loot.length ? `<h2>Itens coletados</h2>${itemList(s.loot, 999)}` : ""}
+    ${s.kills.length ? `<h2>Criaturas mortas</h2>${killChips(s.kills)}` : ""}
+    ${s.can_delete ? `<div style="margin-top:10px"><button class="danger-link" data-del-boss-session="${s.id}">🗑 Apagar esta sessão de boss</button></div>` : ""}</details>`;
+}
+function bossHuntItem(h) {
+  h.kind = "boss";
+  const v = view(h, S.nick);
+  const tag = v.totalPay > 0 ? `<span class="neg">paga ${kk(v.totalPay)}</span>`
+            : v.totalGet > 0 ? `<span class="pos">recebe ${kk(v.totalGet)}</span>` : `<span class="muted">sem acerto</span>`;
+  return `<details class="card"><summary>
+      <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
+      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
+        <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
+      <div class="muted" style="font-size:13px">Sessões vinculadas: ${h.members && h.members.length ? h.members.map(esc).join(", ") : "nenhuma ainda"}</div>
+    </summary>${actionBox(v)}${chartToggle(h, S.nick)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, S.nick)}${deleteButton(h)}</details>`;
+}
+function fromHuntsBlock(list) {
+  if (!list.length) return "";
+  return `<h2>Bosses nas suas hunts (${list.length})</h2>
+    <p class="hint" style="margin-top:-4px">Sessões do 📈 Hunt Session Stacker em que apareceu um boss. O loot do boss é estimado: itens da
+      tabela dele que as outras criaturas mortas na sessão não dropam (moedas ficam de fora).</p>
+    ${list.map((x) => `<details class="card"><summary>
+      <div class="row"><b>${when(x.started_at)}</b><span class="gold">${x.value ? "≈ " + kk(x.value) + " gp" : "sem item exclusivo"}</span></div>
+      <div style="margin-top:4px">${bossChips(x.bosses)}</div></summary>
+      ${x.items.length ? itemList(x.items, 999) : `<p class="muted">Nenhum item exclusivo do boss nessa sessão.</p>`}</details>`).join("")}`;
+}
+async function loadBoss(opts = {}) {
+  const el = $("#bossResult");
+  if (!opts.quiet) el.innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/bosses/${encodeURIComponent(S.nick)}`); }
+  catch (err) {
+    if (err.status === 401) return;
+    el.innerHTML = `<div class="banner bad"><b>${esc(err.message)}</b>${err.hint ? `<div class="hint">${esc(err.hint)}</div>` : ""}</div>`;
+    $("#bossForm").classList.toggle("hidden", err.status === 403);
+    return;
+  }
+  $("#bossForm").classList.remove("hidden");
+  S.prices = { ...S.prices, ...(d.prices || {}) };
+  S.boss = d;
+  const t = d.totals;
+  if (!t.sessions && !d.hunts.length && !d.from_hunts.length) {
+    el.innerHTML = `<div class="card"><b>👑 Nenhum boss ainda</b>
+      <p class="muted">Depois de matar um boss, abra o Hunt Analyser no Tibia, copie e cole aqui. Em <b>Solo</b> a sessão fica só sua.
+        Em <b>Party</b> o app pergunta se você quer fazer o lootsplit: aí ele aparece para todos da PT, e as sessões que eles
+        enviarem no mesmo horário se juntam sozinhas.</p></div>`;
+    return d;
+  }
+  const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
+  el.innerHTML = `
+    <div class="card">
+      <div class="muted">Lucro com bosses · ${fmt(t.boss_kills)} bosses mortos · ${dur(t.duration_seconds)} em sessões de boss</div>
+      <div class="big ${t.profit >= 0 ? "gold" : "neg"}">${n(t.profit, " gp")}</div>
+      <div class="muted">${t.profit_per_hour ? fmt(t.profit_per_hour) + " gp/h nas sessões de boss · " : ""}${fmt(t.sessions)} sessões (${t.solo} solo, ${t.party} party) · ${fmt(t.parties)} lootsplits</div>
+      <div style="margin-top:10px">${statGrid([
+        ["Sessões sem lootsplit", fmt(t.sessions_profit) + " gp", t.sessions_profit >= 0 ? "pos" : "neg"],
+        ["Sua parte nos lootsplits", fmt(t.party_profit) + " gp", t.party_profit >= 0 ? "pos" : "neg"],
+        ["Bosses nas hunts (estimado)", fmt(t.hunts_value) + " gp", "gold"],
+        ["Loot das sessões", fmt(t.loot_value) + " gp"], ["Supplies", fmt(t.supplies) + " gp"], ["XP", fmt(t.xp)],
+      ])}</div>
+      <div class="hint">Sessão sem lootsplit conta pelo Balance dela. Com lootsplit conta a sua parte da divisão (sem contar duas vezes).</div>
+    </div>
+    <h2>Bosses</h2>${bossTable(d.bosses)}
+    ${d.items.length ? `<h2>Itens dos bosses</h2><div class="card">${itemList(d.items)}</div>` : ""}
+    ${d.hunts.length ? `<h2>Lootsplits de bosses (${d.hunts.length})</h2>${d.hunts.map(bossHuntItem).join("")}` : ""}
+    ${d.sessions.length ? `<h2>Sessões de boss (${d.sessions.length})</h2>${d.sessions.map(bossSessionItem).join("")}` : ""}
+    ${fromHuntsBlock(d.from_hunts)}`;
+  countUp(el);
+  const names = [...new Set(d.hunts.flatMap((h) => h.players.map((p) => p.name)))];
+  if (names.length) ensureVocations(names).then((c) => { if (c && S.page === "boss") paintVocations(el); });
+  return d;
+}
+function bossBanner(r) {
+  const found = r.bosses.length ? `Bosses: ${r.bosses.map((b) => `<b>${esc(b.name)}</b>${b.count > 1 ? " ×" + b.count : ""}`).join(", ")}.`
+    : `<span class="neg">Nenhum boss reconhecido nessa sessão.</span> Ela foi guardada mesmo assim; confira se colou a sessão certa.`;
+  return `<div class="banner ok">${r.created ? "Sessão de boss salva ✔" : "Essa sessão já estava salva ✔"} ${found}</div>`;
+}
+$("#bossBtn").addEventListener("click", async () => {
+  const raw = $("#bossText").value.trim();
+  if (!raw) return;
+  const btn = $("#bossBtn"); btn.disabled = true; $("#bossErr").textContent = ""; $("#bossAsk").innerHTML = "";
+  const mode = S.btab;
+  try {
+    const r = await api("POST", "/api/bosses/session", { raw_text: raw, nickname: S.nick, mode });
+    $("#bossText").value = "";
+    S.bossLast = r;
+    let ask = bossBanner(r);
+    if (r.party) {
+      ask += `<div class="banner ok">👥 Juntei com o lootsplit da party (${r.party.players_count} jogadores, ${kk(r.party.profit_each)} para cada) que alguém da PT já tinha enviado.</div>`;
+    } else if (mode === "party") {
+      ask += `<div class="card" id="bossSplitAsk"><b>Quer fazer o lootsplit da party?</b>
+        <p class="muted" style="margin:4px 0 0">Se sim, cole o Party Hunt Analyser: a divisão vai para a aba de bosses de todos da PT.
+          Se não, a sessão fica guardada só para você, como solo.</p>
+        <div class="row" style="gap:8px; margin-top:10px; justify-content:flex-start">
+          <button class="btn" style="width:auto; margin:0; flex:1" data-boss-split="yes">Sim, fazer lootsplit</button>
+          <button class="btn2" style="flex:1" data-boss-split="no">Não</button></div></div>`;
+    }
+    $("#bossAsk").innerHTML = ask;
+    celebrateRewards(r.rewards);
+    await loadBoss({ quiet: true });
+  } catch (err) {
+    if (err.status === 403) $("#bossErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+    else if (err.status !== 401) $("#bossErr").textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+document.addEventListener("click", async (e) => {
+  const a = e.target.closest("[data-boss-split]");
+  if (a) {
+    const box = $("#bossSplitAsk");
+    if (a.dataset.bossSplit === "no") { box.outerHTML = `<div class="banner ok">Guardada só para você, sem lootsplit.</div>`; return; }
+    box.innerHTML = `<label class="muted" for="bossPartyText"><b>Cole o Party Hunt Analyser</b> da mesma luta</label>
+      <textarea id="bossPartyText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Loot Type: Leader&#10;..."></textarea>
+      <button class="btn2 paste-btn" data-paste-into="bossPartyText" data-paste-err="bossPartyErr" type="button">📋 Colar da área de transferência</button>
+      <button class="btn" id="bossSplitBtn">Fazer lootsplit</button><div class="err" id="bossPartyErr"></div>`;
+    $("#bossPartyText").focus();
+    return;
+  }
+  if (e.target.closest("#bossSplitBtn")) {
+    const raw = $("#bossPartyText").value.trim();
+    if (!raw) return;
+    const btn = $("#bossSplitBtn"); btn.disabled = true; $("#bossPartyErr").textContent = "";
+    try {
+      const r = await api("POST", "/api/bosses/lootsplit", { raw_text: raw, nickname: S.nick, session_id: (S.bossLast || {}).session_id || null });
+      r.hunt.kind = "boss";
+      $("#bossSplitAsk").outerHTML = `<div class="banner ok">${r.created ? "Lootsplit de boss enviado ✔ Já aparece na aba de bosses de todos da PT." : "Esse lootsplit já estava salvo ✔"}
+          ${r.linked > 1 ? ` ${r.linked} sessões da PT foram juntadas.` : ""}</div>` + huntCard(r.hunt, S.nick, "Lootsplit do boss");
+      countUp($("#bossAsk")); paintVocations($("#bossAsk"));
+      celebrateRewards(r.rewards);
+      loadBoss({ quiet: true });
+    } catch (err) {
+      if (err.status === 403) $("#bossPartyErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+      else if (err.status !== 401) $("#bossPartyErr").textContent = err.message;
+      btn.disabled = false;
+    }
+    return;
+  }
+  const del = e.target.closest("[data-del-boss-session],[data-del-boss-hunt]");
+  if (!del) return;
+  e.preventDefault();
+  const isHunt = !!del.dataset.delBossHunt;
+  if (!confirm(isHunt ? "Apagar este lootsplit de boss para todos da PT? As sessões continuam salvas." : "Apagar esta sessão de boss? Isso não pode ser desfeito.")) return;
+  del.disabled = true;
+  try {
+    await api("DELETE", isHunt ? `/api/bosses/hunt/${del.dataset.delBossHunt}` : `/api/bosses/session/${del.dataset.delBossSession}`);
+    $("#bossAsk").innerHTML = "";
+    loadBoss();
+  } catch (err) { if (err.status !== 401) alert(err.message); del.disabled = false; }
+});
+
 function npcWhere(b) { return b ? `${esc(b.npc)}${b.city ? " (" + esc(b.city) + ")" : ""} por ${fmt(b.price)} gp cada` : "nenhum NPC compra (veja o preço médio)"; }
 function alertsBlock(d) {
   return d.alerts.map((a) => {
@@ -1555,7 +1790,7 @@ document.addEventListener("submit", async (e) => {
   try {
     S.prices[f.dataset.priceItem] = await api("POST", "/api/items/price", { item: f.dataset.priceItem, price: v === "" ? null : parseInt(v, 10) });
     pop.classList.add("hidden"); popKey = null;
-    await loadStack();
+    await (S.page === "boss" ? loadBoss() : loadStack());
   } catch (err) { if (err.status !== 401) alert(err.message); }
 });
 $("#stackBtn").addEventListener("click", async () => {
@@ -1708,9 +1943,12 @@ const TRACKS = {
   stack: "TIBIA_14_King_Tibianus_Queen_Eloise_Emperor_Kruzak.ogg",
 };
 const PAGE_TRACK = { hunts: "hunts", stack: "stack" };
-const MAX_GAIN = 0.5;  // volume 100% do botão = metade do volume do aparelho: sempre "baixinho"
+// 0.11.0: o som não é o foco. Barra no máximo = 12% do volume do aparelho; o padrão (25) fica em ~3%.
+const MAX_GAIN = 0.12;
+// iPhone/iPad ignoram o volume definido pela página (tocaria no volume do aparelho): lá a música fica desligada.
+const VOLUME_LOCKED = (() => { try { const a = new Audio(); a.volume = 0.25; return Math.abs(a.volume - 0.25) > 0.01; } catch { return true; } })();
 const Music = {
-  vol: 30, muted: false, els: {}, ended: new Set(), current: null, blocked: false,
+  vol: 25, muted: false, els: {}, ended: new Set(), current: null, blocked: false,
   async load() {
     const v = await kv.get("music_vol"), m = await kv.get("music_muted");
     if (v != null && v !== "" && !isNaN(+v)) this.vol = Math.max(0, Math.min(100, +v));
@@ -1718,7 +1956,7 @@ const Music = {
     this.ui();
   },
   save() { kv.set("music_vol", String(this.vol)); kv.set("music_muted", this.muted ? "1" : "0"); },
-  gain() { return this.muted ? 0 : (this.vol / 100) * MAX_GAIN; },
+  gain() { return this.muted || VOLUME_LOCKED ? 0 : (this.vol / 100) * MAX_GAIN; },
   el(id) {
     if (!this.els[id]) {
       const a = new Audio();
@@ -1737,7 +1975,7 @@ const Music = {
   },
   resume() {
     const id = this.current;
-    if (!id || this.muted || this.vol === 0 || this.ended.has(id)) return;
+    if (!id || VOLUME_LOCKED || this.muted || this.vol === 0 || this.ended.has(id)) return;
     const a = this.el(id);
     clearInterval(a._fade);
     a.volume = 0;
@@ -1770,8 +2008,9 @@ const Music = {
     this.ui();
   },
   ui() {
-    const off = this.muted || this.vol === 0;
-    const label = off ? "Ligar a música" : "Silenciar a música";
+    const off = VOLUME_LOCKED || this.muted || this.vol === 0;
+    const label = VOLUME_LOCKED ? "Música desligada neste aparelho" : off ? "Ligar a música" : "Silenciar a música";
+    $("#sound").classList.toggle("locked", VOLUME_LOCKED);
     const b = $("#soundBtn");
     b.textContent = off ? "🔇" : this.vol < 35 ? "🔈" : this.vol < 70 ? "🔉" : "🔊";
     b.setAttribute("aria-label", label); b.title = label;
@@ -1781,8 +2020,17 @@ const Music = {
   },
 };
 $("#soundBtn").addEventListener("click", () => {  // um clique: muda na hora
+  if (VOLUME_LOCKED) {
+    const sheet = $("#sheet");
+    sheet.innerHTML = `<b>🔇 Música desligada neste aparelho</b>
+      <div class="muted" style="font-size:14px; margin-top:2px">Aqui o navegador não deixa o site baixar o volume da música,
+        então ela ficaria alta demais. No PC e no Android ela toca bem baixinha.</div>
+      <div class="actions"><button class="btn2" data-paste-cancel>Entendi</button></div>`;
+    sheet.classList.remove("hidden");
+    return;
+  }
   Music.muted = !(Music.muted || Music.vol === 0);
-  if (!Music.muted && Music.vol === 0) Music.vol = 30;
+  if (!Music.muted && Music.vol === 0) Music.vol = 25;
   Music.save(); Music.apply();
 });
 $("#soundVol").addEventListener("input", (e) => {
@@ -2366,6 +2614,7 @@ async function offerPaste(kind, t) {
       <div class="muted" style="font-size:14px; margin-top:2px">${esc(pasteSummary(t))}.${place ? ` Hunt: <b style="color:var(--text)">${esc(place.name)}</b> (a última que você usou).` : " Escolha em qual hunt foi."}</div>
       <div class="actions">${place ? `<button class="btn" data-paste-go="solo">Enviar agora</button><button class="btn2" data-paste-go="solo-pick">Outra hunt</button>`
                                    : `<button class="btn" data-paste-go="solo-pick">Escolher a hunt</button>`}
+        <button class="btn2" data-paste-go="boss">👑 Foi boss</button>
         <button class="btn2" data-paste-cancel>Cancelar</button></div>`;
   }
   sheet.classList.remove("hidden");
@@ -2386,6 +2635,7 @@ document.addEventListener("click", async (e) => {
     $("#sheet").classList.add("hidden");
     const t = S.pasteText;
     if (g.dataset.pasteGo === "party") { go("loot"); $("#lootText").value = t; $("#lootBtn").click(); return; }
+    if (g.dataset.pasteGo === "boss") { go("boss"); $("#bossText").value = t; $("#bossText").focus(); return; }
     go("stack");
     await initStackPicker();
     $("#stackText").value = t;
@@ -2396,7 +2646,8 @@ document.addEventListener("click", async (e) => {
   const p = e.target.closest("[data-paste-into]");
   if (p) {
     const box = document.getElementById(p.dataset.pasteInto);
-    const err = p.dataset.pasteInto === "lootText" ? $("#lootErr") : $("#stackErr");
+    const err = p.dataset.pasteErr ? document.getElementById(p.dataset.pasteErr)
+              : p.dataset.pasteInto === "lootText" ? $("#lootErr") : $("#stackErr");
     try {
       const t = await navigator.clipboard.readText();
       if (!t.trim()) { err.textContent = "A área de transferência está vazia. Copie o texto no Tibia primeiro."; return; }

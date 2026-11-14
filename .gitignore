@@ -8,6 +8,7 @@ dist/
 # ---- dados sensíveis: NUNCA vão para o GitHub (ver tools/check_secrets.py) ----
 /data/
 /demo-data/
+/video/
 .env
 .env.*
 !.env.example

@@ -35,6 +35,7 @@ from pydantic import BaseModel, Field
 
 from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
+from artemis.core import bosses as boss_core
 from artemis.core.parser import ParseError
 from artemis.core.report import report_from_text
 from artemis.core.session import item_key, parse_solo_session
@@ -114,7 +115,8 @@ async def invalid_input(_request: Request, exc: RequestValidationError):
 # ------------------------------------------------------------------ limite de requisições (anti-abuso)
 MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
 RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600)}   # (máx., janela em s) por IP
-UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview"}
+UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
+                "/api/bosses/session", "/api/bosses/lootsplit"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
 _hits: dict[tuple[str, str], deque] = {}
 
@@ -871,6 +873,191 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
 def delete_solo(session_id: int, access: dict = Depends(require_session)):
     _delete_own("solo_sessions", session_id, access)
     return {"deleted": session_id}
+
+
+# ------------------------------------------------------------------ 👑 rotação de bosses
+BOSS_PRIVATE = "Os dados de bosses são privados: só o dono do personagem vê."
+NOT_IN_PARTY = "Seu personagem não está nesse Party Hunt Analyser."
+
+
+class BossSessionIn(BaseModel):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+    nickname: Name
+    mode: Literal["solo", "party"]
+
+
+class BossSplitIn(BaseModel):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+    nickname: Name
+    session_id: int | None = Field(default=None, ge=1)  # sessão de boss que a pessoa acabou de enviar
+
+
+def _hunt_brief(h: dict) -> dict:
+    return {"id": h["id"], "started_at": h["started_at"], "players_count": h["players_count"],
+            "profit_each": h["profit_each"], "players": [p["name"] for p in h["players"]]}
+
+
+def _link_session_to_party(row: dict) -> dict | None:
+    """Sessão sem lootsplit: procura uma party de bosses do mesmo personagem no mesmo horário."""
+    best = None
+    for h in store.boss_hunts_for(row["name"]):
+        if boss_core.overlaps(row["started_at"], row["ended_at"], h["started_at"], h["ended_at"]):
+            gap = abs((datetime.fromisoformat(h["started_at"]) - datetime.fromisoformat(row["started_at"])).total_seconds())
+            if best is None or gap < best[0]:
+                best = (gap, h)
+    if best is None:
+        return None
+    store.link_boss_session(row["id"], best[1]["id"])
+    return best[1]
+
+
+@app.post("/api/bosses/session")
+def boss_session_upload(body: BossSessionIn, access: dict = Depends(require_session)):
+    """Hunt Session Analyser de bosses (solo ou party). Fica visível só para o dono."""
+    try:
+        session = parse_solo_session(body.raw_text)
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+    name = require_uploader(body.nickname, access)
+    row, created = store.add_boss_session(name, "boss|" + session.fingerprint(name), session.to_dict(), body.mode,
+                                          access["key"])
+    hunt = store.boss_hunt(row["boss_hunt_id"]) if row["boss_hunt_id"] else _link_session_to_party(row)
+    return {"created": created, "session_id": row["id"], "mode": row["mode"],
+            "bosses": boss_core.bosses_in(session.kills),
+            "party": _hunt_brief(hunt) if hunt else None, "rewards": grant_rewards(access["key"])}
+
+
+@app.post("/api/bosses/lootsplit")
+def boss_lootsplit(body: BossSplitIn, access: dict = Depends(require_session)):
+    """Lootsplit de bosses: aparece na aba de bosses de todos da PT e puxa as sessões deles do mesmo horário."""
+    report = _parse_party(body.raw_text)
+    uploader = require_uploader(body.nickname, access)
+    players = {name_key(p["name"]) for p in report["players"]}
+    if name_key(uploader) not in players:
+        raise HTTPException(403, {"message": NOT_IN_PARTY, "hint": "Envie o lootsplit com o personagem que estava na PT."})
+    own = None
+    if body.session_id is not None:
+        own = store.boss_session(body.session_id)
+        if own is None:
+            raise HTTPException(404, "Sessão de boss não encontrada.")
+        if own["uploader_key"] != access["key"] or own["name_key"] != name_key(uploader):
+            raise HTTPException(403, "Essa sessão não é sua.")
+    hunt, created = store.add_boss_hunt(report, uploader, access["key"])
+    linked = 0
+    if own is not None:
+        store.link_boss_session(own["id"], hunt["id"])
+        linked += 1
+    for s in store.unlinked_boss_sessions([p["name"] for p in report["players"]]):
+        if boss_core.overlaps(s["started_at"], s["ended_at"], hunt["started_at"], hunt["ended_at"]):
+            store.link_boss_session(s["id"], hunt["id"])
+            linked += 1
+    return {"created": created, "hunt": _public(hunt, access), "linked": linked, "rewards": grant_rewards(access["key"])}
+
+
+def _valued(pairs, prices: dict) -> list[dict]:
+    items = _sum_counts(pairs)
+    for it in items:
+        it["value"] = it["count"] * prices[it["key"]]["unit_price"]
+    return sorted(items, key=lambda it: (-it["value"], -it["count"]))
+
+
+@app.get("/api/bosses/{name}")
+def bosses_overview(name: str, access: dict = Depends(require_session)):
+    """👑 Rotação de bosses do personagem: só o dono vê (e as parties em que ele estava)."""
+    if not store.is_linked(access["key"], name):
+        raise HTTPException(403, {"message": BOSS_PRIVATE, "hint": FORBIDDEN_HINT})
+    sessions = [_public(s, access) for s in store.boss_sessions_for(name)]
+    kills, loot = store.boss_details([s["id"] for s in sessions])
+    solo = store.solo_for_player(name)
+    s_kills, s_loot = store.solo_details([s["id"] for s in solo])
+    keys = {store.resolve_item(k) for rows in (*loot.values(), *s_loot.values()) for k, _ in rows}
+    prices = store.price_info(list(keys), access["key"])
+    hunts = {h["id"]: _public(h, access) for h in store.boss_hunts_for(name)}
+    per_boss: dict[str, dict] = {}
+
+    def add_boss(b: dict, count: int, value: int, when: str, source: str) -> None:
+        pb = per_boss.setdefault(b["key"], {"key": b["key"], "name": b["name"], "class": b.get("class"), "kills": 0,
+                                            "value": 0, "last": None, "from_hunts": 0})
+        pb["kills"] += count
+        pb["value"] += value
+        pb["last"] = max(pb["last"] or "", when)
+        if source == "hunt":
+            pb["from_hunts"] += count
+
+    for s in sessions:
+        s["kills"] = [{"key": c, "count": n} for c, n in kills[s["id"]]]
+        resolved = [(store.resolve_item(k), n) for k, n in loot[s["id"]]]
+        s["loot"] = _valued(resolved, prices)
+        s["loot_value"] = sum(it["value"] for it in s["loot"])
+        s["net_profit"] = s["loot_value"] - s["supplies"]
+        s["bosses"] = boss_core.bosses_in(kills[s["id"]])
+        split = boss_core.attribute_loot(kills[s["id"]], resolved, whole_session=True)
+        rest = sum(n * prices[k]["unit_price"] for k, n in split.pop("_outros", []))
+        for b in s["bosses"]:
+            v = sum(n * prices[k]["unit_price"] for k, n in split.get(b["key"], []))
+            if len(s["bosses"]) == 1:
+                v += rest  # um boss só na sessão: todo o loot é dele
+            add_boss(b, b["count"], v, s["started_at"], "boss")
+        h = hunts.get(s.get("boss_hunt_id"))
+        s["party"] = _hunt_brief(h) if h else None
+
+    # Bosses mortos em sessões comuns do Hunt Session Stacker: loot estimado (itens exclusivos do boss).
+    from_hunts = []
+    for s in solo:
+        found = boss_core.bosses_in(s_kills[s["id"]])
+        if not found:
+            continue
+        resolved = [(store.resolve_item(k), n) for k, n in s_loot[s["id"]]]
+        split = boss_core.attribute_loot(s_kills[s["id"]], resolved, whole_session=False)
+        items = _valued(((k, n) for b in found for k, n in split.get(b["key"], [])), prices)
+        for b in found:
+            add_boss(b, b["count"], sum(n * prices[k]["unit_price"] for k, n in split.get(b["key"], [])), s["started_at"], "hunt")
+        from_hunts.append({"session_id": s["id"], "started_at": s["started_at"], "bosses": found, "items": items,
+                           "value": sum(it["value"] for it in items)})
+
+    for h in hunts.values():
+        h["members"] = [m["name"] for m in store.boss_sessions_of_hunt(h["id"])]
+    linked_hunts = {s["boss_hunt_id"] for s in sessions if s.get("boss_hunt_id")}
+    sessions_profit = sum(s["balance"] for s in sessions if s.get("boss_hunt_id") not in hunts)
+    party_profit = sum(h["profit_each"] for h in hunts.values())
+    hunts_value = sum(x["value"] for x in from_hunts)
+    secs = sum(s["duration_seconds"] for s in sessions)
+    totals = {
+        "sessions": len(sessions), "solo": sum(1 for s in sessions if s["mode"] == "solo"),
+        "party": sum(1 for s in sessions if s["mode"] == "party"), "parties": len(hunts),
+        "boss_kills": sum(b["kills"] for b in per_boss.values()),
+        "duration_seconds": secs, "xp": sum(s["xp"] for s in sessions),
+        "supplies": sum(s["supplies"] for s in sessions), "balance": sum(s["balance"] for s in sessions),
+        "loot_value": sum(s["loot_value"] for s in sessions),
+        "sessions_profit": sessions_profit, "party_profit": party_profit, "hunts_value": hunts_value,
+        "profit": sessions_profit + party_profit + hunts_value,
+        "profit_per_hour": _per_hour(sessions_profit + party_profit, secs),
+    }
+    all_items = _valued(((it["key"], it["count"]) for s in sessions for it in s["loot"]), prices)
+    return {"name": name, "totals": totals, "bosses": sorted(per_boss.values(), key=lambda b: (-b["kills"], b["name"])),
+            "sessions": sessions, "hunts": sorted(hunts.values(), key=lambda h: h["started_at"], reverse=True),
+            "linked_hunts": len(linked_hunts), "from_hunts": from_hunts, "items": all_items, "prices": prices}
+
+
+def _delete_own_boss(table: str, row_id: int, access: dict) -> None:
+    exists, owner = store.boss_uploader(table, row_id)
+    if not exists:
+        raise HTTPException(404, "Não encontrado (talvez já tenha sido apagado).")
+    if owner != access["key"]:
+        raise HTTPException(403, "Só quem enviou pode apagar.")
+    store.delete_boss(table, row_id)
+
+
+@app.delete("/api/bosses/session/{session_id}")
+def delete_boss_session(session_id: int, access: dict = Depends(require_session)):
+    _delete_own_boss("boss_sessions", session_id, access)
+    return {"deleted": session_id}
+
+
+@app.delete("/api/bosses/hunt/{hunt_id}")
+def delete_boss_hunt(hunt_id: int, access: dict = Depends(require_session)):
+    _delete_own_boss("boss_hunts", hunt_id, access)
+    return {"deleted": hunt_id}
 
 
 # ------------------------------------------------------------------ administração (só o criador)

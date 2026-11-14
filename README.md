@@ -20,7 +20,7 @@ app desktop abre a mesma página numa janela própria.
    (`4RT3MI5-XXXXXX`). A pessoa cola no comentário do personagem no tibia.com; o app confere pelo
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
-4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Hunts**, **Conquistas**, **Meus personagens**,
+4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Rotação de bosses** (Solo / Party), **Hunts**, **Conquistas**, **Meus personagens**,
    **Novidades**, trocar personagem, sair.
 5. Sem conexão: tela de abertura com o aviso, tentando de novo a cada 10 s.
 6. **Colar direto:** com o texto do analyser copiado, Ctrl+V em qualquer tela abre o aviso "Enviar agora".
@@ -32,12 +32,27 @@ app desktop abre a mesma página numa janela própria.
   A cada **30 dias seguidos** o código ganha **+7 dias** de validade, uma vez por bloco de 30 dias
   (tabela `key_rewards`). O app explica a regra no Início e em 🏆 Conquistas.
 
+## 👑 Rotação de bosses (0.11.0)
+
+- Menu ☰ → **Rotação de bosses**, com **Solo** e **Party**. Recebe o Hunt Session Analyser da luta.
+- **Party:** depois da sessão o app pergunta se a pessoa quer fazer o lootsplit. Se sim, ela cola o
+  Party Hunt Analyser; a divisão vai para a aba de bosses de todos da PT. Sessões de boss dos outros
+  jogadores no mesmo horário (±15 min) se juntam sozinhas a esse lootsplit, antes ou depois dele.
+- **Bosses em hunts comuns:** se uma sessão do Stacker tem um boss nas criaturas mortas, ele entra na aba
+  de bosses com o loot **estimado** (itens da tabela do boss que as outras criaturas mortas não dropam).
+- **Privado:** só o dono do personagem vê a aba; o lootsplit de boss só aparece para quem estava na PT.
+  Fica em tabelas próprias (`boss_sessions`, `boss_hunts`), fora do Lootsplit, do Stacker e do ranking de Hunts.
+- Lista de bosses e loot: `artemis/data/bosses.json`, gerado por `tools/import_bosses.py` (TibiaWiki em
+  tibia.fandom.com, CC BY-SA). Rode de novo quando sair boss novo.
+
 ## Música
 
 As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o
 projeto. Anthem na abertura, Special Boss Lairs em Hunts, "King Tibianus, Queen Eloise, Emperor Kruzak" no
-Stacker. Volume baixo, sem repetir, e botão de som em todas as telas (o app lembra volume/mudo). Para tirar
-a música, apague as faixas de `TRACKS` em `index.html`.
+Stacker. Volume bem baixo (a barra no máximo chega a 12% do volume do aparelho; `MAX_GAIN` em `index.html`),
+sem repetir, e botão de som em todas as telas (o app lembra volume/mudo). No iPhone/iPad o navegador não deixa a
+página controlar o volume, então lá a música fica desligada. Para tirar a música, apague as faixas de `TRACKS`
+em `index.html`.
 
 ## Ícone na tela inicial
 

@@ -166,6 +166,59 @@ CREATE TABLE IF NOT EXISTS key_rewards (
     granted_at TEXT NOT NULL,
     PRIMARY KEY (key, reward_id)
 );
+-- 0.11.0: 👑 Rotação de bosses. Separado das hunts/sessões comuns: só a própria pessoa
+-- (e quem estava na PT) vê esses dados.
+CREATE TABLE IF NOT EXISTS boss_hunts (       -- lootsplit de bosses (Party Hunt Analyser)
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint   TEXT UNIQUE NOT NULL,
+    started_at    TEXT NOT NULL,
+    ended_at      TEXT NOT NULL,
+    submitted_by  TEXT,
+    uploader_key  TEXT,
+    created_at    TEXT NOT NULL,
+    report_json   TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS boss_hunt_players (
+    hunt_id  INTEGER NOT NULL REFERENCES boss_hunts(id) ON DELETE CASCADE,
+    name_key TEXT NOT NULL,
+    name     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_boss_hunt_players ON boss_hunt_players(name_key);
+CREATE TABLE IF NOT EXISTS boss_sessions (    -- Hunt Session Analyser enviado na Rotação de bosses
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    fingerprint      TEXT UNIQUE NOT NULL,
+    name_key         TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    mode             TEXT NOT NULL,          -- 'solo' | 'party'
+    boss_hunt_id     INTEGER REFERENCES boss_hunts(id) ON DELETE SET NULL,
+    started_at       TEXT NOT NULL,
+    ended_at         TEXT NOT NULL,
+    duration_seconds INTEGER NOT NULL,
+    session_label    TEXT,
+    raw_xp           INTEGER NOT NULL DEFAULT 0,
+    xp               INTEGER NOT NULL DEFAULT 0,
+    supplies         INTEGER NOT NULL DEFAULT 0,
+    balance          INTEGER NOT NULL DEFAULT 0,
+    damage           INTEGER NOT NULL DEFAULT 0,
+    damage_h         INTEGER NOT NULL DEFAULT 0,
+    healing          INTEGER NOT NULL DEFAULT 0,
+    healing_h        INTEGER NOT NULL DEFAULT 0,
+    uploader_key     TEXT,
+    created_at       TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_boss_sessions_name ON boss_sessions(name_key, started_at);
+CREATE TABLE IF NOT EXISTS boss_kills (
+    session_id INTEGER NOT NULL REFERENCES boss_sessions(id) ON DELETE CASCADE,
+    creature   TEXT NOT NULL,
+    count      INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS boss_loot (
+    session_id INTEGER NOT NULL REFERENCES boss_sessions(id) ON DELETE CASCADE,
+    item_key   TEXT NOT NULL,
+    count      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_boss_kills ON boss_kills(session_id);
+CREATE INDEX IF NOT EXISTS ix_boss_loot ON boss_loot(session_id);
 -- 0.10.0: vocação/level dos personagens (TibiaData), para colorir por vocação sem consultar toda hora
 CREATE TABLE IF NOT EXISTS char_info (
     name_key   TEXT PRIMARY KEY,
@@ -667,7 +720,9 @@ class Store:
         """Horários (UTC) em que este código enviou hunts ou sessões que continuam salvas."""
         rows = self._conn.execute(
             "SELECT created_at FROM hunts WHERE uploader_key = ? UNION ALL "
-            "SELECT created_at FROM solo_sessions WHERE uploader_key = ?", (key, key))
+            "SELECT created_at FROM solo_sessions WHERE uploader_key = ? UNION ALL "
+            "SELECT created_at FROM boss_hunts WHERE uploader_key = ? UNION ALL "
+            "SELECT created_at FROM boss_sessions WHERE uploader_key = ?", (key, key, key, key))
         return [r[0] for r in rows]
 
     def rewards(self, key: str) -> list[dict]:
@@ -726,5 +781,109 @@ class Store:
     def delete_solo(self, session_id: int) -> bool:
         with self._lock:
             cur = self._conn.execute("DELETE FROM solo_sessions WHERE id = ?", (session_id,))
+            self._conn.commit()
+            return cur.rowcount > 0
+
+    # ------------------------------------------------------------------ 👑 rotação de bosses
+    def add_boss_session(self, name: str, fingerprint: str, data: dict, mode: str, uploader_key: str) -> tuple[dict, bool]:
+        with self._lock:
+            existing = self._conn.execute("SELECT * FROM boss_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
+            if existing:
+                return dict(existing), False
+            cols = ", ".join(SOLO_COLUMNS)
+            marks = ", ".join("?" for _ in SOLO_COLUMNS)
+            cur = self._conn.execute(
+                f"INSERT INTO boss_sessions (fingerprint, name_key, name, mode, uploader_key, created_at, {cols}) "
+                f"VALUES (?, ?, ?, ?, ?, ?, {marks})",
+                (fingerprint, name_key(name), name, mode, uploader_key, _iso(utcnow()), *(data[c] for c in SOLO_COLUMNS)))
+            sid = cur.lastrowid
+            self._conn.executemany("INSERT INTO boss_kills VALUES (?, ?, ?)", [(sid, c, n) for c, n in data.get("kills", [])])
+            self._conn.executemany("INSERT INTO boss_loot VALUES (?, ?, ?)", [(sid, i, n) for i, n in data.get("loot", [])])
+            self._conn.commit()
+            return dict(self._conn.execute("SELECT * FROM boss_sessions WHERE id = ?", (sid,)).fetchone()), True
+
+    def boss_session(self, session_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM boss_sessions WHERE id = ?", (session_id,)).fetchone()
+        return dict(row) if row else None
+
+    def boss_sessions_for(self, name: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT * FROM boss_sessions WHERE name_key = ? ORDER BY started_at DESC, id DESC", (name_key(name),))]
+
+    def boss_sessions_of_hunt(self, hunt_id: int) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT id, name, mode, started_at, duration_seconds FROM boss_sessions WHERE boss_hunt_id = ? ORDER BY name",
+            (hunt_id,))]
+
+    def boss_details(self, session_ids: list[int]) -> tuple[dict, dict]:
+        """{session_id: [(criatura, n)]}, {session_id: [(item_key, n)]} das sessões de boss."""
+        kills: dict[int, list] = {i: [] for i in session_ids}
+        loot: dict[int, list] = {i: [] for i in session_ids}
+        if session_ids:
+            marks = ",".join("?" * len(session_ids))
+            for r in self._conn.execute(f"SELECT * FROM boss_kills WHERE session_id IN ({marks}) ORDER BY count DESC", session_ids):
+                kills[r["session_id"]].append((r["creature"], r["count"]))
+            for r in self._conn.execute(f"SELECT * FROM boss_loot WHERE session_id IN ({marks}) ORDER BY count DESC", session_ids):
+                loot[r["session_id"]].append((r["item_key"], r["count"]))
+        return kills, loot
+
+    def link_boss_session(self, session_id: int, hunt_id: int | None) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE boss_sessions SET boss_hunt_id = ? WHERE id = ?", (hunt_id, session_id))
+            self._conn.commit()
+
+    @staticmethod
+    def _boss_hunt(row: sqlite3.Row) -> dict:
+        report = json.loads(row["report_json"])
+        report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
+                      uploader_key=row["uploader_key"])
+        return report
+
+    def add_boss_hunt(self, report: dict, submitted_by: str, uploader_key: str) -> tuple[dict, bool]:
+        with self._lock:
+            existing = self._conn.execute("SELECT * FROM boss_hunts WHERE fingerprint = ?", (report["fingerprint"],)).fetchone()
+            if existing:
+                return self._boss_hunt(existing), False
+            cur = self._conn.execute(
+                "INSERT INTO boss_hunts (fingerprint, started_at, ended_at, submitted_by, uploader_key, created_at, report_json) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (report["fingerprint"], report["started_at"], report["ended_at"], submitted_by, uploader_key,
+                 _iso(utcnow()), json.dumps(report)))
+            hid = cur.lastrowid
+            self._conn.executemany("INSERT INTO boss_hunt_players VALUES (?, ?, ?)",
+                                   [(hid, name_key(p["name"]), p["name"]) for p in report["players"]])
+            self._conn.commit()
+            return self._boss_hunt(self._conn.execute("SELECT * FROM boss_hunts WHERE id = ?", (hid,)).fetchone()), True
+
+    def boss_hunt(self, hunt_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM boss_hunts WHERE id = ?", (hunt_id,)).fetchone()
+        return self._boss_hunt(row) if row else None
+
+    def boss_hunts_for(self, name: str) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT h.* FROM boss_hunts h JOIN boss_hunt_players p ON p.hunt_id = h.id "
+            "WHERE p.name_key = ? ORDER BY h.started_at DESC, h.id DESC", (name_key(name),)).fetchall()
+        return [self._boss_hunt(r) for r in rows]
+
+    def unlinked_boss_sessions(self, names: list[str]) -> list[dict]:
+        """Sessões de boss ainda sem lootsplit destes personagens (para vincular a uma party)."""
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        return [dict(r) for r in self._conn.execute(
+            f"SELECT id, name_key, started_at, ended_at FROM boss_sessions WHERE boss_hunt_id IS NULL AND name_key IN ({marks})", keys)]
+
+    def boss_uploader(self, table: str, row_id: int) -> tuple[bool, str | None]:
+        assert table in ("boss_hunts", "boss_sessions")
+        row = self._conn.execute(f"SELECT uploader_key FROM {table} WHERE id = ?", (row_id,)).fetchone()
+        return (row is not None, row[0] if row else None)
+
+    def delete_boss(self, table: str, row_id: int) -> bool:
+        assert table in ("boss_hunts", "boss_sessions")
+        with self._lock:
+            if table == "boss_hunts":  # as sessões continuam, só perdem o vínculo com a party
+                self._conn.execute("UPDATE boss_sessions SET boss_hunt_id = NULL WHERE boss_hunt_id = ?", (row_id,))
+            cur = self._conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))
             self._conn.commit()
             return cur.rowcount > 0

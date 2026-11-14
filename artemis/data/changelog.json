@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "0.11.0",
+      "date": "2026-11-14",
+      "title": "Rotação de bosses",
+      "changes": [
+        "👑 Nova Rotação de bosses, com Solo e Party: cole o Hunt Session Analyser da luta e veja lucro, bosses mortos, loot de cada boss e itens, como no Stacker.",
+        "Em Party, o app pergunta se você quer fazer o lootsplit. Se sim, cole o Party Hunt Analyser: a divisão aparece na aba de bosses de todos da PT. Se não, a sessão fica guardada só para você.",
+        "Quando alguém da PT envia a própria sessão do mesmo boss, ela se junta sozinha ao lootsplit da party.",
+        "Matou um boss no meio de uma hunt comum do 📈 Hunt Session Stacker? Ele entra na aba de bosses, com o loot estimado dele somado ao lucro de bosses.",
+        "🔒 Os dados de bosses são privados: só você vê os seus, e cada lootsplit só aparece para quem estava na PT.",
+        "🔈 A música ficou bem mais baixa em todo lugar. No iPhone e no iPad, onde o site não consegue baixar o volume, ela fica desligada."
+      ]
+    },
+    {
       "version": "0.10.0",
       "date": "2026-11-14",
       "title": "Conquistas, música e card",

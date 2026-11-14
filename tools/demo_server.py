@@ -119,6 +119,25 @@ def seed() -> str:
         set_created("solo_sessions", row["id"], start.replace(hour=23, minute=50))  # enviada no mesmo dia
     store._conn.commit()
 
+    # 👑 rotação de bosses: sessões solo, uma party com lootsplit e um boss no meio de uma hunt comum
+    boss_runs = [("solo", {"grand master oberon": 1, "falcon knight": 6}, {"falcon battleaxe": 1, "platinum coin": 40}),
+                 ("solo", {"the time guardian": 1}, {"soul stone": 1, "small diamond": 4, "platinum coin": 60}),
+                 ("party", {"scarlett etzel": 1}, {"crystal coin": 1, "platinum coin": 90, "small topaz": 3})]
+    for i, (mode, kills, loot) in enumerate(boss_runs):
+        start = (now - timedelta(days=1 + i)).replace(hour=19, minute=0)
+        s = parse_solo_session(solo_text(start, 25, 300_000, 200_000, kills, loot))
+        row, _ = store.add_boss_session(ME, "boss|" + s.fingerprint(ME), s.to_dict(), mode, key)
+        if mode == "party":
+            players = [(n, random.randint(1, 4) * 1_000_000, random.randint(100, 300) * 1000, 5_000_000, 1_000_000)
+                       for n in list(PARTY)[:4]]
+            hunt, _ = store.add_boss_hunt(report_from_text(party_text(start, 25, players, "Vcte")), ME, key)
+            store.link_boss_session(row["id"], hunt["id"])
+    start = (now - timedelta(days=4)).replace(hour=15, minute=0)
+    s = parse_solo_session(solo_text(start, 60, 2_000_000, 150_000, {"dragon": 90, "demodras": 1},
+                                     {"dragon scale mail": 1, "golden mug": 1, "dragon ham": 7, "platinum coin": 80}))
+    store.add_solo(ME, s.fingerprint(ME), s.to_dict(), key, None, spots[0] if spots else None, 312)
+    store._conn.commit()
+
     store.set_goal(ME, "day", "xp", 4_000_000)
     store.set_goal(ME, "week", "loot", 30_000_000)
     store.set_sell(ME, "green dragon leather", 20)
