@@ -215,6 +215,61 @@ class ServerTests(unittest.TestCase):
         self.assertEqual({it["key"]: it for it in d["period"]["items"]}["strange relic"]["value"], 8000)
         self.assertEqual({k["key"]: k["count"] for k in d["period"]["kills"]}["dragon"], 120)
 
+    def test_hunts_goals_sell_records_forecast(self):
+        server.store.load_places({"imported_at": "t", "hunts": [
+            ["Darama Dragon Lair", "Darashia", "Norte", 40, [33265, 32276, 7], True],
+            ["Mintwallin", "Thais", "Sul", 30, None, True]]})
+        places = {p["name"]: p["id"] for p in self.client.get("/api/places", headers=self.h(self.verify("Knightzao")[1].json()["token"])).json()}
+        token = self.verify("Knightzao")[1].json()["token"]
+        h = self.h(token)
+        dragon = places["Darama Dragon Lair"]
+        r = self.client.post("/api/stacker", json={"raw_text": SOLO, "nickname": "Knightzao", "place_id": dragon}, headers=h)
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["session"]["level"], 100)  # level do TibiaData no envio
+        # outra pessoa na mesma hunt (para ranking / jogadores / level médio)
+        k2 = server.store.create_key(30, "b")["key"]
+        server.store.force_main(k2, "Druidinha")
+        h2 = {"X-Access-Key": k2, "X-Device-Token": server.store.issue_device(k2, "Druidinha")}
+        raw2 = SOLO.replace("18:50:49", "17:50:49").replace("XP Gain: 7,684,000", "XP Gain: 3,000,000")
+        self.client.post("/api/stacker", json={"raw_text": raw2, "nickname": "Druidinha", "place_id": dragon}, headers=h2)
+        rank = self.client.get("/api/places/ranking?sort=xp", headers=h).json()["rows"]
+        self.assertEqual(rank[0]["name"], "Darama Dragon Lair")
+        self.assertEqual((rank[0]["sessions"], rank[0]["players"], rank[0]["avg_level"]), (2, 2, 100))
+        self.assertEqual(rank[0]["xp_per_hour"], round((7_684_000 + 3_000_000) / 4))  # 1h30 + 2h30
+        self.assertEqual(self.client.get("/api/places/ranking?min_level=200", headers=h).json()["rows"], [])
+        cmp_ = self.client.get(f"/api/places/compare?ids={dragon},{places['Mintwallin']}&nick=Knightzao", headers=h).json()
+        self.assertEqual(cmp_[0]["mine"]["sessions"], 1)
+        self.assertIsNone(cmp_[1]["stats"])
+        self.assertEqual(cmp_[0]["top_kills"][0], {"key": "dragon", "count": 240})
+        # nova hunt criada pelo usuário
+        self.assertEqual(self.client.post("/api/places", json={"name": "Minha Hunt Secreta"}, headers=h).json()["source"], "user")
+        # metas: só o dono altera
+        self.assertEqual(self.client.post("/api/goals/Knightzao", json={"period": "week", "metric": "xp", "target": 1000}, headers=h2).status_code, 403)
+        self.client.post("/api/goals/Knightzao", json={"period": "day", "metric": "xp", "target": 1000}, headers=h)
+        d = self.client.get("/api/stacker/Knightzao", headers=h).json()
+        self.assertTrue(d["is_owner"])
+        self.assertEqual(d["goals"][0]["target"], 1000)
+        # previsão: level 100 -> 101 precisa de 50*100² - 150*100 + 200 XP
+        self.assertEqual(d["forecast"]["xp_next_level"], 485_200)
+        self.assertEqual(d["forecast"]["mark"], 150)
+        # recordes e lucro líquido real (loot pelos preços - supplies)
+        self.assertEqual({r["label"] for r in d["records"]} >= {"Maior XP/h", "Sessão mais longa"}, True)
+        s = d["sessions"][0]
+        self.assertEqual(s["net_profit"], s["loot_value"] - s["supplies"])
+        self.assertEqual(s["place"]["name"], "Darama Dragon Lair")
+        # lista de venda: aviso ao juntar 2 gold... (moeda não entra) -> usa item comum
+        server.store.load_wiki({"imported_at": "t2", "items": [["Dragon Ham", 15, [["Billy"]], "Comidas"]], "npcs": {}})
+        raw3 = SOLO.replace("18:50:49", "16:50:49").replace("  3x gold coin", "  3x gold coin\n  5x dragon ham")
+        self.client.post("/api/stacker", json={"raw_text": raw3, "nickname": "Knightzao", "place_id": dragon}, headers=h)
+        self.client.post("/api/sell/Knightzao", json={"item": "dragon ham", "target": 5}, headers=h)
+        d = self.client.get("/api/stacker/Knightzao", headers=h).json()
+        self.assertEqual([a["key"] for a in d["alerts"]], ["dragon ham"])
+        self.assertNotIn("gold coin", [i["key"] for i in d["sell"]])
+        self.client.post("/api/sell/Knightzao/sold", json={"item": "dragon ham"}, headers=h)
+        d = self.client.get("/api/stacker/Knightzao", headers=h).json()
+        self.assertEqual(d["alerts"], [])
+        self.assertEqual({i["key"]: i["count"] for i in d["sell"]}["dragon ham"], 0)
+
     def test_renew_keeps_chars(self):
         self.verify("Hilay")
         k = server.store.renew_key(self.key, 10)

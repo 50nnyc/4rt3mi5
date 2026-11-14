@@ -74,6 +74,11 @@ if WIKI_FILE.exists():
     _wiki = json.loads(WIKI_FILE.read_text(encoding="utf-8"))
     if _wiki.get("imported_at") != store.wiki_imported_at():
         print("Carregando itens da TibiaWiki:", store.load_wiki(_wiki))
+HUNTS_FILE = WIKI_FILE.parent / "hunts.json"
+if HUNTS_FILE.exists():
+    _h = json.loads(HUNTS_FILE.read_text(encoding="utf-8"))
+    if _h.get("imported_at") != store.meta("hunts_imported_at"):
+        print("Carregando hunts da TibiaWiki:", store.load_places(_h))
 
 
 @asynccontextmanager
@@ -159,6 +164,7 @@ class CodeIn(BaseModel):
 class UploadIn(BaseModel):
     raw_text: str
     nickname: str
+    place_id: int | None = None  # Stacker: em qual hunt foi a sessão
 
 
 @app.get("/api/health")
@@ -312,21 +318,125 @@ def _sum_counts(pairs) -> list[dict]:
     return [{"key": k, "count": n} for k, n in sorted(acc.items(), key=lambda kv: -kv[1])]
 
 
+MIN_RECORD_SECONDS = 600  # recordes "por hora" ignoram sessões com menos de 10 minutos
+
+
+def xp_to_next_level(level: int) -> int:
+    """XP para ir do início do level L ao L+1 (fórmula oficial do Tibia)."""
+    return 50 * level * level - 150 * level + 200
+
+
+def total_xp(level: int) -> int:
+    return round(50 / 3 * (level ** 3 - 6 * level ** 2 + 17 * level - 12))
+
+
+def _per_hour(value: int, seconds: int) -> int:
+    return round(value * 3600 / seconds) if seconds else 0
+
+
+def _records(sessions: list[dict]) -> list[dict]:
+    longs = [s for s in sessions if s["duration_seconds"] >= MIN_RECORD_SECONDS]
+    defs = [
+        ("Maior XP/h", longs, lambda s: _per_hour(s["xp"], s["duration_seconds"]), "XP/h"),
+        ("Mais XP numa sessão", sessions, lambda s: s["xp"], "XP"),
+        ("Maior balance/h", longs, lambda s: _per_hour(s["balance"], s["duration_seconds"]), "gp/h"),
+        ("Maior lucro líquido/h", longs, lambda s: _per_hour(s["net_profit"], s["duration_seconds"]), "gp/h"),
+        ("Maior loot numa sessão", sessions, lambda s: s["loot_value"], "gp"),
+        ("Sessão mais longa", sessions, lambda s: s["duration_seconds"], "tempo"),
+    ]
+    out = []
+    for label, pool, f, unit in defs:
+        if pool:
+            best = max(pool, key=f)
+            out.append({"label": label, "value": f(best), "unit": unit, "session_id": best["id"],
+                        "started_at": best["started_at"], "place": (best.get("place") or {}).get("name")})
+    return out
+
+
+def _forecast(name: str, sessions: list[dict]) -> dict | None:
+    try:
+        ch = lookup_character(name)
+    except HTTPException:
+        ch = None
+    level = ch.level if ch else next((s["level"] for s in sessions if s.get("level")), None)
+    if not level:
+        return None
+    week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+    xp_week = sum(s["xp"] for s in sessions if s["started_at"] >= week_ago)
+    secs = sum(s["duration_seconds"] for s in sessions)
+    xp_h = _per_hour(sum(s["xp"] for s in sessions), secs)
+    per_day = xp_week / 7
+    one = xp_to_next_level(level)
+    mark = (level // 50 + 1) * 50
+    to_mark = total_xp(mark) - total_xp(level)
+    return {
+        "level": level, "xp_per_day": round(per_day), "xp_per_hour": xp_h,
+        "next_level": level + 1, "xp_next_level": one,
+        "days_next_level": round(one / per_day, 1) if per_day else None,
+        "hours_next_level": round(one / xp_h, 1) if xp_h else None,
+        "mark": mark, "xp_mark": to_mark,
+        "days_mark": round(to_mark / per_day) if per_day else None,
+    }
+
+
+def _goals(name: str, sessions: list[dict]) -> list[dict]:
+    now = datetime.now()
+    today = now.date().isoformat()
+    week_start = (now - timedelta(days=now.weekday())).date().isoformat()  # segunda-feira
+    pools = {"day": [s for s in sessions if s["started_at"][:10] == today],
+             "week": [s for s in sessions if s["started_at"][:10] >= week_start]}
+    out = []
+    for g in store.goals(name):
+        done = sum(s["xp"] if g["metric"] == "xp" else s["loot_value"] for s in pools[g["period"]])
+        out.append({**g, "done": done, "pct": min(100, round(done * 100 / g["target"])) if g["target"] else 0})
+    order = {("day", "xp"): 0, ("day", "loot"): 1, ("week", "xp"): 2, ("week", "loot"): 3}
+    return sorted(out, key=lambda g: order[(g["period"], g["metric"])])
+
+
+def _sell_list(name: str, sessions: list[dict], prices: dict) -> list[dict]:
+    watch = store.sell_watch(name)
+    acc: dict[str, int] = {}
+    for s in sessions:
+        for it in s["loot"]:
+            since = (watch.get(it["key"]) or {}).get("since")
+            if since is None or s["started_at"] > since:
+                acc[it["key"]] = acc.get(it["key"], 0) + it["count"]
+    out = []
+    for key, count in acc.items():
+        p = prices[key]
+        if p.get("source") == "moeda":
+            continue  # moedas não se vendem
+        target = (watch.get(key) or {}).get("target")
+        out.append({"key": key, "count": count, "value": count * p["unit_price"], "target": target,
+                    "reached": bool(target and count >= target),
+                    "best": p["buyers"][0] if p["buyers"] else None, "since": (watch.get(key) or {}).get("since")})
+    for key, w in watch.items():  # item com aviso mas zerado depois de "vendi"
+        if key not in acc and w.get("target"):
+            out.append({"key": key, "count": 0, "value": 0, "target": w["target"], "reached": False, "best": None,
+                        "since": w.get("since")})
+    return sorted(out, key=lambda it: (not it["reached"], -it["value"], -it["count"]))
+
+
 @app.get("/api/stacker/{name}")
 def stacker(name: str, period: int = 7, access: dict = Depends(require_session)):
     period = period if period in PERIOD_DAYS else 7
     sessions = [_public(s, access) for s in store.solo_for_player(name)]
     kills, loot = store.solo_details([s["id"] for s in sessions])
     keys = {store.resolve_item(k) for rows in loot.values() for k, _ in rows}
+    keys |= set(store.sell_watch(name))
     prices = store.price_info(list(keys), access["key"])
+    places = {p["id"]: p for p in (store.place(pid) for pid in {s.get("place_id") for s in sessions} if pid) if p}
     for s in sessions:
         s.pop("raw_text", None)
+        pl = places.get(s.get("place_id"))
+        s["place"] = {"id": pl["id"], "name": pl["name"]} if pl else None
         s["kills"] = [{"key": c, "count": n} for c, n in kills[s["id"]]]
         items = _sum_counts((store.resolve_item(k), n) for k, n in loot[s["id"]])
         for it in items:
             it["value"] = it["count"] * prices[it["key"]]["unit_price"]
         s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
         s["loot_value"] = sum(it["value"] for it in items)
+        s["net_profit"] = s["loot_value"] - s["supplies"]  # lucro líquido real: loot pelos preços de NPC - supplies
 
     cutoff = (datetime.now() - timedelta(days=period)).isoformat()
     in_period = [s for s in sessions if s["started_at"] >= cutoff]
@@ -334,23 +444,143 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
     for it in p_items:
         it["value"] = it["count"] * prices[it["key"]]["unit_price"]
     p_items.sort(key=lambda it: (-it["value"], -it["count"]))
+    totals = _totals(in_period)
+    loot_value = sum(it["value"] for it in p_items)
     period_data = {
         "days": period,
-        "totals": _totals(in_period),
+        "totals": totals,
         "items": p_items,
         "kills": _sum_counts((k["key"], k["count"]) for s in in_period for k in s["kills"]),
-        "loot_value": sum(it["value"] for it in p_items),
+        "loot_value": loot_value,
+        "net_profit": loot_value - totals["supplies"],
+        "net_profit_per_hour": _per_hour(loot_value - totals["supplies"], totals["duration_seconds"]),
         "unpriced": sum(1 for it in p_items if not prices[it["key"]]["unit_price"]),
     }
     day = sessions[0]["started_at"][:10] if sessions else None
+    sell = _sell_list(name, sessions, prices)
     return {
+        "is_owner": store.is_linked(access["key"], name),
         "day": day,
         "day_totals": _totals([s for s in sessions if s["started_at"][:10] == day]),
         "lifetime": _totals(sessions),
         "sessions": sessions,
         "period": period_data,
         "prices": prices,
+        "goals": _goals(name, sessions),
+        "forecast": _forecast(name, sessions),
+        "records": _records(sessions),
+        "sell": sell,
+        "alerts": [it for it in sell if it["reached"]],
     }
+
+
+def require_owner(name: str, access: dict) -> None:
+    if not store.is_linked(access["key"], name):
+        raise HTTPException(403, "Só o dono do personagem pode alterar isso.")
+
+
+class GoalIn(BaseModel):
+    period: str
+    metric: str
+    target: int | None = None
+
+
+@app.post("/api/goals/{name}")
+def set_goal(name: str, body: GoalIn, access: dict = Depends(require_session)):
+    require_owner(name, access)
+    if body.period not in ("day", "week") or body.metric not in ("xp", "loot"):
+        raise HTTPException(422, "Meta inválida.")
+    store.set_goal(name, body.period, body.metric, body.target if body.target and body.target > 0 else None)
+    return {"goals": store.goals(name)}
+
+
+class SellIn(BaseModel):
+    item: str
+    target: int | None = None
+
+
+@app.post("/api/sell/{name}")
+def set_sell_target(name: str, body: SellIn, access: dict = Depends(require_session)):
+    """Avisar quando juntar `target` unidades do item."""
+    require_owner(name, access)
+    store.set_sell(name, store.resolve_item(item_key(body.item)), body.target if body.target and body.target > 0 else None)
+    return {"ok": True}
+
+
+@app.post("/api/sell/{name}/sold")
+def mark_sold(name: str, body: SellIn, access: dict = Depends(require_session)):
+    """'Vendi': zera a contagem do item (o histórico no banco continua)."""
+    require_owner(name, access)
+    store.set_sell(name, store.resolve_item(item_key(body.item)), sold_at=datetime.now().isoformat(timespec="seconds"),
+                   update_target=False)
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------ hunts (locais, ranking, comparação)
+class PlaceIn(BaseModel):
+    name: str
+    city: str | None = None
+
+
+class PlaceSet(BaseModel):
+    place_id: int | None = None
+
+
+@app.get("/api/places")
+def list_places(_: dict = Depends(require_session)):
+    return store.places()
+
+
+@app.post("/api/places")
+def create_place(body: PlaceIn, access: dict = Depends(require_session)):
+    name = " ".join(body.name.split())
+    if not 3 <= len(name) <= 60:
+        raise HTTPException(422, "Nome da hunt deve ter de 3 a 60 caracteres.")
+    return store.create_place(name, (body.city or "").strip() or None, access["key"])
+
+
+@app.post("/api/stacker/session/{session_id}/place")
+def set_place(session_id: int, body: PlaceSet, access: dict = Depends(require_session)):
+    exists, owner = store.uploader_of("solo_sessions", session_id)
+    if not exists:
+        raise HTTPException(404, "Sessão não encontrada.")
+    if owner != access["key"]:
+        raise HTTPException(403, "Só quem enviou pode alterar a hunt da sessão.")
+    if body.place_id is not None and store.place(body.place_id) is None:
+        raise HTTPException(404, "Hunt não encontrada.")
+    store.set_session_place(session_id, body.place_id)
+    return {"ok": True}
+
+
+@app.get("/api/places/ranking")
+def places_ranking(sort: str = "xp", min_level: int | None = None, max_level: int | None = None,
+                   _: dict = Depends(require_session)):
+    rows = store.place_stats(min_level, max_level)
+    key = "gold_per_hour" if sort == "gold" else "xp_per_hour"
+    return {"sort": sort, "rows": sorted(rows, key=lambda r: -r[key])}
+
+
+@app.get("/api/places/compare")
+def places_compare(ids: str, nick: str = "", access: dict = Depends(require_session)):
+    place_ids = [int(i) for i in ids.split(",") if i.strip().isdigit()][:3]
+    general = {r["id"]: r for r in store.place_stats(place_ids=place_ids)}
+    mine = {r["id"]: r for r in store.place_stats(place_ids=place_ids, name=nick)} if nick else {}
+    out = []
+    for pid in place_ids:
+        p = store.place(pid)
+        if not p:
+            continue
+        kills, loot = store.place_top(pid)
+        loot_keys = [store.resolve_item(k) for k, _ in loot]
+        prices = store.price_info(loot_keys, access["key"])
+        items = _sum_counts((store.resolve_item(k), n) for k, n in loot)
+        for it in items:
+            it["value"] = it["count"] * prices[it["key"]]["unit_price"]
+            it["name"] = prices[it["key"]]["name"]
+        out.append({"place": p, "stats": general.get(pid), "mine": mine.get(pid),
+                    "top_kills": [{"key": k, "count": n} for k, n in kills],
+                    "top_items": sorted((it for it in items if it["value"] > 0), key=lambda it: -it["value"])[:5]})
+    return out
 
 
 class PriceIn(BaseModel):
@@ -378,7 +608,15 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     except ParseError as e:
         raise HTTPException(422, str(e))
     name = require_uploader(body.nickname, access)
-    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text)
+    if body.place_id is not None and store.place(body.place_id) is None:
+        raise HTTPException(404, "Hunt não encontrada.")
+    try:  # level do personagem no momento do envio (para o level médio das hunts)
+        ch = lookup_character(name)
+        level = ch.level if ch else None
+    except HTTPException:
+        level = None
+    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text,
+                                  body.place_id, level)
     row.pop("raw_text", None)
     return {"created": created, "session": _public(row, access)}
 

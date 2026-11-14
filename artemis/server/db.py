@@ -123,6 +123,35 @@ CREATE TABLE IF NOT EXISTS item_user_prices (
     PRIMARY KEY (item_key, access_key)
 );
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
+-- 0.7.0: locais de hunt (TibiaWiki BR + criados pelos usuários)
+CREATE TABLE IF NOT EXISTS hunt_places (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    city          TEXT,
+    location      TEXT,
+    level         INTEGER,          -- level recomendado (wiki)
+    x INTEGER, y INTEGER, z INTEGER,
+    premium       INTEGER,
+    source        TEXT NOT NULL DEFAULT 'wiki',   -- 'wiki' ou 'user'
+    created_by    TEXT
+);
+-- metas de XP/loot por personagem (dia e semana)
+CREATE TABLE IF NOT EXISTS goals (
+    name_key   TEXT NOT NULL,
+    period     TEXT NOT NULL,   -- 'day' | 'week'
+    metric     TEXT NOT NULL,   -- 'xp' | 'loot'
+    target     INTEGER NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (name_key, period, metric)
+);
+-- lista de venda: aviso quando juntar X de um item; "since" = última vez que marcou "vendi"
+CREATE TABLE IF NOT EXISTS sell_watch (
+    name_key TEXT NOT NULL,
+    item_key TEXT NOT NULL,
+    target   INTEGER,
+    since    TEXT,
+    PRIMARY KEY (name_key, item_key)
+);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -161,8 +190,13 @@ class Store:
         for table in ("hunts", "solo_sessions"):  # 0.5.0: quem enviou (só ele pode apagar)
             if "uploader_key" not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN uploader_key TEXT")
-        if "raw_text" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(solo_sessions)")}:
+        solo_cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(solo_sessions)")}
+        if "raw_text" not in solo_cols:
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN raw_text TEXT")  # 0.6.0: texto original
+        if "place_id" not in solo_cols:  # 0.7.0: em qual hunt foi a sessão e level do personagem no envio
+            self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN place_id INTEGER REFERENCES hunt_places(id)")
+        if "level" not in solo_cols:
+            self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN level INTEGER")
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
@@ -382,7 +416,7 @@ class Store:
         return (row is not None, row[0] if row else None)
 
     def add_solo(self, name: str, fingerprint: str, data: dict, uploader_key: str | None = None,
-                 raw_text: str | None = None) -> tuple[dict, bool]:
+                 raw_text: str | None = None, place_id: int | None = None, level: int | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM solo_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
             if existing:
@@ -390,9 +424,10 @@ class Store:
             cols = ", ".join(SOLO_COLUMNS)
             marks = ", ".join("?" for _ in SOLO_COLUMNS)
             cur = self._conn.execute(
-                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, raw_text, {cols}) "
-                f"VALUES (?, ?, ?, ?, ?, ?, {marks})",
-                (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, raw_text, *(data[c] for c in SOLO_COLUMNS)),
+                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, raw_text, place_id, level, {cols}) "
+                f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, {marks})",
+                (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, raw_text, place_id, level,
+                 *(data[c] for c in SOLO_COLUMNS)),
             )
             sid = cur.lastrowid
             self._conn.executemany("INSERT INTO solo_kills VALUES (?, ?, ?)", [(sid, c, n) for c, n in data.get("kills", [])])
@@ -500,6 +535,114 @@ class Store:
             else:
                 self._conn.execute("INSERT OR REPLACE INTO item_user_prices VALUES (?, ?, ?, ?)",
                                    (key, access_key, price, _iso(utcnow())))
+            self._conn.commit()
+
+    # ------------------------------------------------------------------ hunts (locais)
+    def load_places(self, data: dict) -> int:
+        """Importa/atualiza os locais de hunt da wiki sem mudar os ids (sessões apontam para eles)."""
+        with self._lock:
+            for name, city, location, level, coords, premium in data["hunts"]:
+                x, y, z = coords or (None, None, None)
+                self._conn.execute("INSERT OR IGNORE INTO hunt_places (name, source) VALUES (?, 'wiki')", (name,))
+                self._conn.execute(
+                    "UPDATE hunt_places SET city=?, location=?, level=?, x=?, y=?, z=?, premium=?, source='wiki' WHERE name=?",
+                    (city or None, location or None, level, x, y, z, int(bool(premium)), name))
+            self._conn.execute("INSERT OR REPLACE INTO meta VALUES ('hunts_imported_at', ?)", (data.get("imported_at", ""),))
+            self._conn.commit()
+        return len(data["hunts"])
+
+    def meta(self, k: str) -> str | None:
+        row = self._conn.execute("SELECT v FROM meta WHERE k = ?", (k,)).fetchone()
+        return row[0] if row else None
+
+    def places(self) -> list[dict]:
+        rows = self._conn.execute(
+            "SELECT p.id, p.name, p.city, p.level, p.source, COUNT(s.id) AS sessions FROM hunt_places p "
+            "LEFT JOIN solo_sessions s ON s.place_id = p.id GROUP BY p.id ORDER BY p.name")
+        return [dict(r) for r in rows]
+
+    def place(self, place_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM hunt_places WHERE id = ?", (place_id,)).fetchone()
+        return dict(row) if row else None
+
+    def create_place(self, name: str, city: str | None, created_by: str) -> dict:
+        name = " ".join(name.split())
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM hunt_places WHERE name = ?", (name,)).fetchone()
+            if row is None:
+                cur = self._conn.execute("INSERT INTO hunt_places (name, city, source, created_by) VALUES (?, ?, 'user', ?)",
+                                         (name, city or None, created_by))
+                self._conn.commit()
+                row = self._conn.execute("SELECT * FROM hunt_places WHERE id = ?", (cur.lastrowid,)).fetchone()
+        return dict(row)
+
+    def set_session_place(self, session_id: int, place_id: int | None) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE solo_sessions SET place_id = ? WHERE id = ?", (place_id, session_id))
+            self._conn.commit()
+
+    def place_stats(self, min_level: int | None = None, max_level: int | None = None,
+                    place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600) -> list[dict]:
+        """XP/h, gold/h (balance), level médio e nº de jogadores por hunt. Ignora sessões com menos de 10 min."""
+        where, args = ["s.duration_seconds >= ?"], [min_seconds]
+        if min_level is not None:
+            where.append("s.level >= ?"); args.append(min_level)
+        if max_level is not None:
+            where.append("s.level <= ?"); args.append(max_level)
+        if place_ids:
+            where.append(f"p.id IN ({','.join('?' * len(place_ids))})"); args += place_ids
+        if name:
+            where.append("s.name_key = ?"); args.append(name_key(name))
+        rows = self._conn.execute(
+            "SELECT p.id, p.name, p.city, p.level AS wiki_level, COUNT(s.id) AS sessions, COUNT(DISTINCT s.name_key) AS players, "
+            "SUM(s.xp) AS xp, SUM(s.balance) AS balance, SUM(s.supplies) AS supplies, SUM(s.duration_seconds) AS seconds, "
+            "ROUND(AVG(s.level)) AS avg_level, MIN(s.level) AS min_level, MAX(s.level) AS max_level "
+            "FROM solo_sessions s JOIN hunt_places p ON p.id = s.place_id "
+            f"WHERE {' AND '.join(where)} GROUP BY p.id", args)
+        out = []
+        for r in rows:
+            d = dict(r)
+            hours = d["seconds"] / 3600
+            d["xp_per_hour"] = round(d["xp"] / hours) if hours else 0
+            d["gold_per_hour"] = round(d["balance"] / hours) if hours else 0
+            out.append(d)
+        return out
+
+    def place_top(self, place_id: int, limit: int = 5) -> tuple[list, list]:
+        kills = self._conn.execute(
+            "SELECT k.creature, SUM(k.count) AS n FROM solo_kills k JOIN solo_sessions s ON s.id = k.session_id "
+            "WHERE s.place_id = ? GROUP BY k.creature ORDER BY n DESC LIMIT ?", (place_id, limit)).fetchall()
+        loot = self._conn.execute(
+            "SELECT l.item_key, SUM(l.count) AS n FROM solo_loot l JOIN solo_sessions s ON s.id = l.session_id "
+            "WHERE s.place_id = ? GROUP BY l.item_key", (place_id,)).fetchall()
+        return [(r[0], r[1]) for r in kills], [(r[0], r[1]) for r in loot]
+
+    # ------------------------------------------------------------------ metas e lista de venda
+    def goals(self, name: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute("SELECT period, metric, target FROM goals WHERE name_key = ?", (name_key(name),))]
+
+    def set_goal(self, name: str, period: str, metric: str, target: int | None) -> None:
+        with self._lock:
+            if not target:
+                self._conn.execute("DELETE FROM goals WHERE name_key=? AND period=? AND metric=?", (name_key(name), period, metric))
+            else:
+                self._conn.execute("INSERT OR REPLACE INTO goals VALUES (?, ?, ?, ?, ?)",
+                                   (name_key(name), period, metric, target, _iso(utcnow())))
+            self._conn.commit()
+
+    def sell_watch(self, name: str) -> dict[str, dict]:
+        return {r["item_key"]: dict(r) for r in self._conn.execute("SELECT * FROM sell_watch WHERE name_key = ?", (name_key(name),))}
+
+    def set_sell(self, name: str, item: str, target: int | None = None, sold_at: str | None = None,
+                 update_target: bool = True) -> None:
+        cur = self.sell_watch(name).get(item, {})
+        target = target if update_target else cur.get("target")
+        since = sold_at or cur.get("since")
+        with self._lock:
+            if target is None and since is None:
+                self._conn.execute("DELETE FROM sell_watch WHERE name_key=? AND item_key=?", (name_key(name), item))
+            else:
+                self._conn.execute("INSERT OR REPLACE INTO sell_watch VALUES (?, ?, ?, ?)", (name_key(name), item, target, since))
             self._conn.commit()
 
     def delete_solo(self, session_id: int) -> bool:
