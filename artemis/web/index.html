@@ -430,6 +430,7 @@
     <button class="item" data-page="ach">🏆 Conquistas</button>
     <button class="item" data-page="chars">👤 Meus personagens</button>
     <button class="item" data-page="news">📰 Novidades <span class="pill hidden" id="newsDot">novo</span></button>
+    <button class="item hidden" id="renewItem">🔑 Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem">📲 Adicionar à tela inicial</button>
     <div style="height:10px"></div>
     <button class="item" id="changeNick">🔁 Trocar personagem</button>
@@ -745,6 +746,38 @@ $("#storeFree").addEventListener("click", async (e) => {
   finally { btn.disabled = false; }
 });
 
+/* ---------- 0.14.0: renovação grátis de 7 dias (menu ☰) ---------- */
+const fmtDay = (iso) => new Date(iso).toLocaleDateString("pt-BR");
+function renewSheet(html) { const sh = $("#sheet"); sh.innerHTML = html; sh.classList.remove("hidden"); }
+$("#renewItem").addEventListener("click", () => {
+  closeDrawer();
+  const exp = (S.me && S.me.expires_at) || S.keyExpires;
+  const left = exp ? Math.floor((new Date(exp) - Date.now()) / 86400000) : 0;
+  renewSheet(`<b>🔑 Renove 7 dias grátis da sua chave</b>
+    <div class="muted" style="font-size:14px; margin-top:2px">Sua chave ${exp ? `vale até <b>${esc(fmtDay(exp))}</b>` : "está ativa"}.
+      ${left >= 7 ? "Ela ainda tem 7 dias ou mais: a renovação grátis fica disponível quando faltar menos que isso."
+                  : "Renove agora e ela passa a valer por 7 dias a partir de hoje, com os mesmos personagens."}</div>
+    <div class="actions">${left >= 7 ? "" : `<button class="btn" id="renewGo">Renovar 7 dias grátis</button>`}
+      <button class="btn2" data-paste-cancel>${left >= 7 ? "Ok" : "Agora não"}</button></div>`);
+  const b = $("#renewGo");
+  if (b) b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const r = await api("POST", "/api/key/renew-free");
+      S.me = r.me; if (r.me.expires_at) S.keyExpires = r.me.expires_at;
+      updateDrawerFoot();
+      renewSheet(`<b>${r.renewed ? "✔ Chave renovada!" : "Sua chave já está em dia"}</b>
+        <div class="muted" style="font-size:14px; margin-top:2px">${r.me.expires_at ? `Agora ela vale até <b>${esc(fmtDay(r.me.expires_at))}</b>.` : ""}</div>
+        <div class="actions"><button class="btn2" data-paste-cancel>Ok</button></div>`);
+      if (S.page === "home") loadHome();
+    } catch (e) {
+      b.disabled = false;
+      if (!$("#renewErr")) b.parentElement.insertAdjacentHTML("afterend", `<div class="err" id="renewErr"></div>`);
+      $("#renewErr").textContent = e.message;
+    }
+  };
+});
+
 /* ---------- 0.13.0: uso das telas (só contadores por tela, sem dizer quem) ---------- */
 const Track = {
   acted: true,
@@ -978,6 +1011,7 @@ function go(page, opts = {}) {
 }
 function updateDrawerFoot() {
   const exp = (S.me && S.me.expires_at) || S.keyExpires;
+  $("#renewItem").classList.toggle("hidden", !exp);  // sem vencimento (vitalício): nada para renovar
   $("#drawerFoot").innerHTML = `${S.me && S.me.main_char ? "Main: <b>" + esc(S.me.main_char) + "</b><br>" : ""}`
     + `${exp ? "Código válido até " + esc(new Date(exp).toLocaleDateString("pt-BR")) + "<br>" : ""}versão ${esc(S.version || "")}`;
 }
@@ -1279,7 +1313,7 @@ function expiryNotice(streak) {
   const days = Math.floor(ms / 86400000);
   const whenTxt = days <= 0 ? "em menos de 24 horas" : days === 1 ? "em 1 dia" : `em ${days} dias`;
   return `<div class="banner bad"><b>⏰ Seu código de acesso vence ${whenTxt}</b> (${esc(new Date(exp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}).
-    <div class="hint">Peça a renovação para quem te enviou o código. Depois que vence, o código e os aparelhos liberados são apagados
+    <div class="hint">Renove grátis por mais 7 dias no menu ☰ → <b>🔑 Renove 7 dias grátis da sua chave</b>. Depois que vence, o código e os aparelhos liberados são apagados
       (suas hunts e sessões continuam salvas). Enviar uma hunt por dia também ajuda: a cada 30 dias seguidos o código ganha +7 dias.</div></div>`;
 }
 async function loadHome() {

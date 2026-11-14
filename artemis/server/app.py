@@ -522,6 +522,17 @@ def me(access: dict = Depends(require_session)):
     return me_payload(access)
 
 
+@app.post("/api/key/renew-free")
+def renew_free(access: dict = Depends(require_session)):
+    """0.14.0: o próprio usuário renova 7 dias grátis (só completa até 7 dias; nunca tira dias)."""
+    if access.get("lifetime"):
+        return {"renewed": False, "days_left": None, "me": me_payload(access)}
+    renewed, current = store.renew_free(access["key"])
+    current = current or access
+    left = (datetime.fromisoformat(current["expires_at"]) - datetime.now(timezone.utc)).total_seconds() / 86400
+    return {"renewed": renewed, "days_left": int(left), "free_days": store.FREE_RENEW_DAYS, "me": me_payload(current)}
+
+
 @app.post("/api/chars/main")
 def set_main(body: CharIn, access: dict = Depends(require_session)):
     if not store.set_main(access["key"], body.character):

@@ -89,6 +89,10 @@ mesmo!"**: cria na hora um código de 7 dias (rótulo "Loja (grátis)"). Limites
 hash com sal que muda a cada reinício, o banco nunca guarda o IP) e no máximo 20 por dia no total. O painel tem
 **Pausar/Ligar** a chave grátis.
 
+**Renovação grátis (0.14.0):** no menu ☰, **🔑 Renove 7 dias grátis da sua chave** (`POST /api/key/renew-free`).
+Só completa para 7 dias a partir de agora quando falta menos que isso; nunca tira dias. Códigos vitalícios
+não veem o item.
+
 ## Música
 
 As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o

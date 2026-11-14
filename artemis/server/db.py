@@ -397,6 +397,19 @@ class Store:
             self._conn.commit()
             return cur.rowcount
 
+    FREE_RENEW_DAYS = 7
+
+    def renew_free(self, key: str) -> tuple[bool, dict | None]:
+        """Renovação grátis pelo próprio usuário: completa para 7 dias a partir de agora, só se faltar menos que isso.
+        Nunca tira dias. Devolve (renovou?, chave)."""
+        key = normalize_key(key)
+        new = _iso(utcnow() + timedelta(days=self.FREE_RENEW_DAYS))
+        with self._lock:
+            cur = self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at < ? AND lifetime = 0",
+                                     (new, key, new))
+            self._conn.commit()
+        return cur.rowcount > 0, self.validate_key(key)
+
     def set_lifetime(self, key: str, on: bool) -> dict | None:
         """Liga/desliga o código vitalício. Ao desligar um código já vencido, ele ganha 7 dias (não some na hora)."""
         key = normalize_key(key)

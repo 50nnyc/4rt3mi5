@@ -63,6 +63,25 @@ class V013Tests(unittest.TestCase):
         self.assertEqual(rep["news"]["actions"], 0)
         self.assertEqual(self.client.get("/api/admin/screens").status_code, 401)
 
+    def test_renew_free_only_tops_up_to_7_days(self):
+        token = self.verify("Hilay")[1].json()["token"]
+        self.assertEqual(self.client.post("/api/key/renew-free", headers=self.h()).status_code, 401)
+        # tem 30 dias: não mexe
+        r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
+        self.assertFalse(r["renewed"])
+        self.assertGreaterEqual(r["days_left"], 29)
+        # faltam 2 dias: volta para 7
+        server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
+                                   (_iso(utcnow() + timedelta(days=2)), self.key))
+        r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
+        self.assertTrue(r["renewed"])
+        self.assertEqual(r["days_left"], 6)  # 7 dias menos alguns segundos
+        self.assertGreater(r["me"]["expires_at"], _iso(utcnow() + timedelta(days=6, hours=23)))
+        # vitalício: nada a renovar e nada aparece
+        server.store.set_lifetime(self.key, True)
+        r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
+        self.assertEqual((r["renewed"], r["me"]["expires_at"]), (False, None))
+
     def test_spoofed_forwarded_for_does_not_dodge_lockout(self):
         for i in range(server.FAIL_LIMIT):
             self.client.post("/api/auth", headers={"X-Access-Key": "ART-ERRA-DO00", "X-Forwarded-For": f"9.9.9.{i}, 5.5.5.5"})

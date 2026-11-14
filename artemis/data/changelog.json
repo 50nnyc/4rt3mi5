@@ -1,6 +1,14 @@
 {
   "releases": [
     {
+      "version": "0.14.0",
+      "date": "2026-11-14",
+      "title": "Renovação grátis",
+      "changes": [
+        "🔑 Novo item no menu ☰: \"Renove 7 dias grátis da sua chave\". Quando faltar menos de 7 dias, toque e sua chave volta a valer 7 dias a partir de hoje, com os mesmos personagens."
+      ]
+    },
+    {
       "version": "0.13.0",
       "date": "2026-11-14",
       "title": "Loja e chave grátis",
