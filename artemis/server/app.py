@@ -32,7 +32,8 @@ from artemis import APP_NAME, __version__
 from artemis.core.parser import ParseError
 from artemis.core.report import report_from_text
 from artemis.core.session import item_key, parse_solo_session
-from artemis.core.tibiadata import TibiaDataError, fetch_character
+from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
+from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from .db import Store, name_key, normalize_key
 
@@ -321,14 +322,6 @@ def _sum_counts(pairs) -> list[dict]:
 MIN_RECORD_SECONDS = 600  # recordes "por hora" ignoram sessões com menos de 10 minutos
 
 
-def xp_to_next_level(level: int) -> int:
-    """XP para ir do início do level L ao L+1 (fórmula oficial do Tibia)."""
-    return 50 * level * level - 150 * level + 200
-
-
-def total_xp(level: int) -> int:
-    return round(50 / 3 * (level ** 3 - 6 * level ** 2 + 17 * level - 12))
-
 
 def _per_hour(value: int, seconds: int) -> int:
     return round(value * 3600 / seconds) if seconds else 0
@@ -353,29 +346,74 @@ def _records(sessions: list[dict]) -> list[dict]:
     return out
 
 
+_exp_cache: dict[str, tuple[float, tuple[int, int] | None]] = {}
+
+
+def current_experience(ch, sessions: list[dict]) -> tuple[int, str]:
+    """XP atual do personagem e a origem ("highscore" ou "level").
+
+    Usa o highscore de experiência do mundo (top 1000, atualizado ~1x/dia) e soma
+    o XP das sessões enviadas depois da atualização. Fora do top 1000, parte do
+    início do level atual (tabela oficial de experiência).
+    """
+    level = ch.level
+    k = name_key(ch.name)
+    hit = _exp_cache.get(k)
+    if hit and time.monotonic() - hit[0] < 1800:
+        hs = hit[1]
+    else:
+        hs = fetch_experience(ch.name, ch.world, level) if ch.world else None
+        _exp_cache[k] = (time.monotonic(), hs)
+    floor, ceil = xp_at(level), xp_at(level + 1) - 1
+    if not hs:
+        return floor, "level"
+    xp, age_min = hs
+    since = (datetime.now() - timedelta(minutes=age_min)).isoformat()
+    xp += sum(s["xp"] for s in sessions if (s.get("ended_at") or s["started_at"]) >= since)
+    if level_for_xp(xp) < level:  # highscore antigo demais: o level do site é mais novo
+        return floor, "level"
+    return min(max(xp, floor), ceil), "highscore"
+
+
 def _forecast(name: str, sessions: list[dict]) -> dict | None:
     try:
         ch = lookup_character(name)
     except HTTPException:
         ch = None
-    level = ch.level if ch else next((s["level"] for s in sessions if s.get("level")), None)
-    if not level:
+    if not ch:
         return None
+    level = ch.level
+    cur, source = current_experience(ch, sessions)
     week_ago = (datetime.now() - timedelta(days=7)).isoformat()
     xp_week = sum(s["xp"] for s in sessions if s["started_at"] >= week_ago)
     secs = sum(s["duration_seconds"] for s in sessions)
     xp_h = _per_hour(sum(s["xp"] for s in sessions), secs)
     per_day = xp_week / 7
-    one = xp_to_next_level(level)
+    lvl_size = xp_to_next_level(level)
+    pct = round((cur - xp_at(level)) * 100 / lvl_size, 1) if lvl_size else 0
+
+    def row(target: int) -> dict:
+        need = max(0, xp_at(target) - cur)
+        return {"level": target, "total_xp": xp_at(target), "xp_left": need,
+                "days": round(need / per_day, 1) if per_day else None,
+                "hours": round(need / xp_h, 1) if xp_h else None}
+
+    targets = [level + i for i in range(1, 6)]
+    for step in (50, 100):
+        m = (level // step + 1) * step
+        if m not in targets:
+            targets.append(m)
+    table = [row(t) for t in sorted(targets)]
+    nxt = table[0]
     mark = (level // 50 + 1) * 50
-    to_mark = total_xp(mark) - total_xp(level)
+    mrow = next(r for r in table if r["level"] == mark)
     return {
-        "level": level, "xp_per_day": round(per_day), "xp_per_hour": xp_h,
-        "next_level": level + 1, "xp_next_level": one,
-        "days_next_level": round(one / per_day, 1) if per_day else None,
-        "hours_next_level": round(one / xp_h, 1) if xp_h else None,
-        "mark": mark, "xp_mark": to_mark,
-        "days_mark": round(to_mark / per_day) if per_day else None,
+        "level": level, "xp_now": cur, "xp_source": source, "level_pct": pct,
+        "xp_per_day": round(per_day), "xp_per_hour": xp_h,
+        "next_level": level + 1, "xp_next_level": nxt["xp_left"],
+        "days_next_level": nxt["days"], "hours_next_level": nxt["hours"],
+        "mark": mark, "xp_mark": mrow["xp_left"], "days_mark": mrow["days"],
+        "table": table,
     }
 
 

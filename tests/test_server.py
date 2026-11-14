@@ -29,13 +29,17 @@ class ServerTests(unittest.TestCase):
         self.client = TestClient(server.app)
         server._char_cache.clear()
         server._last_check.clear()
+        server._exp_cache.clear()
         COMMENTS.clear()
         self.patch = mock.patch.object(server, "fetch_character", fake_fetch)
         self.patch.start()
+        self.hs = mock.patch.object(server, "fetch_experience", lambda *a, **k: None)
+        self.hs.start()
         self.key = server.store.create_key(30, "teste")["key"]
 
     def tearDown(self):
         self.patch.stop()
+        self.hs.stop()
 
     def h(self, token=""):
         return {"X-Access-Key": self.key, "X-Device-Token": token}
@@ -252,6 +256,15 @@ class ServerTests(unittest.TestCase):
         # previsão: level 100 -> 101 precisa de 50*100² - 150*100 + 200 XP
         self.assertEqual(d["forecast"]["xp_next_level"], 485_200)
         self.assertEqual(d["forecast"]["mark"], 150)
+        self.assertEqual(d["forecast"]["xp_source"], "level")
+        # com XP exata do highscore (100.000 XP dentro do level 100)
+        server._exp_cache.clear()
+        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (server.xp_at(100) + 100_000, 0)):
+            f = self.client.get("/api/stacker/Knightzao", headers=h).json()["forecast"]
+        self.assertEqual(f["xp_source"], "highscore")
+        self.assertEqual(f["xp_next_level"], 385_200)
+        self.assertEqual(f["level_pct"], round(100_000 * 100 / 485_200, 1))
+        self.assertEqual([r["level"] for r in f["table"]], [101, 102, 103, 104, 105, 150, 200])
         # recordes e lucro líquido real (loot pelos preços - supplies)
         self.assertEqual({r["label"] for r in d["records"]} >= {"Maior XP/h", "Sessão mais longa"}, True)
         s = d["sessions"][0]

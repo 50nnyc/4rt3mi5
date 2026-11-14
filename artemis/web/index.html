@@ -169,6 +169,10 @@
   .gbar { height: 10px; background: var(--track); border-radius: 99px; overflow: hidden; margin-top: 4px; }
   .gbar > div { height: 100%; background: var(--bar); border-radius: 99px; }
   .gbar.done > div { background: var(--green); }
+  .lvl-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+  .lvl-table th, .lvl-table td { padding: 5px 4px; border-top: 1px solid var(--line); text-align: left; }
+  .lvl-table th { color: var(--muted); font-weight: 500; }
+  .lvl-table .num { text-align: right; white-space: nowrap; }
   .alert { border-radius: 12px; padding: 12px 14px; margin: 0 0 10px; background: rgba(242, 201, 76, .1); border: 1px solid rgba(242, 201, 76, .5); }
   .rank { display: grid; grid-template-columns: 34px 1fr auto; gap: 4px 10px; align-items: center; padding: 10px 6px; border-top: 1px solid var(--line); cursor: pointer; }
   .rank:first-child { border-top: 0; }
@@ -953,13 +957,22 @@ function goalsBlock(d) {
 function forecastBlock(f) {
   if (!f) return "";
   const days = (n) => n == null ? "—" : n < 1 ? "menos de 1 dia" : `~${fmt(Math.round(n))} dia${Math.round(n) === 1 ? "" : "s"}`;
+  const exact = f.xp_source === "highscore";
+  const pct = Math.max(0, Math.min(100, f.level_pct || 0));
+  const rows = (f.table || []).map((r) => `<tr${r.level % 50 === 0 ? ' class="gold"' : ""}>
+      <td>${r.level}</td><td class="num">${fmt(r.xp_left)}</td><td class="num">${r.hours ? "~" + fmt(r.hours) + "h" : "—"}</td><td class="num">${days(r.days)}</td></tr>`).join("");
   return `<h2>📈 Previsão de level</h2><div class="card">
-    <div class="muted">Level atual (TibiaData): <b style="color:var(--text)">${f.level}</b> · ritmo dos últimos 7 dias: <b style="color:var(--text)">${fmt(f.xp_per_day)} XP/dia</b></div>
+    <div class="row"><span>Level <b>${f.level}</b> · ${exact ? `<b>${pct.toFixed(1)}%</b> do level` : `<span class="muted">% do level desconhecido</span>`}</span>
+      <span class="muted" style="font-size:13px">${fmt(f.xp_per_day)} XP/dia</span></div>
+    ${exact ? `<div class="gbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div style="width:${pct}%"></div></div>` : ""}
+    <div class="muted" style="font-size:13px; margin-top:6px">XP atual: <b style="color:var(--text)">${fmt(f.xp_now)}</b>${exact ? " (highscore do mundo + sessões enviadas depois)" : " (início do level)"}</div>
     <div class="row" style="margin-top:10px"><span>Próximo level (${f.next_level})</span><b>${days(f.days_next_level)}</b></div>
-    <div class="muted" style="font-size:13px">${fmt(f.xp_next_level)} XP${f.hours_next_level ? ` · ~${fmt(f.hours_next_level)}h de hunt no seu XP/h médio` : ""}</div>
-    <div class="row" style="margin-top:10px"><span>Level ${f.mark}</span><b>${days(f.days_mark)}</b></div>
-    <div class="muted" style="font-size:13px">${fmt(f.xp_mark)} XP a partir do início do level ${f.level}</div>
-    <div class="hint">O TibiaData não informa quanto você já tem do level atual, então a conta parte do início do level (é o tempo máximo).${f.xp_per_day ? "" : " Envie sessões desta semana para calcular os dias."}</div>
+    <div class="row"><span>Level ${f.mark}</span><b>${days(f.days_mark)}</b></div>
+    <details style="margin-top:8px"><summary class="link">Tabela de levels ▾</summary>
+      <table class="lvl-table"><thead><tr><th>Level</th><th class="num">XP que falta</th><th class="num">Horas de hunt</th><th class="num">Dias</th></tr></thead><tbody>${rows}</tbody></table>
+    </details>
+    <div class="hint">XP de cada level pela tabela oficial do tibia.com. Dias = ritmo dos últimos 7 dias; horas = seu XP/h médio.
+      ${exact ? "" : "Seu personagem não está no top 1000 de experiência do mundo, então a conta parte do início do level (é o tempo máximo)."}${f.xp_per_day ? "" : " Envie sessões desta semana para calcular os dias."}</div>
   </div>`;
 }
 function recordsBlock(recs) {
