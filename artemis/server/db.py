@@ -20,6 +20,26 @@ def hash_token(token: str) -> str:
 _KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sem 0/O/1/I para não confundir
 
 SCHEMA = """
+-- 0.13.0: entradas no app/site por código (só o painel do criador vê)
+CREATE TABLE IF NOT EXISTS key_logins (
+    key     TEXT NOT NULL,
+    at      TEXT NOT NULL,
+    client  TEXT NOT NULL DEFAULT 'site'
+);
+CREATE INDEX IF NOT EXISTS idx_key_logins ON key_logins(key, at);
+-- 0.13.0: uso das telas, só contadores por dia (sem dizer quem)
+CREATE TABLE IF NOT EXISTS screen_stats (
+    day      TEXT NOT NULL,
+    page     TEXT NOT NULL,
+    views    INTEGER NOT NULL DEFAULT 0,
+    actions  INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (day, page)
+);
+-- 0.13.0: chaves grátis geradas na loja (IP só como hash, para limitar 1 por dia)
+CREATE TABLE IF NOT EXISTS store_claims (
+    ip_hash  TEXT NOT NULL,
+    at       TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS access_keys (
     key         TEXT PRIMARY KEY,
     label       TEXT NOT NULL DEFAULT '',
@@ -297,6 +317,8 @@ class Store:
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN main_char TEXT")
         if "trusted" not in cols:  # banco criado antes da 0.4.0
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN trusted INTEGER NOT NULL DEFAULT 0")
+        if "lifetime" not in cols:  # 0.13.0: "amigo do adm" (código que nunca vence)
+            self._conn.execute("ALTER TABLE access_keys ADD COLUMN lifetime INTEGER NOT NULL DEFAULT 0")
         for table in ("hunts", "solo_sessions"):  # 0.5.0: quem enviou (só ele pode apagar)
             if "uploader_key" not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN uploader_key TEXT")
@@ -337,16 +359,17 @@ class Store:
         row = self._conn.execute("SELECT * FROM access_keys WHERE key = ?", (key,)).fetchone()
         if row is None:
             return None
-        if row["expires_at"] <= _iso(utcnow()):
+        if row["expires_at"] <= _iso(utcnow()) and not row["lifetime"]:
             self.purge_expired()
             return None
         return dict(row)
 
     def purge_expired(self) -> int:
-        """Apaga chaves vencidas (e, em cascata, personagens/aparelhos ligados) e verificações velhas."""
+        """Apaga chaves vencidas (e, em cascata, personagens/aparelhos ligados) e verificações velhas.
+        Códigos vitalícios ("amigo do adm") nunca são apagados."""
         now = _iso(utcnow())
         with self._lock:
-            cur = self._conn.execute("DELETE FROM access_keys WHERE expires_at <= ?", (now,))
+            cur = self._conn.execute("DELETE FROM access_keys WHERE expires_at <= ? AND lifetime = 0", (now,))
             self._conn.execute("DELETE FROM verifications WHERE expires_at <= ?", (now,))
             self._conn.commit()
             return cur.rowcount
@@ -360,6 +383,73 @@ class Store:
                                (_iso(utcnow() + timedelta(days=days)), normalize_key(key)))
             self._conn.commit()
         return self.validate_key(key)
+
+    def renew_all(self, days: int = MAX_KEY_DAYS) -> int:
+        """Leva para `days` a partir de agora só as chaves válidas que têm MENOS que isso.
+        Quem já tem mais dias (e os vitalícios) não muda. Devolve quantas foram renovadas."""
+        if not 1 <= days <= MAX_KEY_DAYS:
+            raise ValueError(f"A validade deve ser de 1 a {MAX_KEY_DAYS} dias.")
+        now = utcnow()
+        new = _iso(now + timedelta(days=days))
+        with self._lock:
+            cur = self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE expires_at > ? AND expires_at < ? AND lifetime = 0",
+                                     (new, _iso(now), new))
+            self._conn.commit()
+            return cur.rowcount
+
+    def set_lifetime(self, key: str, on: bool) -> dict | None:
+        """Liga/desliga o código vitalício. Ao desligar um código já vencido, ele ganha 7 dias (não some na hora)."""
+        key = normalize_key(key)
+        with self._lock:
+            self._conn.execute("UPDATE access_keys SET lifetime = ? WHERE key = ?", (int(on), key))
+            if not on:
+                self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at <= ?",
+                                   (_iso(utcnow() + timedelta(days=7)), key, _iso(utcnow())))
+            self._conn.commit()
+        return self.validate_key(key)
+
+    # ------------------------------------------------------------------ 0.13.0: atividade (painel do criador)
+    LOGIN_GAP = timedelta(minutes=30)   # aberturas seguidas dentro disso contam como 1 entrada
+    KEEP_ACTIVITY = timedelta(days=180)
+
+    def log_login(self, key: str, client: str) -> bool:
+        now = utcnow()
+        with self._lock:
+            last = self._conn.execute("SELECT MAX(at) FROM key_logins WHERE key = ?", (key,)).fetchone()[0]
+            if last and datetime.fromisoformat(last) > now - self.LOGIN_GAP:
+                return False
+            self._conn.execute("INSERT INTO key_logins VALUES (?, ?, ?)", (key, _iso(now), client))
+            self._conn.execute("DELETE FROM key_logins WHERE at < ?", (_iso(now - self.KEEP_ACTIVITY),))
+            self._conn.commit()
+        return True
+
+    def logins(self, key: str, limit: int = 30) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT at, client FROM key_logins WHERE key = ? ORDER BY at DESC LIMIT ?", (normalize_key(key), limit))]
+
+    def track_screen(self, page: str, action: bool, day: str) -> None:
+        col = "actions" if action else "views"
+        with self._lock:
+            self._conn.execute("INSERT OR IGNORE INTO screen_stats (day, page) VALUES (?, ?)", (day, page))
+            self._conn.execute(f"UPDATE screen_stats SET {col} = {col} + 1 WHERE day = ? AND page = ?", (day, page))
+            self._conn.commit()
+
+    def screen_report(self, since_day: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT page, SUM(views) AS views, SUM(actions) AS actions FROM screen_stats WHERE day >= ? "
+            "GROUP BY page ORDER BY views DESC", (since_day,))]
+
+    def store_claims_since(self, since: datetime, ip_hash: str | None = None) -> int:
+        if ip_hash:
+            return self._conn.execute("SELECT COUNT(*) FROM store_claims WHERE at >= ? AND ip_hash = ?",
+                                      (_iso(since), ip_hash)).fetchone()[0]
+        return self._conn.execute("SELECT COUNT(*) FROM store_claims WHERE at >= ?", (_iso(since),)).fetchone()[0]
+
+    def add_store_claim(self, ip_hash: str) -> None:
+        with self._lock:
+            self._conn.execute("INSERT INTO store_claims VALUES (?, ?)", (ip_hash, _iso(utcnow())))
+            self._conn.execute("DELETE FROM store_claims WHERE at < ?", (_iso(utcnow() - timedelta(days=30)),))
+            self._conn.commit()
 
     def reset_key(self, key: str) -> None:
         """Desvincula o dono: apaga personagens e aparelhos (a pessoa verifica de novo)."""
@@ -375,7 +465,11 @@ class Store:
         out = []
         for k in self.list_keys():
             k["trusted"] = bool(k.get("trusted"))
+            k["lifetime"] = bool(k.get("lifetime"))
             k["chars"] = self.key_chars(k["key"])
+            k["logins_7d"], k["last_login"] = self._conn.execute(
+                "SELECT COUNT(*), (SELECT MAX(at) FROM key_logins WHERE key = ?) FROM key_logins WHERE key = ? AND at >= ?",
+                (k["key"], k["key"], _iso(utcnow() - timedelta(days=7)))).fetchone()
             k["devices"], k["last_seen"] = self._conn.execute("SELECT COUNT(*), MAX(last_seen) FROM devices WHERE key = ?",
                                                               (k["key"],)).fetchone()
             out.append(k)
@@ -856,7 +950,7 @@ class Store:
     def grant_reward(self, key: str, reward_id: str, days: int) -> dict | None:
         """Soma `days` à validade do código, uma única vez por reward_id. Devolve o novo vencimento."""
         with self._lock:
-            row = self._conn.execute("SELECT expires_at FROM access_keys WHERE key = ?", (key,)).fetchone()
+            row = self._conn.execute("SELECT expires_at FROM access_keys WHERE key = ? AND lifetime = 0", (key,)).fetchone()
             if row is None or self._conn.execute("SELECT 1 FROM key_rewards WHERE key = ? AND reward_id = ?",
                                                  (key, reward_id)).fetchone():
                 return None

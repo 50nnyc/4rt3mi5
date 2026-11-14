@@ -14,13 +14,14 @@ Acesso:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 import secrets
 import sys
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import re
@@ -141,9 +142,9 @@ async def invalid_input(_request: Request, exc: RequestValidationError):
 # ------------------------------------------------------------------ limite de requisições (anti-abuso)
 MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
 RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (máx., janela em s) por IP
-              "img": (600, 60)}                                             # imagens (/img/wiki/...)
+              "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
 UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
-                "/api/bosses/session", "/api/bosses/lootsplit"}
+                "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
 _hits: dict[tuple[str, str], deque] = {}
 
@@ -154,6 +155,8 @@ def _rate_bucket(request: Request) -> str | None:
         return None
     if request.method == "POST" and path in UPLOAD_PATHS:
         return "upload"
+    if path == "/api/track":
+        return "track"
     return "write" if request.method in ("POST", "DELETE", "PUT", "PATCH") else "read"
 
 
@@ -211,8 +214,10 @@ _fails: dict[str, list[float]] = {}
 
 
 def client_ip(request: Request) -> str:
+    # O ngrok ACRESCENTA o IP real no fim do X-Forwarded-For; o começo pode ter sido inventado por quem chama
+    # (e serviria para fugir do bloqueio contra força bruta). Por isso vale o último.
     fwd = request.headers.get("x-forwarded-for", "")
-    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?")
+    return fwd.split(",")[-1].strip() if fwd else (request.client.host if request.client else "?")
 
 
 def _check_blocked(ip: str) -> None:
@@ -292,9 +297,14 @@ def char_or_404(name: str, fresh: bool = False):
     return ch
 
 
+def user_expires(access: dict) -> str | None:
+    """Vencimento mostrado para a pessoa. Código vitalício ("amigo do adm"): nenhum, e nada diz que é vitalício."""
+    return None if access.get("lifetime") else access.get("expires_at")
+
+
 def me_payload(access: dict) -> dict:
     current = store.validate_key(access["key"]) or access
-    return {"expires_at": current["expires_at"], "main_char": current.get("main_char"),
+    return {"expires_at": user_expires(current), "main_char": current.get("main_char"),
             "chars": store.key_chars(access["key"])}
 
 
@@ -405,20 +415,78 @@ async def wiki_image(file: str, request: Request):
     return Response(got[1], media_type=got[0], headers={"Cache-Control": "public, max-age=2592000, immutable"})
 
 
+_LOCAL_ORIGIN = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$")
+
+
+def _log_login(request: Request, access: dict) -> None:
+    store.log_login(access["key"], "app" if _LOCAL_ORIGIN.match(request.headers.get("origin", "")) else "site")
+
+
 @app.post("/api/auth")
-def auth(session: tuple = Depends(optional_device)):
+def auth(request: Request, session: tuple = Depends(optional_device)):
     access, device = session
-    return {"valid": True, "expires_at": access["expires_at"], "claimed": bool(access.get("main_char")),
+    if device is not None:  # abertura do app/site já liberado = 1 entrada (histórico do painel do criador)
+        _log_login(request, access)
+    return {"valid": True, "expires_at": user_expires(access), "claimed": bool(access.get("main_char")),
             "device_verified": device is not None}
 
 
+# ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
+TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news"}
+
+
+class TrackIn(BaseModel):
+    page: str = Field(max_length=20)
+    action: bool = False
+
+
+@app.post("/api/track")
+def track(body: TrackIn, _: dict = Depends(require_session)):
+    """Conta visita/ação por tela e por dia, sem guardar quem foi (painel do criador)."""
+    if body.page not in TRACK_PAGES:
+        raise HTTPException(422, "Tela desconhecida.")
+    store.track_screen(body.page, body.action, ach.local_day(datetime.now(timezone.utc).isoformat()).isoformat())
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------ 0.13.0: loja (chave grátis)
+STORE_FREE_DAYS = 7
+STORE_FREE_PER_DAY = 20   # no máximo 20 chaves grátis por dia no total
+STORE_SALT = secrets.token_hex(16)  # IP vira hash com sal que muda a cada reinício: o banco nunca guarda o IP
+
+
+def _store_free_on() -> bool:
+    return store.meta("store_free") != "off"
+
+
+@app.get("/api/store")
+def store_info():
+    return {"free": _store_free_on(), "free_days": STORE_FREE_DAYS}
+
+
+@app.post("/api/store/free")
+def store_free(request: Request):
+    if not _store_free_on():
+        raise HTTPException(403, "A chave gratuita está pausada no momento. Peça um código para quem te indicou o 4rt3mi5.")
+    ip_hash = hashlib.sha256((STORE_SALT + client_ip(request)).encode()).hexdigest()
+    day_ago = datetime.now(timezone.utc) - timedelta(days=1)
+    if store.store_claims_since(day_ago, ip_hash):
+        raise HTTPException(429, "Você já gerou uma chave gratuita hoje. Use a que recebeu ou tente amanhã.")
+    if store.store_claims_since(day_ago) >= STORE_FREE_PER_DAY:
+        raise HTTPException(429, "As chaves gratuitas de hoje acabaram. Tente de novo amanhã.")
+    store.add_store_claim(ip_hash)
+    k = store.create_key(STORE_FREE_DAYS, "Loja (grátis)")
+    return {"key": k["key"], "expires_at": k["expires_at"]}
+
+
 @app.post("/api/verify/start")
-def verify_start(body: CharIn, session: tuple = Depends(optional_device)):
+def verify_start(body: CharIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
     ch = char_or_404(body.character)
     # Contato de confiança (main forçado pelo criador): entra direto, sem código de verificação.
     if access.get("trusted") and store.is_linked(access["key"], ch.name):
         token = device or store.issue_device(access["key"], ch.name)
+        _log_login(request, access)
         return {"token": token, "character": ch.name, "me": me_payload(access), "trusted": True}
     # Código já tem dono: um aparelho novo só pode verificar com um personagem já vinculado.
     if access.get("main_char") and device is None and not store.is_linked(access["key"], ch.name):
@@ -428,7 +496,7 @@ def verify_start(body: CharIn, session: tuple = Depends(optional_device)):
 
 
 @app.post("/api/verify/check")
-def verify_check(body: CodeIn, session: tuple = Depends(optional_device)):
+def verify_check(body: CodeIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
     v = store.get_verification(access["key"], body.code)
     if v is None:
@@ -445,6 +513,7 @@ def verify_check(body: CodeIn, session: tuple = Depends(optional_device)):
                     "vamos conferir de novo sozinhos.",
         })
     token = store.complete_verification(access["key"], v["code"], ch.name, device)
+    _log_login(request, access)
     return {"token": token, "character": ch.name, "me": me_payload(access)}
 
 
@@ -608,7 +677,7 @@ def grant_rewards(key: str) -> list[dict]:
 def streak_payload(key: str) -> dict:
     info = ach.streak_info(_upload_days(key))
     current = store.validate_key(key) or {}
-    info.update(rewards=store.rewards(key), expires_at=current.get("expires_at"))
+    info.update(rewards=store.rewards(key), expires_at=user_expires(current))
     return info
 
 
@@ -1375,13 +1444,22 @@ def admin_status():
         vigia = json.loads(VIGIA_FILE.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         vigia = None
-    return {"last_backup": store.meta("last_backup"), "backups": backups, "keep": BACKUP_KEEP, "vigia": vigia}
+    return {"last_backup": store.meta("last_backup"), "backups": backups, "keep": BACKUP_KEEP, "vigia": vigia,
+            "store_free": _store_free_on()}
 
 
 @app.post("/api/admin/keys", dependencies=[Depends(require_admin)])
 def admin_create(body: NewKeyIn):
     try:
         return store.create_key(body.days, body.label.strip())
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+
+
+@app.post("/api/admin/keys/renew-all", dependencies=[Depends(require_admin)])
+def admin_renew_all(body: DaysIn):
+    try:
+        return {"renewed": store.renew_all(body.days)}
     except ValueError as e:
         raise HTTPException(422, str(e))
 
@@ -1393,6 +1471,35 @@ def admin_renew(key: str, body: DaysIn):
         return store.renew_key(key, body.days)
     except ValueError as e:
         raise HTTPException(422, str(e))
+
+
+class OnIn(BaseModel):
+    on: bool
+
+
+@app.post("/api/admin/keys/{key}/lifetime", dependencies=[Depends(require_admin)])
+def admin_lifetime(key: str, body: OnIn):
+    """"Amigo do adm": o código nunca vence (o vencimento some para a pessoa)."""
+    _admin_key(key)
+    return store.set_lifetime(key, body.on)
+
+
+@app.get("/api/admin/keys/{key}/logins", dependencies=[Depends(require_admin)])
+def admin_logins(key: str):
+    return store.logins(key)
+
+
+@app.get("/api/admin/screens", dependencies=[Depends(require_admin)])
+def admin_screens(days: int = 7):
+    days = 30 if days == 30 else 7
+    since = ach.local_day(datetime.now(timezone.utc).isoformat()) - timedelta(days=days - 1)
+    return {"days": days, "screens": store.screen_report(since.isoformat())}
+
+
+@app.post("/api/admin/store", dependencies=[Depends(require_admin)])
+def admin_store(body: OnIn):
+    store.set_meta("store_free", "on" if body.on else "off")
+    return {"free": body.on}
 
 
 @app.post("/api/admin/keys/{key}/trust", dependencies=[Depends(require_admin)])

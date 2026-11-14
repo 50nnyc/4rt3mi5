@@ -65,6 +65,12 @@
   .gate .logo { font-size: 40px; justify-content: center; margin-bottom: 4px; }
   .gate .logo span { opacity: 1; transform: none; filter: none; }
   .gate .card { text-align: left; margin-top: 18px; }
+  .storeOpen { width: 100%; margin-top: 12px; padding: 12px; font-weight: 700; color: var(--gold); border-color: rgba(242,201,76,.4); }
+  .card.store { position: relative; padding-top: 22px; border-color: rgba(76,209,138,.4); }
+  .card.store h3 { margin: 0 0 8px; font-size: 18px; }
+  .card.store ul { margin: 0; padding-left: 18px; font-size: 14px; }
+  .storeTag { position: absolute; top: -10px; left: 14px; background: var(--green); color: #0b0d12; font: 800 11px/1 system-ui;
+              letter-spacing: .1em; padding: 5px 8px; border-radius: 6px; }
 
   /* ---------- app ---------- */
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
@@ -354,6 +360,28 @@
       <div class="err" id="keyErr"></div>
       <div class="hint hidden" id="serverLine"></div>
     </div>
+    <button class="btn2 storeOpen" id="storeOpen" type="button">🔑 Gere sua nova chave</button>
+  </div>
+</section>
+
+<!-- 0.13.0: loja (chave gratuita) -->
+<section id="storeScreen" class="gate hidden">
+  <div class="box" style="max-width:460px">
+    <div class="logo">4rt3mi5</div>
+    <div class="muted" style="margin-top:4px">Escolha a sua chave de acesso</div>
+    <div class="card store">
+      <div class="storeTag">GRÁTIS</div>
+      <h3>🎁 Gere sua chave gratuita agora mesmo!</h3>
+      <ul class="muted">
+        <li>Acesso completo ao 4rt3mi5 por <b id="freeDays">7</b> dias</li>
+        <li>Lootsplit, Hunt Session Stacker, Rotação de bosses, metas e ranking</li>
+        <li>Seus dados ficam salvos mesmo depois que a chave vence</li>
+      </ul>
+      <button class="btn" id="storeFree" type="button">Gerar minha chave grátis</button>
+      <div class="err" id="storeErr"></div>
+      <div id="storeGot"></div>
+    </div>
+    <button class="link" id="storeBack" style="margin-top:10px">← já tenho um código</button>
   </div>
 </section>
 
@@ -689,6 +717,53 @@ $("#keyForm").addEventListener("submit", async (e) => {
   await splashHide();
 });
 
+/* ---------- 0.13.0: loja ("Gere sua nova chave") ---------- */
+$("#storeOpen").addEventListener("click", async () => {
+  $("#storeErr").textContent = ""; $("#storeGot").innerHTML = "";
+  showOnly("storeScreen");
+  try {
+    const s = await (await timedFetch(S.api + "/api/store", { headers: NGROK })).json();
+    $("#freeDays").textContent = s.free_days;
+    $("#storeFree").classList.toggle("hidden", !s.free);
+    if (!s.free) $("#storeErr").textContent = "A chave gratuita está pausada no momento. Peça um código para quem te indicou o 4rt3mi5.";
+  } catch { $("#storeErr").textContent = "Sem conexão com o servidor."; }
+});
+$("#storeBack").addEventListener("click", () => { showOnly("keyScreen"); $("#keyInput").focus(); });
+$("#storeFree").addEventListener("click", async (e) => {
+  const btn = e.currentTarget; btn.disabled = true; $("#storeErr").textContent = "";
+  try {
+    const res = await timedFetch(S.api + "/api/store/free", { method: "POST", headers: NGROK });
+    const d = await res.json().catch(() => ({}));
+    if (!res.ok) { const m = d.detail; $("#storeErr").textContent = typeof m === "object" && m ? m.message : (m || `Erro ${res.status}`); return; }
+    btn.classList.add("hidden");
+    $("#storeGot").innerHTML = `<div class="banner ok" style="margin-top:12px"><b>Pronto! Sua chave:</b>
+      <div class="codebox" style="margin:8px 0">${esc(d.key)}</div>
+      <div class="hint">Vale até ${esc(new Date(d.expires_at).toLocaleDateString("pt-BR"))}. Guarde este código: é com ele que você entra em outros aparelhos.</div>
+      <button class="btn" id="storeUse" type="button">Entrar com esta chave</button></div>`;
+    $("#storeUse").onclick = () => { showOnly("keyScreen"); $("#keyInput").value = d.key; $("#keyForm").requestSubmit(); };
+  } catch { $("#storeErr").textContent = "Sem conexão com o servidor."; }
+  finally { btn.disabled = false; }
+});
+
+/* ---------- 0.13.0: uso das telas (só contadores por tela, sem dizer quem) ---------- */
+const Track = {
+  acted: true,
+  send(page, action) {
+    if (!S.key || !S.token) return;
+    timedFetch(S.api + "/api/track", { method: "POST", headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ page, action }) }).catch(() => {});
+  },
+  view(page) { this.acted = false; this.send(page, false); },
+  act() { if (this.acted || !S.page) return; this.acted = true; this.send(S.page, true); },
+};
+// "fez algo" = tocou em botão/campo/link dentro da tela (navegar para outra tela não conta) ou colou texto
+$("main").addEventListener("click", (e) => {
+  const el = e.target.closest("button, a, input, select, textarea, summary, [data-price-item], [data-view]");
+  if (el && !el.closest("[data-page], [data-page-link]")) Track.act();
+});
+$("main").addEventListener("paste", () => Track.act());
+document.addEventListener("keydown", (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v" && !$("#app").classList.contains("hidden")) Track.act(); });
+
 /* ---------- verificação do main character (código no comentário do tibia.com) ---------- */
 async function needVerification(msg) {
   S.token = null; S.me = null;
@@ -809,7 +884,7 @@ $("#nickForm").addEventListener("submit", async (e) => {
 
 /* ---------- app / menu ---------- */
 function showOnly(id) {
-  for (const s of ["keyScreen", "verifyScreen", "nickScreen", "app"]) $("#" + s).classList.toggle("hidden", s !== id);
+  for (const s of ["keyScreen", "storeScreen", "verifyScreen", "nickScreen", "app"]) $("#" + s).classList.toggle("hidden", s !== id);
   // botão de som: no cabeçalho dentro do app; flutuando no canto nas outras telas
   const snd = $("#sound"), inApp = id === "app";
   snd.classList.toggle("floating", !inApp);
@@ -876,6 +951,7 @@ $("#logout").addEventListener("click", () => lockOut(""));
 
 function go(page, opts = {}) {
   if (!opts.noPush && page !== S.page) pushNav();
+  Track.view(page);
   S.page = page;
   updateBack();
   document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page

@@ -165,6 +165,21 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/admin/keys/{k['key']}", headers=admin).status_code, 200)
         self.assertEqual(self.client.post("/api/auth", headers=h).status_code, 401)
 
+    def test_admin_renew_all(self):
+        admin = {"X-Admin-Token": server.CONFIG["admin_token"]}
+        a = self.client.post("/api/admin/keys", json={"days": 3}, headers=admin).json()
+        b = self.client.post("/api/admin/keys", json={"days": 7}, headers=admin).json()
+        c = self.client.post("/api/admin/keys", json={"days": 30}, headers=admin).json()
+        self.assertEqual(self.client.post("/api/admin/keys/renew-all", json={"days": 15}).status_code, 401)
+        self.assertEqual(self.client.post("/api/admin/keys/renew-all", json={"days": 31}, headers=admin).status_code, 422)
+        r = self.client.post("/api/admin/keys/renew-all", json={"days": 15}, headers=admin)
+        self.assertEqual(r.status_code, 200)
+        self.assertGreaterEqual(r.json()["renewed"], 2)
+        keys = {x["key"]: x for x in self.client.get("/api/admin/keys", headers=admin).json()}
+        self.assertEqual(keys[a["key"]]["expires_at"][:10], keys[b["key"]]["expires_at"][:10])
+        self.assertGreater(keys[a["key"]]["expires_at"], b["expires_at"])
+        self.assertEqual(keys[c["key"]]["expires_at"], c["expires_at"])  # quem tem mais dias não perde nada
+
     def test_only_uploader_can_delete(self):
         token = self.verify("Hilay")[1].json()["token"]
         r = self.client.post("/api/lootsplit", json={"raw_text": EXAMPLE, "nickname": "Hilay"}, headers=self.h(token)).json()

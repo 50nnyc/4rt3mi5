@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.13.0",
+      "date": "2026-11-14",
+      "title": "Loja e chave grátis",
+      "changes": [
+        "🔑 Novo botão \"Gere sua nova chave\" na tela de entrada: abre a loja do 4rt3mi5, onde você gera uma chave gratuita de 7 dias na hora e já entra com ela.",
+        "📊 Para saber o que melhorar, o 4rt3mi5 agora conta quantas vezes cada tela é aberta e usada (sem guardar quem foi) e registra os dias em que cada código entrou no app.",
+        "🔒 A proteção contra quem tenta adivinhar códigos de acesso ficou mais forte."
+      ]
+    },
+    {
       "version": "0.12.0",
       "date": "2026-11-14",
       "title": "Acertos, ranking e drops raros",

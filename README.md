@@ -79,7 +79,15 @@ app desktop abre a mesma página numa janela própria.
   `docker compose --profile public up -d`; se só o ngrok caiu, reinicia o ngrok. Se continuar fora do ar, mostra
   uma notificação do Windows (e outra quando voltar). Instale uma vez com **`vigia.bat`** (Agendador de Tarefas,
   a cada 5 minutos). Resultado em `data/vigia.json` (aparece no painel) e histórico em `data/vigia.log`.
+  Desligar por um tempo: `schtasks /Change /TN "4rt3mi5 vigia" /DISABLE` (religar com `/ENABLE`).
   Remover: `schtasks /Delete /TN "4rt3mi5 vigia" /F`.
+
+## Loja e chave grátis (0.13.0)
+
+Na tela de entrada, **🔑 Gere sua nova chave** abre a loja. Hoje só existe **"Gere sua chave gratuita agora
+mesmo!"**: cria na hora um código de 7 dias (rótulo "Loja (grátis)"). Limites: 1 por pessoa por dia (o IP vira
+hash com sal que muda a cada reinício, o banco nunca guarda o IP) e no máximo 20 por dia no total. O painel tem
+**Pausar/Ligar** a chave grátis.
 
 ## Música
 
@@ -111,8 +119,15 @@ criar o ícone depois que a pessoa toca em **Sim, adicionar** no aviso que expli
 A senha aparece no `painel.bat` (ou `docker compose exec server python -m artemis.server admin-token`).
 Pela internet (ngrok) o painel é bloqueado, mesmo com a senha.
 
-- Criar código de 7, 15 ou 30 dias, com botão "Copiar convite" (código + links do app e do site).
+- Criar código de 7, 15 ou 30 dias, com botão "Copiar convite" (convite da fase beta com código e SITE).
 - Renovar por 7, 15 ou 30 dias a partir de hoje (mantém personagens e aparelhos).
+- **Completar todos para 7/15/30 dias**: só quem tem menos que isso ganha dias; ninguém perde dias.
+- **⭐ Amigo do adm (vitalício)**: o código nunca vence e nunca é apagado; a pessoa não vê data de
+  vencimento (nem sabe que é vitalício). "Tirar vitalício" devolve o vencimento (se já passou, ganha 7 dias).
+- **Entradas**: quantas vezes cada código entrou nos últimos 7 dias e o histórico (data, app Windows ou
+  site). Aberturas com menos de 30 minutos de intervalo contam uma vez; guarda 180 dias.
+- **Uso das telas** (7 ou 30 dias): visitas por tela, quantas fizeram algo (tocaram em botão/campo ou
+  colaram texto) e a % que só olhou. Só contadores por dia, sem dizer quem.
 - **Forçar main (contato de confiança)**: define o main sem código de verificação; a pessoa entra só
   com o código de acesso + nick do main. "Remover confiança" volta a exigir verificação.
 - Resetar dono e apagar código.

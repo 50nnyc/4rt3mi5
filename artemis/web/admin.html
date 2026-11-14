@@ -48,6 +48,13 @@
            border-radius: 10px; padding: 10px 16px; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; }
   #toast.show { opacity: 1; }
   .hidden { display: none !important; }
+  .badge.life { color: #1a1400; background: var(--gold); border-color: var(--gold); font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .logins { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .tablewrap { overflow-x: auto; }
 </style>
 </head>
 <body>
@@ -70,6 +77,11 @@
     <h2>Situação do servidor</h2>
     <div class="card" id="status"><span class="muted">Carregando…</span></div>
     <div id="expiring"></div>
+    <div class="row" style="margin-top:26px">
+      <h2 style="margin:0">Uso das telas</h2>
+      <div class="seg" id="screenDays" style="margin-left:auto"><button data-days="7" class="on">7 dias</button><button data-days="30">30 dias</button></div>
+    </div>
+    <div class="card" id="screens" style="margin-top:12px"><span class="muted">Carregando…</span></div>
     <h2>Novo código de acesso</h2>
     <div class="card">
       <form id="createForm" class="row">
@@ -88,6 +100,11 @@
       <input id="filter" class="grow" placeholder="Filtrar por nome, código ou personagem" style="margin-left:auto; max-width:340px">
       <button id="refresh">Atualizar</button>
     </div>
+    <div class="card row" id="renewAll" style="margin-top:12px">
+      <span class="muted" style="width:150px" title="Só quem tem menos dias que isso ganha; ninguém perde dias">Completar todos para</span>
+      <button data-days="7">7 dias</button><button data-days="15">15 dias</button><button data-days="30">30 dias</button>
+      <span class="err" id="renewAllErr"></span>
+    </div>
     <div id="list" style="margin-top:12px"></div>
   </section>
 </main>
@@ -96,7 +113,6 @@
 <script>
 "use strict";
 const SITE = "https://quiver-procedure-resolved.ngrok-free.dev";
-const DOWNLOAD = "https://github.com/50nnyc/4rt3mi5/releases/latest";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const day = (iso) => new Date(iso).toLocaleDateString("pt-BR");
@@ -119,8 +135,11 @@ async function copy(text) {
   toast("Copiado!");
 }
 function inviteText(k) {
-  return `Seu código de acesso do 4rt3mi5: ${k.key} (válido até ${day(k.expires_at)}).\n`
-    + `App para Windows: ${DOWNLOAD}\nCelular: ${SITE}`;
+  return `🏹 Você foi convidado para testar o 4rt3mi5!\n\n`
+    + `O app que ajuda na sua hunt de Tibia: lootsplit da PT, Hunt Session Stacker, metas, rotação de bosses e muito mais.\n\n`
+    + `Estamos na fase beta, com a versão quase finalizada. Se achar algum erro ou tiver uma ideia, me conta: sua opinião ajuda a deixar o app pronto.\n\n`
+    + `🔑 Seu código de acesso: ${k.key}\n(válido até ${day(k.expires_at)})\n\n`
+    + `SITE: ${SITE}`;
 }
 
 async function api(method, path, body) {
@@ -146,8 +165,9 @@ async function enter() {
   $("#panel").classList.remove("hidden"); $("#logout").classList.remove("hidden");
   render();
   loadStatus();
+  loadScreens();
 }
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); }
+async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); }
 const when = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
 async function loadStatus() {
   let s;
@@ -160,11 +180,36 @@ async function loadStatus() {
       <div><span class="muted">Vigia do site (ngrok)</span><b>${vigia}</b></div>
       <div><span class="muted">Último backup automático</span><b>${esc(when(s.last_backup))}</b></div>
       <div><span class="muted">Backups guardados</span><b>${s.backups.length} de ${s.keep} (data/backups)</b></div>
+      <div><span class="muted">Loja: chave grátis</span><b>${s.store_free ? `<span class="badge ok">ligada</span>` : `<span class="badge warn">pausada</span>`}
+        <button id="storeToggle" style="margin-left:6px">${s.store_free ? "Pausar" : "Ligar"}</button></b></div>
     </div>`;
+  $("#storeToggle").onclick = async () => {
+    try { await api("POST", "/api/admin/store", { on: !s.store_free }); toast(s.store_free ? "Chave grátis pausada" : "Chave grátis ligada"); loadStatus(); } catch {}
+  };
 }
+const PAGE_PT = { home: "🏠 Início", loot: "💰 Lootsplit", stack: "📈 Hunt Session Stacker", boss: "👑 Rotação de bosses", hunts: "🗺️ Hunts",
+                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades" };
+let screenDays = 7;
+async function loadScreens() {
+  let r;
+  try { r = await api("GET", `/api/admin/screens?days=${screenDays}`); } catch { return; }
+  if (!r.screens.length) { $("#screens").innerHTML = `<span class="muted">Ninguém abriu o app nesse período (ou a versão nova ainda não foi usada).</span>`; return; }
+  $("#screens").innerHTML = `<div class="tablewrap"><table><tr><th>Tela</th><th>Visitas</th><th>Fizeram algo</th><th>Só olharam</th></tr>${r.screens.map((s) => {
+    const idle = Math.max(0, s.views - s.actions), pct = s.views ? Math.round(idle * 100 / s.views) : 0;
+    return `<tr><td>${esc(PAGE_PT[s.page] || s.page)}</td><td>${s.views}</td><td>${s.actions}</td>
+      <td><span class="badge ${pct >= 70 ? "warn" : ""}">${pct}%</span></td></tr>`;
+  }).join("")}</table></div>
+  <div class="muted" style="margin-top:8px">Contagem por tela, sem dizer quem. "Fizeram algo" = tocaram em botão, campo ou colaram texto na tela.</div>`;
+}
+$("#screenDays").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-days]"); if (!b) return;
+  screenDays = +b.dataset.days;
+  $("#screenDays").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+  loadScreens();
+});
 /** Códigos que vencem em até 7 dias, para renovar a tempo. */
 function expiringBlock() {
-  const soon = KEYS.filter((k) => daysLeft(k.expires_at) <= 7).sort((a, b) => a.expires_at.localeCompare(b.expires_at));
+  const soon = KEYS.filter((k) => !k.lifetime && daysLeft(k.expires_at) <= 7).sort((a, b) => a.expires_at.localeCompare(b.expires_at));
   if (!soon.length) return "";
   return `<h2>Vencem nesta semana (${soon.length})</h2><div class="card">${soon.map((k) => {
     const left = daysLeft(k.expires_at);
@@ -191,20 +236,26 @@ function keyCard(k) {
       <button data-act="copy-key">Copiar código</button>
       <button data-act="copy-invite">Copiar convite</button>
       <span style="margin-left:auto" class="row">${status}
-        <span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"}</span></span>
+        ${k.lifetime ? `<span class="badge life">⭐ amigo do adm · vitalício</span>`
+          : `<span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"}</span>`}</span>
     </div>
     <div class="grid">
       <div><span class="muted">Para</span><b>${esc(k.label || "—")}</b></div>
       <div><span class="muted">Main</span><b>${esc(k.main_char || "—")}</b></div>
       <div><span class="muted">Personagens</span><b>${chars}</b></div>
-      <div><span class="muted">Vence em</span><b>${day(k.expires_at)}</b></div>
+      <div><span class="muted">Vence em</span><b>${k.lifetime ? "nunca" : day(k.expires_at)}</b></div>
       <div><span class="muted">Aparelhos liberados</span><b>${k.devices}</b></div>
       <div><span class="muted">Último uso</span><b>${esc(lastUse(k))}</b></div>
+      <div><span class="muted">Entradas (7 dias)</span><b>${k.logins_7d} <button data-act="logins" style="padding:2px 8px; font-size:12px">ver histórico</button></b></div>
       <div><span class="muted">Criado em</span><b>${day(k.created_at)}</b></div>
     </div>
+    <div class="logins hidden" data-logins></div>
     <div class="actions">
-      <div class="row"><span class="muted" style="width:150px">Renovar a partir de hoje</span>
-        <button data-act="renew" data-days="7">7 dias</button><button data-act="renew" data-days="15">15 dias</button><button data-act="renew" data-days="30">30 dias</button></div>
+      ${k.lifetime ? "" : `<div class="row"><span class="muted" style="width:150px">Renovar a partir de hoje</span>
+        <button data-act="renew" data-days="7">7 dias</button><button data-act="renew" data-days="15">15 dias</button><button data-act="renew" data-days="30">30 dias</button></div>`}
+      <div class="row"><span class="muted" style="width:150px">Amigo do adm</span>
+        <button data-act="lifetime">${k.lifetime ? "Tirar vitalício" : "⭐ Tornar vitalício"}</button>
+        <span class="muted">${k.lifetime ? "Nunca vence; a pessoa não vê data de vencimento." : "O código nunca vence e a data some para a pessoa."}</span></div>
       <div class="row"><span class="muted" style="width:150px">Forçar main (confiança)</span>
         <input class="grow" data-input="main" placeholder="Nick do main character" value="" style="max-width:280px">
         <button data-act="trust">Definir main sem verificação</button>
@@ -253,6 +304,18 @@ $("#createForm").addEventListener("submit", async (e) => {
   finally { btn.disabled = false; }
 });
 
+$("#renewAll").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-days]"); if (!b) return;
+  const days = +b.dataset.days; $("#renewAllErr").textContent = "";
+  const fewer = KEYS.filter((k) => !k.lifetime && new Date(k.expires_at) < Date.now() + days * 86400000).length;
+  if (!fewer) { toast(`Todos já têm ${days} dias ou mais`); return; }
+  if (!confirm(`Completar para ${days} dias os ${fewer} código${fewer === 1 ? "" : "s"} que têm menos que isso?\n\nQuem já tem mais dias (e os vitalícios) não muda.`)) return;
+  b.disabled = true;
+  try { const r = await api("POST", "/api/admin/keys/renew-all", { days }); toast(`${r.renewed} código${r.renewed === 1 ? "" : "s"} renovado${r.renewed === 1 ? "" : "s"}`); await reload(); }
+  catch (ex) { if (ex.message !== "401") $("#renewAllErr").textContent = ex.message; }
+  finally { b.disabled = false; }
+});
+
 $("#list").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act]"); if (!b) return;
   const card = b.closest("[data-key]"), key = card.dataset.key, k = KEYS.find((x) => x.key === key);
@@ -261,7 +324,23 @@ $("#list").addEventListener("click", async (e) => {
   try {
     if (act === "copy-key") return copy(key);
     if (act === "copy-invite") return copy(inviteText(k));
+    if (act === "logins") {
+      const box = $("[data-logins]", card);
+      if (!box.classList.contains("hidden")) { box.classList.add("hidden"); return; }
+      const list = await api("GET", `/api/admin/keys/${key}/logins`);
+      box.innerHTML = list.length ? `<b>Últimas entradas</b> (aberturas com 30 min de intervalo contam uma vez):<br>`
+        + list.map((x) => `${esc(when(x.at))} · ${x.client === "app" ? "app Windows" : "site"}`).join("<br>")
+        : "Nenhuma entrada registrada ainda (o histórico começou na versão 0.13.0).";
+      box.classList.remove("hidden");
+      return;
+    }
     b.disabled = true;
+    if (act === "lifetime") {
+      const on = !k.lifetime;
+      if (!confirm(on ? `Tornar ${key} vitalício (amigo do adm)? Ele nunca mais vence.`
+                      : `Tirar o vitalício de ${key}? Ele volta a ter vencimento (se já passou, ganha 7 dias).`)) return;
+      await api("POST", `/api/admin/keys/${key}/lifetime`, { on }); toast(on ? "⭐ Agora é vitalício" : "Vitalício removido");
+    }
     if (act === "renew") { const r = await api("POST", `/api/admin/keys/${key}/renew`, { days: +b.dataset.days }); toast(`Renovado até ${day(r.expires_at)}`); }
     if (act === "trust") {
       const name = $("[data-input=main]", card).value.trim();
