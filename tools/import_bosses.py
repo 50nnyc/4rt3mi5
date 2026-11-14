@@ -29,6 +29,7 @@ _FIELD = re.compile(r"^\|\s*(\w+)\s*=\s*(.*)$")
 _LOOT_ITEM = re.compile(r"\{\{Loot Item\|([^}]*)\}\}")
 _AMOUNT = re.compile(r"[\d?+\-–]+")
 _RARITY = {"always", "common", "uncommon", "semi-rare", "rare", "very rare", "extremely rare", "never", "?"}
+_RARE = {"rare", "very rare", "extremely rare"}  # o que conta como "drop raro" na 👑 Rotação de bosses
 
 
 def _get(params: dict) -> dict:
@@ -73,14 +74,18 @@ def infobox(text: str) -> dict | None:
             fields[m.group(1).lower()] = m.group(2).strip()
     loot_part = text.split("| loot", 1)[1] if "| loot" in text else ""
     loot_part = loot_part.split("\n| ", 1)[0]
-    loot = set()
+    loot, rare = set(), {}
     for m in _LOOT_ITEM.finditer(loot_part):  # {{Loot Item|[quantidade|]Nome[|raridade]}}
         parts = [p.strip() for p in m.group(1).split("|")]
         name = parts[1] if len(parts) > 1 and _AMOUNT.fullmatch(parts[0]) else parts[0]
         if name and name.lower() not in _RARITY:
-            loot.add(" ".join(name.split()).lower())
-    loot = sorted(loot)
-    fields["_loot"] = loot
+            key = " ".join(name.split()).lower()
+            loot.add(key)
+            rarity = next((p.lower() for p in parts if p.lower() in _RARE), None)
+            if rarity:
+                rare[key] = rarity
+    fields["_loot"] = sorted(loot)
+    fields["_rare"] = dict(sorted(rare.items()))
     return fields
 
 
@@ -100,7 +105,7 @@ def main() -> None:
             continue
         name = (f.get("actualname") or f.get("name") or title).strip()
         bosses[name.lower()] = {"name": name, "class": (f.get("bosstiaryclass") or "").strip().title() or None,
-                                "hp": _int(f.get("hp")), "exp": _int(f.get("exp")), "loot": f["_loot"]}
+                                "hp": _int(f.get("hp")), "exp": _int(f.get("exp")), "loot": f["_loot"], "rare": f["_rare"]}
     boss_items = {it for b in bosses.values() for it in b["loot"]}
     creatures: dict[str, list[str]] = {}
     for title, text in wikitexts(creature_titles):

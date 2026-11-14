@@ -22,7 +22,8 @@ def _data() -> tuple[dict, dict]:
         raw = json.loads(BOSSES_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}, {}
-    bosses = {item_key(b["name"]): {**b, "loot": set(b.get("loot", []))} for b in raw.get("bosses", {}).values()}
+    bosses = {item_key(b["name"]): {**b, "loot": set(b.get("loot", [])), "rare": dict(b.get("rare", {}))}
+              for b in raw.get("bosses", {}).values()}
     creatures = {item_key(k): set(v) for k, v in raw.get("creature_loot", {}).items()}
     return bosses, creatures
 
@@ -84,6 +85,46 @@ def attribute_loot(kills: list[tuple[str, int]], loot: list[tuple[str, int]], wh
     if whole_session:
         out["_outros"] = others
     return out
+
+
+RARE_RARITIES = {"very rare", "extremely rare"}  # raridade da TibiaWiki que já conta como drop raro
+RARE_VALUE = 500_000  # sem raridade na wiki: item do boss que vale isso ou mais (unidade) também conta
+
+
+def drop_rarity(boss_key: str, item: str) -> str | None:
+    """Raridade do item na tabela do boss segundo a TibiaWiki ("very rare"...), ou None."""
+    b = _data()[0].get(boss_key)
+    if not b:
+        return None
+    return next((b["rare"][n] for n in _resolve_variants(item) if n in b["rare"]), None)
+
+
+def rare_drops(kills: list[tuple[str, int]], loot: list[tuple[str, int]], whole_session: bool,
+               unit_price) -> list[dict]:
+    """Drops raros de boss na sessão: [{boss_key, boss, item, count, rarity, unit}].
+
+    Raro = "very rare"/"extremely rare" na TibiaWiki ou valor unitário >= RARE_VALUE.
+    `unit_price(item) -> int` dá o preço usado no app. Sessão de boss com um boss só: itens fora da
+    tabela dele também contam (pelo valor).
+    """
+    found = bosses_in(kills)
+    if not found:
+        return []
+    split = attribute_loot(kills, loot, whole_session)
+    others = split.pop("_outros", [])
+    if len(found) == 1:
+        split[found[0]["key"]] = split.get(found[0]["key"], []) + others
+    names = {b["key"]: b["name"] for b in found}
+    out = []
+    for bk, pairs in split.items():
+        for item, n in pairs:
+            if item in COINS:
+                continue
+            rarity, unit = drop_rarity(bk, item), unit_price(item)
+            if (rarity in RARE_RARITIES) or unit >= RARE_VALUE:
+                out.append({"boss_key": bk, "boss": names.get(bk, bk), "item": item, "count": n,
+                            "rarity": rarity, "unit": unit})
+    return sorted(out, key=lambda d: -d["unit"] * d["count"])
 
 
 def overlaps(a_start: str, a_end: str, b_start: str, b_end: str) -> bool:

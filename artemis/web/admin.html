@@ -67,6 +67,9 @@
   </section>
 
   <section id="panel" class="hidden">
+    <h2>Situação do servidor</h2>
+    <div class="card" id="status"><span class="muted">Carregando…</span></div>
+    <div id="expiring"></div>
     <h2>Novo código de acesso</h2>
     <div class="card">
       <form id="createForm" class="row">
@@ -142,8 +145,40 @@ async function enter() {
   $("#login").classList.add("hidden");
   $("#panel").classList.remove("hidden"); $("#logout").classList.remove("hidden");
   render();
+  loadStatus();
 }
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); }
+async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); }
+const when = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
+async function loadStatus() {
+  let s;
+  try { s = await api("GET", "/api/admin/status"); } catch { return; }
+  const v = s.vigia;
+  const vigia = !v ? `<span class="badge">vigia não instalado</span> <span class="muted">rode <code>vigia.bat</code> uma vez para instalar</span>`
+    : v.ok ? `<span class="badge ok">site no ar</span> <span class="muted">conferido ${esc(when(v.checked_at))}</span>`
+    : `<span class="badge warn">site fora do ar</span> <span class="muted">${esc(v.message || "")} · desde ${esc(when(v.down_since))}</span>`;
+  $("#status").innerHTML = `<div class="grid">
+      <div><span class="muted">Vigia do site (ngrok)</span><b>${vigia}</b></div>
+      <div><span class="muted">Último backup automático</span><b>${esc(when(s.last_backup))}</b></div>
+      <div><span class="muted">Backups guardados</span><b>${s.backups.length} de ${s.keep} (data/backups)</b></div>
+    </div>`;
+}
+/** Códigos que vencem em até 7 dias, para renovar a tempo. */
+function expiringBlock() {
+  const soon = KEYS.filter((k) => daysLeft(k.expires_at) <= 7).sort((a, b) => a.expires_at.localeCompare(b.expires_at));
+  if (!soon.length) return "";
+  return `<h2>Vencem nesta semana (${soon.length})</h2><div class="card">${soon.map((k) => {
+    const left = daysLeft(k.expires_at);
+    return `<div class="row" style="padding:4px 0"><span class="key" style="font-size:14px">${esc(k.key)}</span>
+      <b>${esc(k.label || k.main_char || "—")}</b>
+      <span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"} (${day(k.expires_at)})</span>
+      <span class="muted">último uso: ${esc(lastUse(k))}</span></div>`;
+  }).join("")}</div>`;
+}
+function lastUse(k) {
+  if (!k.last_seen) return "nunca";
+  const d = Math.floor((Date.now() - new Date(k.last_seen)) / 86400000);
+  return d <= 0 ? "hoje" : d === 1 ? "ontem" : `há ${d} dias`;
+}
 
 function keyCard(k) {
   const left = daysLeft(k.expires_at);
@@ -164,6 +199,7 @@ function keyCard(k) {
       <div><span class="muted">Personagens</span><b>${chars}</b></div>
       <div><span class="muted">Vence em</span><b>${day(k.expires_at)}</b></div>
       <div><span class="muted">Aparelhos liberados</span><b>${k.devices}</b></div>
+      <div><span class="muted">Último uso</span><b>${esc(lastUse(k))}</b></div>
       <div><span class="muted">Criado em</span><b>${day(k.created_at)}</b></div>
     </div>
     <div class="actions">
@@ -184,6 +220,7 @@ function render() {
   const q = $("#filter").value.trim().toLowerCase();
   const shown = KEYS.filter((k) => !q || [k.key, k.label, k.main_char, ...k.chars.map((c) => c.name)].join(" ").toLowerCase().includes(q));
   $("#count").textContent = `(${KEYS.length})`;
+  $("#expiring").innerHTML = expiringBlock();
   $("#list").innerHTML = shown.map(keyCard).join("") || `<p class="muted">Nenhum código ${q ? "encontrado" : "válido no momento"}.</p>`;
 }
 

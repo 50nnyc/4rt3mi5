@@ -30,14 +30,14 @@ from typing import Annotated, Literal
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 
 from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
 from artemis.core import bosses as boss_core
 from artemis.core.parser import ParseError
-from artemis.core.report import report_from_text
+from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
@@ -89,15 +89,41 @@ if HUNTS_FILE.exists():
         print("Carregando hunts da TibiaWiki:", store.load_places(_h))
 
 
+BACKUP_DIR = DATA_DIR / "backups"
+BACKUP_KEEP = int(os.environ.get("ARTEMIS_BACKUP_KEEP", "14"))  # backups diários guardados (os mais velhos saem)
+
+
+def daily_backup(now: datetime | None = None) -> Path | None:
+    """Um backup por dia em data/backups/artemis-AAAAMMDD.db; mantém só os BACKUP_KEEP mais novos."""
+    now = now or datetime.now()
+    path = BACKUP_DIR / f"artemis-{now:%Y%m%d}.db"
+    if path.exists():
+        return None
+    store.backup_to(path)
+    store.set_meta("last_backup", now.isoformat(timespec="seconds"))
+    for old in sorted(BACKUP_DIR.glob("artemis-*.db"), reverse=True)[BACKUP_KEEP:]:
+        old.unlink(missing_ok=True)
+    return path
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     async def purge_loop():
         while True:
             store.purge_expired()
             await asyncio.sleep(600)  # a cada 10 minutos apaga chaves vencidas
-    task = asyncio.create_task(purge_loop())
+
+    async def backup_loop():
+        while True:
+            try:
+                await asyncio.to_thread(daily_backup)
+            except Exception as e:  # backup nunca derruba o servidor
+                print("Falha no backup automático:", e)
+            await asyncio.sleep(3600)  # confere a cada hora se o backup do dia já foi feito
+    tasks = [asyncio.create_task(purge_loop()), asyncio.create_task(backup_loop())]
     yield
-    task.cancel()
+    for task in tasks:
+        task.cancel()
 
 
 app = FastAPI(title=APP_NAME, version=__version__, lifespan=lifespan,
@@ -114,7 +140,8 @@ async def invalid_input(_request: Request, exc: RequestValidationError):
 
 # ------------------------------------------------------------------ limite de requisições (anti-abuso)
 MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
-RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600)}   # (máx., janela em s) por IP
+RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (máx., janela em s) por IP
+              "img": (600, 60)}                                             # imagens (/img/wiki/...)
 UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
                 "/api/bosses/session", "/api/bosses/lootsplit"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
@@ -308,6 +335,76 @@ def health():
     return {"ok": True, "app": APP_NAME, "version": __version__}
 
 
+# ------------------------------------------------------------------ imagens da TibiaWiki guardadas no banco
+# O site pede /img/wiki/<Nome>.gif; na primeira vez o servidor busca na TibiaWiki BR e guarda no banco.
+# Depois disso a imagem sai do banco, sem depender da wiki. Se a wiki não responder, o navegador é
+# mandado para o endereço original (que o CSP já permite).
+WIKI_IMG_URL = "https://www.tibiawiki.com.br/wiki/Especial:Redirecionar/file/{}.gif"
+_IMG_NAME = re.compile(r"[\w À-ÿ'().,&+!-]{1,80}")
+IMG_MAX = 300_000
+IMG_MISS_RETRY = timedelta(days=7)     # imagem que não existe: tenta de novo depois de uma semana
+IMG_FETCH_LIMIT = (120, 60)             # buscas novas na wiki (todas as pessoas juntas) por minuto
+_img_fetches: deque = deque()
+
+
+def _fetch_wiki_image(name: str) -> tuple[str, bytes] | None | bool:
+    """(tipo, bytes) se achou; None se não existe na wiki; False se a wiki não respondeu."""
+    import urllib.error
+    import urllib.parse
+    import urllib.request
+    url = WIKI_IMG_URL.format(urllib.parse.quote(name.replace(" ", "_")))
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (4rt3mi5 image cache)"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            host = urllib.parse.urlparse(r.geturl()).hostname or ""
+            ctype = (r.headers.get("Content-Type") or "").split(";")[0].strip()
+            if not host.endswith("tibiawiki.com.br") or not ctype.startswith("image/"):
+                return None
+            data = r.read(IMG_MAX + 1)
+            return None if len(data) > IMG_MAX else (ctype, data)
+    except urllib.error.HTTPError as e:
+        return None if e.code == 404 else False
+    except OSError:
+        return False
+
+
+def _img_budget() -> bool:
+    limit, window = IMG_FETCH_LIMIT
+    now = time.monotonic()
+    while _img_fetches and now - _img_fetches[0] > window:
+        _img_fetches.popleft()
+    if len(_img_fetches) >= limit:
+        return False
+    _img_fetches.append(now)
+    return True
+
+
+@app.get("/img/wiki/{file}", include_in_schema=False)
+async def wiki_image(file: str, request: Request):
+    name = file[:-4] if file.lower().endswith(".gif") else file
+    name = " ".join(name.replace("_", " ").split())
+    if not _IMG_NAME.fullmatch(name):
+        return Response(status_code=404)
+    if _rate_limited(client_ip(request), "img"):
+        return Response(status_code=429, headers={"Retry-After": "60"})
+    cached = store.wiki_image(name)
+    if cached is not None and cached["data"] is not None:
+        return Response(cached["data"], media_type=cached["content_type"],
+                        headers={"Cache-Control": "public, max-age=2592000, immutable"})
+    original = WIKI_IMG_URL.format(name.replace(" ", "_"))
+    if cached is not None and datetime.fromisoformat(cached["fetched_at"]) > datetime.now().astimezone() - IMG_MISS_RETRY:
+        return Response(status_code=404, headers={"Cache-Control": "public, max-age=86400"})
+    if not _img_budget():
+        return RedirectResponse(original, status_code=302)
+    got = await asyncio.to_thread(_fetch_wiki_image, name)
+    if got is False:
+        return RedirectResponse(original, status_code=302)
+    store.save_wiki_image(name, got[0] if got else None, got[1] if got else None)
+    if got is None:
+        return Response(status_code=404, headers={"Cache-Control": "public, max-age=86400"})
+    return Response(got[1], media_type=got[0], headers={"Cache-Control": "public, max-age=2592000, immutable"})
+
+
 @app.post("/api/auth")
 def auth(session: tuple = Depends(optional_device)):
     access, device = session
@@ -417,6 +514,66 @@ def player_hunts(name: str, access: dict = Depends(require_session)):
 def delete_hunt(hunt_id: int, access: dict = Depends(require_session)):
     _delete_own("hunts", hunt_id, access)
     return {"deleted": hunt_id}
+
+
+class RulesIn(BaseModel):
+    excluded: Annotated[list[Name], Field(max_length=10)] = []
+    fixed: Annotated[dict[Name, Annotated[int, Field(ge=0, le=100_000_000_000)]], Field(max_length=10)] = {}
+
+
+class PaidIn(BaseModel):
+    payer: Name
+    receiver: Name
+    paid: bool = True
+
+
+def _load_hunt(kind: str, hunt_id: int) -> dict:
+    h = store.hunt(hunt_id) if kind == "hunt" else store.boss_hunt(hunt_id)
+    if h is None:
+        raise HTTPException(404, "Lootsplit não encontrado (talvez tenha sido apagado).")
+    return h
+
+
+def _set_rules(kind: str, hunt_id: int, body: RulesIn, access: dict) -> dict:
+    """Regras de divisão: só quem enviou o lootsplit define. Zera as marcações de "já paguei"."""
+    h = _load_hunt(kind, hunt_id)
+    if h.get("uploader_key") != access["key"]:
+        raise HTTPException(403, "Só quem enviou o lootsplit pode mudar as regras de divisão.")
+    names = {p["name"].lower(): p["name"] for p in h["players"]}
+    unknown = [n for n in [*body.excluded, *body.fixed] if n.lower() not in names]
+    if unknown:
+        raise HTTPException(422, f"{unknown[0]} não está nesse lootsplit.")
+    excluded = sorted({names[n.lower()] for n in body.excluded})
+    fixed = {names[n.lower()]: v for n, v in body.fixed.items() if names[n.lower()] not in excluded}
+    if len(excluded) + len(fixed) >= len(names):
+        raise HTTPException(422, "Pelo menos um jogador precisa continuar na divisão igual.")
+    rules = {"excluded": excluded, "fixed": fixed} if excluded or fixed else None
+    store.set_split_rules(kind, hunt_id, rules, access["key"])
+    return {"hunt": _public(_load_hunt(kind, hunt_id), access)}
+
+
+def _set_paid(kind: str, hunt_id: int, body: PaidIn, access: dict) -> dict:
+    """'Já paguei' / 'recebi': quem marca precisa ter o pagador ou o recebedor vinculado ao código."""
+    h = _load_hunt(kind, hunt_id)
+    t = next((t for t in h["transfers"] if name_key(t["payer"]) == name_key(body.payer)
+              and name_key(t["receiver"]) == name_key(body.receiver)), None)
+    if t is None:
+        raise HTTPException(404, "Essa transferência não existe nesse lootsplit.")
+    if not (store.is_linked(access["key"], t["payer"]) or store.is_linked(access["key"], t["receiver"])):
+        raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.",
+                                  "hint": FORBIDDEN_HINT})
+    store.set_paid(kind, hunt_id, t["payer"], t["receiver"], t["amount"], access["key"], body.paid)
+    return {"hunt": _public(_load_hunt(kind, hunt_id), access)}
+
+
+@app.post("/api/hunt/{hunt_id}/rules")
+def hunt_rules(hunt_id: int, body: RulesIn, access: dict = Depends(require_session)):
+    return _set_rules("hunt", hunt_id, body, access)
+
+
+@app.post("/api/hunt/{hunt_id}/paid")
+def hunt_paid(hunt_id: int, body: PaidIn, access: dict = Depends(require_session)):
+    return _set_paid("hunt", hunt_id, body, access)
 
 
 @app.post("/api/lootsplit/preview")
@@ -831,6 +988,38 @@ def places_compare(ids: str, nick: str = "", access: dict = Depends(require_sess
     return out
 
 
+# ------------------------------------------------------------------ 🥇 ranking entre amigos (só quem aceitar)
+RANKING_METRICS = {"xp", "xp_h", "profit", "profit_h", "hours"}
+
+
+class RankingJoinIn(BaseModel):
+    join: bool
+
+
+@app.get("/api/ranking")
+def ranking(period: int = 7, metric: str = "xp", nick: str = "", _: dict = Depends(require_session)):
+    """Ranking das sessões do Stacker de quem entrou no ranking. Quem não entrou nunca aparece."""
+    period = period if period in (7, 30) else 7
+    metric = metric if metric in RANKING_METRICS else "xp"
+    since = (datetime.now() - timedelta(days=period)).isoformat(timespec="seconds")
+    rows = []
+    for r in store.ranking_rows(since):
+        secs = r["seconds"]
+        rows.append({"name": r["name"], "vocation": r["vocation"], "level": r["level"], "sessions": r["sessions"],
+                     "xp": r["xp"], "profit": r["balance"], "hours": round(secs / 3600, 1),
+                     "xp_h": _per_hour(r["xp"], secs), "profit_h": _per_hour(r["balance"], secs)})
+    rows.sort(key=lambda r: (-r[metric], r["name"]))
+    return {"period": period, "metric": metric, "rows": rows, "joined": bool(nick) and store.ranking_member(nick)}
+
+
+@app.post("/api/ranking/{name}")
+def ranking_join(name: str, body: RankingJoinIn, access: dict = Depends(require_session)):
+    """Entrar/sair do ranking: só o dono do personagem decide."""
+    real = require_uploader(name, access)
+    store.ranking_join(real, body.join)
+    return {"joined": store.ranking_member(real)}
+
+
 class PriceIn(BaseModel):
     item: Annotated[str, Field(min_length=1, max_length=80)]
     price: int | None = None
@@ -866,7 +1055,34 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text,
                                   body.place_id, level)
     row.pop("raw_text", None)
-    return {"created": created, "session": _public(row, access), "rewards": grant_rewards(access["key"])}
+    return {"created": created, "session": _public(row, access), "rewards": grant_rewards(access["key"]),
+            "rare": _session_rare(session, False, access) if created else [],
+            "compare": _compare_with_average(name, row)}
+
+
+COMPARE_MIN_SECONDS = 600  # sessões curtas distorcem a média (mesmo corte do ranking de Hunts)
+
+
+def _compare_with_average(name: str, row: dict) -> dict | None:
+    """Sessão x média do próprio personagem na mesma hunt (XP/h e balance/h)."""
+    place = store.place(row["place_id"]) if row.get("place_id") else None
+    if place is None or row["duration_seconds"] < COMPARE_MIN_SECONDS:
+        return None
+    others = [s for s in store.solo_for_player(name)
+              if s["place_id"] == place["id"] and s["id"] != row["id"] and s["duration_seconds"] >= COMPARE_MIN_SECONDS]
+    out = {"place": place["name"], "sessions": len(others),
+           "xp_h": _per_hour(row["xp"], row["duration_seconds"]),
+           "gold_h": _per_hour(row["balance"], row["duration_seconds"])}
+    if not others:
+        return out
+    secs = sum(s["duration_seconds"] for s in others)
+    out["avg_xp_h"] = _per_hour(sum(s["xp"] for s in others), secs)
+    out["avg_gold_h"] = _per_hour(sum(s["balance"] for s in others), secs)
+
+    def pct(v: int, avg: int) -> int | None:
+        return round((v - avg) * 100 / abs(avg)) if avg else None
+    out["xp_pct"], out["gold_pct"] = pct(out["xp_h"], out["avg_xp_h"]), pct(out["gold_h"], out["avg_gold_h"])
+    return out
 
 
 @app.delete("/api/stacker/session/{session_id}")
@@ -924,6 +1140,7 @@ def boss_session_upload(body: BossSessionIn, access: dict = Depends(require_sess
     hunt = store.boss_hunt(row["boss_hunt_id"]) if row["boss_hunt_id"] else _link_session_to_party(row)
     return {"created": created, "session_id": row["id"], "mode": row["mode"],
             "bosses": boss_core.bosses_in(session.kills),
+            "rare": _session_rare(session, True, access) if created else [],
             "party": _hunt_brief(hunt) if hunt else None, "rewards": grant_rewards(access["key"])}
 
 
@@ -954,6 +1171,25 @@ def boss_lootsplit(body: BossSplitIn, access: dict = Depends(require_session)):
     return {"created": created, "hunt": _public(hunt, access), "linked": linked, "rewards": grant_rewards(access["key"])}
 
 
+def _rare(kills, resolved, whole_session: bool, prices: dict) -> list[dict]:
+    """Drops raros de boss (very/extremely rare na TibiaWiki ou item caro), com o valor pelos preços do app."""
+    drops = boss_core.rare_drops(kills, resolved, whole_session,
+                                 lambda k: (prices.get(k) or {}).get("unit_price") or 0)
+    return [{**d, "key": d["item"], "value": d["unit"] * d["count"]} for d in drops]
+
+
+def _session_rare(session, whole_session: bool, access: dict) -> list[dict]:
+    """Drops raros de uma sessão recém-enviada (para a comemoração no app)."""
+    if not boss_core.bosses_in(session.kills):
+        return []
+    resolved = [(store.resolve_item(item_key(k)), n) for k, n in session.loot]
+    prices = store.price_info(list({k for k, _ in resolved}), access["key"])
+    out = _rare(session.kills, resolved, whole_session, prices)
+    for d in out:
+        d["name"] = prices[d["key"]]["name"]
+    return out
+
+
 def _valued(pairs, prices: dict) -> list[dict]:
     items = _sum_counts(pairs)
     for it in items:
@@ -974,6 +1210,7 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
     prices = store.price_info(list(keys), access["key"])
     hunts = {h["id"]: _public(h, access) for h in store.boss_hunts_for(name)}
     per_boss: dict[str, dict] = {}
+    rare: list[dict] = []  # 💎 histórico de drops raros
 
     def add_boss(b: dict, count: int, value: int, when: str, source: str) -> None:
         pb = per_boss.setdefault(b["key"], {"key": b["key"], "name": b["name"], "class": b.get("class"), "kills": 0,
@@ -998,6 +1235,8 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
             if len(s["bosses"]) == 1:
                 v += rest  # um boss só na sessão: todo o loot é dele
             add_boss(b, b["count"], v, s["started_at"], "boss")
+        for d in _rare(kills[s["id"]], resolved, True, prices):
+            rare.append({**d, "started_at": s["started_at"], "source": "boss", "session_id": s["id"]})
         h = hunts.get(s.get("boss_hunt_id"))
         s["party"] = _hunt_brief(h) if h else None
 
@@ -1014,12 +1253,14 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
             add_boss(b, b["count"], sum(n * prices[k]["unit_price"] for k, n in split.get(b["key"], [])), s["started_at"], "hunt")
         from_hunts.append({"session_id": s["id"], "started_at": s["started_at"], "bosses": found, "items": items,
                            "value": sum(it["value"] for it in items)})
+        for d in _rare(s_kills[s["id"]], resolved, False, prices):
+            rare.append({**d, "started_at": s["started_at"], "source": "hunt", "session_id": s["id"]})
 
     for h in hunts.values():
         h["members"] = [m["name"] for m in store.boss_sessions_of_hunt(h["id"])]
     linked_hunts = {s["boss_hunt_id"] for s in sessions if s.get("boss_hunt_id")}
     sessions_profit = sum(s["balance"] for s in sessions if s.get("boss_hunt_id") not in hunts)
-    party_profit = sum(h["profit_each"] for h in hunts.values())
+    party_profit = sum(profit_of(h, name) for h in hunts.values())  # considera as regras de divisão
     hunts_value = sum(x["value"] for x in from_hunts)
     secs = sum(s["duration_seconds"] for s in sessions)
     totals = {
@@ -1034,9 +1275,15 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
         "profit_per_hour": _per_hour(sessions_profit + party_profit, secs),
     }
     all_items = _valued(((it["key"], it["count"]) for s in sessions for it in s["loot"]), prices)
+    # 💰 itens de boss que nenhum NPC compra: a pessoa informa o preço (entra na média de todos)
+    boss_keys = {it["key"] for it in all_items} | {it["key"] for x in from_hunts for it in x["items"]}
+    no_npc = sorted((k for k in boss_keys if not prices[k]["npc_price"] and prices[k].get("source") != "moeda"),
+                    key=lambda k: (bool(prices[k]["unit_price"]), prices[k]["name"]))
     return {"name": name, "totals": totals, "bosses": sorted(per_boss.values(), key=lambda b: (-b["kills"], b["name"])),
             "sessions": sessions, "hunts": sorted(hunts.values(), key=lambda h: h["started_at"], reverse=True),
-            "linked_hunts": len(linked_hunts), "from_hunts": from_hunts, "items": all_items, "prices": prices}
+            "linked_hunts": len(linked_hunts), "from_hunts": from_hunts, "items": all_items, "prices": prices,
+            "rare_drops": sorted(rare, key=lambda d: d["started_at"], reverse=True),
+            "no_npc": no_npc, "unpriced": sum(1 for k in no_npc if not prices[k]["unit_price"])}
 
 
 def _delete_own_boss(table: str, row_id: int, access: dict) -> None:
@@ -1052,6 +1299,25 @@ def _delete_own_boss(table: str, row_id: int, access: dict) -> None:
 def delete_boss_session(session_id: int, access: dict = Depends(require_session)):
     _delete_own_boss("boss_sessions", session_id, access)
     return {"deleted": session_id}
+
+
+def _require_boss_member(hunt_id: int, access: dict) -> None:
+    """Lootsplit de boss é privado: só quem tem personagem da PT mexe nele."""
+    h = _load_hunt("boss", hunt_id)
+    if not any(store.is_linked(access["key"], p["name"]) for p in h["players"]):
+        raise HTTPException(403, {"message": BOSS_PRIVATE, "hint": FORBIDDEN_HINT})
+
+
+@app.post("/api/bosses/hunt/{hunt_id}/rules")
+def boss_hunt_rules(hunt_id: int, body: RulesIn, access: dict = Depends(require_session)):
+    _require_boss_member(hunt_id, access)
+    return _set_rules("boss", hunt_id, body, access)
+
+
+@app.post("/api/bosses/hunt/{hunt_id}/paid")
+def boss_hunt_paid(hunt_id: int, body: PaidIn, access: dict = Depends(require_session)):
+    _require_boss_member(hunt_id, access)
+    return _set_paid("boss", hunt_id, body, access)
 
 
 @app.delete("/api/bosses/hunt/{hunt_id}")
@@ -1096,6 +1362,20 @@ def _admin_key(key: str) -> dict:
 def admin_keys():
     store.purge_expired()
     return store.keys_overview()
+
+
+VIGIA_FILE = DATA_DIR / "vigia.json"  # escrito pelo tools/vigia.ps1 (Agendador do Windows)
+
+
+@app.get("/api/admin/status", dependencies=[Depends(require_admin)])
+def admin_status():
+    """Backups automáticos e o último resultado do vigia do site (painel do criador)."""
+    backups = sorted((p.name for p in BACKUP_DIR.glob("artemis-*.db")), reverse=True) if BACKUP_DIR.exists() else []
+    try:
+        vigia = json.loads(VIGIA_FILE.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        vigia = None
+    return {"last_backup": store.meta("last_backup"), "backups": backups, "keep": BACKUP_KEEP, "vigia": vigia}
 
 
 @app.post("/api/admin/keys", dependencies=[Depends(require_admin)])

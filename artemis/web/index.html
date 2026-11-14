@@ -398,6 +398,7 @@
     <button class="item sub" data-page="boss" data-btab="solo">↳ Solo</button>
     <button class="item sub" data-page="boss" data-btab="party">↳ Party</button>
     <button class="item" data-page="hunts">🗺️ Hunts</button>
+    <button class="item" data-page="rank">🥇 Ranking entre amigos</button>
     <button class="item" data-page="ach">🏆 Conquistas</button>
     <button class="item" data-page="chars">👤 Meus personagens</button>
     <button class="item" data-page="news">📰 Novidades <span class="pill hidden" id="newsDot">novo</span></button>
@@ -477,6 +478,19 @@
         <div class="chips" id="cmpChips" style="margin:10px 0"></div>
         <div id="cmpResult"></div>
       </div>
+    </div>
+
+    <div id="pageRank" class="hidden">
+      <h1>Ranking entre amigos</h1>
+      <p class="muted" style="margin-top:-4px">Só aparece quem aceitou entrar. Usa as sessões do 📈 Hunt Session Stacker.</p>
+      <div id="rankJoin"></div>
+      <div class="seg" role="tablist" id="rankMetric">
+        <button data-rmetric="xp" class="on">XP</button><button data-rmetric="xp_h">XP/h</button><button data-rmetric="profit">Lucro</button><button data-rmetric="profit_h">Lucro/h</button><button data-rmetric="hours">Horas</button>
+      </div>
+      <div class="seg" role="tablist" id="rankPeriod" style="margin-left:6px">
+        <button data-rperiod="7" class="on">Semana</button><button data-rperiod="30">Mês</button>
+      </div>
+      <div id="rankBody" style="margin-top:12px"></div>
     </div>
 
     <div id="pageAch" class="hidden">
@@ -609,6 +623,7 @@ async function waitOnline(splashAlreadyVisible) {
   S.offline = false;
   if (!splashAlreadyVisible) await splashHide();
   else setSplashMsg("");
+  setTimeout(flushDrafts, 1000);  // 📤 manda os rascunhos guardados enquanto estava sem conexão
 }
 function startMonitor() {
   setInterval(() => { if (!S.offline) waitOnline(false); }, RETRY_MS);
@@ -813,6 +828,7 @@ function openApp() {
   S.page = null;
   go("home", { noPush: true });
   setTimeout(offerInstall, 2500);
+  setTimeout(flushDrafts, 1500);
 }
 function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
@@ -872,7 +888,9 @@ function go(page, opts = {}) {
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
   $("#pageNews").classList.toggle("hidden", page !== "news");
   $("#pageAch").classList.toggle("hidden", page !== "ach");
+  $("#pageRank").classList.toggle("hidden", page !== "rank");
   Music.forPage(page);
+  if (page === "rank") loadRank();
   if (page === "news") loadNews();
   if (page === "ach") loadAch();
   window.scrollTo(0, 0);
@@ -926,23 +944,120 @@ function view(h, name) {
   const key = name.toLowerCase();
   const pays = h.transfers.filter((t) => t.payer.toLowerCase() === key);
   const gets = h.transfers.filter((t) => t.receiver.toLowerCase() === key);
-  return { inParty: h.players.some((p) => p.name.toLowerCase() === key), pays, gets,
-           totalPay: pays.reduce((a, t) => a + t.amount, 0), totalGet: gets.reduce((a, t) => a + t.amount, 0) };
+  const me = h.players.find((p) => p.name.toLowerCase() === key);
+  return { inParty: !!me, pays, gets, profit: me && me.profit != null ? me.profit : h.profit_each,
+           totalPay: pays.reduce((a, t) => a + t.amount, 0), totalGet: gets.reduce((a, t) => a + t.amount, 0),
+           pendingPay: pays.filter((t) => !t.paid_at).reduce((a, t) => a + t.amount, 0),
+           pendingGet: gets.filter((t) => !t.paid_at).reduce((a, t) => a + t.amount, 0) };
 }
-function actionBox(v) {
+/** Personagem vinculado ao código de quem está usando o app (pode marcar "já paguei"/"recebi"). */
+const isMine = (name) => ((S.me && S.me.chars) || []).some((c) => c.name.toLowerCase() === String(name).toLowerCase());
+const huntBase = (h) => h.kind === "boss" ? `/api/bosses/hunt/${h.id}` : `/api/hunt/${h.id}`;
+const HUNTS_BY_ID = new Map();  // "kind:id" -> hunt mostrada (para os botões de pagamento e regras)
+const huntRef = (h) => { const k = `${h.kind || "hunt"}:${h.id}`; if (h.id) HUNTS_BY_ID.set(k, h); return k; };
+function paidButton(h, t) {
+  if (!h.id) return "";
+  const ref = huntRef(h), canMark = isMine(t.payer) || isMine(t.receiver);
+  if (t.paid_at) return `<span class="pos" style="font-size:13px">✔ pago ${esc(new Date(t.paid_at).toLocaleDateString("pt-BR"))}</span>
+    ${canMark ? `<button class="link" style="font-size:13px" data-paid="${ref}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}" data-set="0">desfazer</button>` : ""}`;
+  if (!canMark) return `<span class="muted" style="font-size:13px">⏳ falta pagar</span>`;
+  return `<button class="btn2" style="padding:4px 10px; font-size:13px" data-paid="${ref}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}" data-set="1">${t.receiver.toLowerCase() !== (S.nick || "").toLowerCase() && isMine(t.payer) ? "✔ Já paguei" : "✔ Recebi"}</button>`;
+}
+function actionBox(v, h) {
   if (!v.inParty) return "";
-  if (v.totalPay > 0) return `<div class="action pay"><div class="title">Você deve transferir ${fmt(v.totalPay)} gp</div>
+  if (v.totalPay > 0) return `<div class="action pay"><div class="title">${v.pendingPay ? `Você deve transferir ${fmt(v.pendingPay)} gp` : `Você já pagou tudo ✔ (${fmt(v.totalPay)} gp)`}</div>
     ${v.pays.map((t) => `<div class="tx"><div class="row"><span>para <b>${esc(t.receiver)}</b></span><b>${fmt(t.amount)}</b></div>
-      <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("")}</div>`;
-  if (v.totalGet > 0) return `<div class="action get"><div class="title">Você vai receber ${fmt(v.totalGet)} gp</div>
-    ${v.gets.map((t) => `<div class="tx row"><span>de <b>${esc(t.payer)}</b></span><b>${fmt(t.amount)}</b></div>`).join("")}</div>`;
+      <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div>
+      ${h ? `<div class="row" style="justify-content:flex-end">${paidButton(h, t)}</div>` : ""}</div>`).join("")}</div>`;
+  if (v.totalGet > 0) return `<div class="action get"><div class="title">${v.pendingGet ? `Você vai receber ${fmt(v.pendingGet)} gp` : `Você já recebeu tudo ✔ (${fmt(v.totalGet)} gp)`}</div>
+    ${v.gets.map((t) => `<div class="tx row"><span>de <b>${esc(t.payer)}</b> · <b>${fmt(t.amount)}</b></span>${h ? paidButton(h, t) : ""}</div>`).join("")}</div>`;
   return `<div class="action none"><div class="title">Nada a transferir nesta hunt</div></div>`;
 }
 function transfersBox(h) {
   if (!h.transfers.length) return `<p class="muted">Ninguém precisa transferir.</p>`;
-  return h.transfers.map((t) => `<div class="tx"><div class="row"><span><b>${esc(t.payer)}</b> → <b>${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)}</b></div>
-    <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("");
+  const pending = h.transfers.filter((t) => !t.paid_at).length;
+  return (h.id ? `<div class="muted" style="font-size:13px; margin-bottom:4px">${pending ? `⏳ ${pending} de ${h.transfers.length} transferências ainda não foram marcadas como pagas.` : "✔ Todas as transferências foram pagas."}</div>` : "")
+    + h.transfers.map((t) => `<div class="tx"><div class="row"><span><b>${esc(t.payer)}</b> → <b>${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)}</b></div>
+    <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div>
+    ${h.id ? `<div class="row" style="justify-content:flex-end">${paidButton(h, t)}</div>` : ""}</div>`).join("");
 }
+function rulesLine(h) {
+  if (!h.rules) return "";
+  const parts = [...h.rules.excluded.map((n) => `${esc(n)} fora da divisão`),
+                 ...Object.entries(h.rules.fixed).map(([n, v]) => `${esc(n)} fica com ${kk(v)} fixo`)];
+  return `<div class="banner ok" style="margin-top:8px">⚖️ Regras de divisão: ${parts.join("; ")}. Quem divide igual fica com ${fmt(h.profit_each)} gp.</div>`;
+}
+/** ⚖️ Regras de divisão (só quem enviou o lootsplit edita). */
+function rulesBox(h) {
+  if (!h.can_delete || !h.id) return "";
+  const ref = huntRef(h), r = h.rules || { excluded: [], fixed: {} };
+  const rows = h.players.map((p) => {
+    const mode = r.excluded.includes(p.name) ? "out" : p.name in r.fixed ? "fixed" : "equal";
+    return `<div class="row" style="padding:6px 0; border-bottom:1px solid var(--line); flex-wrap:wrap" data-rule-player="${esc(p.name)}">
+      <b style="flex:1 1 120px">${vdot(p.name)}${esc(p.name)}</b>
+      <select data-rule-mode style="padding:6px 8px; border-radius:8px; background:var(--card2); color:var(--text); border:1px solid var(--line)">
+        <option value="equal"${mode === "equal" ? " selected" : ""}>Divide igual</option>
+        <option value="out"${mode === "out" ? " selected" : ""}>Fora da divisão</option>
+        <option value="fixed"${mode === "fixed" ? " selected" : ""}>Valor fixo</option></select>
+      <input data-rule-value type="number" min="0" step="1" inputmode="numeric" placeholder="gp" value="${mode === "fixed" ? r.fixed[p.name] : ""}"
+        class="${mode === "fixed" ? "" : "hidden"}" style="width:130px; padding:6px 8px" aria-label="Valor fixo de ${esc(p.name)}"></div>`;
+  }).join("");
+  return `<details style="margin-top:10px"><summary class="link">⚖️ Regras de divisão ${h.rules ? "(ativas)" : ""} ▾</summary>
+    <p class="hint">Fora da divisão: a pessoa recebe de volta os supplies e entrega o loot (termina com 0 de lucro).
+      Valor fixo: termina com aquele lucro (ex.: quem só ajudou no boss). O resto divide igual. Mudar as regras apaga as marcações de "já paguei".</p>
+    <div data-rules="${ref}">${rows}</div>
+    <div class="row" style="gap:8px; margin-top:8px; justify-content:flex-start">
+      <button class="btn2" data-rules-save="${ref}">Salvar regras</button>
+      ${h.rules ? `<button class="link" data-rules-clear="${ref}">Voltar a dividir igual para todos</button>` : ""}</div>
+    <div class="err" data-rules-err="${ref}"></div></details>`;
+}
+async function afterHuntChange(h) {
+  h.kind = h.kind || (S.page === "boss" ? "boss" : undefined);
+  if (S.page === "home") return loadHome();
+  if (S.page === "boss") return loadBoss({ quiet: true });
+  if (S.page === "loot") { $("#lootResult").innerHTML = huntCard(h, S.nick, "Resultado"); paintVocations($("#lootResult")); }
+}
+document.addEventListener("change", (e) => {
+  const sel = e.target.closest("[data-rule-mode]");
+  if (sel) sel.parentElement.querySelector("[data-rule-value]").classList.toggle("hidden", sel.value !== "fixed");
+});
+document.addEventListener("click", async (e) => {
+  const paid = e.target.closest("[data-paid]");
+  const save = e.target.closest("[data-rules-save],[data-rules-clear]");
+  if (!paid && !save) return;
+  e.preventDefault();
+  const ref = paid ? paid.dataset.paid : (save.dataset.rulesSave || save.dataset.rulesClear);
+  const h = HUNTS_BY_ID.get(ref);
+  if (!h) return;
+  const btn = paid || save; btn.disabled = true;
+  try {
+    let r;
+    if (paid) {
+      r = await api("POST", huntBase(h) + "/paid", { payer: paid.dataset.payer, receiver: paid.dataset.receiver, paid: paid.dataset.set === "1" });
+    } else {
+      const body = { excluded: [], fixed: {} };
+      if (save.dataset.rulesSave) {
+        for (const row of document.querySelectorAll(`[data-rules="${ref}"] [data-rule-player]`)) {
+          const mode = row.querySelector("[data-rule-mode]").value, name = row.dataset.rulePlayer;
+          if (mode === "out") body.excluded.push(name);
+          if (mode === "fixed") {
+            const v = parseInt(row.querySelector("[data-rule-value]").value, 10);
+            if (!(v >= 0)) { document.querySelector(`[data-rules-err="${ref}"]`).textContent = `Informe o valor fixo de ${name}.`; btn.disabled = false; return; }
+            body.fixed[name] = v;
+          }
+        }
+      }
+      r = await api("POST", huntBase(h) + "/rules", body);
+    }
+    r.hunt.kind = h.kind;
+    await afterHuntChange(r.hunt);
+  } catch (err) {
+    btn.disabled = false;
+    if (err.status === 401) return;
+    const box = document.querySelector(`[data-rules-err="${ref}"]`);
+    if (save && box) box.textContent = err.message; else alert(err.message);
+  }
+});
 function partyTable(h, name) {
   const key = (name || "").toLowerCase();
   return `<div class="table-wrap"><table><tr><th>Jogador</th><th>Loot</th><th>Supplies</th><th>Balance</th><th>Damage</th><th>Healing</th><th>Acerto</th></tr>
@@ -959,12 +1074,14 @@ function huntCard(h, name, title) {
     <div style="margin-top:10px" class="muted">Rendeu para cada um</div>
     <div class="big ${cls}" data-count="${h.profit_each}" data-suffix=" gp">${fmt(h.profit_each)} gp</div>
     <div class="muted"><b class="${cls}">${fmt(h.profit_each_per_hour)} gp/h</b> por pessoa · total da PT ${fmt(h.balance)} gp</div>
-    ${actionBox(view(h, name))}
+    ${rulesLine(h)}
+    ${actionBox(view(h, name), h)}
     ${chartToggle(h, name)} ${shareButton("hunt", h)}
     <details style="margin-top:4px"><summary class="link">Transferências e detalhes da PT ▾</summary>
       <h2>Transferências</h2>${transfersBox(h)}
       <h2>Jogadores</h2>${partyTable(h, name)}
       <div class="muted" style="margin-top:8px">Loot ${fmt(h.loot)} · Supplies ${fmt(h.supplies)} · Loot type ${esc(h.loot_type || "—")}</div>
+      ${rulesBox(h)}
       ${deleteButton(h)}
     </details>
   </div>`;
@@ -1016,15 +1133,19 @@ function deleteButton(h) {
     ? `<div style="margin-top:12px"><button class="danger-link" data-del-boss-hunt="${h.id}">🗑 Apagar este lootsplit de boss</button></div>`
     : `<div style="margin-top:12px"><button class="danger-link" data-del-hunt="${h.id}">🗑 Apagar esta hunt</button></div>`;
 }
+/** Etiqueta do resumo: quanto paga/recebe e se já foi acertado. */
+function settleTag(v) {
+  if (v.totalPay > 0) return v.pendingPay ? `<span class="neg">paga ${kk(v.pendingPay)}</span>` : `<span class="pos">✔ pago</span>`;
+  if (v.totalGet > 0) return v.pendingGet ? `<span class="pos">recebe ${kk(v.pendingGet)}</span>` : `<span class="pos">✔ recebido</span>`;
+  return `<span class="muted">sem acerto</span>`;
+}
 function historyItem(h, name) {
   const v = view(h, name);
-  const tag = v.totalPay > 0 ? `<span class="neg">paga ${kk(v.totalPay)}</span>`
-            : v.totalGet > 0 ? `<span class="pos">recebe ${kk(v.totalGet)}</span>` : `<span class="muted">sem acerto</span>`;
   return `<details class="card"><summary>
-      <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
-      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
+      <div class="row"><b>${when(h.started_at)}</b>${settleTag(v)}</div>
+      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores${h.pending ? ` · ⏳ ${h.pending} a pagar` : ""}</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
-    </summary>${actionBox(v)}${chartToggle(h, name)} ${shareButton("hunt", h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${deleteButton(h)}</details>`;
+    </summary>${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, name)} ${shareButton("hunt", h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${rulesBox(h)}${deleteButton(h)}</details>`;
 }
 function statGrid(items) {
   return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
@@ -1072,6 +1193,19 @@ document.addEventListener("click", async (e) => {
 });
 
 /* ---------- página inicial ---------- */
+const EXPIRY_WARN_DAYS = 3;
+/** Aviso de código de acesso vencendo (3 dias antes). */
+function expiryNotice(streak) {
+  const exp = (streak && streak.expires_at) || (S.me && S.me.expires_at) || S.keyExpires;
+  if (!exp) return "";
+  const ms = new Date(exp) - Date.now();
+  if (ms > EXPIRY_WARN_DAYS * 86400000) return "";
+  const days = Math.floor(ms / 86400000);
+  const whenTxt = days <= 0 ? "em menos de 24 horas" : days === 1 ? "em 1 dia" : `em ${days} dias`;
+  return `<div class="banner bad"><b>⏰ Seu código de acesso vence ${whenTxt}</b> (${esc(new Date(exp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}).
+    <div class="hint">Peça a renovação para quem te enviou o código. Depois que vence, o código e os aparelhos liberados são apagados
+      (suas hunts e sessões continuam salvas). Enviar uma hunt por dia também ajuda: a cada 30 dias seguidos o código ganha +7 dias.</div></div>`;
+}
 async function loadHome() {
   const el = $("#pageHome");
   el.innerHTML = skeleton("home");
@@ -1080,13 +1214,22 @@ async function loadHome() {
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   const hunts = data.hunts;
   S.homeHunts = hunts;
-  const total = hunts.reduce((a, h) => a + h.profit_each, 0);
+  const total = hunts.reduce((a, h) => a + view(h, S.nick).profit, 0);  // considera as regras de divisão
   const secs = hunts.reduce((a, h) => a + h.duration_seconds, 0);
-  let toPay = 0, toGet = 0;
-  hunts.forEach((h) => { const v = view(h, S.nick); toPay += v.totalPay; toGet += v.totalGet; });
+  let toPay = 0, toGet = 0, owe = 0, oweN = 0, due = 0, dueN = 0;
+  hunts.forEach((h) => {
+    const v = view(h, S.nick); toPay += v.totalPay; toGet += v.totalGet;
+    if (v.pendingPay) { owe += v.pendingPay; oweN++; }
+    if (v.pendingGet) { due += v.pendingGet; dueN++; }
+  });
+  const pendingCard = owe || due ? `<div class="card"><b>💸 Acertos pendentes</b>
+    ${owe ? `<div class="neg" style="margin-top:4px">Você ainda deve ${fmt(owe)} gp em ${oweN} ${oweN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
+    ${due ? `<div class="pos" style="margin-top:4px">Falta receber ${fmt(due)} gp de ${dueN} ${dueN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
+    <div class="hint">Depois de transferir no banco, toque em "✔ Já paguei" na hunt. Quem recebe também pode marcar "✔ Recebi".</div></div>` : "";
   const [notice, streak] = await Promise.all([newsNotice().catch(() => ""), api("GET", "/api/streak").catch(() => null)]);
   const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
-  el.innerHTML = `${notice}
+  el.innerHTML = `${expiryNotice(streak)}${notice}
+    ${pendingCard}
     ${streak ? streakTeaser(streak) : ""}
     ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt") : emptyState("home")}
     ${hunts.length ? `<h2>Totais</h2>
@@ -1105,6 +1248,48 @@ async function loadHome() {
   if (streak) celebrateRewards(streak.granted);
 }
 
+/* ---------- 📤 rascunhos sem internet: guarda o envio e manda sozinho quando a conexão voltar ---------- */
+const DRAFT_LABEL = { "/api/lootsplit": "Lootsplit", "/api/stacker": "Sessão do Stacker",
+                      "/api/bosses/session": "Sessão de boss", "/api/bosses/lootsplit": "Lootsplit de boss" };
+async function loadDrafts() { try { return JSON.parse((await kv.get("drafts")) || "[]"); } catch { return []; } }
+async function saveDrafts(list) { await kv.set("drafts", list.length ? JSON.stringify(list) : null); }
+/** Envio que falhou por falta de conexão: guarda (sem repetir) e avisa. */
+async function queueDraft(path, body, errEl) {
+  const list = await loadDrafts();
+  if (!list.some((d) => d.path === path && d.body.raw_text === body.raw_text)) list.push({ path, body, saved_at: new Date().toISOString() });
+  await saveDrafts(list.slice(-20));
+  if (errEl) errEl.innerHTML = `<span style="color:var(--gold)">📤 Sem conexão: guardei o texto como rascunho e envio sozinho quando a internet voltar.</span>`;
+}
+let flushingDrafts = false;
+async function flushDrafts() {
+  if (flushingDrafts || !S.key || !S.token || S.offline) return;
+  flushingDrafts = true;
+  const done = [];
+  try {
+    let list = await loadDrafts();
+    while (list.length) {
+      const d = list[0];
+      try { const r = await api("POST", d.path, d.body); done.push({ d, ok: true, created: r.created }); }
+      catch (err) {
+        if (err.status === 0 || err.status === 401 || err.status === 429) break;  // tenta de novo depois
+        done.push({ d, ok: false, msg: err.message });                            // erro do texto: não adianta repetir
+      }
+      list.shift();
+      await saveDrafts(list);
+    }
+  } finally { flushingDrafts = false; }
+  if (!done.length) return;
+  const sheet = $("#sheet");
+  sheet.innerHTML = `<b>📤 Rascunhos enviados</b>
+    ${done.map((x) => `<div class="muted" style="font-size:14px; margin-top:4px">${x.ok ? "✔" : "✖"} ${esc(DRAFT_LABEL[x.d.path] || "Envio")}
+      de ${esc(new Date(x.d.saved_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }))}
+      (${esc(x.d.body.nickname || "")})${x.ok ? (x.created ? "" : " · já estava salvo") : ": " + esc(x.msg)}</div>`).join("")}
+    <div class="actions"><button class="btn2" data-paste-cancel>Ok</button></div>`;
+  sheet.classList.remove("hidden");
+  if (S.page === "home") loadHome(); else if (S.page === "stack") loadStack(); else if (S.page === "boss") loadBoss({ quiet: true });
+}
+window.addEventListener("online", () => setTimeout(flushDrafts, 2000));
+
 /* ---------- lootsplit ---------- */
 $("#lootBtn").addEventListener("click", async () => {
   const raw = $("#lootText").value.trim();
@@ -1121,7 +1306,10 @@ $("#lootBtn").addEventListener("click", async () => {
     celebrateRewards(r.rewards);
     if (r.created) checkAchievements();
   } catch (err) {
-    if (err.status === 403) {
+    if (err.status === 0) {
+      await queueDraft("/api/lootsplit", { raw_text: raw, nickname: S.nick }, $("#lootErr"));
+      $("#lootText").value = "";
+    } else if (err.status === 403) {
       // mostra o cálculo mesmo assim, mas sem salvar
       const preview = await api("POST", "/api/lootsplit/preview", { raw_text: raw, nickname: S.nick }).catch(() => null);
       $("#lootResult").innerHTML = `<div class="banner bad"><b>${esc(err.message)}</b><div class="hint">${esc(err.hint || "")}</div>
@@ -1166,7 +1354,12 @@ function soloItem(s) {
 
 /* ---------- loot: itens, preços, NPCs e minimapa ---------- */
 const PERIODS = [[7, "Semana"], [15, "15 dias"], [30, "Mês"], [90, "3 meses"], [180, "6 meses"], [365, "1 ano"]];
-const WIKI_FILE = (name) => "https://www.tibiawiki.com.br/wiki/Especial:Redirecionar/file/" + encodeURIComponent(String(name).replace(/ /g, "_")) + ".gif";
+// Imagens da TibiaWiki: no site saem do banco do servidor (/img/wiki, a wiki só é consultada na 1ª vez).
+// No app desktop a página roda em 127.0.0.1 e o CSP não libera o servidor para imagens: busca direto na wiki.
+const WIKI_FILE = (name) => {
+  const file = encodeURIComponent(String(name).replace(/ /g, "_")) + ".gif";
+  return S.api ? "https://www.tibiawiki.com.br/wiki/Especial:Redirecionar/file/" + file : "/img/wiki/" + file;
+};
 const MAP_TILE = (x, y, z) => `https://tibiamaps.github.io/tibia-map-data/mapper/Minimap_Color_${x}_${y}_${z}.png`;
 S.prices = {}; S.period = 7;
 
@@ -1265,6 +1458,59 @@ async function loadStack(opts = {}) {
   return d;
 }
 
+/* ---------- 🥇 ranking entre amigos (só quem aceitar entrar) ---------- */
+S.rank = { metric: "xp", period: 7 };
+const RANK_FMT = { xp: (r) => fmt(r.xp) + " XP", xp_h: (r) => fmt(r.xp_h) + " XP/h", profit: (r) => fmt(r.profit) + " gp",
+                   profit_h: (r) => fmt(r.profit_h) + " gp/h", hours: (r) => String(r.hours).replace(".", ",") + " h" };
+async function loadRank() {
+  const body = $("#rankBody");
+  body.innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/ranking?period=${S.rank.period}&metric=${S.rank.metric}&nick=${encodeURIComponent(S.nick)}`); }
+  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  const owner = isMine(S.nick);
+  $("#rankJoin").innerHTML = !owner ? `<div class="card muted">Você está vendo ${esc(S.nick)}. Só o dono do personagem decide se ele entra no ranking.</div>`
+    : d.joined ? `<div class="card row"><span>✔ <b>${esc(S.nick)}</b> está no ranking.</span><button class="btn2" data-rank-join="0">Sair do ranking</button></div>`
+    : `<div class="card"><b>Quer entrar no ranking?</b>
+        <p class="muted" style="margin:4px 0 8px">Seus totais do Stacker (XP, lucro e horas da semana e do mês) passam a aparecer aqui para
+          todos que usam o 4rt3mi5. Você pode sair quando quiser.</p>
+        <button class="btn" style="margin:0" data-rank-join="1">Entrar com ${esc(S.nick)}</button></div>`;
+  document.querySelectorAll("[data-rmetric]").forEach((b) => b.classList.toggle("on", b.dataset.rmetric === d.metric));
+  document.querySelectorAll("[data-rperiod]").forEach((b) => b.classList.toggle("on", +b.dataset.rperiod === d.period));
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">Ninguém entrou no ranking ainda. Seja o primeiro!</p>`; return; }
+  const me = S.nick.toLowerCase(), medal = ["🥇", "🥈", "🥉"];
+  body.innerHTML = `<div class="table-wrap"><table><tr><th>#</th><th>Jogador</th><th>${esc($(`[data-rmetric="${d.metric}"]`).textContent)}</th><th>Sessões</th></tr>
+    ${d.rows.map((r, i) => `<tr class="${r.name.toLowerCase() === me ? "me" : ""}"><td>${medal[i] || i + 1}</td>
+      <td>${vdot(r.name)}${esc(r.name)}${r.level ? `<div class="muted" style="font-size:12px">level ${r.level}${r.vocation ? " · " + esc(r.vocation) : ""}</div>` : ""}</td>
+      <td>${RANK_FMT[d.metric](r)}</td><td>${r.sessions}</td></tr>`).join("")}</table></div>
+    <div class="hint">XP/h e lucro/h = total do período dividido pelas horas de hunt. Lucro = Balance das sessões.</div>`;
+  ensureVocations(d.rows.map((r) => r.name)).then((c) => { if (c && S.page === "rank") paintVocations(body); });
+}
+document.addEventListener("click", async (e) => {
+  const m = e.target.closest("[data-rmetric]"), p = e.target.closest("[data-rperiod]"), j = e.target.closest("[data-rank-join]");
+  if (m) { S.rank.metric = m.dataset.rmetric; loadRank(); }
+  if (p) { S.rank.period = +p.dataset.rperiod; loadRank(); }
+  if (j) {
+    j.disabled = true;
+    try { await api("POST", `/api/ranking/${encodeURIComponent(S.nick)}`, { join: j.dataset.rankJoin === "1" }); loadRank(); }
+    catch (err) { j.disabled = false; if (err.status !== 401) alert(err.message); }
+  }
+});
+
+/** Sessão recém-enviada x sua média na mesma hunt. */
+function compareBanner(c) {
+  if (!c) return "";
+  if (!c.sessions) return `<div class="card">📊 Primeira sessão sua em <b>${esc(c.place)}</b> (com 10 min ou mais):
+    ${fmt(c.xp_h)} XP/h e ${fmt(c.gold_h)} gp/h de balance. As próximas vão ser comparadas com ela.</div>`;
+  const line = (label, v, avg, pct) => {
+    const cls = pct == null ? "muted" : pct >= 0 ? "pos" : "neg";
+    const txt = pct == null ? "" : pct === 0 ? "igual à média" : `${Math.abs(pct)}% ${pct > 0 ? "acima" : "abaixo"} da média`;
+    return `<div class="row"><span>${label}: <b>${fmt(v)}</b> <span class="muted">(média ${fmt(avg)})</span></span><b class="${cls}">${txt}</b></div>`;
+  };
+  return `<div class="card"><b>📊 Comparada com a sua média em ${esc(c.place)}</b>
+    <div class="muted" style="font-size:13px; margin-bottom:6px">Média das suas outras ${c.sessions} ${c.sessions === 1 ? "sessão" : "sessões"} lá (10 min ou mais).</div>
+    ${line("XP/h", c.xp_h, c.avg_xp_h, c.xp_pct)}${line("Balance/h", c.gold_h, c.avg_gold_h, c.gold_pct)}</div>`;
+}
 /* ---------- avisos de venda, metas, previsão, recordes, lista de venda ---------- */
 /* ---------- 👑 rotação de bosses (solo / party) ---------- */
 S.btab = "solo";
@@ -1321,14 +1567,12 @@ function bossSessionItem(s) {
 function bossHuntItem(h) {
   h.kind = "boss";
   const v = view(h, S.nick);
-  const tag = v.totalPay > 0 ? `<span class="neg">paga ${kk(v.totalPay)}</span>`
-            : v.totalGet > 0 ? `<span class="pos">recebe ${kk(v.totalGet)}</span>` : `<span class="muted">sem acerto</span>`;
   return `<details class="card"><summary>
-      <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
-      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
+      <div class="row"><b>${when(h.started_at)}</b>${settleTag(v)}</div>
+      <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores${h.pending ? ` · ⏳ ${h.pending} a pagar` : ""}</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
       <div class="muted" style="font-size:13px">Sessões vinculadas: ${h.members && h.members.length ? h.members.map(esc).join(", ") : "nenhuma ainda"}</div>
-    </summary>${actionBox(v)}${chartToggle(h, S.nick)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, S.nick)}${deleteButton(h)}</details>`;
+    </summary>${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, S.nick)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, S.nick)}${rulesBox(h)}${deleteButton(h)}</details>`;
 }
 function fromHuntsBlock(list) {
   if (!list.length) return "";
@@ -1339,6 +1583,33 @@ function fromHuntsBlock(list) {
       <div class="row"><b>${when(x.started_at)}</b><span class="gold">${x.value ? "≈ " + kk(x.value) + " gp" : "sem item exclusivo"}</span></div>
       <div style="margin-top:4px">${bossChips(x.bosses)}</div></summary>
       ${x.items.length ? itemList(x.items, 999) : `<p class="muted">Nenhum item exclusivo do boss nessa sessão.</p>`}</details>`).join("")}`;
+}
+function rareBlock(list) {
+  if (!list.length) return "";
+  return `<h2>💎 Drops raros (${list.length})</h2><div class="card">
+    ${list.map((d) => `<div class="row" data-item="${esc(d.key)}" style="padding:6px 0; border-bottom:1px solid var(--line); cursor:pointer">
+      <span style="display:inline-flex; align-items:center; gap:8px">${itemImg((S.prices[d.key] || {}).name || d.key, 32)}
+        <span><b>${d.count > 1 ? d.count + "x " : ""}${esc((S.prices[d.key] || {}).name || d.key)}</b>
+        <span class="muted" style="font-size:13px"><br>${esc(d.boss)} · ${esc(dayLabel(d.started_at.slice(0, 10)))}${d.rarity ? " · " + esc(RARITY_PT[d.rarity] || d.rarity) : ""}${d.source === "hunt" ? " · numa hunt do Stacker" : ""}</span></span></span>
+      <span class="gold">${d.value ? kk(d.value) : "sem preço"}</span></div>`).join("")}
+    <div class="hint">Conta como raro o item "very rare" ou "extremely rare" na TibiaWiki, ou item do boss que vale 500 mil gp ou mais.</div></div>`;
+}
+function noNpcBlock(d) {
+  if (!d.no_npc.length) return "";
+  const rows = d.no_npc.map((k) => {
+    const p = S.prices[k] || { name: k };
+    return `<div style="padding:8px 0; border-bottom:1px solid var(--line)">
+      <div class="row"><span style="display:inline-flex; align-items:center; gap:8px">${itemImg(p.name, 32)}<b>${esc(p.name)}</b></span>
+        <span class="${p.unit_price ? "muted" : "neg"}" style="font-size:13px">${p.avg_price ? "média " + kk(p.avg_price) + (p.avg_count ? ` (${p.avg_count})` : "") : "sem preço"}</span></div>
+      <form class="price-form row" data-price-item="${esc(k)}" style="margin-top:6px">
+        <input type="number" min="0" step="1" inputmode="numeric" placeholder="Seu preço (gp)" value="${p.my_price ?? ""}" style="padding:8px 10px" aria-label="Seu preço para ${esc(p.name)}">
+        <button class="btn2" type="submit">Salvar</button></form></div>`;
+  }).join("");
+  const open = d.unpriced > 0 ? " open" : "";
+  return `<details class="card"${open}><summary class="row"><b>💰 Itens sem NPC comprador</b>
+      <span class="${d.unpriced ? "neg" : "muted"}">${d.unpriced ? d.unpriced + " sem preço" : d.no_npc.length + (d.no_npc.length === 1 ? " item" : " itens")} ▾</span></summary>
+    <p class="hint">Nenhum NPC compra estes itens, então o lucro de bosses usa a média do preço que os jogadores informam.
+      ${d.unpriced ? "Itens sem preço contam como 0 gp: informe quanto você vende para o lucro ficar certo." : "Ajuste o seu preço quando quiser."}</p>${rows}</details>`;
 }
 async function loadBoss(opts = {}) {
   const el = $("#bossResult");
@@ -1376,7 +1647,9 @@ async function loadBoss(opts = {}) {
       ])}</div>
       <div class="hint">Sessão sem lootsplit conta pelo Balance dela. Com lootsplit conta a sua parte da divisão (sem contar duas vezes).</div>
     </div>
+    ${noNpcBlock(d)}
     <h2>Bosses</h2>${bossTable(d.bosses)}
+    ${rareBlock(d.rare_drops)}
     ${d.items.length ? `<h2>Itens dos bosses</h2><div class="card">${itemList(d.items)}</div>` : ""}
     ${d.hunts.length ? `<h2>Lootsplits de bosses (${d.hunts.length})</h2>${d.hunts.map(bossHuntItem).join("")}` : ""}
     ${d.sessions.length ? `<h2>Sessões de boss (${d.sessions.length})</h2>${d.sessions.map(bossSessionItem).join("")}` : ""}
@@ -1412,10 +1685,12 @@ $("#bossBtn").addEventListener("click", async () => {
           <button class="btn2" style="flex:1" data-boss-split="no">Não</button></div></div>`;
     }
     $("#bossAsk").innerHTML = ask;
+    celebrateRare(r.rare);
     celebrateRewards(r.rewards);
     await loadBoss({ quiet: true });
   } catch (err) {
-    if (err.status === 403) $("#bossErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+    if (err.status === 0) { await queueDraft("/api/bosses/session", { raw_text: raw, nickname: S.nick, mode }, $("#bossErr")); $("#bossText").value = ""; }
+    else if (err.status === 403) $("#bossErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
     else if (err.status !== 401) $("#bossErr").textContent = err.message;
   } finally { btn.disabled = false; }
 });
@@ -1444,6 +1719,7 @@ document.addEventListener("click", async (e) => {
       celebrateRewards(r.rewards);
       loadBoss({ quiet: true });
     } catch (err) {
+      if (err.status === 0) { await queueDraft("/api/bosses/lootsplit", { raw_text: raw, nickname: S.nick }, $("#bossPartyErr")); return; }
       if (err.status === 403) $("#bossPartyErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
       else if (err.status !== 401) $("#bossPartyErr").textContent = err.message;
       btn.disabled = false;
@@ -1805,11 +2081,13 @@ $("#stackBtn").addEventListener("click", async () => {
     $("#stackText").value = "";
     const after = await loadStack();
     $("#stackResult").insertAdjacentHTML("afterbegin",
-      `<div class="banner ok">${r.created ? "Sessão adicionada ✔" : "Essa sessão já estava salva ✔"}</div>`);
+      `<div class="banner ok">${r.created ? "Sessão adicionada ✔" : "Essa sessão já estava salva ✔"}</div>${compareBanner(r.compare)}`);
+    celebrateRare(r.rare);
     celebrateRewards(r.rewards);
     if (r.created) { celebrateProgress(before, after); checkAchievements(); }
   } catch (err) {
-    if (err.status === 403) $("#stackErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+    if (err.status === 0) { await queueDraft("/api/stacker", { raw_text: raw, nickname: S.nick, place_id: placeId }, $("#stackErr")); $("#stackText").value = ""; }
+    else if (err.status === 403) $("#stackErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
     else if (err.status !== 401) $("#stackErr").textContent = err.message;
   } finally { btn.disabled = false; }
 });
@@ -2331,6 +2609,14 @@ function celebrateRewards(list) {
     updateDrawerFoot();
     celebrate({ emoji: "🎁", kicker: "Recompensa desbloqueada", title: `+${r.days} dias de acesso!`,
                 sub: `30 dias seguidos alimentando o 4rt3mi5. Seu código agora vale até ${new Date(r.expires_at).toLocaleDateString("pt-BR")}.` });
+  }
+}
+const RARITY_PT = { "very rare": "muito raro", "extremely rare": "extremamente raro" };
+/** 💎 Drop raro de boss na sessão que acabou de ser enviada. */
+function celebrateRare(list) {
+  for (const d of (list || []).slice(0, 3)) {
+    celebrate({ emoji: "💎", kicker: `Drop raro de ${d.boss}!`, title: `${d.count > 1 ? d.count + "x " : ""}${d.name || d.item}`,
+                sub: [d.rarity ? `${RARITY_PT[d.rarity] || d.rarity} na TibiaWiki` : "", d.value ? `vale ${fmt(d.value)} gp` : ""].filter(Boolean).join(" · ") });
   }
 }
 function recordText(r) {

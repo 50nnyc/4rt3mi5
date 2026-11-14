@@ -20,7 +20,7 @@ app desktop abre a mesma página numa janela própria.
    (`4RT3MI5-XXXXXX`). A pessoa cola no comentário do personagem no tibia.com; o app confere pelo
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
-4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Rotação de bosses** (Solo / Party), **Hunts**, **Conquistas**, **Meus personagens**,
+4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Rotação de bosses** (Solo / Party), **Hunts**, **Ranking entre amigos**, **Conquistas**, **Meus personagens**,
    **Novidades**, trocar personagem, sair.
 5. Sem conexão: tela de abertura com o aviso, tentando de novo a cada 10 s.
 6. **Colar direto:** com o texto do analyser copiado, Ctrl+V em qualquer tela abre o aviso "Enviar agora".
@@ -44,6 +44,42 @@ app desktop abre a mesma página numa janela própria.
   Fica em tabelas próprias (`boss_sessions`, `boss_hunts`), fora do Lootsplit, do Stacker e do ranking de Hunts.
 - Lista de bosses e loot: `artemis/data/bosses.json`, gerado por `tools/import_bosses.py` (TibiaWiki em
   tibia.fandom.com, CC BY-SA). Rode de novo quando sair boss novo.
+- **💎 Drops raros (0.12.0):** item de boss "very rare"/"extremely rare" na TibiaWiki ou que vale 500 mil gp ou mais
+  (`RARE_RARITIES` e `RARE_VALUE` em `artemis/core/bosses.py`). O app comemora no envio e guarda o histórico na aba.
+- **💰 Itens sem NPC:** a aba lista os itens de boss que nenhum NPC compra, para a pessoa informar o preço
+  (entra na média de todos, como no Stacker).
+
+## Lootsplit: acertos e regras (0.12.0)
+
+- **Já paguei / Recebi:** cada transferência pode ser marcada por quem paga ou por quem recebe (tabela
+  `hunt_payments`). O Início mostra o que a pessoa ainda deve ou tem a receber.
+- **Regras de divisão:** quem enviou o lootsplit pode deixar alguém **fora da divisão** (termina com lucro 0:
+  recebe os supplies de volta e entrega o loot) ou com **valor fixo** (termina com aquele lucro). O resto divide
+  igual (`split_with_rules` em `artemis/core/split.py`, tabela `hunt_rules`). Mudar as regras apaga as marcações
+  de pagamento daquela hunt. Vale também para o lootsplit de bosses.
+
+## Outras novidades da 0.12.0
+
+- **Comparação com a média:** ao enviar uma sessão no Stacker (10 min ou mais), o app compara XP/h e balance/h
+  com a média das outras sessões do personagem na mesma hunt.
+- **🥇 Ranking entre amigos:** opcional, por personagem (tabela `ranking_optin`); só o dono entra/sai.
+- **Rascunho sem internet:** envio que falha por falta de conexão fica guardado no aparelho e é enviado sozinho
+  quando a conexão volta.
+- **Aviso de código vencendo:** o Início avisa 3 dias antes. O painel mostra os códigos que vencem na semana e o
+  último uso de cada um.
+- **Imagens no banco:** o site pede `/img/wiki/<Nome>.gif`; o servidor busca na TibiaWiki BR só na primeira vez e
+  guarda em `wiki_images`. Itens, preços, NPCs, hunts e bosses já ficam no projeto/banco; a wiki só é consultada
+  para imagens novas. (No app desktop as imagens ainda vêm direto da wiki, por causa do CSP da página local.)
+
+## Backup e vigia do site
+
+- **Backup automático:** o servidor faz uma cópia por dia em `data/backups/artemis-AAAAMMDD.db` e guarda as 14
+  mais novas (`ARTEMIS_BACKUP_KEEP`). O painel mostra o último backup.
+- **Vigia:** `tools/vigia.ps1` confere o site no PC e pelo ngrok. Se o servidor parou, roda
+  `docker compose --profile public up -d`; se só o ngrok caiu, reinicia o ngrok. Se continuar fora do ar, mostra
+  uma notificação do Windows (e outra quando voltar). Instale uma vez com **`vigia.bat`** (Agendador de Tarefas,
+  a cada 5 minutos). Resultado em `data/vigia.json` (aparece no painel) e histórico em `data/vigia.log`.
+  Remover: `schtasks /Delete /TN "4rt3mi5 vigia" /F`.
 
 ## Música
 

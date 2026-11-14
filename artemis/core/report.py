@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 
 from .parser import HuntSession, parse_session
-from .split import split_session
+from .split import split_session, split_with_rules
 
 
 def fingerprint(session: HuntSession) -> str:
@@ -56,6 +56,39 @@ def build_report(session: HuntSession) -> dict:
 
 def report_from_text(text: str) -> dict:
     return build_report(parse_session(text))
+
+
+def apply_rules(report: dict, rules: dict | None) -> dict:
+    """Refaz a divisão com as regras da PT (quem fica fora / quem tem valor fixo).
+
+    Sem regras, cada jogador recebe `profit` = profit_each. Com regras, `profit_each` passa a ser o
+    valor de quem divide igual e cada jogador ganha `profit` (o que ele termina ganhando).
+    """
+    out = {**report, "players": [dict(p) for p in report["players"]]}
+    names = {p["name"].lower(): p["name"] for p in out["players"]}
+    excluded = {names[n.lower()] for n in (rules or {}).get("excluded", []) if n.lower() in names}
+    fixed = {names[n.lower()]: int(v) for n, v in (rules or {}).get("fixed", {}).items()
+             if n.lower() in names and names[n.lower()] not in excluded}
+    if not excluded and not fixed:
+        for p in out["players"]:
+            p["profit"] = out["profit_each"]
+        out["rules"] = None
+        return out
+    share, transfers, diff, target = split_with_rules({p["name"]: p["balance"] for p in out["players"]}, excluded, fixed)
+    duration = out.get("duration_seconds") or 0
+    out.update(profit_each=share, profit_each_per_hour=round(share * 3600 / duration) if duration > 0 else 0,
+               rules={"excluded": sorted(excluded), "fixed": fixed},
+               transfers=[{"payer": t.payer, "receiver": t.receiver, "amount": t.amount, "command": t.bank_command}
+                          for t in transfers])
+    for p in out["players"]:
+        p["diff"], p["profit"] = diff[p["name"]], target[p["name"]]
+    return out
+
+
+def profit_of(report: dict, name: str) -> int:
+    """Quanto um jogador termina ganhando na hunt (considera as regras de divisão)."""
+    p = next((p for p in report["players"] if p["name"].lower() == name.lower()), None)
+    return p.get("profit", report["profit_each"]) if p else report["profit_each"]
 
 
 def player_view(report: dict, name: str) -> dict:

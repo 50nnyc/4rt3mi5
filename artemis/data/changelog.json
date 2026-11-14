@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "0.12.0",
+      "date": "2026-11-14",
+      "title": "Acertos, ranking e drops raros",
+      "changes": [
+        "💸 Lootsplit com \"✔ Já paguei\": marque cada transferência feita (quem recebe também pode marcar \"✔ Recebi\"). O Início mostra quanto você ainda deve ou tem a receber.",
+        "⚖️ Regras de divisão: quem enviou o lootsplit pode tirar alguém da divisão ou dar um valor fixo para quem só ajudou. O app refaz as transferências na hora.",
+        "📊 Depois de enviar uma sessão no 📈 Hunt Session Stacker, o app compara o XP/h e o balance/h com a sua média naquela hunt.",
+        "🥇 Novo Ranking entre amigos: XP, lucro e horas da semana ou do mês. Só aparece quem tocar em \"Entrar\", e dá para sair quando quiser.",
+        "📤 Sem internet na hora de enviar? O app guarda o texto e envia sozinho quando a conexão voltar. ⏰ E avisa no Início 3 dias antes do seu código de acesso vencer.",
+        "💎 Drop raro de boss: comemoração quando cai item muito raro (pela TibiaWiki) ou que vale 500 mil gp ou mais, com histórico na 👑 Rotação de bosses. Itens de boss sem NPC comprador pedem o seu preço ali mesmo, e as imagens de itens e criaturas carregam mais rápido."
+      ]
+    },
+    {
       "version": "0.11.0",
       "date": "2026-11-14",
       "title": "Rotação de bosses",

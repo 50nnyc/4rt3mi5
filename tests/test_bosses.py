@@ -66,6 +66,18 @@ class BossCoreTests(unittest.TestCase):
         split = boss_core.attribute_loot(kills, loot, whole_session=False)
         self.assertEqual(sorted(i for i, _ in split["demodras"]), ["dragon scale mail", "golden mug"])
 
+    def test_rare_drops_by_rarity_and_value(self):
+        kills = [("dragon", 80), ("demodras", 1)]
+        loot = [("dragon scale mail", 1), ("dragon ham", 5), ("golden mug", 1), ("platinum coins", 30)]
+        drops = boss_core.rare_drops(kills, loot, False, lambda k: 0)
+        self.assertEqual([d["item"] for d in drops], ["dragon scale mail"])  # very rare; golden mug é só "rare"
+        self.assertEqual(drops[0]["rarity"], "very rare")
+        oberon = [("grand master oberon", 1), ("falcon knight", 4)]
+        self.assertEqual(boss_core.rare_drops(oberon, [("falcon battleaxe", 1)], True, lambda k: 0), [])
+        expensive = boss_core.rare_drops(oberon, [("falcon battleaxe", 1)], True, lambda k: 700_000)
+        self.assertEqual(expensive[0]["boss"], "Grand Master Oberon")
+        self.assertEqual(boss_core.rare_drops([("dragon", 9)], [("dragon scale mail", 1)], False, lambda k: 9**9), [])
+
     def test_overlap_tolerance(self):
         self.assertTrue(boss_core.overlaps("2026-11-04T18:52:10", "2026-11-04T20:19:30",
                                            "2026-11-04T18:50:49", "2026-11-04T20:21:07"))
@@ -171,7 +183,9 @@ class BossServerTests(unittest.TestCase):
         kaio = self.login("Kaio Boss")
         r = self.client.post("/api/stacker", json={"raw_text": HUNT_WITH_BOSS, "nickname": "Kaio Boss"}, headers=kaio)
         self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual([x["key"] for x in r.json()["rare"]], ["dragon scale mail"])  # 💎 comemoração no envio
         d = self.client.get("/api/bosses/Kaio Boss", headers=kaio).json()
+        self.assertEqual([(x["key"], x["source"]) for x in d["rare_drops"]], [("dragon scale mail", "hunt")])
         self.assertEqual(len(d["from_hunts"]), 1)
         keys = {it["key"] for it in d["from_hunts"][0]["items"]}
         self.assertIn("dragon scale mail", keys)
@@ -180,6 +194,22 @@ class BossServerTests(unittest.TestCase):
         demodras = next(b for b in d["bosses"] if b["name"] == "Demodras")
         self.assertEqual(demodras["from_hunts"], 1)
         self.assertEqual(d["totals"]["profit"], d["totals"]["hunts_value"])
+
+    def test_item_without_npc_asks_price_and_becomes_rare(self):
+        nara = self.login("Nara Boss")
+        text = session_for("07:00:00").replace("2026-11-04", "2026-10-20")
+        r = self.client.post("/api/bosses/session", json={"raw_text": text, "nickname": "Nara Boss", "mode": "solo"},
+                             headers=nara)
+        self.assertEqual(r.json()["rare"], [])
+        d = self.client.get("/api/bosses/Nara Boss", headers=nara).json()
+        self.assertIn("falcon battleaxe", d["no_npc"])
+        self.assertNotIn("platinum coin", d["no_npc"])
+        self.assertGreaterEqual(d["unpriced"], 1)
+        r = self.client.post("/api/items/price", json={"item": "falcon battleaxe", "price": 800_000}, headers=nara)
+        self.assertEqual(r.status_code, 200, r.text)
+        d = self.client.get("/api/bosses/Nara Boss", headers=nara).json()
+        self.assertEqual(d["prices"]["falcon battleaxe"]["unit_price"], 800_000)
+        self.assertEqual([(x["key"], x["value"]) for x in d["rare_drops"]], [("falcon battleaxe", 800_000)])
 
     def test_validation(self):
         hilay = self.login("Hilay")

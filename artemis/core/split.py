@@ -33,6 +33,30 @@ def split_session(session: HuntSession) -> tuple[int, list[Transfer], dict[str, 
     share = total // len(players)  # arredonda para baixo; o resto (< nº jogadores) fica com quem paga
 
     diff = {p.name: p.balance - share for p in players}
+    return share, transfers_for(diff), diff
+
+
+def split_with_rules(balances: dict[str, int], excluded: set[str], fixed: dict[str, int]
+                     ) -> tuple[int, list[Transfer], dict[str, int], dict[str, int]]:
+    """Divisão com regras: (profit de quem divide igual, transferências, diff, profit final de cada um).
+
+    - excluded: fica fora da divisão -> termina com profit 0 (recebe de volta os supplies, entrega o loot);
+    - fixed: termina com aquele profit fixo (ex.: quem só ajudou no boss);
+    - o resto divide igualmente o que sobrar.
+    """
+    regular = [n for n in balances if n not in excluded and n not in fixed]
+    if not regular:
+        raise ValueError("Pelo menos um jogador precisa continuar na divisão igual.")
+    total = sum(balances.values())
+    reserved = sum(fixed.values())
+    share = (total - reserved) // len(regular)
+    target = {n: (0 if n in excluded else fixed[n] if n in fixed else share) for n in balances}
+    diff = {n: balances[n] - target[n] for n in balances}
+    return share, transfers_for(diff), diff, target
+
+
+def transfers_for(diff: dict[str, int]) -> list[Transfer]:
+    """Menor número de transferências: maior pagador com maior recebedor."""
     payers = sorted(([n, d] for n, d in diff.items() if d > 0), key=lambda x: -x[1])
     receivers = sorted(([n, -d] for n, d in diff.items() if d < 0), key=lambda x: -x[1])
 
@@ -48,4 +72,4 @@ def split_session(session: HuntSession) -> tuple[int, list[Transfer], dict[str, 
             i += 1
         if receivers[j][1] == 0:
             j += 1
-    return share, transfers, diff
+    return transfers

@@ -9,6 +9,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from artemis.core.report import apply_rules
+
 MAX_KEY_DAYS = 30
 
 
@@ -219,6 +221,39 @@ CREATE TABLE IF NOT EXISTS boss_loot (
 );
 CREATE INDEX IF NOT EXISTS ix_boss_kills ON boss_kills(session_id);
 CREATE INDEX IF NOT EXISTS ix_boss_loot ON boss_loot(session_id);
+-- 0.12.0: regras de divisão do lootsplit (quem fica fora / valor fixo) e "já paguei" de cada transferência.
+-- kind = 'hunt' (Lootsplit) ou 'boss' (lootsplit da Rotação de bosses).
+CREATE TABLE IF NOT EXISTS hunt_rules (
+    kind       TEXT NOT NULL,
+    hunt_id    INTEGER NOT NULL,
+    rules_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT,
+    PRIMARY KEY (kind, hunt_id)
+);
+CREATE TABLE IF NOT EXISTS hunt_payments (
+    kind         TEXT NOT NULL,
+    hunt_id      INTEGER NOT NULL,
+    payer_key    TEXT NOT NULL,
+    receiver_key TEXT NOT NULL,
+    amount       INTEGER NOT NULL,     -- valor marcado; se a divisão mudar, a marcação deixa de valer
+    paid_at      TEXT NOT NULL,
+    marked_by    TEXT,
+    PRIMARY KEY (kind, hunt_id, payer_key, receiver_key)
+);
+-- 0.12.0: personagens que aceitaram aparecer no 🥇 Ranking entre amigos
+CREATE TABLE IF NOT EXISTS ranking_optin (
+    name_key  TEXT PRIMARY KEY,
+    name      TEXT NOT NULL,
+    joined_at TEXT NOT NULL
+);
+-- 0.12.0: imagens da TibiaWiki guardadas no banco (o site busca na wiki só na primeira vez)
+CREATE TABLE IF NOT EXISTS wiki_images (
+    name         TEXT PRIMARY KEY,
+    content_type TEXT,
+    data         BLOB,                 -- NULL = não existe na wiki
+    fetched_at   TEXT NOT NULL
+);
 -- 0.10.0: vocação/level dos personagens (TibiaData), para colorir por vocação sem consultar toda hora
 CREATE TABLE IF NOT EXISTS char_info (
     name_key   TEXT PRIMARY KEY,
@@ -341,7 +376,8 @@ class Store:
         for k in self.list_keys():
             k["trusted"] = bool(k.get("trusted"))
             k["chars"] = self.key_chars(k["key"])
-            k["devices"] = self._conn.execute("SELECT COUNT(*) FROM devices WHERE key = ?", (k["key"],)).fetchone()[0]
+            k["devices"], k["last_seen"] = self._conn.execute("SELECT COUNT(*), MAX(last_seen) FROM devices WHERE key = ?",
+                                                              (k["key"],)).fetchone()
             out.append(k)
         return out
 
@@ -447,12 +483,52 @@ class Store:
             return cur.rowcount > 0
 
     # ------------------------------------------------------------------ lootsplit
-    @staticmethod
-    def _hunt(row: sqlite3.Row) -> dict:
-        report = json.loads(row["report_json"])
+    def _hunt(self, row: sqlite3.Row, kind: str = "hunt") -> dict:
+        report = apply_rules(json.loads(row["report_json"]), self.split_rules(kind, row["id"]))
         report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
                       uploader_key=row["uploader_key"])
+        paid = {(r["payer_key"], r["receiver_key"]): r for r in self._conn.execute(
+            "SELECT * FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, row["id"]))}
+        for t in report["transfers"]:
+            p = paid.get((name_key(t["payer"]), name_key(t["receiver"])))
+            t["paid_at"] = p["paid_at"] if p and p["amount"] == t["amount"] else None
+        report["pending"] = sum(1 for t in report["transfers"] if not t["paid_at"])
         return report
+
+    # ------------------------------------------------------------------ regras de divisão e "já paguei"
+    def split_rules(self, kind: str, hunt_id: int) -> dict | None:
+        row = self._conn.execute("SELECT rules_json FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def set_split_rules(self, kind: str, hunt_id: int, rules: dict | None, by_key: str) -> None:
+        """Novas regras mudam os valores: as marcações de "já paguei" daquela hunt são zeradas."""
+        with self._lock:
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+            if rules:
+                self._conn.execute("INSERT OR REPLACE INTO hunt_rules VALUES (?, ?, ?, ?, ?)",
+                                   (kind, hunt_id, json.dumps(rules), _iso(utcnow()), by_key))
+            else:
+                self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+            self._conn.commit()
+
+    def set_paid(self, kind: str, hunt_id: int, payer: str, receiver: str, amount: int, by_key: str, paid: bool) -> None:
+        with self._lock:
+            if paid:
+                self._conn.execute("INSERT OR REPLACE INTO hunt_payments VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                   (kind, hunt_id, name_key(payer), name_key(receiver), amount, _iso(utcnow()), by_key))
+            else:
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ? AND payer_key = ? AND receiver_key = ?",
+                                   (kind, hunt_id, name_key(payer), name_key(receiver)))
+            self._conn.commit()
+
+    def _forget_split(self, kind: str, hunt_id: int) -> None:
+        """Hunt apagada: some com as regras e os pagamentos dela (chamar dentro do _lock)."""
+        self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+        self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+
+    def hunt(self, hunt_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM hunts WHERE id = ?", (hunt_id,)).fetchone()
+        return self._hunt(row) if row else None
 
     def add_hunt(self, report: dict, raw_text: str, submitted_by: str, uploader_key: str | None = None) -> tuple[dict, bool]:
         with self._lock:
@@ -484,6 +560,7 @@ class Store:
     def delete_hunt(self, hunt_id: int) -> bool:
         with self._lock:
             cur = self._conn.execute("DELETE FROM hunts WHERE id = ?", (hunt_id,))
+            self._forget_split("hunt", hunt_id)
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -633,6 +710,53 @@ class Store:
     def meta(self, k: str) -> str | None:
         row = self._conn.execute("SELECT v FROM meta WHERE k = ?", (k,)).fetchone()
         return row[0] if row else None
+
+    def set_meta(self, k: str, v: str) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (k, v))
+            self._conn.commit()
+
+    # ------------------------------------------------------------------ 🥇 ranking entre amigos (opcional)
+    def ranking_join(self, name: str, join: bool) -> None:
+        with self._lock:
+            if join:
+                self._conn.execute("INSERT OR IGNORE INTO ranking_optin VALUES (?, ?, ?)", (name_key(name), name, _iso(utcnow())))
+            else:
+                self._conn.execute("DELETE FROM ranking_optin WHERE name_key = ?", (name_key(name),))
+            self._conn.commit()
+
+    def ranking_member(self, name: str) -> bool:
+        return self._conn.execute("SELECT 1 FROM ranking_optin WHERE name_key = ?", (name_key(name),)).fetchone() is not None
+
+    def ranking_rows(self, since: str) -> list[dict]:
+        """Totais do Stacker desde `since` de quem aceitou entrar no ranking (inclui quem não caçou: zeros)."""
+        rows = self._conn.execute(
+            "SELECT r.name, c.vocation, c.level, COUNT(s.id) AS sessions, COALESCE(SUM(s.xp), 0) AS xp, "
+            "COALESCE(SUM(s.balance), 0) AS balance, COALESCE(SUM(s.duration_seconds), 0) AS seconds "
+            "FROM ranking_optin r LEFT JOIN solo_sessions s ON s.name_key = r.name_key AND s.started_at >= ? "
+            "LEFT JOIN char_info c ON c.name_key = r.name_key GROUP BY r.name_key", (since,))
+        return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------ imagens da TibiaWiki (cache)
+    def wiki_image(self, name: str) -> sqlite3.Row | None:
+        return self._conn.execute("SELECT content_type, data, fetched_at FROM wiki_images WHERE name = ?", (name,)).fetchone()
+
+    def save_wiki_image(self, name: str, content_type: str | None, data: bytes | None) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO wiki_images VALUES (?, ?, ?, ?)",
+                               (name, content_type, data, _iso(utcnow())))
+            self._conn.commit()
+
+    # ------------------------------------------------------------------ backup
+    def backup_to(self, path: Path) -> None:
+        """Cópia consistente do banco (API de backup do SQLite), mesmo com o servidor no ar."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        dst = sqlite3.connect(path)
+        try:
+            with self._lock:
+                self._conn.backup(dst)
+        finally:
+            dst.close()
 
     def places(self) -> list[dict]:
         rows = self._conn.execute(
@@ -832,12 +956,8 @@ class Store:
             self._conn.execute("UPDATE boss_sessions SET boss_hunt_id = ? WHERE id = ?", (hunt_id, session_id))
             self._conn.commit()
 
-    @staticmethod
-    def _boss_hunt(row: sqlite3.Row) -> dict:
-        report = json.loads(row["report_json"])
-        report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
-                      uploader_key=row["uploader_key"])
-        return report
+    def _boss_hunt(self, row: sqlite3.Row) -> dict:
+        return self._hunt(row, "boss")
 
     def add_boss_hunt(self, report: dict, submitted_by: str, uploader_key: str) -> tuple[dict, bool]:
         with self._lock:
@@ -884,6 +1004,7 @@ class Store:
         with self._lock:
             if table == "boss_hunts":  # as sessões continuam, só perdem o vínculo com a party
                 self._conn.execute("UPDATE boss_sessions SET boss_hunt_id = NULL WHERE boss_hunt_id = ?", (row_id,))
+                self._forget_split("boss", row_id)
             cur = self._conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))
             self._conn.commit()
             return cur.rowcount > 0

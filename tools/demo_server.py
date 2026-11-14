@@ -138,6 +138,9 @@ def seed() -> str:
     store.add_solo(ME, s.fingerprint(ME), s.to_dict(), key, None, spots[0] if spots else None, 312)
     store._conn.commit()
 
+    store.set_user_price("falcon battleaxe", "demo-outro", 650_000)  # item sem NPC com preço -> drop raro na demo
+    for n in (ME, "Hilay", "Jioe"):  # 🥇 ranking entre amigos
+        store.ranking_join(n, True)
     store.set_goal(ME, "day", "xp", 4_000_000)
     store.set_goal(ME, "week", "loot", 30_000_000)
     store.set_sell(ME, "green dragon leather", 20)
