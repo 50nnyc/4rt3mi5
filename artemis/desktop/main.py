@@ -9,8 +9,10 @@ import webview
 
 from artemis import APP_NAME, __version__
 
-from . import updater
+from . import secure, updater
 from .config import CONFIG_DIR, Config
+
+SECRET_KEYS = {"key", "token"}  # código de acesso e token do aparelho: criptografados no PC
 
 
 def web_dir() -> Path:
@@ -38,14 +40,20 @@ class Bridge:
         return self.cfg.server_url
 
     def kv_get(self, key: str):
-        return self.cfg.storage.get(key)
+        value = self.cfg.storage.get(key)
+        if key in SECRET_KEYS and isinstance(value, str):
+            plain = secure.unprotect(value)
+            if plain is not None and not value.startswith(secure.PREFIX):
+                self.kv_set(key, plain)  # valor salvo por versão antiga: protege agora
+            return plain
+        return value
 
     def kv_set(self, key: str, value) -> None:
         with self._lock:
             if value is None:
                 self.cfg.storage.pop(key, None)
             else:
-                self.cfg.storage[key] = value
+                self.cfg.storage[key] = secure.protect(value) if key in SECRET_KEYS and isinstance(value, str) else value
             self.cfg.save()
 
     def check_update(self):

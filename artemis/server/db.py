@@ -1,6 +1,7 @@
 """Banco de dados SQLite (abre no DB Browser for SQLite: data/artemis.db)."""
 from __future__ import annotations
 
+import hashlib
 import json
 import secrets
 import sqlite3
@@ -9,6 +10,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 MAX_KEY_DAYS = 30
+
+
+def hash_token(token: str) -> str:
+    """Hash do token de aparelho: o banco guarda só isto, nunca o token."""
+    return "sha256:" + hashlib.sha256(token.encode("utf-8")).hexdigest()
 _KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sem 0/O/1/I para não confundir
 
 SCHEMA = """
@@ -197,6 +203,10 @@ class Store:
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN place_id INTEGER REFERENCES hunt_places(id)")
         if "level" not in solo_cols:
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN level INTEGER")
+        # 0.8.0: tokens de aparelho ficam só como hash (quem copiar o banco não consegue usá-los)
+        for (tok,) in self._conn.execute("SELECT token FROM devices WHERE token NOT LIKE 'sha256:%'").fetchall():
+            self._conn.execute("UPDATE devices SET token = ? WHERE token = ?", (hash_token(tok), tok))
+        self._conn.commit()
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
@@ -287,7 +297,7 @@ class Store:
         token = secrets.token_urlsafe(32)
         now = _iso(utcnow())
         with self._lock:
-            self._conn.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?)", (token, key, name, now, now))
+            self._conn.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?)", (hash_token(token), key, name, now, now))
             self._conn.commit()
         return token
 
@@ -327,7 +337,7 @@ class Store:
             self._conn.execute("DELETE FROM verifications WHERE code = ?", (code,))
             if not device_token:
                 device_token = secrets.token_urlsafe(32)
-                self._conn.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?)", (device_token, key, name, now, now))
+                self._conn.execute("INSERT INTO devices VALUES (?, ?, ?, ?, ?)", (hash_token(device_token), key, name, now, now))
             self._conn.commit()
         return device_token
 
@@ -336,7 +346,7 @@ class Store:
             return False
         with self._lock:
             cur = self._conn.execute("UPDATE devices SET last_seen = ? WHERE token = ? AND key = ?",
-                                     (_iso(utcnow()), token, key))
+                                     (_iso(utcnow()), hash_token(token), key))
             self._conn.commit()
             return cur.rowcount > 0
 

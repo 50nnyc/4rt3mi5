@@ -1,0 +1,10 @@
+#!/bin/sh
+# Bloqueia commits com dados sensíveis (códigos, tokens, senhas, e-mails, .env, banco).
+# Ativado por: git config core.hooksPath .githooks
+for py in ".venv/Scripts/python.exe" ".venv/bin/python" "python3" "python" "py"; do
+  if command -v "$py" >/dev/null 2>&1 || [ -x "$py" ]; then
+    exec "$py" tools/check_secrets.py
+  fi
+done
+echo "pre-commit: Python não encontrado; não foi possível verificar dados sensíveis." >&2
+exit 1

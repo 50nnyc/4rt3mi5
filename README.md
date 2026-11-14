@@ -74,6 +74,20 @@ python -m venv .venv
 .venv\Scripts\python run_desktop.py         # app desktop
 ```
 
+## Segurança dos dados sensíveis
+
+- **Nada sensível vai para o GitHub.** `tools/check_secrets.py` procura códigos de acesso, tokens
+  (ngrok, GitHub, admin), senhas, chaves privadas, e-mails e arquivos proibidos (`.env`, banco,
+  `server.json`). Roda sozinho antes de cada commit (`git config core.hooksPath .githooks`) e no
+  GitHub Actions antes de gerar a versão — se achar algo, bloqueia.
+- **Segredos só no `.env` e em `data/`** (ambos fora do Git e da imagem Docker).
+- **Servidor:** token de aparelho guardado só como hash (SHA-256); 10 tentativas erradas de
+  código ou senha do painel em 10 min bloqueiam o IP; painel só no PC do servidor; sem página
+  pública de documentação da API; cabeçalhos de segurança e respostas da API sem cache.
+- **App desktop:** código de acesso e token criptografados com o DPAPI do Windows (só o mesmo
+  usuário do Windows, no mesmo PC, consegue abrir).
+- **Testes** sempre usam um banco temporário (`tests/__init__.py`), nunca o `data/artemis.db`.
+
 ## Acesso fora de casa
 
 O celular e o app precisam de um endereço público **fixo** para o servidor. Opções:

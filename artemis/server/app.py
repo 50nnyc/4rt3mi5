@@ -93,7 +93,47 @@ async def lifespan(_app: FastAPI):
     task.cancel()
 
 
-app = FastAPI(title=APP_NAME, version=__version__, lifespan=lifespan)
+app = FastAPI(title=APP_NAME, version=__version__, lifespan=lifespan,
+              docs_url=None, redoc_url=None, openapi_url=None)  # sem documentação pública da API
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    resp = await call_next(request)
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["Referrer-Policy"] = "no-referrer"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if request.url.path.startswith("/api/"):
+        resp.headers["Cache-Control"] = "no-store"  # respostas com dados de conta não ficam em cache
+    return resp
+
+
+# ------------------------------------------------------------------ limite contra força bruta
+FAIL_LIMIT = 10          # tentativas erradas de código/senha...
+FAIL_WINDOW = 600        # ...em 10 minutos bloqueiam o IP por esse tempo
+TOO_MANY = "Muitas tentativas com código inválido. Aguarde alguns minutos e tente de novo."
+_fails: dict[str, list[float]] = {}
+
+
+def client_ip(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "?")
+
+
+def _check_blocked(ip: str) -> None:
+    now = time.monotonic()
+    recent = [t for t in _fails.get(ip, []) if now - t < FAIL_WINDOW]
+    _fails[ip] = recent
+    if len(recent) >= FAIL_LIMIT:
+        raise HTTPException(429, {"message": TOO_MANY, "reason": "rate"})
+
+
+def _record_fail(ip: str) -> None:
+    _fails.setdefault(ip, []).append(time.monotonic())
+    if len(_fails) > 5000:  # não deixa a tabela crescer sem limite
+        for k in list(_fails)[:1000]:
+            _fails.pop(k, None)
 app.add_middleware(
     CORSMiddleware,  # o app desktop carrega o site localmente e chama a API daqui
     allow_origins=["*"],
@@ -103,9 +143,12 @@ app.add_middleware(
 
 
 # ------------------------------------------------------------------ autenticação
-def require_key(x_access_key: str = Header(default="")) -> dict:
+def require_key(request: Request, x_access_key: str = Header(default="")) -> dict:
+    ip = client_ip(request)
+    _check_blocked(ip)
     key = store.validate_key(x_access_key)
     if key is None:
+        _record_fail(ip)
         raise HTTPException(401, {"message": INVALID_KEY, "reason": "key"})
     return key
 
@@ -674,7 +717,10 @@ def require_admin(request: Request, x_admin_token: str = Header(default="")) -> 
     # Tudo que chega pelo túnel (ngrok) traz cabeçalhos de proxy: o painel não aceita acesso pela internet.
     if any(h in request.headers for h in _PROXY_HEADERS):
         raise HTTPException(403, ADMIN_REMOTE_BLOCKED)
+    ip = "admin:" + client_ip(request)
+    _check_blocked(ip)
     if not secrets.compare_digest(x_admin_token, CONFIG["admin_token"]):
+        _record_fail(ip)
         raise HTTPException(401, "Senha de administrador inválida.")
 
 

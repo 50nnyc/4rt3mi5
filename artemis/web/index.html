@@ -67,6 +67,9 @@
   header.top .brand { font-family: var(--logo); font-weight: 800; color: var(--gold); letter-spacing: .06em; font-size: 20px; }
   header.top .who { margin-left: auto; font-weight: 700; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .burger { background: var(--card2); width: 40px; height: 40px; font-size: 20px; border: 1px solid var(--line); flex: none; }
+  .backbtn { background: var(--card2); width: 40px; height: 40px; font-size: 20px; border: 1px solid var(--line); flex: none; padding: 0; }
+  header.top .brand { background: none; border: 0; padding: 4px 2px; cursor: pointer; }
+  header.top .brand:hover { color: var(--gold2); }
   main { max-width: 760px; margin: 0 auto; padding: 16px 16px 64px; }
   h1 { font-size: 22px; margin: 6px 0 14px; }
   h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 26px 0 10px; }
@@ -226,6 +229,7 @@
         <button class="btn" type="submit">Ver hunts</button>
       </form>
       <div class="err" id="nickErr"></div>
+      <button class="link hidden" id="nickBack" style="margin-top:8px">← voltar</button>
     </div>
   </div>
 </section>
@@ -233,7 +237,8 @@
 <section id="app" class="hidden">
   <header class="top">
     <button class="burger" id="burger" aria-label="Abrir menu">☰</button>
-    <span class="brand">4rt3mi5</span>
+    <button class="backbtn hidden" id="backBtn" aria-label="Voltar" title="Voltar">←</button>
+    <button class="brand" id="brandHome" title="Ir para o início" aria-label="4rt3mi5 — ir para o início">4rt3mi5</button>
     <span class="who" id="topWho"></span>
   </header>
   <div class="scrim" id="scrim"></div>
@@ -564,6 +569,7 @@ function verifyWidget(el, { title, intro = "", onDone, placeholder = "Ex.: Atx B
 async function showNick(prefill = true) {
   showOnly("nickScreen");
   $("#nickErr").textContent = "";
+  $("#nickBack").classList.toggle("hidden", !S.char);
   const last = prefill ? ((await kv.get("nick")) || (S.me && S.me.main_char)) : null;
   if (last && !$("#nickInput").value) $("#nickInput").value = last;
   setTimeout(() => $("#nickInput").focus(), 50);
@@ -594,7 +600,9 @@ function openApp() {
   updateDrawerFoot();
   $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = "";
   showOnly("app");
-  go("home");
+  S.navStack = [];
+  S.page = null;
+  go("home", { noPush: true });
 }
 function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
@@ -602,10 +610,43 @@ $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
 document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => { closeDrawer(); go(b.dataset.page); }));
 $("#changeNick").addEventListener("click", () => { closeDrawer(); $("#nickInput").value = ""; showNick(false); });
+$("#nickBack").addEventListener("click", () => showOnly("app"));
+$("#brandHome").addEventListener("click", () => { closeDrawer(); if (S.page !== "home") go("home"); else window.scrollTo(0, 0); });
+$("#backBtn").addEventListener("click", goBack);
+
+/* ---------- voltar: botão ← e o "voltar" do celular/navegador ---------- */
+S.navStack = [];
+function pushNav() {
+  if (!S.page || $("#app").classList.contains("hidden")) return;
+  S.navStack.push({ page: S.page, htab: S.htab });
+  try { history.pushState({ nav: S.navStack.length }, ""); } catch {}
+}
+function goBack() {
+  closeDrawer();
+  if (S.navStack.length) { try { history.back(); } catch { restoreNav(); } }
+  else if (S.page !== "home") go("home", { noPush: true });
+}
+function restoreNav() {
+  const st = S.navStack.pop();
+  if (!st) { if (S.page !== "home") go("home", { noPush: true }); return; }
+  if (st.page === "hunts" && S.page === "hunts") { showHuntTab(st.htab); return; }
+  if (st.htab) S.htab = st.htab;
+  go(st.page, { noPush: true });
+}
+window.addEventListener("popstate", () => {
+  if ($("#app").classList.contains("hidden")) return;
+  if ($("#drawer").classList.contains("open")) { closeDrawer(); }
+  restoreNav();
+});
+function updateBack() {
+  $("#backBtn").classList.toggle("hidden", !(S.navStack.length || S.page !== "home"));
+}
 $("#logout").addEventListener("click", () => lockOut(""));
 
-function go(page) {
+function go(page, opts = {}) {
+  if (!opts.noPush && page !== S.page) pushNav();
   S.page = page;
+  updateBack();
   document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
   $("#pageHome").classList.toggle("hidden", page !== "home");
   $("#pageLoot").classList.toggle("hidden", page !== "loot");
@@ -1103,8 +1144,10 @@ async function loadHunts() {
   }
   showHuntTab(S.htab);
 }
-function showHuntTab(tab) {
+function showHuntTab(tab, opts = {}) {
+  if (opts.push && tab !== S.htab) pushNav();
   S.htab = tab;
+  updateBack();
   document.querySelectorAll("[data-htab]").forEach((b) => b.classList.toggle("on", b.dataset.htab === tab));
   $("#huntRankingBox").classList.toggle("hidden", tab === "cmp");
   $("#huntCompareBox").classList.toggle("hidden", tab !== "cmp");
@@ -1156,12 +1199,12 @@ function renderCompare() {
 }
 document.addEventListener("click", (e) => {
   const tab = e.target.closest("[data-htab]");
-  if (tab) return showHuntTab(tab.dataset.htab);
+  if (tab) return showHuntTab(tab.dataset.htab, { push: true });
   const add = e.target.closest("[data-cmp-add]");
   if (add) {
     const p = (S.places || []).find((x) => x.id === +add.dataset.cmpAdd);
     if (p && !S.cmp.some((x) => x.id === p.id)) { if (S.cmp.length >= 3) S.cmp.shift(); S.cmp.push(p); }
-    return showHuntTab("cmp");
+    return showHuntTab("cmp", { push: true });
   }
   const del = e.target.closest("[data-cmp-del]");
   if (del) { S.cmp = S.cmp.filter((p) => p.id !== +del.dataset.cmpDel); renderCompare(); }

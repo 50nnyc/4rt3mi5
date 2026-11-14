@@ -4,5 +4,22 @@ __pycache__/
 build/
 dist/
 *.spec
+
+# ---- dados sensíveis: NUNCA vão para o GitHub (ver tools/check_secrets.py) ----
 /data/
 .env
+.env.*
+!.env.example
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+server.json
+*.pem
+*.key
+*.pfx
+*.p12
+id_rsa*
+*.log
+backup*/
