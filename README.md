@@ -87,6 +87,19 @@ python -m venv .venv
 - **App desktop:** código de acesso e token criptografados com o DPAPI do Windows (só o mesmo
   usuário do Windows, no mesmo PC, consegue abrir).
 - **Testes** sempre usam um banco temporário (`tests/__init__.py`), nunca o `data/artemis.db`.
+- **Anti-abuso (0.9.0):** limite por IP (240 leituras/min, 40 alterações/min, 30 envios/10 min),
+  corpo máximo de 512 KB, campos validados (tamanho, formato, faixas de valores), no máximo 30 hunts
+  criadas por código, nomes impossíveis nem consultam o TibiaData, CORS só para o app local,
+  CSP no site (só carrega imagens da TibiaWiki/tibiamaps e fontes do Google), container Docker
+  sem root e sem cabeçalho de versão do servidor. Um teste garante que o código de acesso de um
+  usuário nunca aparece nas respostas vistas por outro.
+- **Atualizações do app:** só aceita manifesto e instalador das Releases oficiais
+  (`github.com/50nnyc/4rt3mi5/releases/`), segue redirecionamento só para o GitHub e confere o SHA-256.
+
+## Novidades (changelog)
+
+Toda versão nova precisa de uma entrada no topo de `artemis/data/changelog.json` (um teste falha
+se faltar). O site mostra a aba 📰 Novidades e avisa no Início quando há versão que o usuário não viu.
 
 ## Acesso fora de casa
 

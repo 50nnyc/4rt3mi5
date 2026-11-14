@@ -1,0 +1,104 @@
+{
+  "releases": [
+    {
+      "version": "0.9.0",
+      "date": "2026-11-14",
+      "title": "Novidades e mais proteção",
+      "changes": [
+        "Nova aba 📰 Novidades: mostra o que mudou em cada versão. Quando sair uma versão nova, o app avisa na tela inicial.",
+        "Mais proteção contra uso malicioso: limite de envios e de requisições por pessoa, tamanho máximo dos textos colados, validação de nomes, preços e metas, e bloqueio de conteúdo externo não autorizado no site.",
+        "O app de Windows só instala atualizações baixadas do GitHub oficial do 4rt3mi5 e conferidas por assinatura (SHA-256)."
+      ]
+    },
+    {
+      "version": "0.8.0",
+      "date": "2026-11-14",
+      "title": "Botão voltar e segurança",
+      "changes": [
+        "Botão ← no topo para voltar à tela anterior (o \"voltar\" do celular também funciona).",
+        "Tocar no logo 4rt3mi5 leva para o Início de qualquer tela.",
+        "\"Trocar personagem\" agora tem a opção de voltar.",
+        "Seu código de acesso e o token do aparelho ficam criptografados no PC (app de Windows) e o servidor guarda o token só como hash.",
+        "Muitas tentativas com código errado bloqueiam temporariamente quem está tentando adivinhar."
+      ]
+    },
+    {
+      "version": "0.7.1",
+      "date": "2026-11-14",
+      "title": "Previsão de level exata",
+      "changes": [
+        "A previsão de level usa a tabela oficial de experiência do tibia.com.",
+        "Para quem está no top 1000 de experiência do mundo, mostra a XP exata e a % do level atual.",
+        "Nova tabela com quanto falta (XP, horas de hunt e dias) para os próximos levels e para os múltiplos de 50 e 100."
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "date": "2026-11-14",
+      "title": "Menu Hunts, metas e recordes",
+      "changes": [
+        "Novo menu 🗺️ Hunts: ranking por XP/h e gold/h, level médio de quem caça em cada hunt, filtro por level e comparação de até 3 hunts.",
+        "No envio de sessão, escolha a hunt (campo que filtra enquanto digita).",
+        "🎯 Metas de XP e loot por dia e por semana, com barra de progresso.",
+        "📈 Previsão de level, lucro líquido real, 🧺 lista de venda com aviso de quantidade e 🏆 recordes pessoais."
+      ]
+    },
+    {
+      "version": "0.6.0",
+      "date": "2026-11-13",
+      "title": "Itens, preços e NPCs",
+      "changes": [
+        "O Hunt Session Stacker guarda criaturas mortas e itens coletados.",
+        "Preço de cada item pelo NPC que paga mais (TibiaWiki BR), com cidade e minimapa.",
+        "Itens sem NPC: os jogadores informam o preço e o app usa a média.",
+        "Totais por semana, 15 dias, mês, 3 meses, 6 meses e 1 ano."
+      ]
+    },
+    {
+      "version": "0.5.0",
+      "date": "2026-11-13",
+      "title": "Gráficos e exclusão",
+      "changes": [
+        "Só quem enviou uma hunt pode apagá-la.",
+        "Lootsplit guarda damage e healing e mostra gráficos de contribuição (link \"Gráfico\")."
+      ]
+    },
+    {
+      "version": "0.4.0",
+      "date": "2026-11-13",
+      "title": "Painel do criador",
+      "changes": [
+        "Painel de administração para criar e renovar códigos de 7, 15 ou 30 dias.",
+        "Contatos de confiança podem entrar sem código de verificação."
+      ]
+    },
+    {
+      "version": "0.3.0",
+      "date": "2026-11-13",
+      "title": "Verificação do main",
+      "changes": [
+        "Verificação do personagem principal com um código colocado no comentário do tibia.com.",
+        "Só é possível enviar dados de personagens vinculados ao seu código."
+      ]
+    },
+    {
+      "version": "0.2.0",
+      "date": "2026-11-12",
+      "title": "4rt3mi5",
+      "changes": [
+        "Novo nome: 4rt3mi5, com telas de abertura animadas.",
+        "Acesso por código válido por até 30 dias.",
+        "Hunt Session Stacker: totais do dia e de toda a vida.",
+        "Sem internet, o app espera e tenta de novo a cada 10 segundos."
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "date": "2026-11-12",
+      "title": "Primeira versão",
+      "changes": [
+        "Lootsplit: cole o Party Hunt Analyser e veja quanto cada um recebe ou paga, total e por hora."
+      ]
+    }
+  ]
+}

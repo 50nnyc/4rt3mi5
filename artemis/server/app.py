@@ -23,10 +23,15 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
+import re
+from collections import deque
+from typing import Annotated, Literal
+
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
-from pydantic import BaseModel
+from fastapi.responses import FileResponse, JSONResponse
+from pydantic import BaseModel, Field
 
 from artemis import APP_NAME, __version__
 from artemis.core.parser import ParseError
@@ -97,6 +102,62 @@ app = FastAPI(title=APP_NAME, version=__version__, lifespan=lifespan,
               docs_url=None, redoc_url=None, openapi_url=None)  # sem documentação pública da API
 
 
+@app.exception_handler(RequestValidationError)
+async def invalid_input(_request: Request, exc: RequestValidationError):
+    """Dados fora do formato/tamanho permitido: mensagem curta, sem ecoar o que foi enviado."""
+    fields = sorted({str(e.get("loc", ["", "?"])[-1]) for e in exc.errors()})
+    return JSONResponse(status_code=422, content={"detail": {"message": "Dados inválidos ou grandes demais: " + ", ".join(fields),
+                                                             "reason": "invalid"}})
+
+
+# ------------------------------------------------------------------ limite de requisições (anti-abuso)
+MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
+RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600)}   # (máx., janela em s) por IP
+UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview"}
+SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
+_hits: dict[tuple[str, str], deque] = {}
+
+
+def _rate_bucket(request: Request) -> str | None:
+    path = request.url.path
+    if not path.startswith("/api/") or path == "/api/health":
+        return None
+    if request.method == "POST" and path in UPLOAD_PATHS:
+        return "upload"
+    return "write" if request.method in ("POST", "DELETE", "PUT", "PATCH") else "read"
+
+
+def _rate_limited(ip: str, bucket: str) -> bool:
+    limit, window = RATE_RULES[bucket]
+    now = time.monotonic()
+    q = _hits.setdefault((ip, bucket), deque())
+    while q and now - q[0] > window:
+        q.popleft()
+    if len(q) >= limit:
+        return True
+    q.append(now)
+    if len(_hits) > 20000:  # memória limitada: descarta os mais antigos
+        for k in list(_hits)[:5000]:
+            _hits.pop(k, None)
+    return False
+
+
+@app.middleware("http")
+async def abuse_guard(request: Request, call_next):
+    length = request.headers.get("content-length")
+    if length and (not length.isdigit() or int(length) > MAX_BODY):
+        return JSONResponse(status_code=413, content={"detail": {"message": "Envio grande demais.", "reason": "size"}})
+    if request.method in ("POST", "PUT", "PATCH") and not length and request.url.path.startswith("/api/"):
+        body = await request.body()  # sem Content-Length (chunked): confere o tamanho real
+        if len(body) > MAX_BODY:
+            return JSONResponse(status_code=413, content={"detail": {"message": "Envio grande demais.", "reason": "size"}})
+    bucket = _rate_bucket(request)
+    if bucket and _rate_limited(client_ip(request), bucket):
+        return JSONResponse(status_code=429, content={"detail": {"message": SLOW_DOWN, "reason": "rate"}},
+                            headers={"Retry-After": "60"})
+    return await call_next(request)
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     resp = await call_next(request)
@@ -104,6 +165,9 @@ async def security_headers(request: Request, call_next):
     resp.headers["Referrer-Policy"] = "no-referrer"
     resp.headers["X-Frame-Options"] = "DENY"
     resp.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    resp.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+    if request.headers.get("x-forwarded-proto") == "https":  # pelo túnel: força HTTPS por 1 ano
+        resp.headers["Strict-Transport-Security"] = "max-age=31536000"
     if request.url.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"  # respostas com dados de conta não ficam em cache
     return resp
@@ -135,8 +199,8 @@ def _record_fail(ip: str) -> None:
         for k in list(_fails)[:1000]:
             _fails.pop(k, None)
 app.add_middleware(
-    CORSMiddleware,  # o app desktop carrega o site localmente e chama a API daqui
-    allow_origins=["*"],
+    CORSMiddleware,  # o app desktop carrega o site localmente (127.0.0.1) e chama a API daqui
+    allow_origin_regex=r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$",  # outros sites não podem usar a API pelo navegador
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["X-Access-Key", "X-Device-Token", "Content-Type", "ngrok-skip-browser-warning"],
 )
@@ -169,7 +233,12 @@ _char_cache: dict[str, tuple[float, object]] = {}
 _last_check: dict[str, float] = {}
 
 
+_VALID_NAME = re.compile(r"[A-Za-zÀ-ÿ' .-]{2,40}")
+
+
 def lookup_character(name: str, fresh: bool = False):
+    if not _VALID_NAME.fullmatch(name or ""):  # nome impossível no Tibia: nem consulta o TibiaData
+        return None
     k = name_key(name)
     hit = _char_cache.get(k)
     if hit and not fresh and time.monotonic() - hit[0] < 120:
@@ -197,18 +266,36 @@ def me_payload(access: dict) -> dict:
             "chars": store.key_chars(access["key"])}
 
 
+NAME_MAX = 40          # nomes do Tibia têm até 29 caracteres
+RAW_MAX = 200_000      # texto colado do analyser (uma sessão longa tem poucos KB)
+Name = Annotated[str, Field(min_length=1, max_length=NAME_MAX)]
+
+
 class CharIn(BaseModel):
-    character: str
+    character: Name
 
 
 class CodeIn(BaseModel):
-    code: str
+    code: Annotated[str, Field(max_length=40)]
 
 
 class UploadIn(BaseModel):
-    raw_text: str
-    nickname: str
-    place_id: int | None = None  # Stacker: em qual hunt foi a sessão
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+    nickname: Name
+    place_id: int | None = Field(default=None, ge=1)  # Stacker: em qual hunt foi a sessão
+
+
+CHANGELOG_FILE = Path(__file__).resolve().parent.parent / "data" / "changelog.json"
+
+
+@app.get("/api/changelog")
+def changelog():
+    """Novidades de cada versão (aba 📰 Novidades). Público: não tem dado de ninguém."""
+    try:
+        data = json.loads(CHANGELOG_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {"releases": []}
+    return {"version": __version__, "releases": data.get("releases", [])}
 
 
 @app.get("/api/health")
@@ -561,9 +648,9 @@ def require_owner(name: str, access: dict) -> None:
 
 
 class GoalIn(BaseModel):
-    period: str
-    metric: str
-    target: int | None = None
+    period: Literal["day", "week"]
+    metric: Literal["xp", "loot"]
+    target: int | None = Field(default=None, ge=0, le=10**13)
 
 
 @app.post("/api/goals/{name}")
@@ -576,8 +663,8 @@ def set_goal(name: str, body: GoalIn, access: dict = Depends(require_session)):
 
 
 class SellIn(BaseModel):
-    item: str
-    target: int | None = None
+    item: Annotated[str, Field(min_length=1, max_length=80)]
+    target: int | None = Field(default=None, ge=0, le=10_000_000)
 
 
 @app.post("/api/sell/{name}")
@@ -599,12 +686,17 @@ def mark_sold(name: str, body: SellIn, access: dict = Depends(require_session)):
 
 # ------------------------------------------------------------------ hunts (locais, ranking, comparação)
 class PlaceIn(BaseModel):
-    name: str
-    city: str | None = None
+    name: Annotated[str, Field(max_length=60)]
+    city: Annotated[str, Field(max_length=40)] | None = None
 
 
 class PlaceSet(BaseModel):
-    place_id: int | None = None
+    place_id: int | None = Field(default=None, ge=1)
+
+
+# Nomes de hunt criados por usuários: letras (com acento), números, espaço e pontuação simples.
+_PLACE_NAME = re.compile(r"[\w À-ÿ'().,&/-]+")
+PLACES_PER_KEY = 30
 
 
 @app.get("/api/places")
@@ -615,9 +707,14 @@ def list_places(_: dict = Depends(require_session)):
 @app.post("/api/places")
 def create_place(body: PlaceIn, access: dict = Depends(require_session)):
     name = " ".join(body.name.split())
+    city = " ".join((body.city or "").split()) or None
     if not 3 <= len(name) <= 60:
         raise HTTPException(422, "Nome da hunt deve ter de 3 a 60 caracteres.")
-    return store.create_place(name, (body.city or "").strip() or None, access["key"])
+    if not _PLACE_NAME.fullmatch(name) or (city and not _PLACE_NAME.fullmatch(city)):
+        raise HTTPException(422, "Use só letras, números, espaços e pontuação simples no nome da hunt.")
+    if store.places_created_by(access["key"]) >= PLACES_PER_KEY:
+        raise HTTPException(429, f"Limite de {PLACES_PER_KEY} hunts criadas por código de acesso atingido.")
+    return store.create_place(name, city, access["key"])
 
 
 @app.post("/api/stacker/session/{session_id}/place")
@@ -665,7 +762,7 @@ def places_compare(ids: str, nick: str = "", access: dict = Depends(require_sess
 
 
 class PriceIn(BaseModel):
-    item: str
+    item: Annotated[str, Field(min_length=1, max_length=80)]
     price: int | None = None
 
 

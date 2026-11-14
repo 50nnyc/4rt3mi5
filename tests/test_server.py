@@ -30,6 +30,8 @@ class ServerTests(unittest.TestCase):
         server._char_cache.clear()
         server._last_check.clear()
         server._exp_cache.clear()
+        server._hits.clear()
+        server._fails.clear()
         COMMENTS.clear()
         self.patch = mock.patch.object(server, "fetch_character", fake_fetch)
         self.patch.start()
@@ -289,6 +291,45 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(k["main_char"], "Hilay")
         with self.assertRaises(ValueError):
             server.store.renew_key(self.key, 31)
+
+    def test_never_leaks_other_users_key(self):
+        """O código de acesso de A nunca pode aparecer em nenhuma resposta vista por B."""
+        a = self.key
+        ha = self.h(self.verify("Vazador")[1].json()["token"])
+        place = self.client.post("/api/places", json={"name": "Caverna do Vazador"}, headers=ha).json()
+        self.assertNotIn("created_by", place)
+        self.client.post("/api/stacker", json={"raw_text": SOLO.replace("18:50:49", "11:11:11"), "nickname": "Vazador",
+                                               "place_id": place["id"]}, headers=ha)
+        self.client.post("/api/items/price", json={"item": "item inventado do vazador", "price": 999}, headers=ha)
+        kb = server.store.create_key(30, "b")["key"]
+        server.store.force_main(kb, "Olheiro")
+        hb = {"X-Access-Key": kb, "X-Device-Token": server.store.issue_device(kb, "Olheiro")}
+        for url in ["/api/places", f"/api/places/compare?ids={place['id']}&nick=Vazador", "/api/places/ranking",
+                    "/api/stacker/Vazador", "/api/hunts/Vazador", "/api/me", "/api/changelog",
+                    "/api/character/Vazador", "/api/goals/Vazador", "/api/sell/Vazador"]:
+            r = self.client.get(url, headers=hb)
+            self.assertNotIn(a, r.text, url)
+            self.assertNotIn("created_by", r.text, url)
+            self.assertNotIn("uploader_key", r.text, url)
+            self.assertNotIn("raw_text", r.text, url)
+        # B também não descobre o código de A criando uma hunt com o mesmo nome
+        same = self.client.post("/api/places", json={"name": "caverna do vazador"}, headers=hb)
+        self.assertNotIn(a, same.text)
+
+    def test_input_validation(self):
+        h = self.h(self.verify("Validador")[1].json()["token"])
+        r = self.client.post("/api/places", json={"name": "<script>alert(1)</script>"}, headers=h)
+        self.assertEqual(r.status_code, 422)
+        r = self.client.post("/api/goals/Validador", json={"period": "ano", "metric": "xp", "target": 5}, headers=h)
+        self.assertEqual(r.status_code, 422)
+        self.assertIn("message", r.json()["detail"])
+        self.assertNotIn("ano", r.text)  # não ecoa o que foi enviado
+        r = self.client.post("/api/stacker", json={"raw_text": "x" * (server.RAW_MAX + 1), "nickname": "Validador"}, headers=h)
+        self.assertEqual(r.status_code, 422)
+        r = self.client.post("/api/stacker", content=b"{" + b" " * (server.MAX_BODY + 10) + b"}",
+                             headers={**h, "Content-Type": "application/json"})
+        self.assertEqual(r.status_code, 413)
+        self.assertEqual(self.client.get("/api/character/" + "a" * 60, headers=h).status_code, 404)
 
 
 if __name__ == "__main__":

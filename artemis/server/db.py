@@ -571,19 +571,25 @@ class Store:
             "LEFT JOIN solo_sessions s ON s.place_id = p.id GROUP BY p.id ORDER BY p.name")
         return [dict(r) for r in rows]
 
+    # Colunas que podem sair para o site. NUNCA incluir created_by (é o código de acesso de quem criou).
+    _PLACE_COLS = "id, name, city, location, level, x, y, z, premium, source"
+
     def place(self, place_id: int) -> dict | None:
-        row = self._conn.execute("SELECT * FROM hunt_places WHERE id = ?", (place_id,)).fetchone()
+        row = self._conn.execute(f"SELECT {self._PLACE_COLS} FROM hunt_places WHERE id = ?", (place_id,)).fetchone()
         return dict(row) if row else None
+
+    def places_created_by(self, key: str) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM hunt_places WHERE created_by = ?", (key,)).fetchone()[0]
 
     def create_place(self, name: str, city: str | None, created_by: str) -> dict:
         name = " ".join(name.split())
         with self._lock:
-            row = self._conn.execute("SELECT * FROM hunt_places WHERE name = ?", (name,)).fetchone()
+            row = self._conn.execute(f"SELECT {self._PLACE_COLS} FROM hunt_places WHERE name = ?", (name,)).fetchone()
             if row is None:
                 cur = self._conn.execute("INSERT INTO hunt_places (name, city, source, created_by) VALUES (?, ?, 'user', ?)",
                                          (name, city or None, created_by))
                 self._conn.commit()
-                row = self._conn.execute("SELECT * FROM hunt_places WHERE id = ?", (cur.lastrowid,)).fetchone()
+                row = self._conn.execute(f"SELECT {self._PLACE_COLS} FROM hunt_places WHERE id = ?", (cur.lastrowid,)).fetchone()
         return dict(row)
 
     def set_session_place(self, session_id: int, place_id: int | None) -> None:

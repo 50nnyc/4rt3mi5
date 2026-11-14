@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d12">
+<!-- Segurança: só carrega o que o app precisa (bloqueia scripts e envios para outros servidores) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <title>4rt3mi5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
@@ -172,6 +175,9 @@
   .gbar { height: 10px; background: var(--track); border-radius: 99px; overflow: hidden; margin-top: 4px; }
   .gbar > div { height: 100%; background: var(--bar); border-radius: 99px; }
   .gbar.done > div { background: var(--green); }
+  .news-new { border-color: rgba(242, 201, 76, .55); background: linear-gradient(180deg, rgba(242, 201, 76, .07), var(--card)); }
+  .news-list { margin: 8px 0 6px; padding-left: 20px; line-height: 1.5; }
+  .news-list li { margin: 4px 0; }
   .lvl-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
   .lvl-table th, .lvl-table td { padding: 5px 4px; border-top: 1px solid var(--line); text-align: left; }
   .lvl-table th { color: var(--muted); font-weight: 500; }
@@ -249,6 +255,7 @@
     <button class="item" data-page="stack">📈 Hunt Session Stacker</button>
     <button class="item" data-page="hunts">🗺️ Hunts</button>
     <button class="item" data-page="chars">👤 Meus personagens</button>
+    <button class="item" data-page="news">📰 Novidades <span class="pill hidden" id="newsDot">novo</span></button>
     <div style="height:10px"></div>
     <button class="item" id="changeNick">🔁 Trocar personagem</button>
     <button class="item" id="logout">🚪 Sair (apagar chave)</button>
@@ -305,6 +312,12 @@
         <div class="chips" id="cmpChips" style="margin:10px 0"></div>
         <div id="cmpResult"></div>
       </div>
+    </div>
+
+    <div id="pageNews" class="hidden">
+      <h1>Novidades</h1>
+      <p class="muted">O que mudou em cada versão do 4rt3mi5.</p>
+      <div id="newsList"></div>
     </div>
 
     <div id="pageChars" class="hidden">
@@ -653,6 +666,8 @@ function go(page, opts = {}) {
   $("#pageStack").classList.toggle("hidden", page !== "stack");
   $("#pageChars").classList.toggle("hidden", page !== "chars");
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
+  $("#pageNews").classList.toggle("hidden", page !== "news");
+  if (page === "news") loadNews();
   window.scrollTo(0, 0);
   if (page === "home") loadHome();
   if (page === "stack") { initStackPicker(); loadStack(); }
@@ -803,6 +818,47 @@ function statGrid(items) {
   return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
 }
 
+/* ---------- novidades (changelog) ---------- */
+async function fetchNews() {
+  if (!S.news) S.news = await api("GET", "/api/changelog").catch(() => null);
+  return S.news;
+}
+function releaseCard(r, highlight) {
+  const d = r.date ? new Date(r.date + "T12:00:00").toLocaleDateString("pt-BR") : "";
+  return `<div class="card${highlight ? " news-new" : ""}">
+    <div class="row"><b>Versão ${esc(r.version)}${r.title ? " · " + esc(r.title) : ""}</b><span class="muted" style="font-size:13px">${esc(d)}</span></div>
+    <ul class="news-list">${r.changes.map((c) => `<li>${esc(c)}</li>`).join("")}</ul></div>`;
+}
+async function loadNews() {
+  const d = await fetchNews();
+  if (!d) { $("#newsList").innerHTML = `<div class="err">Não foi possível carregar as novidades.</div>`; return; }
+  $("#newsList").innerHTML = d.releases.map((r, i) => releaseCard(r, i === 0)).join("");
+  await markNewsSeen();
+}
+async function markNewsSeen() {
+  const d = await fetchNews();
+  if (d && d.releases.length) await kv.set("seen_version", d.releases[0].version);
+  $("#newsDot").classList.add("hidden");
+}
+/** Aviso no Início quando há versão nova que o usuário ainda não viu. */
+async function newsNotice() {
+  const d = await fetchNews();
+  if (!d || !d.releases.length) return "";
+  const latest = d.releases[0];
+  const seen = await kv.get("seen_version");
+  if (seen === latest.version) return "";
+  $("#newsDot").classList.remove("hidden");
+  return `<div class="card news-new" id="newsNotice">
+    <div class="row"><b>🎉 Novidades da versão ${esc(latest.version)}</b><button class="link" id="newsClose" aria-label="Fechar aviso">✕</button></div>
+    <ul class="news-list">${latest.changes.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
+    <button class="link" data-page-link="news">Ver todas as versões →</button></div>`;
+}
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("#newsClose")) { $("#newsNotice").remove(); await markNewsSeen(); }
+  const link = e.target.closest("[data-page-link]");
+  if (link) go(link.dataset.pageLink);
+});
+
 /* ---------- página inicial ---------- */
 async function loadHome() {
   const el = $("#pageHome");
@@ -815,7 +871,8 @@ async function loadHome() {
   const secs = hunts.reduce((a, h) => a + h.duration_seconds, 0);
   let toPay = 0, toGet = 0;
   hunts.forEach((h) => { const v = view(h, S.nick); toPay += v.totalPay; toGet += v.totalGet; });
-  el.innerHTML = `
+  const notice = await newsNotice().catch(() => "");
+  el.innerHTML = `${notice}
     ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt")
       : `<div class="card"><div class="muted">Última hunt</div><div class="big gold">0 gp</div>
          <div class="muted">Nenhuma hunt registrada para ${esc(S.nick)} ainda. Use o menu ☰ → Lootsplit para enviar uma.</div></div>`}

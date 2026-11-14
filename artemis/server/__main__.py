@@ -89,7 +89,9 @@ def main(argv: list[str] | None = None) -> None:
     print(f" Config: {CONFIG_PATH}")
     print(f" Chaves válidas: {len(store.list_keys())}  (crie com: admin.bat create \"Nome\")")
     print("=" * 60)
-    uvicorn.run(app, host=CONFIG["host"], port=int(CONFIG["port"]))
+    # server_header=False: não revela qual servidor/versão está rodando
+    uvicorn.run(app, host=CONFIG["host"], port=int(CONFIG["port"]), server_header=False,
+                limit_concurrency=200, timeout_keep_alive=10)
 
 
 if __name__ == "__main__":

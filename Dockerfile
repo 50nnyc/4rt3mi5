@@ -11,6 +11,10 @@ RUN pip install --no-cache-dir -r requirements-server.txt
 
 COPY artemis ./artemis
 
+# Roda sem privilégios de administrador dentro do container
+RUN useradd --system --uid 10001 --no-create-home artemis && mkdir -p /data && chown artemis /data
+USER artemis
+
 EXPOSE 8000
 VOLUME ["/data"]
 HEALTHCHECK --interval=30s --timeout=5s CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"

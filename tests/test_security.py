@@ -54,6 +54,29 @@ class ServerSecurityTests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/auth", headers={**h, "X-Access-Key": key}).status_code, 429)
         self.assertEqual(self.client.post("/api/auth", headers={"X-Access-Key": key, "X-Forwarded-For": "203.0.113.10"}).status_code, 200)
 
+    def test_limite_de_requisicoes(self):
+        server._hits.clear()
+        h = {"X-Forwarded-For": "198.51.100.7"}
+        limit = server.RATE_RULES["read"][0]
+        codes = [self.client.get("/api/changelog", headers=h).status_code for _ in range(limit + 1)]
+        self.assertEqual(codes[:limit], [200] * limit)
+        self.assertEqual(codes[-1], 429)
+        self.assertEqual(self.client.get("/api/changelog", headers={"X-Forwarded-For": "198.51.100.8"}).status_code, 200)
+        self.assertEqual(self.client.get("/api/health", headers=h).status_code, 200)  # health nunca bloqueia
+        server._hits.clear()
+
+    def test_cors_so_app_local(self):
+        ok = self.client.get("/api/health", headers={"Origin": "http://127.0.0.1:51234"})
+        self.assertEqual(ok.headers.get("access-control-allow-origin"), "http://127.0.0.1:51234")
+        bad = self.client.get("/api/health", headers={"Origin": "https://site-malicioso.example"})
+        self.assertIsNone(bad.headers.get("access-control-allow-origin"))
+
+    def test_novidades_da_versao_atual(self):
+        d = self.client.get("/api/changelog").json()
+        self.assertEqual(d["version"], server.__version__)
+        self.assertEqual(d["releases"][0]["version"], server.__version__, "adicione a versão nova em artemis/data/changelog.json")
+        self.assertTrue(all(r["changes"] for r in d["releases"]))
+
     def test_cabecalhos_e_sem_docs(self):
         r = self.client.get("/api/health")
         self.assertEqual(r.headers["X-Content-Type-Options"], "nosniff")
@@ -69,6 +92,17 @@ class ServerSecurityTests(unittest.TestCase):
         self.assertNotIn(tok, rows)
         self.assertTrue(server.store.device_valid(key, tok))
         self.assertFalse(server.store.device_valid(key, hash_token(tok)))  # o hash do banco não serve como token
+
+
+class UpdaterTests(unittest.TestCase):
+    def test_so_aceita_releases_oficiais(self):
+        from artemis.desktop import updater
+        self.assertTrue(updater._trusted("https://github.com/50nnyc/4rt3mi5/releases/download/v1.0.0/x.exe"))
+        for bad in ["https://evil.example/4rt3mi5-Setup.exe", "http://github.com/50nnyc/4rt3mi5/releases/x.exe",
+                    "https://github.com/outro/4rt3mi5/releases/x.exe",
+                    "https://github.com/50nnyc/4rt3mi5/releases/../../outro/x.exe"]:
+            self.assertFalse(updater._trusted(bad), bad)
+        self.assertIsNone(updater.check("https://evil.example/latest.json"))
 
 
 @unittest.skipUnless(sys.platform == "win32", "DPAPI só existe no Windows")
