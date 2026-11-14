@@ -181,6 +181,40 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.delete(f"/api/stacker/session/{s['id']}", headers=other).status_code, 403)
         self.assertEqual(self.client.delete(f"/api/stacker/session/{s['id']}", headers=self.h(token)).status_code, 200)
 
+    def test_stacker_loot_prices_and_user_average(self):
+        server.store.load_wiki({"imported_at": "teste", "items": [
+            ["Dwarven Shield", 100, [["Hardek"], ["H.L.", 55], ["Morpel"]], "Escudos"],
+            ["White Mushroom", 2, [["Avriel"]], "Comidas"],
+            ["Dragon Scale Mail", 40000, [["Hireling (Trader)"], ["Rashid"]], "Armaduras"],
+            ["Strange Relic", 0, [], "Outros"],
+        ], "npcs": {"Hardek": ["Thais", "Thais.", [32279, 32354, 7]], "Morpel": ["Yalahar", "Yalahar.", [32700, 31100, 7]],
+                    "H.L.": ["Venore", "Outlaw Camp.", [32600, 32100, 7]], "Avriel": ["Ab'Dendriel", "Ab'Dendriel.", None]}})
+        token = self.verify("Hilay")[1].json()["token"]
+        raw = SOLO.replace("  3x gold coin", "  3x gold coin\n  2x dwarven shields\n  4x a strange relic")
+        self.assertEqual(self.client.post("/api/stacker", json={"raw_text": raw, "nickname": "Hilay"}, headers=self.h(token)).status_code, 200)
+        d = self.client.get("/api/stacker/Hilay?period=365", headers=self.h(token)).json()
+        p = d["prices"]
+        # melhor preço: Hardek e Morpel (100) empatados; H.L. (55) não aparece
+        self.assertEqual(p["dwarven shield"]["npc_price"], 100)
+        self.assertEqual({b["npc"] for b in p["dwarven shield"]["buyers"]}, {"Hardek", "Morpel"})
+        self.assertEqual(p["dwarven shield"]["buyers"][0]["coords"], [32279, 32354, 7])
+        self.assertEqual(p["gold coin"]["unit_price"], 1)
+        loot = {it["key"]: it for it in d["sessions"][0]["loot"]}
+        self.assertEqual(loot["dwarven shield"]["value"], 200)  # plural reconhecido
+        self.assertEqual(loot["strange relic"]["value"], 0)    # sem NPC e sem preço ainda
+        self.assertEqual(d["period"]["unpriced"], 1)
+        # preço informado pelos usuários -> média
+        r = self.client.post("/api/items/price", json={"item": "strange relic", "price": 1000}, headers=self.h(token)).json()
+        self.assertEqual((r["avg_price"], r["my_price"]), (1000, 1000))
+        other_key = server.store.create_key(30, "x")["key"]
+        other = {"X-Access-Key": other_key, "X-Device-Token": server.store.issue_device(other_key, "Jioe")}
+        r = self.client.post("/api/items/price", json={"item": "a strange relic", "price": 3000}, headers=other).json()
+        self.assertEqual((r["avg_price"], r["avg_count"], r["my_price"]), (2000, 2, 3000))
+        self.assertEqual(self.client.post("/api/items/price", json={"item": "dwarven shield", "price": 5}, headers=other).status_code, 400)
+        d = self.client.get("/api/stacker/Hilay?period=365", headers=self.h(token)).json()
+        self.assertEqual({it["key"]: it for it in d["period"]["items"]}["strange relic"]["value"], 8000)
+        self.assertEqual({k["key"]: k["count"] for k in d["period"]["kills"]}["dragon"], 120)
+
     def test_renew_keeps_chars(self):
         self.verify("Hilay")
         k = server.store.renew_key(self.key, 10)

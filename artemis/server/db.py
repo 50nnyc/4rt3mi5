@@ -80,6 +80,49 @@ CREATE TABLE IF NOT EXISTS solo_sessions (
     created_at       TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_solo_name ON solo_sessions(name_key, started_at);
+-- 0.6.0: criaturas mortas e itens coletados em cada sessão do Stacker (nunca apagados por período)
+CREATE TABLE IF NOT EXISTS solo_kills (
+    session_id INTEGER NOT NULL REFERENCES solo_sessions(id) ON DELETE CASCADE,
+    creature   TEXT NOT NULL,
+    count      INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS solo_loot (
+    session_id INTEGER NOT NULL REFERENCES solo_sessions(id) ON DELETE CASCADE,
+    item_key   TEXT NOT NULL,
+    count      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_solo_loot ON solo_loot(session_id);
+CREATE INDEX IF NOT EXISTS ix_solo_kills ON solo_kills(session_id);
+-- Itens e NPCs importados da TibiaWiki BR (artemis/data/tibiawiki.json)
+CREATE TABLE IF NOT EXISTS wiki_items (
+    item_key     TEXT PRIMARY KEY,
+    name         TEXT NOT NULL,
+    npc_value    INTEGER NOT NULL DEFAULT 0,  -- preço padrão de venda para NPC
+    best_price   INTEGER NOT NULL DEFAULT 0,  -- maior preço pago por um NPC (0 = nenhum NPC compra)
+    primary_type TEXT
+);
+CREATE TABLE IF NOT EXISTS wiki_item_buyers (   -- todos os NPCs que compram o item e por quanto
+    item_key TEXT NOT NULL,
+    npc      TEXT NOT NULL,
+    price    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_buyers ON wiki_item_buyers(item_key);
+CREATE TABLE IF NOT EXISTS wiki_npcs (
+    name     TEXT PRIMARY KEY,
+    city     TEXT,
+    location TEXT,
+    x INTEGER, y INTEGER, z INTEGER
+);
+-- Preço informado pelos usuários para itens que nenhum NPC compra ("preco_temp").
+-- Um valor por código de acesso; o preço do item é a média de todos.
+CREATE TABLE IF NOT EXISTS item_user_prices (
+    item_key   TEXT NOT NULL,
+    access_key TEXT NOT NULL,
+    price      INTEGER NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (item_key, access_key)
+);
+CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -118,6 +161,8 @@ class Store:
         for table in ("hunts", "solo_sessions"):  # 0.5.0: quem enviou (só ele pode apagar)
             if "uploader_key" not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN uploader_key TEXT")
+        if "raw_text" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(solo_sessions)")}:
+            self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN raw_text TEXT")  # 0.6.0: texto original
         self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
@@ -336,7 +381,8 @@ class Store:
         row = self._conn.execute(f"SELECT uploader_key FROM {table} WHERE id = ?", (row_id,)).fetchone()
         return (row is not None, row[0] if row else None)
 
-    def add_solo(self, name: str, fingerprint: str, data: dict, uploader_key: str | None = None) -> tuple[dict, bool]:
+    def add_solo(self, name: str, fingerprint: str, data: dict, uploader_key: str | None = None,
+                 raw_text: str | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM solo_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
             if existing:
@@ -344,10 +390,13 @@ class Store:
             cols = ", ".join(SOLO_COLUMNS)
             marks = ", ".join("?" for _ in SOLO_COLUMNS)
             cur = self._conn.execute(
-                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, {cols}) "
-                f"VALUES (?, ?, ?, ?, ?, {marks})",
-                (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, *(data[c] for c in SOLO_COLUMNS)),
+                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, raw_text, {cols}) "
+                f"VALUES (?, ?, ?, ?, ?, ?, {marks})",
+                (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, raw_text, *(data[c] for c in SOLO_COLUMNS)),
             )
+            sid = cur.lastrowid
+            self._conn.executemany("INSERT INTO solo_kills VALUES (?, ?, ?)", [(sid, c, n) for c, n in data.get("kills", [])])
+            self._conn.executemany("INSERT INTO solo_loot VALUES (?, ?, ?)", [(sid, i, n) for i, n in data.get("loot", [])])
             self._conn.commit()
             return dict(self._conn.execute("SELECT * FROM solo_sessions WHERE id = ?", (cur.lastrowid,)).fetchone()), True
 
@@ -356,6 +405,102 @@ class Store:
             "SELECT * FROM solo_sessions WHERE name_key = ? ORDER BY started_at DESC, id DESC", (name_key(name),)
         ).fetchall()
         return [dict(r) for r in rows]
+
+    def solo_details(self, session_ids: list[int]) -> tuple[dict, dict]:
+        """{session_id: [(criatura, n)]}, {session_id: [(item_key, n)]}"""
+        kills: dict[int, list] = {i: [] for i in session_ids}
+        loot: dict[int, list] = {i: [] for i in session_ids}
+        if session_ids:
+            marks = ",".join("?" * len(session_ids))
+            for r in self._conn.execute(f"SELECT * FROM solo_kills WHERE session_id IN ({marks}) ORDER BY count DESC", session_ids):
+                kills[r["session_id"]].append((r["creature"], r["count"]))
+            for r in self._conn.execute(f"SELECT * FROM solo_loot WHERE session_id IN ({marks}) ORDER BY count DESC", session_ids):
+                loot[r["session_id"]].append((r["item_key"], r["count"]))
+        return kills, loot
+
+    # ------------------------------------------------------------------ itens / preços (TibiaWiki + usuários)
+    COINS = {"gold coin": 1, "platinum coin": 100, "crystal coin": 10_000}
+
+    def load_wiki(self, data: dict) -> dict:
+        """Substitui a tabela de itens/NPCs pelos dados importados da TibiaWiki."""
+        items, buyers = [], []
+        for name, npc_value, sellto, ptype in data["items"]:
+            key = name.lower().strip()
+            prices = [(entry[0], entry[1] if len(entry) > 1 else npc_value) for entry in sellto]
+            prices = [(npc, p) for npc, p in prices if p and p > 0]
+            best = max((p for _, p in prices), default=0)
+            items.append((key, name, npc_value or 0, best, ptype or None))
+            buyers += [(key, npc, p) for npc, p in prices]
+        def city(c: str) -> str | None:  # NPCs que viajam (Rashid, Yasir...) vêm com resto de HTML no lugar da cidade
+            return "Viaja (local muda)" if not c or c.lower() in ("div", "span") else c
+        npcs = [(n, city(v[0]), v[1] if v[1] and v[1].lower() not in ("div", "span") else None,
+                 *(v[2] or (None, None, None))) for n, v in data["npcs"].items()]
+        with self._lock:
+            for t in ("wiki_items", "wiki_item_buyers", "wiki_npcs"):
+                self._conn.execute(f"DELETE FROM {t}")
+            self._conn.executemany("INSERT OR REPLACE INTO wiki_items VALUES (?, ?, ?, ?, ?)", items)
+            self._conn.executemany("INSERT INTO wiki_item_buyers VALUES (?, ?, ?)", buyers)
+            self._conn.executemany("INSERT OR REPLACE INTO wiki_npcs VALUES (?, ?, ?, ?, ?, ?)", npcs)
+            self._conn.execute("INSERT OR REPLACE INTO meta VALUES ('wiki_imported_at', ?)", (data.get("imported_at", ""),))
+            self._conn.commit()
+        self._wiki_keys = None
+        return {"items": len(items), "buyers": len(buyers), "npcs": len(npcs)}
+
+    def wiki_imported_at(self) -> str | None:
+        row = self._conn.execute("SELECT v FROM meta WHERE k = 'wiki_imported_at'").fetchone()
+        return row[0] if row else None
+
+    def resolve_item(self, key: str) -> str:
+        """Acha o item da wiki mesmo no plural ("white mushrooms" -> "white mushroom")."""
+        if getattr(self, "_wiki_keys", None) is None:
+            self._wiki_keys = {r[0] for r in self._conn.execute("SELECT item_key FROM wiki_items")}
+        if key in self._wiki_keys or key in self.COINS:
+            return key
+        for cand in (key[:-3] + "y" if key.endswith("ies") else None, key[:-2] if key.endswith("es") else None,
+                     key[:-1] if key.endswith("s") else None):
+            if cand and (cand in self._wiki_keys or cand in self.COINS):
+                return cand
+        return key
+
+    def price_info(self, keys: list[str], access_key: str) -> dict[str, dict]:
+        """Preço de cada item: NPC que paga mais (todos empatados no maior preço) ou média dos usuários."""
+        out = {}
+        for key in set(keys):
+            info = {"key": key, "name": key.title(), "npc_price": 0, "buyers": [], "avg_price": None,
+                    "avg_count": 0, "my_price": None, "type": None}
+            if key in self.COINS:
+                info.update(npc_price=self.COINS[key], source="moeda")
+            row = self._conn.execute("SELECT * FROM wiki_items WHERE item_key = ?", (key,)).fetchone()
+            if row:
+                info.update(name=row["name"], npc_price=info["npc_price"] or row["best_price"], type=row["primary_type"])
+                if row["best_price"]:
+                    for b in self._conn.execute(
+                        "SELECT b.npc, b.price, n.city, n.location, n.x, n.y, n.z FROM wiki_item_buyers b "
+                        "LEFT JOIN wiki_npcs n ON n.name = b.npc WHERE b.item_key = ? AND b.price = ? "
+                        "ORDER BY (b.npc LIKE 'Hireling%'), b.npc", (key, row["best_price"])
+                    ):
+                        info["buyers"].append({"npc": b["npc"], "price": b["price"], "city": b["city"],
+                                               "location": b["location"],
+                                               "coords": [b["x"], b["y"], b["z"]] if b["x"] is not None else None})
+            avg = self._conn.execute("SELECT AVG(price), COUNT(*) FROM item_user_prices WHERE item_key = ?", (key,)).fetchone()
+            if avg[1]:
+                info.update(avg_price=round(avg[0]), avg_count=avg[1])
+            mine = self._conn.execute("SELECT price FROM item_user_prices WHERE item_key = ? AND access_key = ?",
+                                      (key, access_key)).fetchone()
+            info["my_price"] = mine[0] if mine else None
+            info.setdefault("source", "npc" if info["npc_price"] else ("media" if info["avg_price"] else None))
+            info["unit_price"] = info["npc_price"] or info["avg_price"] or 0
+            out[key] = info
+        return out
+
+    def set_user_price(self, key: str, access_key: str, price: int | None) -> None:
+        with self._lock:
+            if price is None or price <= 0:
+                self._conn.execute("DELETE FROM item_user_prices WHERE item_key = ? AND access_key = ?", (key, access_key))
+            else:
+                self._conn.execute("INSERT OR REPLACE INTO item_user_prices VALUES (?, ?, ?, ?)",
+                                   (key, access_key, price, _iso(utcnow())))
+            self._conn.commit()
 
     def delete_solo(self, session_id: int) -> bool:
         with self._lock:

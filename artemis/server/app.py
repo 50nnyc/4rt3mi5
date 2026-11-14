@@ -20,6 +20,7 @@ import secrets
 import sys
 import time
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
@@ -30,7 +31,7 @@ from pydantic import BaseModel
 from artemis import APP_NAME, __version__
 from artemis.core.parser import ParseError
 from artemis.core.report import report_from_text
-from artemis.core.session import parse_solo_session
+from artemis.core.session import item_key, parse_solo_session
 from artemis.core.tibiadata import TibiaDataError, fetch_character
 
 from .db import Store, name_key, normalize_key
@@ -66,6 +67,13 @@ def load_config() -> dict:
 
 CONFIG = load_config()
 store = Store(DATA_DIR / "artemis.db")
+
+# Tabela de itens/NPCs da TibiaWiki BR (gerada pelo importador, versionada no projeto).
+WIKI_FILE = Path(__file__).resolve().parent.parent / "data" / "tibiawiki.json"
+if WIKI_FILE.exists():
+    _wiki = json.loads(WIKI_FILE.read_text(encoding="utf-8"))
+    if _wiki.get("imported_at") != store.wiki_imported_at():
+        print("Carregando itens da TibiaWiki:", store.load_wiki(_wiki))
 
 
 @asynccontextmanager
@@ -294,16 +302,73 @@ def _totals(sessions: list[dict]) -> dict:
     return t
 
 
+PERIOD_DAYS = (7, 15, 30, 90, 180, 365)  # semana, quinzena, mês, 3 meses, 6 meses, 1 ano
+
+
+def _sum_counts(pairs) -> list[dict]:
+    acc: dict[str, int] = {}
+    for k, n in pairs:
+        acc[k] = acc.get(k, 0) + n
+    return [{"key": k, "count": n} for k, n in sorted(acc.items(), key=lambda kv: -kv[1])]
+
+
 @app.get("/api/stacker/{name}")
-def stacker(name: str, access: dict = Depends(require_session)):
+def stacker(name: str, period: int = 7, access: dict = Depends(require_session)):
+    period = period if period in PERIOD_DAYS else 7
     sessions = [_public(s, access) for s in store.solo_for_player(name)]
+    kills, loot = store.solo_details([s["id"] for s in sessions])
+    keys = {store.resolve_item(k) for rows in loot.values() for k, _ in rows}
+    prices = store.price_info(list(keys), access["key"])
+    for s in sessions:
+        s.pop("raw_text", None)
+        s["kills"] = [{"key": c, "count": n} for c, n in kills[s["id"]]]
+        items = _sum_counts((store.resolve_item(k), n) for k, n in loot[s["id"]])
+        for it in items:
+            it["value"] = it["count"] * prices[it["key"]]["unit_price"]
+        s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
+        s["loot_value"] = sum(it["value"] for it in items)
+
+    cutoff = (datetime.now() - timedelta(days=period)).isoformat()
+    in_period = [s for s in sessions if s["started_at"] >= cutoff]
+    p_items = _sum_counts((it["key"], it["count"]) for s in in_period for it in s["loot"])
+    for it in p_items:
+        it["value"] = it["count"] * prices[it["key"]]["unit_price"]
+    p_items.sort(key=lambda it: (-it["value"], -it["count"]))
+    period_data = {
+        "days": period,
+        "totals": _totals(in_period),
+        "items": p_items,
+        "kills": _sum_counts((k["key"], k["count"]) for s in in_period for k in s["kills"]),
+        "loot_value": sum(it["value"] for it in p_items),
+        "unpriced": sum(1 for it in p_items if not prices[it["key"]]["unit_price"]),
+    }
     day = sessions[0]["started_at"][:10] if sessions else None
     return {
         "day": day,
         "day_totals": _totals([s for s in sessions if s["started_at"][:10] == day]),
         "lifetime": _totals(sessions),
         "sessions": sessions,
+        "period": period_data,
+        "prices": prices,
     }
+
+
+class PriceIn(BaseModel):
+    item: str
+    price: int | None = None
+
+
+@app.post("/api/items/price")
+def set_item_price(body: PriceIn, access: dict = Depends(require_session)):
+    """Preço informado pelo usuário (só para itens que nenhum NPC compra) -> entra na média de todos."""
+    key = store.resolve_item(item_key(body.item))
+    info = store.price_info([key], access["key"])[key]
+    if info["npc_price"]:
+        raise HTTPException(400, "Esse item já tem preço de NPC.")
+    if body.price is not None and not 0 <= body.price <= 10_000_000_000:
+        raise HTTPException(422, "Preço inválido.")
+    store.set_user_price(key, access["key"], body.price)
+    return store.price_info([key], access["key"])[key]
 
 
 @app.post("/api/stacker")
@@ -313,7 +378,8 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     except ParseError as e:
         raise HTTPException(422, str(e))
     name = require_uploader(body.nickname, access)
-    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"])
+    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text)
+    row.pop("raw_text", None)
     return {"created": created, "session": _public(row, access)}
 
 

@@ -27,13 +27,20 @@ from __future__ import annotations
 
 import hashlib
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 
 from .parser import _SESSION, _SESSION_DATA, ParseError, _num
 
 _KV = re.compile(r"^([A-Za-z][A-Za-z /]*?):\s*(-?[\d.,]+)\s*$")
-_STOP = re.compile(r"^(Killed Monsters|Looted Items):", re.IGNORECASE)
+_SECTION = re.compile(r"^(Killed Monsters|Looted Items):\s*$", re.IGNORECASE)
+_COUNT = re.compile(r"^(\d[\d.,]*)\s*x\s+(.+?)\s*$", re.IGNORECASE)
+_ARTICLE = re.compile(r"^(a|an|the)\s+", re.IGNORECASE)
+
+
+def item_key(name: str) -> str:
+    """Nome normalizado do item/criatura: minúsculo, sem artigo ("a dwarven shield" -> "dwarven shield")."""
+    return _ARTICLE.sub("", " ".join(name.split())).lower()
 
 _FIELDS = {
     "raw xp gain": "raw_xp",
@@ -61,6 +68,8 @@ class SoloSession:
     damage_h: int = 0
     healing: int = 0
     healing_h: int = 0
+    kills: list = field(default_factory=list)   # [(criatura, quantidade)]
+    loot: list = field(default_factory=list)    # [(item, quantidade)]
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -81,9 +90,19 @@ def parse_solo_session(text: str) -> SoloSession:
     started = ended = None
     label = ""
     values: dict[str, int] = {}
+    sections: dict[str, dict[str, int]] = {"killed monsters": {}, "looted items": {}}
+    section = None
     for line in lines:
-        if _STOP.match(line):
-            break
+        if m := _SECTION.match(line):
+            section = m.group(1).lower()
+            continue
+        if section:
+            if m := _COUNT.match(line):
+                name = item_key(m.group(2))
+                bucket = sections[section]
+                bucket[name] = bucket.get(name, 0) + _num(m.group(1))
+                continue
+            section = None  # fim da lista
         if m := _SESSION_DATA.match(line):
             started = datetime.fromisoformat(f"{m.group(1)}T{m.group(2)}")
             ended = datetime.fromisoformat(f"{m.group(3)}T{m.group(4)}")
@@ -110,5 +129,7 @@ def parse_solo_session(text: str) -> SoloSession:
         ended_at=ended.isoformat(),
         duration_seconds=max(duration, 0),
         session_label=label,
+        kills=sorted(sections["killed monsters"].items(), key=lambda kv: -kv[1]),
+        loot=sorted(sections["looted items"].items(), key=lambda kv: -kv[1]),
         **values,
     )
