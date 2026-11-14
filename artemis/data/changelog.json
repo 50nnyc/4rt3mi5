@@ -1,6 +1,19 @@
 {
   "releases": [
     {
+      "version": "0.10.0",
+      "date": "2026-11-14",
+      "title": "Conquistas, música e card",
+      "changes": [
+        "🏆 Conquistas: 13 desafios (Maratona, Primeiro kk, Anjo da guarda e outros) com barra de progresso e comemoração quando você desbloqueia.",
+        "🔥 Sequência de dias: envie uma hunt ou sessão por dia e, a cada 30 dias seguidos, seu código de acesso ganha +7 dias de validade sozinho.",
+        "🎵 Trilha do Tibia baixinha: o Anthem na abertura, Special Boss Lairs em 🗺️ Hunts e o tema dos reis no Stacker. Botão de som em todas as telas: um toque silencia na hora, e o app lembra sua escolha.",
+        "🖼️ Card para compartilhar a hunt ou a sessão no Discord e no WhatsApp, além de 🏅 ranking da PT por dano, cura e balance, com cor por vocação.",
+        "📋 Colar direto: copie o analyser no Tibia e aperte Ctrl+V em qualquer tela (ou toque em Colar). Também tem evolução semanal de XP e lucro, itens mais valiosos ou mais dropados e imagens de itens e criaturas.",
+        "Abertura nova com runa e partículas douradas, números que contam até o valor, telas de carregamento mais bonitas e a opção de pôr o ícone do 4rt3mi5 na tela inicial (só se você tocar em Sim)."
+      ]
+    },
+    {
       "version": "0.9.0",
       "date": "2026-11-14",
       "title": "Novidades e mais proteção",

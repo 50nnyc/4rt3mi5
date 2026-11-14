@@ -34,6 +34,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from artemis import APP_NAME, __version__
+from artemis.core import achievements as ach
 from artemis.core.parser import ParseError
 from artemis.core.report import report_from_text
 from artemis.core.session import item_key, parse_solo_session
@@ -250,6 +251,8 @@ def lookup_character(name: str, fresh: bool = False):
             raise HTTPException(503, f"Não foi possível consultar o TibiaData agora. {e}")
         ch = None
     _char_cache[k] = (time.monotonic(), ch)
+    if ch is not None:  # guarda vocação/level para colorir por vocação sem consultar de novo
+        store.save_char_info(ch.name, ch.vocation, ch.level)
     return ch
 
 
@@ -425,7 +428,67 @@ def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
     report = _parse_party(body.raw_text)
     uploader = require_uploader(body.nickname, access)
     hunt, created = store.add_hunt(report, body.raw_text, uploader, access["key"])
-    return {"created": created, "hunt": _public(hunt, access)}
+    return {"created": created, "hunt": _public(hunt, access), "rewards": grant_rewards(access["key"])}
+
+
+# ------------------------------------------------------------------ conquistas e sequência de dias
+def _upload_days(key: str) -> set:
+    return {ach.local_day(t) for t in store.upload_times(key)}
+
+
+def grant_rewards(key: str) -> list[dict]:
+    """Concede (uma vez só) +7 dias de validade a cada 30 dias seguidos enviando hunts/sessões."""
+    out = []
+    for rid in ach.streak_rewards(_upload_days(key)):
+        r = store.grant_reward(key, rid, ach.STREAK_REWARD_DAYS)
+        if r:
+            out.append(r)
+    return out
+
+
+def streak_payload(key: str) -> dict:
+    info = ach.streak_info(_upload_days(key))
+    current = store.validate_key(key) or {}
+    info.update(rewards=store.rewards(key), expires_at=current.get("expires_at"))
+    return info
+
+
+@app.get("/api/streak")
+def streak(access: dict = Depends(require_session)):
+    """Sequência de dias do código de quem está vendo (cartão do Início)."""
+    granted = grant_rewards(access["key"])
+    return {**streak_payload(access["key"]), "granted": granted}
+
+
+@app.get("/api/achievements/{name}")
+def achievements(name: str, access: dict = Depends(require_session)):
+    """Conquistas do personagem (qualquer um pode ver) + a sequência de dias do código de quem está vendo."""
+    sessions, _ = _enriched_sessions(name, access)
+    hunts = store.hunts_for_player(name)
+    granted = grant_rewards(access["key"])
+    items = ach.evaluate(name, sessions, hunts, store.sold_count(name))
+    return {"name": name, "achievements": items, "unlocked": sum(a["unlocked"] for a in items), "total": len(items),
+            "streak": streak_payload(access["key"]), "granted": granted}
+
+
+@app.get("/api/vocations")
+def vocations(names: str = "", _: dict = Depends(require_session)):
+    """Vocação de até 20 personagens (para colorir a PT). Usa o cache; consulta o TibiaData só os que faltam."""
+    wanted = [" ".join(n.split()) for n in names.split(",") if n.strip()][:20]
+    wanted = [n for n in wanted if _VALID_NAME.fullmatch(n)]
+    known = store.char_infos(wanted)
+    out, fetched = {}, 0
+    for n in wanted:
+        info = known.get(name_key(n))
+        if info is None and fetched < 10:
+            fetched += 1
+            try:
+                ch = lookup_character(n)
+            except HTTPException:
+                ch = None
+            info = {"vocation": ch.vocation, "level": ch.level} if ch else None
+        out[n] = info["vocation"] if info else None
+    return out
 
 
 # ------------------------------------------------------------------ hunt session stacker
@@ -585,9 +648,8 @@ def _sell_list(name: str, sessions: list[dict], prices: dict) -> list[dict]:
     return sorted(out, key=lambda it: (not it["reached"], -it["value"], -it["count"]))
 
 
-@app.get("/api/stacker/{name}")
-def stacker(name: str, period: int = 7, access: dict = Depends(require_session)):
-    period = period if period in PERIOD_DAYS else 7
+def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
+    """Sessões do Stacker com hunt, criaturas, itens, valor do loot e lucro líquido; e os preços usados."""
     sessions = [_public(s, access) for s in store.solo_for_player(name)]
     kills, loot = store.solo_details([s["id"] for s in sessions])
     keys = {store.resolve_item(k) for rows in loot.values() for k, _ in rows}
@@ -605,7 +667,13 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
         s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
         s["loot_value"] = sum(it["value"] for it in items)
         s["net_profit"] = s["loot_value"] - s["supplies"]  # lucro líquido real: loot pelos preços de NPC - supplies
+    return sessions, prices
 
+
+@app.get("/api/stacker/{name}")
+def stacker(name: str, period: int = 7, access: dict = Depends(require_session)):
+    period = period if period in PERIOD_DAYS else 7
+    sessions, prices = _enriched_sessions(name, access)
     cutoff = (datetime.now() - timedelta(days=period)).isoformat()
     in_period = [s for s in sessions if s["started_at"] >= cutoff]
     p_items = _sum_counts((it["key"], it["count"]) for s in in_period for it in s["loot"])
@@ -796,7 +864,7 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text,
                                   body.place_id, level)
     row.pop("raw_text", None)
-    return {"created": created, "session": _public(row, access)}
+    return {"created": created, "session": _public(row, access), "rewards": grant_rewards(access["key"])}
 
 
 @app.delete("/api/stacker/session/{session_id}")
@@ -905,3 +973,15 @@ def index():
 @app.get("/sw.js", include_in_schema=False)
 def service_worker():
     return FileResponse(WEB_DIR / "sw.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+# Ícone do app na tela inicial (só é instalado se a pessoa tocar em "Sim" no aviso do site).
+_STATIC = {"manifest.webmanifest": "application/manifest+json", "icon-192.png": "image/png",
+           "icon-512.png": "image/png", "icon-maskable.png": "image/png"}
+
+
+@app.get("/{filename}", include_in_schema=False)
+def static_file(filename: str):
+    if filename not in _STATIC:  # lista fechada: nenhum outro arquivo da pasta sai por aqui
+        raise HTTPException(404)
+    return FileResponse(WEB_DIR / filename, media_type=_STATIC[filename], headers={"Cache-Control": "max-age=86400"})

@@ -1,6 +1,7 @@
 """App desktop do 4rt3mi5: janela nativa (WebView2) com a mesma interface do site."""
 from __future__ import annotations
 
+import os
 import sys
 import threading
 from pathlib import Path
@@ -79,6 +80,9 @@ class Bridge:
 
 def main() -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    # Deixa a trilha da abertura tocar sem precisar de um clique antes (o volume e o mudo
+    # continuam com a pessoa, pelo botão de som).
+    os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--autoplay-policy=no-user-gesture-required")
     webview.create_window(
         APP_NAME,
         url=str(web_dir() / "index.html"),

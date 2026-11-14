@@ -18,3 +18,4 @@ packaging
 *.key
 *.log
 **/__pycache__
+.claude

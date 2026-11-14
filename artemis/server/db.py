@@ -158,6 +158,22 @@ CREATE TABLE IF NOT EXISTS sell_watch (
     since    TEXT,
     PRIMARY KEY (name_key, item_key)
 );
+-- 0.10.0: recompensas já concedidas a um código (ex.: +7 dias por 30 dias seguidos enviando dados)
+CREATE TABLE IF NOT EXISTS key_rewards (
+    key        TEXT NOT NULL REFERENCES access_keys(key) ON DELETE CASCADE,
+    reward_id  TEXT NOT NULL,
+    days       INTEGER NOT NULL,
+    granted_at TEXT NOT NULL,
+    PRIMARY KEY (key, reward_id)
+);
+-- 0.10.0: vocação/level dos personagens (TibiaData), para colorir por vocação sem consultar toda hora
+CREATE TABLE IF NOT EXISTS char_info (
+    name_key   TEXT PRIMARY KEY,
+    name       TEXT NOT NULL,
+    vocation   TEXT,
+    level      INTEGER,
+    updated_at TEXT NOT NULL
+);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -645,6 +661,52 @@ class Store:
                 self._conn.execute("INSERT OR REPLACE INTO goals VALUES (?, ?, ?, ?, ?)",
                                    (name_key(name), period, metric, target, _iso(utcnow())))
             self._conn.commit()
+
+    # ------------------------------------------------------------------ conquistas / recompensas
+    def upload_times(self, key: str) -> list[str]:
+        """Horários (UTC) em que este código enviou hunts ou sessões que continuam salvas."""
+        rows = self._conn.execute(
+            "SELECT created_at FROM hunts WHERE uploader_key = ? UNION ALL "
+            "SELECT created_at FROM solo_sessions WHERE uploader_key = ?", (key, key))
+        return [r[0] for r in rows]
+
+    def rewards(self, key: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT reward_id, days, granted_at FROM key_rewards WHERE key = ? ORDER BY granted_at", (key,))]
+
+    def grant_reward(self, key: str, reward_id: str, days: int) -> dict | None:
+        """Soma `days` à validade do código, uma única vez por reward_id. Devolve o novo vencimento."""
+        with self._lock:
+            row = self._conn.execute("SELECT expires_at FROM access_keys WHERE key = ?", (key,)).fetchone()
+            if row is None or self._conn.execute("SELECT 1 FROM key_rewards WHERE key = ? AND reward_id = ?",
+                                                 (key, reward_id)).fetchone():
+                return None
+            base = max(datetime.fromisoformat(row[0]), utcnow())
+            expires = _iso(base + timedelta(days=days))
+            self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?", (expires, key))
+            self._conn.execute("INSERT INTO key_rewards VALUES (?, ?, ?, ?)", (key, reward_id, days, _iso(utcnow())))
+            self._conn.commit()
+        return {"reward_id": reward_id, "days": days, "expires_at": expires}
+
+    def sold_count(self, name: str) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM sell_watch WHERE name_key = ? AND since IS NOT NULL",
+                                  (name_key(name),)).fetchone()[0]
+
+    def save_char_info(self, name: str, vocation: str | None, level: int | None) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO char_info VALUES (?, ?, ?, ?, ?)",
+                               (name_key(name), name, vocation, level, _iso(utcnow())))
+            self._conn.commit()
+
+    def char_infos(self, names: list[str], max_age_days: int = 3) -> dict[str, dict]:
+        """{name_key: {name, vocation, level}} dos que estão no cache e não são velhos demais."""
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return {}
+        fresh = _iso(utcnow() - timedelta(days=max_age_days))
+        marks = ",".join("?" * len(keys))
+        rows = self._conn.execute(f"SELECT * FROM char_info WHERE name_key IN ({marks}) AND updated_at >= ?", (*keys, fresh))
+        return {r["name_key"]: {"name": r["name"], "vocation": r["vocation"], "level": r["level"]} for r in rows}
 
     def sell_watch(self, name: str) -> dict[str, dict]:
         return {r["item_key"]: dict(r) for r in self._conn.execute("SELECT * FROM sell_watch WHERE name_key = ?", (name_key(name),))}

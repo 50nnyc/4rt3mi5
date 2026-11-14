@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d12">
 <!-- Segurança: só carrega o que o app precisa (bloqueia scripts e envios para outros servidores) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; media-src https://static.tibia.com; connect-src 'self' https:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>4rt3mi5</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&display=swap">
 <style>
@@ -191,12 +194,142 @@
   .danger-link { background: none; color: var(--red); padding: 4px 0; font-size: 14px; }
   #update { position: fixed; left: 16px; right: 16px; bottom: 16px; max-width: 520px; margin: 0 auto; z-index: 60;
             background: var(--card2); border: 1px solid var(--gold); border-radius: 12px; padding: 12px 14px; }
+
+  /* ---------- 0.10.0: cores por vocação ---------- */
+  :root { --voc-knight: #e8705a; --voc-paladin: #4fc39f; --voc-druid: #5aa9f0; --voc-sorcerer: #b382f2;
+          --voc-monk: #f0a04b; --voc-none: #8a93a6; }
+  .vdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--vc, var(--voc-none));
+          margin-right: 6px; vertical-align: 1px; flex: none; }
+  .track .fill.voc { background: var(--vc, var(--bar)); }
+  .track .fill.voc.me { box-shadow: 0 0 0 2px var(--gold); }
+  .voc-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+  /* ---------- botão de som (em todas as telas) ---------- */
+  .sound { display: flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line);
+           border-radius: 99px; padding: 3px 10px 3px 3px; flex: none; }
+  .sound.floating { position: fixed; z-index: 120; top: calc(10px + env(safe-area-inset-top, 0px));
+                    right: max(12px, env(safe-area-inset-right, 0px)); background: rgba(29, 33, 45, .85); backdrop-filter: blur(6px); }
+  .sound button { width: 34px; height: 34px; border-radius: 50%; background: none; font-size: 17px; padding: 0; }
+  .sound button:focus-visible, .sound input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sound input { width: 74px; padding: 0; border: 0; background: none; accent-color: var(--gold); height: 20px; }
+  .sound.muted input { opacity: .45; }
+  header.top .who { margin-left: auto; }
+  @media (max-width: 480px) {
+    .sound input { width: 56px; }
+    header.top { gap: 8px; }
+    header.top .who { display: none; }  /* no celular o nick vai embaixo do logo */
+    #soundSlot { margin-left: auto; }
+    header.top .brand { line-height: 1.05; text-align: left; max-width: 44vw; overflow: hidden; }
+    header.top .brand::after { content: attr(data-nick); display: block; font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: 0;
+                               color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  }
+
+  /* ---------- abertura com clima: runa girando + partículas douradas ---------- */
+  #embers { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .crest { position: relative; display: grid; place-items: center; }
+  .crest .rune { position: absolute; width: clamp(220px, 62vw, 420px); height: auto; opacity: 0; pointer-events: none;
+                 color: var(--gold); filter: drop-shadow(0 0 14px rgba(242, 201, 76, .25)); }
+  .play .crest .rune { animation: runeIn 1.2s .15s ease forwards, spin 40s linear infinite; }
+  @keyframes runeIn { to { opacity: .32; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #splash .logo { position: relative; }
+
+  /* ---------- telas de carregamento com a forma do conteúdo ---------- */
+  .sk { background: linear-gradient(90deg, var(--card2) 0%, #262b39 45%, var(--card2) 90%); background-size: 220% 100%;
+        animation: shimmer 1.3s ease-in-out infinite; border-radius: 8px; }
+  @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+  .sk-line { height: 12px; margin: 8px 0; } .sk-big { height: 34px; width: 55%; margin: 10px 0; }
+  .sk-stat { height: 62px; border-radius: 12px; }
+
+  /* ---------- tela que convida a usar ---------- */
+  .empty { text-align: center; padding: 22px 16px; border-style: dashed; border-color: rgba(242, 201, 76, .35);
+           background: radial-gradient(ellipse at 50% 0%, rgba(242, 201, 76, .07), transparent 70%), var(--card); }
+  .empty svg { width: 76px; height: 76px; color: var(--gold); opacity: .9; }
+  .empty h3 { margin: 8px 0 6px; font-size: 19px; }
+  .empty ol { text-align: left; max-width: 380px; margin: 12px auto; padding-left: 22px; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+  .empty ol b { color: var(--text); }
+  .empty .btn { max-width: 320px; }
+
+  /* ---------- comemoração ---------- */
+  .celebrate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px;
+               background: radial-gradient(ellipse at 50% 45%, rgba(242, 201, 76, .16), rgba(0, 0, 0, .72) 60%); }
+  .celebrate canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .cel-card { position: relative; text-align: center; max-width: 360px; width: 100%; background: var(--card); border: 1px solid rgba(242, 201, 76, .6);
+              border-radius: 18px; padding: 22px 18px 18px; box-shadow: 0 20px 60px rgba(0, 0, 0, .6); animation: pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: none; opacity: 1; } }
+  .cel-emoji { font-size: 56px; line-height: 1; animation: bob 1.6s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  .cel-kicker { margin-top: 10px; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--gold); }
+  .cel-title { font: 800 24px/1.2 var(--logo); margin-top: 6px; color: var(--gold2); }
+  .cel-sub { color: var(--muted); margin: 8px 0 14px; }
+
+  /* ---------- conquistas e sequência ---------- */
+  .streak { border-color: rgba(242, 201, 76, .5); background: linear-gradient(160deg, rgba(242, 201, 76, .09), var(--card) 55%); }
+  .streak .count { font: 800 34px/1 var(--logo); color: var(--gold); }
+  .streak .gbar > div { background: linear-gradient(90deg, #b8861b, var(--gold)); }
+  .days { display: grid; grid-template-columns: repeat(15, minmax(0, 24px)); gap: 5px; margin: 12px 0 8px; }
+  .days i { aspect-ratio: 1; border-radius: 4px; background: var(--track); }
+  .days i.on { background: var(--gold); box-shadow: 0 0 8px rgba(242, 201, 76, .35); }
+  .days i.today { outline: 1px solid var(--text); outline-offset: 1px; }
+  .ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .ach { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+  .ach .em { font-size: 28px; line-height: 1; }
+  .ach b { display: block; margin: 8px 0 2px; }
+  .ach p { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+  .ach.lock .em { filter: grayscale(1); opacity: .45; }
+  .ach.on { border-color: rgba(242, 201, 76, .55); background: linear-gradient(180deg, rgba(242, 201, 76, .08), var(--card)); }
+  .ach .gbar { margin-top: 8px; height: 6px; }
+  .ach .done-tag { font-size: 11px; color: var(--gold); letter-spacing: .12em; text-transform: uppercase; margin-top: 8px; }
+  .teaser { display: flex; gap: 12px; align-items: center; cursor: pointer; }
+  .teaser .count { font: 800 26px/1 var(--logo); color: var(--gold); min-width: 54px; text-align: center; }
+
+  /* ---------- janelas (card para compartilhar, aviso do ícone, colar direto) ---------- */
+  .modal { position: fixed; inset: 0; z-index: 85; background: rgba(0, 0, 0, .7); display: flex; justify-content: center;
+           align-items: flex-start; padding: 16px; overflow-y: auto; }
+  .modal .box { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; width: 100%; max-width: 440px; margin: auto 0; }
+  .modal h3 { margin: 0 0 8px; }
+  .modal canvas { width: 100%; max-width: calc(62vh * .8); height: auto; margin: 0 auto; border-radius: 12px; border: 1px solid var(--line); display: block; }
+  .modal .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .modal .actions .btn { margin-top: 0; flex: 1 1 140px; width: auto; }
+  .modal .actions .btn2 { flex: 1 1 120px; }
+  .modal ul { margin: 8px 0; padding-left: 20px; color: var(--muted); font-size: 14px; display: grid; gap: 4px; }
+  .sheet { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); max-width: 520px; margin: 0 auto; z-index: 80;
+           background: var(--card2); border: 1px solid var(--accent); border-radius: 14px; padding: 14px; box-shadow: 0 12px 40px rgba(0, 0, 0, .55);
+           animation: up .25s ease; }
+  @keyframes up { from { transform: translateY(20px); opacity: 0; } }
+  .sheet .actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .sheet .actions .btn { margin-top: 0; flex: 1 1 150px; width: auto; padding: 11px; }
+  .paste-btn { margin-top: 8px; }
+
+  /* ---------- evolução semanal ---------- */
+  .wk svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .wk .lbl { fill: var(--muted); font-size: 11px; }
+  .wk .val { fill: var(--text); font-size: 10px; font-weight: 700; }
+  .wk .grid { stroke: var(--line); stroke-width: 1; }
+  .wk-title { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  .wk-title b { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .play .crest .rune { animation: runeIn .01s forwards; }
+    .sk, .cel-emoji, .cel-card, .sheet { animation: none; }
+  }
 </style>
 </head>
 <body>
 
 <div id="splash">
-  <div class="logo" id="logo" aria-label="4rt3mi5"></div>
+  <canvas id="embers" aria-hidden="true"></canvas>
+  <div class="crest">
+    <svg class="rune" viewBox="0 0 200 200" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round">
+      <circle cx="100" cy="100" r="96" stroke-width="1"/>
+      <circle cx="100" cy="100" r="84" stroke-width="2.2"/>
+      <circle cx="100" cy="100" r="58" stroke-width="1" stroke-dasharray="2 6"/>
+      <g id="runeMarks" stroke-width="2"></g>
+      <path d="M100 30 L118 100 L100 170 L82 100 Z" stroke-width="1.2" opacity=".6"/>
+      <path d="M30 100 L100 84 L170 100 L100 116 Z" stroke-width="1.2" opacity=".6"/>
+    </svg>
+    <div class="logo" id="logo" aria-label="4rt3mi5"></div>
+  </div>
   <div class="bar"></div>
   <div class="tagline">hunt companion</div>
   <div id="splashMsg"></div>
@@ -246,6 +379,7 @@
     <button class="backbtn hidden" id="backBtn" aria-label="Voltar" title="Voltar">←</button>
     <button class="brand" id="brandHome" title="Ir para o início" aria-label="4rt3mi5 — ir para o início">4rt3mi5</button>
     <span class="who" id="topWho"></span>
+    <span id="soundSlot"></span>
   </header>
   <div class="scrim" id="scrim"></div>
   <nav class="drawer" id="drawer" aria-label="Menu">
@@ -254,8 +388,10 @@
     <button class="item" data-page="loot">💰 Lootsplit</button>
     <button class="item" data-page="stack">📈 Hunt Session Stacker</button>
     <button class="item" data-page="hunts">🗺️ Hunts</button>
+    <button class="item" data-page="ach">🏆 Conquistas</button>
     <button class="item" data-page="chars">👤 Meus personagens</button>
     <button class="item" data-page="news">📰 Novidades <span class="pill hidden" id="newsDot">novo</span></button>
+    <button class="item hidden" id="installItem">📲 Adicionar à tela inicial</button>
     <div style="height:10px"></div>
     <button class="item" id="changeNick">🔁 Trocar personagem</button>
     <button class="item" id="logout">🚪 Sair (apagar chave)</button>
@@ -270,6 +406,7 @@
       <div class="card">
         <label class="muted" for="lootText">Cole aqui o Party Hunt Analyser</label>
         <textarea id="lootText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Loot Type: Leader&#10;..."></textarea>
+        <button class="btn2 paste-btn" data-paste-into="lootText" type="button">📋 Colar da área de transferência</button>
         <button class="btn" id="lootBtn">Calcular e enviar</button>
         <div class="err" id="lootErr"></div>
       </div>
@@ -281,6 +418,7 @@
       <div class="card">
         <label class="muted" for="stackText">Cole aqui o Hunt Analyser (sessão individual)</label>
         <textarea id="stackText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Raw XP Gain: ...&#10;XP Gain: ..."></textarea>
+        <button class="btn2 paste-btn" data-paste-into="stackText" type="button">📋 Colar da área de transferência</button>
         <label class="muted" style="display:block; margin-top:12px">Em qual hunt foi essa sessão?</label>
         <div id="stackPlace" style="margin-top:6px"></div>
         <button class="btn" id="stackBtn">Adicionar sessão</button>
@@ -314,6 +452,11 @@
       </div>
     </div>
 
+    <div id="pageAch" class="hidden">
+      <h1>Conquistas</h1>
+      <div id="achBody"></div>
+    </div>
+
     <div id="pageNews" class="hidden">
       <h1>Novidades</h1>
       <p class="muted">O que mudou em cada versão do 4rt3mi5.</p>
@@ -332,6 +475,24 @@
 </section>
 
 <div id="update" class="hidden"></div>
+
+<div id="sound" class="sound floating">
+  <button id="soundBtn" type="button" aria-label="Silenciar música" title="Silenciar música">🔉</button>
+  <input id="soundVol" type="range" min="0" max="100" step="1" value="30" aria-label="Volume da música">
+</div>
+
+<div id="celebrate" class="celebrate hidden" role="status" aria-live="polite">
+  <canvas id="burst" aria-hidden="true"></canvas>
+  <div class="cel-card">
+    <div class="cel-emoji" id="celEmoji"></div>
+    <div class="cel-kicker" id="celKicker"></div>
+    <div class="cel-title" id="celTitle"></div>
+    <div class="cel-sub" id="celSub"></div>
+    <button class="btn2" id="celOk" type="button">Continuar</button>
+  </div>
+</div>
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-live="polite"></div>
 
 <script>
 "use strict";
@@ -381,6 +542,7 @@ function splashShow(msg = "") {
   sp.classList.remove("hidden", "fade", "play");
   void sp.offsetWidth; // reinicia a animação
   sp.classList.add("play");
+  if (typeof Embers !== "undefined") Embers.start();
 }
 function setSplashMsg(msg) { $("#splashMsg").innerHTML = msg ? `<span class="dot"></span>${esc(msg)}` : ""; }
 async function splashHide() {
@@ -388,6 +550,7 @@ async function splashHide() {
   sp.classList.add("fade");
   await sleep(450);
   sp.classList.add("hidden");
+  Embers.stop();
 }
 async function presentation(ms = 1800) { splashShow(); await sleep(ms); }
 
@@ -605,9 +768,15 @@ $("#nickForm").addEventListener("submit", async (e) => {
 /* ---------- app / menu ---------- */
 function showOnly(id) {
   for (const s of ["keyScreen", "verifyScreen", "nickScreen", "app"]) $("#" + s).classList.toggle("hidden", s !== id);
+  // botão de som: no cabeçalho dentro do app; flutuando no canto nas outras telas
+  const snd = $("#sound"), inApp = id === "app";
+  snd.classList.toggle("floating", !inApp);
+  (inApp ? $("#soundSlot") : document.body).appendChild(snd);
+  if (!inApp) Music.forPage(null);
 }
 function openApp() {
   $("#topWho").textContent = S.nick;
+  $("#brandHome").dataset.nick = S.nick;
   $("#drawerName").textContent = S.nick;
   $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
   updateDrawerFoot();
@@ -616,6 +785,7 @@ function openApp() {
   S.navStack = [];
   S.page = null;
   go("home", { noPush: true });
+  setTimeout(offerInstall, 2500);
 }
 function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
@@ -667,7 +837,10 @@ function go(page, opts = {}) {
   $("#pageChars").classList.toggle("hidden", page !== "chars");
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
   $("#pageNews").classList.toggle("hidden", page !== "news");
+  $("#pageAch").classList.toggle("hidden", page !== "ach");
+  Music.forPage(page);
   if (page === "news") loadNews();
+  if (page === "ach") loadAch();
   window.scrollTo(0, 0);
   if (page === "home") loadHome();
   if (page === "stack") { initStackPicker(); loadStack(); }
@@ -739,7 +912,7 @@ function partyTable(h, name) {
   const key = (name || "").toLowerCase();
   return `<div class="table-wrap"><table><tr><th>Jogador</th><th>Loot</th><th>Supplies</th><th>Balance</th><th>Damage</th><th>Healing</th><th>Acerto</th></tr>
     ${h.players.map((p) => `<tr class="${p.name.toLowerCase() === key ? "me" : ""}">
-      <td>${esc(p.name)}${p.is_leader ? " 👑" : ""}</td><td>${kk(p.loot)}</td><td>${kk(p.supplies)}</td><td>${kk(p.balance)}</td>
+      <td>${vdot(p.name)}${esc(p.name)}${p.is_leader ? " 👑" : ""}</td><td>${kk(p.loot)}</td><td>${kk(p.supplies)}</td><td>${kk(p.balance)}</td>
       <td>${kk(p.damage)}</td><td>${kk(p.healing)}</td>
       <td class="${p.diff > 0 ? "neg" : p.diff < 0 ? "pos" : ""}">${p.diff > 0 ? "paga " + kk(p.diff) : p.diff < 0 ? "recebe " + kk(-p.diff) : "—"}</td></tr>`).join("")}
   </table></div>`;
@@ -749,10 +922,10 @@ function huntCard(h, name, title) {
   return `<div class="card">
     <div class="muted">${esc(title)} · ${when(h.started_at)} · ${dur(h.duration_seconds)} · ${h.players_count} jogadores</div>
     <div style="margin-top:10px" class="muted">Rendeu para cada um</div>
-    <div class="big ${cls}">${fmt(h.profit_each)} gp</div>
+    <div class="big ${cls}" data-count="${h.profit_each}" data-suffix=" gp">${fmt(h.profit_each)} gp</div>
     <div class="muted"><b class="${cls}">${fmt(h.profit_each_per_hour)} gp/h</b> por pessoa · total da PT ${fmt(h.balance)} gp</div>
     ${actionBox(view(h, name))}
-    ${chartToggle(h, name)}
+    ${chartToggle(h, name)} ${shareButton("hunt", h)}
     <details style="margin-top:4px"><summary class="link">Transferências e detalhes da PT ▾</summary>
       <h2>Transferências</h2>${transfersBox(h)}
       <h2>Jogadores</h2>${partyTable(h, name)}
@@ -780,7 +953,7 @@ function renderChart(id, metric = "damage") {
     .sort((a, b) => b.v - a.v);
   const seg = `<div class="seg" role="tablist">${METRICS.map(([k, t]) =>
     `<button data-metric="${k}" data-chart="${id}" class="${k === metric ? "on" : ""}" role="tab" aria-selected="${k === metric}">${t}</button>`).join("")}</div>`;
-  const nm = (r) => `<span class="nm ${r.me ? "me" : ""}" title="${esc(r.n)}">${esc(r.n)}${r.me ? " (você)" : ""}</span>`;
+  const nm = (r) => `<span class="nm ${r.me ? "me gold" : ""}" title="${esc(r.n)}">${vdot(r.n)}${esc(r.n)}${r.me ? " (você)" : ""}</span>`;
   let body, note;
   if (metric === "balance") {
     const maxAbs = Math.max(...rows.map((r) => Math.abs(r.v)), 1);
@@ -794,12 +967,13 @@ function renderChart(id, metric = "damage") {
     body = rows.map((r) => {
       const pct = (Math.max(r.v, 0) / total) * 100;
       return `${nm(r)}
-        <div class="track" title="${esc(r.n)}: ${fmt(r.v)} (${pct.toFixed(1)}%)"><div class="fill ${r.me ? "me" : ""}" style="width:${pct}%"></div></div>
+        <div class="track" title="${esc(r.n)}: ${fmt(r.v)} (${pct.toFixed(1)}%)"><div class="fill voc ${r.me ? "me" : ""}" style="width:${pct}%; ${vstyle(r.n)}"></div></div>
         <span class="val"><b>${pct.toFixed(0)}%</b> · ${kk(r.v)}</span>`;
     }).join("");
-    note = `Parte de cada jogador no ${label.toLowerCase()} total da hunt (${fmt(total)}).`;
+    note = `Parte de cada jogador no ${label.toLowerCase()} total da hunt (${fmt(total)}). Cor da barra = vocação; contorno dourado = você.`;
   }
-  document.getElementById(id).innerHTML = `${seg}<div class="bars">${body}</div><div class="chart-note">${note}</div>`;
+  document.getElementById(id).innerHTML = `${seg}<div class="bars">${body}</div><div class="chart-note">${note}</div>${vocLegend()}`;
+  ensureVocations(h.players.map((p) => p.name)).then((changed) => { if (changed) renderChart(id, metric); });
 }
 function deleteButton(h) {
   return h.can_delete && h.id ? `<div style="margin-top:12px"><button class="danger-link" data-del-hunt="${h.id}">🗑 Apagar esta hunt</button></div>` : "";
@@ -812,7 +986,7 @@ function historyItem(h, name) {
       <div class="row"><b>${when(h.started_at)}</b>${tag}</div>
       <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
-    </summary>${actionBox(v)}${chartToggle(h, name)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${deleteButton(h)}</details>`;
+    </summary>${actionBox(v)}${chartToggle(h, name)} ${shareButton("hunt", h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${deleteButton(h)}</details>`;
 }
 function statGrid(items) {
   return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
@@ -862,26 +1036,35 @@ document.addEventListener("click", async (e) => {
 /* ---------- página inicial ---------- */
 async function loadHome() {
   const el = $("#pageHome");
-  el.innerHTML = `<p class="muted">Carregando hunts de ${esc(S.nick)}…</p>`;
+  el.innerHTML = skeleton("home");
   let data;
   try { data = await api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   const hunts = data.hunts;
+  S.homeHunts = hunts;
   const total = hunts.reduce((a, h) => a + h.profit_each, 0);
   const secs = hunts.reduce((a, h) => a + h.duration_seconds, 0);
   let toPay = 0, toGet = 0;
   hunts.forEach((h) => { const v = view(h, S.nick); toPay += v.totalPay; toGet += v.totalGet; });
-  const notice = await newsNotice().catch(() => "");
+  const [notice, streak] = await Promise.all([newsNotice().catch(() => ""), api("GET", "/api/streak").catch(() => null)]);
+  const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
   el.innerHTML = `${notice}
-    ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt")
-      : `<div class="card"><div class="muted">Última hunt</div><div class="big gold">0 gp</div>
-         <div class="muted">Nenhuma hunt registrada para ${esc(S.nick)} ainda. Use o menu ☰ → Lootsplit para enviar uma.</div></div>`}
-    <h2>Totais</h2>
-    ${statGrid([["Hunts", fmt(hunts.length)], ["Profit total", fmt(total) + " gp", total >= 0 ? "gold" : "neg"],
-                ["Tempo de hunt", dur(secs)], ["Média por hora", fmt(secs ? Math.round(total * 3600 / secs) : 0) + " gp"],
-                ["Total transferido", fmt(toPay) + " gp", toPay ? "neg" : ""], ["Total recebido", fmt(toGet) + " gp", toGet ? "pos" : ""]])}
+    ${streak ? streakTeaser(streak) : ""}
+    ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt") : emptyState("home")}
+    ${hunts.length ? `<h2>Totais</h2>
+    ${statGrid([["Hunts", n(hunts.length)], ["Profit total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
+                ["Tempo de hunt", dur(secs)], ["Média por hora", n(secs ? Math.round(total * 3600 / secs) : 0, " gp")],
+                ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
+    <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
     <h2>Todas as hunts (${hunts.length})</h2>
-    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}`;
+    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}`;
+  countUp(el);
+  if (hunts.length) {
+    renderPtRank();
+    const names = [...new Set(hunts.flatMap((h) => h.players.map((p) => p.name)))];
+    ensureVocations(names).then((changed) => { if (changed && S.page === "home") { renderPtRank(); paintVocations(el); } });
+  }
+  if (streak) celebrateRewards(streak.granted);
 }
 
 /* ---------- lootsplit ---------- */
@@ -893,7 +1076,12 @@ $("#lootBtn").addEventListener("click", async () => {
     const r = await api("POST", "/api/lootsplit", { raw_text: raw, nickname: S.nick });
     $("#lootResult").innerHTML = `<div class="banner ok">${r.created ? "Hunt enviada ✔ Todos da PT já podem ver no app." : "Essa hunt já estava salva ✔"}</div>`
       + huntCard(r.hunt, S.nick, "Resultado");
+    countUp($("#lootResult"));
+    paintVocations($("#lootResult"));
+    ensureVocations(r.hunt.players.map((p) => p.name)).then((c) => c && paintVocations($("#lootResult")));
     $("#lootText").value = "";
+    celebrateRewards(r.rewards);
+    if (r.created) checkAchievements();
   } catch (err) {
     if (err.status === 403) {
       // mostra o cálculo mesmo assim, mas sem salvar
@@ -934,6 +1122,7 @@ function soloItem(s) {
     ])}</div>
     ${s.loot.length ? `<h2>Itens coletados</h2>${itemList(s.loot, 999)}` : ""}
     ${s.kills.length ? `<h2>Criaturas mortas</h2>${killChips(s.kills)}` : ""}
+    <div style="margin-top:10px">${shareButton("solo", s)}</div>
     ${s.can_delete ? `<div style="margin-top:10px"><button class="danger-link" data-del-solo="${s.id}">🗑 Apagar esta sessão</button></div>` : ""}</details>`;
 }
 
@@ -963,7 +1152,13 @@ function itemList(items, limit = 8) {
   return `<div class="items">${head}${rest.length ? `<details><summary class="link">Ver todos os itens (${items.length})</summary>${rest.map(itemRow).join("")}</details>` : ""}</div>`;
 }
 function killChips(kills) {
-  return `<div class="chips">${kills.map((k) => `<span class="chip">${fmt(k.count)}x ${esc(k.key)}</span>`).join("")}</div>`;
+  return `<div class="chips">${kills.map((k) => `<span class="chip" style="display:inline-flex; align-items:center; gap:6px">${creatureImg(k.key)}${fmt(k.count)}x ${esc(k.key)}</span>`).join("")}</div>`;
+}
+/** Imagem da criatura na TibiaWiki BR ("dragon lord" -> Dragon_Lord.gif). Some se não existir. */
+function creatureImg(name, size = 24) {
+  const small = new Set(["of", "the", "de", "da", "do"]);
+  const title = String(name).split(" ").map((w, i) => (i && small.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+  return `<img src="${WIKI_FILE(title)}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none; object-fit:contain" onerror="this.remove()">`;
 }
 function itemsChart(items) {
   const top = items.filter((i) => i.value > 0).slice(0, 10);
@@ -982,30 +1177,35 @@ function periodBlock(p) {
       `<button data-period="${d}" class="${d === p.days ? "on" : ""}" role="tab" aria-selected="${d === p.days}">${t}</button>`).join("")}</div>
     <div class="card">
       <div class="muted">Loot estimado (${label}) · ${fmt(p.totals.sessions)} sessões · ${dur(p.totals.duration_seconds)}</div>
-      <div class="big gold">${fmt(p.loot_value)} gp</div>
+      <div class="big gold" data-count="${p.loot_value}" data-suffix=" gp">${fmt(p.loot_value)} gp</div>
       <div class="muted">${p.totals.duration_seconds ? fmt(Math.round(p.loot_value * 3600 / p.totals.duration_seconds)) + " gp/h de loot · " : ""}XP ${fmt(p.totals.xp)} · balance ${fmt(p.totals.balance)} gp</div>
       <div style="margin-top:8px">Lucro líquido real: <b class="${p.net_profit >= 0 ? "pos" : "neg"}">${fmt(p.net_profit)} gp</b>
         <span class="muted">(${fmt(p.net_profit_per_hour)} gp/h)</span>
         <div class="hint">Loot avaliado pelos preços de NPC (ou média dos usuários) menos os supplies gastos.</div></div>
       ${p.unpriced ? `<div class="hint" style="margin-top:6px">${p.unpriced} ${p.unpriced === 1 ? "item não tem" : "itens não têm"} NPC comprador. Toque no item para informar um preço.</div>` : ""}
-      ${p.items.length ? `<h2>Itens</h2>${itemList(p.items)}
+      ${p.items.length ? `<h2>Itens</h2>${itemSortSeg()}<div id="itemsBox">${itemList(sortItems(p.items))}</div>
         <button class="link" data-loot-chart style="margin-top:8px">📊 Gráfico</button><div class="chart hidden" id="lootChart">${itemsChart(p.items)}</div>`
         : `<p class="muted">Nenhum item coletado neste período.</p>`}
       ${p.kills.length ? `<h2>Criaturas mortas</h2>${killChips(p.kills)}` : ""}
     </div>`;
 }
 
-async function loadStack() {
+async function loadStack(opts = {}) {
   const el = $("#stackResult");
-  el.innerHTML = `<p class="muted">Carregando sessões de ${esc(S.nick)}…</p>`;
+  if (!opts.quiet) el.innerHTML = skeleton("stack");
   let d;
   try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=${S.period}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   S.prices = d.prices || {};
   S.stack = d;
+  if (!d.sessions.length) {
+    el.innerHTML = emptyState("stack");
+    return d;
+  }
   el.innerHTML = `
     ${alertsBlock(d)}
     ${goalsBlock(d)}
+    ${weeklyBlock(d.sessions)}
     <h2>Loot e criaturas</h2>${periodBlock(d.period)}
     ${forecastBlock(d.forecast)}
     <details class="card"><summary class="row"><b>🏆 Recordes pessoais</b><span class="muted">▾</span></summary>${recordsBlock(d.records)}</details>
@@ -1023,6 +1223,8 @@ async function loadStack() {
       value: s.place, onPick: async (p) => { await api("POST", `/api/stacker/session/${sid}/place`, { place_id: p.id }); loadStack(); },
     });
   });
+  countUp(el);
+  return d;
 }
 
 /* ---------- avisos de venda, metas, previsão, recordes, lista de venda ---------- */
@@ -1175,16 +1377,18 @@ function initPicker(root, { onPick, value, allowCreate = true, onlyWithData = fa
   list.addEventListener("mousedown", (e) => { e.preventDefault(); choose(e.target.closest(".pk-opt")); });
   return root;
 }
-async function initStackPicker() {
-  const slot = $("#stackPlace");
-  if (slot.firstElementChild) return;
-  slot.innerHTML = pickerHTML();
-  await ensurePlaces();
-  const lastId = +(await kv.get("last_place")) || 0;
-  initPicker(slot.firstElementChild, {
-    value: (S.places || []).find((p) => p.id === lastId),
-    onPick: (p) => kv.set("last_place", String(p.id)),
-  });
+function initStackPicker() {  // uma vez só; quem precisa do seletor pronto (colar direto) espera a mesma promessa
+  if (!S.stackPickerReady) S.stackPickerReady = (async () => {
+    const slot = $("#stackPlace");
+    slot.innerHTML = pickerHTML();
+    await ensurePlaces();
+    const lastId = +(await kv.get("last_place")) || 0;
+    initPicker(slot.firstElementChild, {
+      value: (S.places || []).find((p) => p.id === lastId),
+      onPick: (p) => kv.set("last_place", String(p.id)),
+    });
+  })();
+  return S.stackPickerReady;
 }
 
 /* ---------- página Hunts: ranking por XP/h e gold/h, level médio, comparação ---------- */
@@ -1215,7 +1419,7 @@ async function loadRanking() {
   const qs = new URLSearchParams({ sort: S.htab });
   if ($("#lvlMin").value) qs.set("min_level", $("#lvlMin").value);
   if ($("#lvlMax").value) qs.set("max_level", $("#lvlMax").value);
-  el.innerHTML = `<p class="muted">Carregando…</p>`;
+  el.innerHTML = skeleton("list");
   let d;
   try { d = await api("GET", "/api/places/ranking?" + qs); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   if (!d.rows.length) { el.innerHTML = `<p class="muted">Nenhuma hunt com sessões ${$("#lvlMin").value || $("#lvlMax").value ? "nessa faixa de level" : "ainda"}. Envie sessões pelo Hunt Session Stacker escolhendo a hunt.</p>`; return; }
@@ -1361,11 +1565,14 @@ $("#stackBtn").addEventListener("click", async () => {
   if (!placeId) { $("#stackErr").textContent = "Escolha em qual hunt foi a sessão (digite para procurar)."; return; }
   const btn = $("#stackBtn"); btn.disabled = true; $("#stackErr").textContent = "";
   try {
+    const before = S.stack;
     const r = await api("POST", "/api/stacker", { raw_text: raw, nickname: S.nick, place_id: placeId });
     $("#stackText").value = "";
-    await loadStack();
+    const after = await loadStack();
     $("#stackResult").insertAdjacentHTML("afterbegin",
       `<div class="banner ok">${r.created ? "Sessão adicionada ✔" : "Essa sessão já estava salva ✔"}</div>`);
+    celebrateRewards(r.rewards);
+    if (r.created) { celebrateProgress(before, after); checkAchievements(); }
   } catch (err) {
     if (err.status === 403) $("#stackErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
     else if (err.status !== 401) $("#stackErr").textContent = err.message;
@@ -1445,7 +1652,14 @@ async function checkUpdate() {
 /* ---------- início ---------- */
 async function boot() {
   splashShow();
-  const [desktop] = await Promise.all([detectDesktop(1500), sleep(1900)]);
+  Embers.start();
+  const detected = detectDesktop(1500).then(async (d) => {
+    S.desktop = d;
+    await Music.load();      // volume/mudo da última vez
+    Music.play("anthem");    // a abertura começa com o Anthem, baixinho
+    return d;
+  });
+  const [desktop] = await Promise.all([detected, sleep(2600)]);
   S.desktop = desktop;
   if (desktop) {
     const cfg = await window.pywebview.api.get_config();
@@ -1480,6 +1694,763 @@ async function boot() {
   startMonitor();
   if (desktop) checkUpdate();
 }
+/* =====================================================================================
+   0.10.0 — som, abertura, vocações, comemorações, conquistas, card, colar direto e ícone
+   ===================================================================================== */
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const nk = (n) => String(n || "").trim().replace(/\s+/g, " ").toLowerCase();
+
+/* ---------- música (tocada direto do site oficial do Tibia; nunca em loop) ---------- */
+const MUSIC_BASE = "https://static.tibia.com/music/";
+const TRACKS = {
+  anthem: "TIBIA_Anthem.ogg",
+  hunts: "TIBIA_17_Special_Boss_Lairs.ogg",
+  stack: "TIBIA_14_King_Tibianus_Queen_Eloise_Emperor_Kruzak.ogg",
+};
+const PAGE_TRACK = { hunts: "hunts", stack: "stack" };
+const MAX_GAIN = 0.5;  // volume 100% do botão = metade do volume do aparelho: sempre "baixinho"
+const Music = {
+  vol: 30, muted: false, els: {}, ended: new Set(), current: null, blocked: false,
+  async load() {
+    const v = await kv.get("music_vol"), m = await kv.get("music_muted");
+    if (v != null && v !== "" && !isNaN(+v)) this.vol = Math.max(0, Math.min(100, +v));
+    this.muted = m === "1";
+    this.ui();
+  },
+  save() { kv.set("music_vol", String(this.vol)); kv.set("music_muted", this.muted ? "1" : "0"); },
+  gain() { return this.muted ? 0 : (this.vol / 100) * MAX_GAIN; },
+  el(id) {
+    if (!this.els[id]) {
+      const a = new Audio();
+      a.preload = "none"; a.loop = false; a.src = MUSIC_BASE + TRACKS[id];
+      a.addEventListener("ended", () => { this.ended.add(id); if (this.current === id) this.current = null; });  // terminou, terminou
+      a.addEventListener("error", () => { this.ended.add(id); if (this.current === id) this.current = null; });
+      this.els[id] = a;
+    }
+    return this.els[id];
+  },
+  play(id) {
+    if (this.ended.has(id) || this.current === id) return;
+    if (this.current) this.fadeTo(this.els[this.current], 0, true);
+    this.current = id;
+    this.resume();
+  },
+  resume() {
+    const id = this.current;
+    if (!id || this.muted || this.vol === 0 || this.ended.has(id)) return;
+    const a = this.el(id);
+    clearInterval(a._fade);
+    a.volume = 0;
+    const p = a.play();
+    if (p && p.then) p.then(() => { this.blocked = false; this.fadeTo(a, this.gain()); }).catch(() => { this.blocked = true; });
+  },
+  stop() { if (this.current) { this.fadeTo(this.els[this.current], 0, true); this.current = null; } },
+  fadeTo(a, target, pauseAtEnd) {
+    if (!a) return;
+    clearInterval(a._fade);
+    const from = a.volume, steps = 12;
+    let i = 0;
+    a._fade = setInterval(() => {
+      i++;
+      a.volume = Math.max(0, Math.min(1, from + (target - from) * (i / steps)));
+      if (i >= steps) { clearInterval(a._fade); if (pauseAtEnd) a.pause(); }
+    }, 50);
+  },
+  /** Hunts e Stacker têm trilha própria; nas outras telas só continua o Anthem da abertura. */
+  forPage(page) {
+    const t = PAGE_TRACK[page];
+    if (t) return this.play(t);
+    if (this.current && this.current !== "anthem") this.stop();
+  },
+  apply() {
+    const a = this.current && this.els[this.current];
+    if (this.muted || this.vol === 0) { if (a) { clearInterval(a._fade); a.pause(); } }
+    else if (a && a.paused) this.resume();
+    else if (a) { clearInterval(a._fade); a.volume = this.gain(); }
+    this.ui();
+  },
+  ui() {
+    const off = this.muted || this.vol === 0;
+    const label = off ? "Ligar a música" : "Silenciar a música";
+    const b = $("#soundBtn");
+    b.textContent = off ? "🔇" : this.vol < 35 ? "🔈" : this.vol < 70 ? "🔉" : "🔊";
+    b.setAttribute("aria-label", label); b.title = label;
+    b.setAttribute("aria-pressed", String(off));
+    $("#soundVol").value = this.vol;
+    $("#sound").classList.toggle("muted", off);
+  },
+};
+$("#soundBtn").addEventListener("click", () => {  // um clique: muda na hora
+  Music.muted = !(Music.muted || Music.vol === 0);
+  if (!Music.muted && Music.vol === 0) Music.vol = 30;
+  Music.save(); Music.apply();
+});
+$("#soundVol").addEventListener("input", (e) => {
+  Music.vol = +e.target.value;
+  Music.muted = Music.vol === 0;
+  Music.save(); Music.apply();
+});
+// Navegadores só deixam tocar som depois do primeiro toque/tecla: começa a trilha pendente aí.
+["pointerdown", "keydown", "touchstart"].forEach((ev) =>
+  document.addEventListener(ev, () => { if (Music.blocked) Music.resume(); }, { capture: true, passive: true }));
+Music.ui();
+
+/* ---------- abertura: partículas douradas e runa ---------- */
+$("#runeMarks").innerHTML = Array.from({ length: 24 }, (_, i) => {
+  const a = (i / 24) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+  const p = (r) => `${(100 + c * r).toFixed(1)} ${(100 + s * r).toFixed(1)}`;
+  const t = (r, d) => `${(100 + c * r - s * d).toFixed(1)} ${(100 + s * r + c * d).toFixed(1)}`;
+  return i % 3 === 0 ? `<path d="M${p(86)} L${p(94)} M${p(90)} L${t(92, 3.5)}"/>`
+       : i % 3 === 1 ? `<path d="M${t(86, -2.5)} L${t(94, 2.5)} M${t(86, 2.5)} L${t(94, -2.5)}"/>`
+       : `<path d="M${p(86)} L${p(94)}"/>`;
+}).join("");
+const Embers = {
+  running: false, raf: 0, parts: [],
+  start() {
+    const c = $("#embers");
+    if (this.running || !c) return;
+    this.running = true;
+    const ctx = c.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1), still = reduceMotion();
+    let w = 0, h = 0;
+    const size = () => { w = c.clientWidth; h = c.clientHeight; c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    size();
+    this.onResize = size; window.addEventListener("resize", size);
+    const spawn = (anywhere) => ({ x: Math.random() * w, y: anywhere ? Math.random() * h : h + 8, r: 0.6 + Math.random() * 1.7,
+                                   vy: 0.25 + Math.random() * 0.75, vx: (Math.random() - 0.5) * 0.25, ph: Math.random() * 6.28 });
+    this.parts = Array.from({ length: still ? 16 : Math.round(Math.min(90, (w * h) / 9000)) }, () => spawn(true));
+    const tick = () => {
+      if (!this.running) return;
+      ctx.clearRect(0, 0, w, h);
+      for (const p of this.parts) {
+        if (!still) { p.y -= p.vy; p.x += p.vx + Math.sin((p.ph += 0.02)) * 0.15; }
+        if (p.y < -8) Object.assign(p, spawn(false));
+        const a = Math.max(0, Math.min(1, p.y / (h * 0.35)) * (0.55 + 0.45 * Math.sin(p.ph * 3)));
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 4);
+        g.addColorStop(0, `rgba(255,241,193,${a})`); g.addColorStop(0.35, `rgba(242,201,76,${a * 0.6})`); g.addColorStop(1, "rgba(242,201,76,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.r * 4, 0, 6.283); ctx.fill();
+      }
+      if (!still) this.raf = requestAnimationFrame(tick);
+    };
+    tick();
+  },
+  stop() { this.running = false; cancelAnimationFrame(this.raf); window.removeEventListener("resize", this.onResize); },
+};
+
+/* ---------- cores por vocação ---------- */
+S.voc = {};
+const VOC_LABEL = { knight: "Knight", paladin: "Paladin", druid: "Druid", sorcerer: "Sorcerer", monk: "Monk" };
+function vocKey(v) {
+  v = String(v || "").toLowerCase();
+  return v.includes("knight") ? "knight" : v.includes("paladin") ? "paladin" : v.includes("druid") ? "druid"
+       : v.includes("sorcerer") ? "sorcerer" : v.includes("monk") ? "monk" : "none";
+}
+const VOC_HEX = { knight: "#e8705a", paladin: "#4fc39f", druid: "#5aa9f0", sorcerer: "#b382f2", monk: "#f0a04b", none: "#8a93a6" };
+function vstyle(name) { const v = S.voc[nk(name)]; return v ? `--vc:var(--voc-${vocKey(v)})` : ""; }
+function vdot(name) {
+  const v = S.voc[nk(name)];
+  return `<i class="vdot" data-vn="${esc(nk(name))}" style="${vstyle(name)}" title="${esc(v || "vocação desconhecida")}"></i>`;
+}
+function vocLegend() {
+  return `<div class="voc-legend">${Object.entries(VOC_LABEL).map(([k, t]) => `<span><i class="vdot" style="--vc:var(--voc-${k})"></i>${t}</span>`).join("")}</div>`;
+}
+/** Busca a vocação de quem ainda não conhecemos. true = descobriu alguma (vale redesenhar). */
+async function ensureVocations(names) {
+  if (S.char && S.nick) S.voc[nk(S.nick)] = S.char.vocation;
+  const want = new Map();
+  names.forEach((n) => { if (!(nk(n) in S.voc)) want.set(nk(n), n); });
+  if (!want.size) return false;
+  const list = [...want.values()].slice(0, 20);
+  list.forEach((n) => (S.voc[nk(n)] = null));  // marca como "buscando" para não pedir duas vezes
+  try {
+    const r = await api("GET", "/api/vocations?names=" + encodeURIComponent(list.join(",")));
+    let changed = false;
+    for (const [n, v] of Object.entries(r)) if (v) { S.voc[nk(n)] = v; changed = true; }
+    return changed;
+  } catch { return false; }
+}
+function paintVocations(root) {
+  root.querySelectorAll("[data-vn]").forEach((e) => {
+    const v = S.voc[e.dataset.vn];
+    if (v) { e.style.setProperty("--vc", `var(--voc-${vocKey(v)})`); e.title = v; }
+  });
+}
+
+/* ---------- números que contam até o valor ---------- */
+function countUp(root) {
+  if (reduceMotion()) return;
+  root.querySelectorAll("[data-count]").forEach((el) => {
+    const target = Number(el.dataset.count) || 0, suf = el.dataset.suffix || "";
+    if (!target) return;
+    const t0 = performance.now(), D = 950;
+    const step = (t) => {
+      const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3);
+      el.textContent = fmt(Math.round(target * e)) + suf;
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+/* ---------- carregamento com a forma do conteúdo ---------- */
+function skeleton(kind) {
+  const lines = (n) => Array.from({ length: n }, (_, i) => `<div class="sk sk-line" style="width:${[70, 92, 55, 80][i % 4]}%"></div>`).join("");
+  const card = (n, big) => `<div class="card">${lines(1)}${big ? `<div class="sk sk-big"></div>` : ""}${lines(n)}</div>`;
+  if (kind === "list") return `<div aria-busy="true" aria-label="Carregando">${card(2)}${card(2)}${card(2)}${card(2)}</div>`;
+  const stats = `<div class="stats">${Array.from({ length: kind === "home" ? 6 : 4 }, () => `<div class="sk sk-stat"></div>`).join("")}</div>`;
+  return `<div aria-busy="true" aria-label="Carregando">${card(2, true)}<div class="sk sk-line" style="width:120px; margin:26px 0 12px"></div>${stats}<div style="height:12px"></div>${card(3)}${card(3)}</div>`;
+}
+
+/* ---------- tela que convida a usar ---------- */
+const MARK_SVG = `<svg viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" aria-hidden="true">
+  <circle cx="50" cy="50" r="33"/><path d="M22 78 L70 30"/><path d="M80 20 L60 27 L73 40 Z" fill="currentColor" stroke-linejoin="round"/>
+  <path d="M25 75 h-8 M25 75 v8 M31 69 h-8 M31 69 v8" stroke-width="3.5"/></svg>`;
+function emptyState(kind) {
+  if (kind === "home") return `<div class="card empty">${MARK_SVG}
+    <h3>Sua primeira hunt começa aqui</h3>
+    <p class="muted" style="margin:0">Divida o loot da PT em segundos, guarde cada hunt e veja quem mais bateu e curou.</p>
+    <ol><li>No Tibia, abra o <b>Party Hunt Analyser</b> e clique em <b>Copy to clipboard</b>.</li>
+      <li>Volte aqui e aperte <b>Ctrl+V</b> em qualquer tela (no celular, toque em <b>📋 Colar</b>).</li>
+      <li>Pronto: a divisão aparece e fica salva para toda a PT.</li></ol>
+    <button class="btn" data-page-link="loot">💰 Dividir minha primeira hunt</button>
+    <div class="hint" style="margin-top:10px">Caça sozinho? Use o <button class="link" data-page-link="stack">📈 Hunt Session Stacker</button>.</div></div>`;
+  return `<div class="card empty">${MARK_SVG}
+    <h3>Comece seu histórico de caçadas</h3>
+    <p class="muted" style="margin:0">Cada sessão vira XP/h, lucro real, recordes, metas, lista de venda e ranking das hunts.</p>
+    <ol><li>No Tibia, abra o <b>Hunt Analyser</b> e clique em <b>Copy to clipboard</b>.</li>
+      <li>Cole na caixa acima (ou aperte <b>Ctrl+V</b> em qualquer tela).</li>
+      <li>Escolha em qual hunt foi e toque em <b>Adicionar sessão</b>.</li></ol>
+    <button class="btn" data-focus="stackText">📋 Colar minha primeira sessão</button></div>`;
+}
+document.addEventListener("keydown", (e) => {  // cartões clicáveis (role=button) também abrem com Enter/Espaço
+  const c = e.target.closest && e.target.closest('[role="button"][data-page-link]');
+  if (c && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); c.click(); }
+});
+document.addEventListener("click", (e) => {
+  const f = e.target.closest("[data-focus]");
+  if (f) { const t = document.getElementById(f.dataset.focus); window.scrollTo(0, 0); t.focus(); }
+});
+
+/* ---------- itens: mais valiosos x mais dropados ---------- */
+S.itemSort = "value";
+function sortItems(items) {
+  return [...items].sort(S.itemSort === "count" ? (a, b) => b.count - a.count || b.value - a.value
+                                                : (a, b) => b.value - a.value || b.count - a.count);
+}
+function itemSortSeg() {
+  return `<div class="seg" role="tablist" id="itemSortSeg">${[["value", "💎 Mais valiosos"], ["count", "📦 Mais dropados"]].map(([k, t]) =>
+    `<button data-item-sort="${k}" class="${S.itemSort === k ? "on" : ""}" role="tab" aria-selected="${S.itemSort === k}">${t}</button>`).join("")}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-item-sort]");
+  if (!b || !S.stack) return;
+  S.itemSort = b.dataset.itemSort;
+  $("#itemSortSeg").outerHTML = itemSortSeg();
+  $("#itemsBox").innerHTML = itemList(sortItems(S.stack.period.items));
+});
+
+/* ---------- evolução semanal de XP e lucro ---------- */
+function weekKey(isoDay) {
+  const d = new Date(isoDay.slice(0, 10) + "T12:00:00");
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));  // segunda-feira
+  return d.toISOString().slice(0, 10);
+}
+function wkChart(vals, labels, { color, diverging }) {
+  const W = 500, top = 16, base = 106, H = base - top;
+  const hi = Math.max(0, ...vals), lo = Math.min(0, ...vals);
+  const span = diverging ? (hi - lo || 1) : (hi || 1);
+  const zero = diverging ? top + H * (hi / span) : base;
+  const slot = W / vals.length, bw = slot * 0.62;
+  const bars = vals.map((v, i) => {
+    const h = (Math.abs(v) / span) * H, x = i * slot + (slot - bw) / 2, y = v >= 0 ? zero - h : zero;
+    const fill = diverging ? (v >= 0 ? "var(--green)" : "var(--red)") : color;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(v ? 1.5 : 0, h).toFixed(1)}" rx="2"
+      style="fill:${fill}; opacity:${i === vals.length - 1 ? 1 : 0.72}"><title>Semana de ${labels[i]}: ${fmt(v)}</title></rect>`;
+  }).join("");
+  const lbls = labels.map((l, i) => (i % 2 === (labels.length - 1) % 2 ? `<text class="lbl" x="${(i * slot + slot / 2).toFixed(1)}" y="122" text-anchor="middle">${l}</text>` : "")).join("");
+  return `<svg viewBox="0 0 ${W} 128" role="img" aria-label="Gráfico semanal">
+    <line class="grid" x1="0" x2="${W}" y1="${zero.toFixed(1)}" y2="${zero.toFixed(1)}"/>
+    <text class="lbl" x="0" y="10">${kk(hi)}</text>${diverging && lo < 0 ? `<text class="lbl" x="0" y="${base + 2}">−${kk(-lo)}</text>` : ""}
+    ${bars}${lbls}</svg>`;
+}
+function weeklyBlock(sessions) {
+  const N = 12, keys = [], d = new Date();
+  for (let i = N - 1; i >= 0; i--) { const x = new Date(d); x.setDate(x.getDate() - i * 7); keys.push(weekKey(x.toISOString())); }
+  const xp = Object.fromEntries(keys.map((k) => [k, 0])), profit = Object.fromEntries(keys.map((k) => [k, 0]));
+  for (const s of sessions) { const k = weekKey(s.started_at); if (k in xp) { xp[k] += s.xp; profit[k] += s.net_profit; } }
+  const xv = keys.map((k) => xp[k]), pv = keys.map((k) => profit[k]);
+  if (!xv.some(Boolean) && !pv.some(Boolean)) return "";
+  const labels = keys.map((k) => k.slice(8, 10) + "/" + k.slice(5, 7));
+  return `<h2>📊 Evolução semanal</h2><div class="card wk">
+    <div class="wk-title"><span>XP por semana</span><span>esta semana: <b>${kk(xv[N - 1])}</b></span></div>
+    ${wkChart(xv, labels, { color: "var(--bar)" })}
+    <div class="wk-title" style="margin-top:14px"><span>Lucro líquido por semana</span><span>esta semana: <b class="${pv[N - 1] >= 0 ? "pos" : "neg"}">${kk(pv[N - 1])}</b></span></div>
+    ${wkChart(pv, labels, { diverging: true })}
+    <div class="hint">Últimas 12 semanas (segunda a domingo). Lucro líquido = loot pelos preços de NPC − supplies.</div></div>`;
+}
+
+/* ---------- ranking da PT (dano, cura e balance) ---------- */
+S.ptMetric = "damage"; S.ptDays = 30;
+function renderPtRank() {
+  const box = $("#ptRank");
+  if (!box) return;
+  const cutoff = S.ptDays ? Date.now() - S.ptDays * 864e5 : 0;
+  const hunts = (S.homeHunts || []).filter((h) => !cutoff || new Date(h.started_at).getTime() >= cutoff);
+  const acc = new Map();
+  for (const h of hunts) for (const p of h.players) {
+    const r = acc.get(nk(p.name)) || { name: p.name, hunts: 0, damage: 0, healing: 0, balance: 0 };
+    r.hunts++; r.damage += p.damage || 0; r.healing += p.healing || 0; r.balance += p.balance || 0;
+    acc.set(nk(p.name), r);
+  }
+  const m = S.ptMetric, rows = [...acc.values()].sort((a, b) => b[m] - a[m]);
+  const max = Math.max(1, ...rows.map((r) => Math.abs(r[m]))), me = nk(S.nick);
+  const seg = (attr, cur, opts) => `<div class="seg" role="tablist">${opts.map(([k, t]) =>
+    `<button ${attr}="${k}" class="${String(cur) === String(k) ? "on" : ""}" role="tab" aria-selected="${String(cur) === String(k)}">${t}</button>`).join("")}</div>`;
+  box.innerHTML = `${seg("data-pt-metric", m, [["damage", "⚔️ Dano"], ["healing", "✨ Cura"], ["balance", "💰 Balance"]])}
+    ${seg("data-pt-days", S.ptDays, [[7, "7 dias"], [30, "30 dias"], [0, "Tudo"]])}
+    ${rows.length ? rows.slice(0, 10).map((r, i) => {
+      const mine = nk(r.name) === me, v = r[m];
+      return `<div class="rank" style="cursor:default">
+        <span class="pos" style="font-size:${i < 3 ? 20 : 14}px">${i < 3 ? ["🥇", "🥈", "🥉"][i] : "#" + (i + 1)}</span>
+        <span style="min-width:0"><b class="${mine ? "gold" : ""}">${vdot(r.name)}${esc(r.name)}${mine ? " (você)" : ""}</b><br>
+          <span class="muted" style="font-size:13px">${r.hunts} hunt${r.hunts === 1 ? "" : "s"} · média ${kk(Math.round(v / r.hunts))}/hunt</span>
+          <div class="track" style="margin-top:6px"><div class="fill voc ${mine ? "me" : ""}" style="width:${(Math.max(0, v) / max) * 100}%; ${vstyle(r.name)}"></div></div></span>
+        <span style="text-align:right; min-width:64px"><b class="${m === "balance" && v < 0 ? "neg" : ""}">${kk(v)}</b></span></div>`;
+    }).join("") : `<p class="muted">Nenhuma party hunt nesse período.</p>`}
+    <div class="hint">Soma das party hunts em que ${esc(S.nick)} esteve. Balance = loot − supplies de cada um, antes da divisão.</div>${vocLegend()}`;
+}
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-pt-metric]"), b = e.target.closest("[data-pt-days]");
+  if (a) { S.ptMetric = a.dataset.ptMetric; renderPtRank(); }
+  if (b) { S.ptDays = +b.dataset.ptDays; renderPtRank(); }
+});
+
+/* ---------- comemoração ---------- */
+const Burst = {
+  raf: 0,
+  fire() {
+    if (reduceMotion()) return;
+    const c = $("#burst"), ctx = c.getContext("2d"), dpr = Math.min(2, window.devicePixelRatio || 1);
+    const w = c.clientWidth, h = c.clientHeight;
+    c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cx = w / 2, cy = h * 0.4, cols = ["#fff1c1", "#f2c94c", "#b8861b", "#ffffff", "#ffd86b"];
+    const ps = Array.from({ length: 120 }, () => {
+      const a = Math.random() * 6.283, s = 3 + Math.random() * 8;
+      return { x: cx, y: cy, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 2.5, r: 2 + Math.random() * 3.2, rot: Math.random() * 6,
+               vr: (Math.random() - 0.5) * 0.3, c: cols[(Math.random() * cols.length) | 0], sq: Math.random() < 0.55 };
+    });
+    const t0 = performance.now();
+    cancelAnimationFrame(this.raf);
+    const tick = (t) => {
+      const k = (t - t0) / 1900;
+      ctx.clearRect(0, 0, w, h);
+      if (k >= 1) return;
+      ctx.globalAlpha = 1 - k * k;
+      for (const p of ps) {
+        p.vx *= 0.985; p.vy = p.vy * 0.985 + 0.13; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c;
+        if (p.sq) ctx.fillRect(-p.r, -p.r / 2, p.r * 2, p.r); else { ctx.beginPath(); ctx.arc(0, 0, p.r * 0.7, 0, 6.283); ctx.fill(); }
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+      this.raf = requestAnimationFrame(tick);
+    };
+    this.raf = requestAnimationFrame(tick);
+  },
+};
+const Cel = { q: [], busy: false, t: 0 };
+function celebrate(item) { Cel.q.push(item); if (!Cel.busy) nextCel(); }
+function nextCel() {
+  clearTimeout(Cel.t);
+  const it = Cel.q.shift(), box = $("#celebrate");
+  if (!it) { Cel.busy = false; box.classList.add("hidden"); return; }
+  Cel.busy = true;
+  $("#celEmoji").textContent = it.emoji; $("#celKicker").textContent = it.kicker;
+  $("#celTitle").textContent = it.title; $("#celSub").textContent = it.sub || "";
+  box.classList.remove("hidden");
+  const card = box.querySelector(".cel-card");
+  card.style.animation = "none"; void card.offsetWidth; card.style.animation = "";
+  Burst.fire();
+  Cel.t = setTimeout(nextCel, 5500);
+  $("#celOk").focus({ preventScroll: true });
+}
+$("#celOk").addEventListener("click", nextCel);
+$("#celebrate").addEventListener("click", (e) => { if (e.target.id === "celebrate") nextCel(); });
+
+function celebrateRewards(list) {
+  for (const r of list || []) {
+    S.keyExpires = r.expires_at;
+    if (S.me) S.me.expires_at = r.expires_at;
+    updateDrawerFoot();
+    celebrate({ emoji: "🎁", kicker: "Recompensa desbloqueada", title: `+${r.days} dias de acesso!`,
+                sub: `30 dias seguidos alimentando o 4rt3mi5. Seu código agora vale até ${new Date(r.expires_at).toLocaleDateString("pt-BR")}.` });
+  }
+}
+function recordText(r) {
+  return r.unit === "tempo" ? dur(r.value) : fmt(r.value) + (r.unit === "XP" ? " XP" : r.unit === "XP/h" ? " XP/h" : " " + r.unit);
+}
+/** Depois de enviar uma sessão: novo recorde pessoal ou meta batida. */
+function celebrateProgress(before, after) {
+  if (!before || !after || !before.sessions.length) return;
+  for (const r of after.records) {
+    const old = before.records.find((x) => x.label === r.label);
+    if (old && r.value > old.value && r.session_id !== old.session_id)
+      celebrate({ emoji: "🏆", kicker: "Novo recorde pessoal", title: r.label, sub: `${recordText(r)} (antes: ${recordText(old)})` });
+  }
+  for (const g of after.goals) {
+    const old = before.goals.find((x) => x.period === g.period && x.metric === g.metric);
+    if (g.pct >= 100 && (!old || old.pct < 100))
+      celebrate({ emoji: "🎯", kicker: "Meta batida", title: `${GOAL_LABEL[g.period]} · ${METRIC_LABEL[g.metric]}`,
+                  sub: `${kk(g.done)} de ${kk(g.target)}${g.metric === "loot" ? " gp" : " XP"}` });
+  }
+}
+/** Compara com as conquistas já vistas neste aparelho e comemora as novas. */
+async function diffAchievements(d) {
+  const store = "ach:" + nk(d.name);
+  const seen = JSON.parse((await kv.get(store)) || "null");
+  const now = d.achievements.filter((a) => a.unlocked).map((a) => a.id);
+  await kv.set(store, JSON.stringify(now));
+  if (seen) for (const a of d.achievements) if (a.unlocked && !seen.includes(a.id))
+    celebrate({ emoji: a.emoji, kicker: "Conquista desbloqueada", title: a.title, sub: a.description });
+  celebrateRewards(d.granted);
+}
+async function checkAchievements() {
+  try { await diffAchievements(await api("GET", `/api/achievements/${encodeURIComponent(S.nick)}`)); } catch {}
+}
+
+/* ---------- página de conquistas e sequência de dias ---------- */
+function streakDays(s) {
+  const today = new Date();
+  return s.calendar.map((on, i) => {
+    const d = new Date(today); d.setDate(d.getDate() - (s.calendar.length - 1 - i));
+    return `<i class="${on ? "on" : ""} ${i === s.calendar.length - 1 ? "today" : ""}" title="${d.toLocaleDateString("pt-BR")}${on ? ": enviou" : ""}"></i>`;
+  }).join("");
+}
+function streakCard(s) {
+  const won = (s.rewards || []).reduce((a, r) => a + r.days, 0);
+  return `<div class="card streak">
+    <div class="row" style="align-items:flex-end; flex-wrap:wrap">
+      <div><div class="muted">🔥 Sequência de dias</div><div class="count">${s.current} <span class="muted" style="font: 600 15px system-ui">dia${s.current === 1 ? "" : "s"} seguidos</span></div></div>
+      <div style="text-align:right"><div class="muted" style="font-size:13px">Próxima recompensa</div>
+        <b class="gold">+${s.reward_days} dias em ${s.next_reward_in} dia${s.next_reward_in === 1 ? "" : "s"}</b></div></div>
+    <div class="days" aria-label="Últimos 30 dias">${streakDays(s)}</div>
+    <div class="gbar"><div style="width:${(s.progress / s.target) * 100}%"></div></div>
+    <p style="margin:10px 0 0; font-size:14px"><b>Como ganhar:</b> envie pelo menos <b>uma</b> party hunt (Lootsplit) ou sessão (Stacker) por dia.
+      A cada <b>${s.target} dias seguidos</b>, seu código de acesso ganha <b class="gold">+${s.reward_days} dias</b> de validade, sozinho.</p>
+    <div class="hint">${s.active_today ? "Hoje já conta ✔" : "Hoje ainda não conta: envie algo até a meia-noite (horário de Brasília) para manter a sequência."}
+      ${s.expires_at ? ` Seu código vale até ${new Date(s.expires_at).toLocaleDateString("pt-BR")}.` : ""}${won ? ` Você já ganhou ${won} dias assim.` : ""}</div></div>`;
+}
+function streakTeaser(s) {
+  return `<div class="card streak teaser" data-page-link="ach" role="button" tabindex="0" aria-label="Ver conquistas e sequência">
+    <div class="count">${s.current}</div>
+    <div style="min-width:0; flex:1"><b>🔥 ${s.current} de ${s.target} dias seguidos</b>
+      <div class="muted" style="font-size:13px">Envie uma hunt ou sessão por dia: com ${s.target} dias seguidos seu código ganha
+        <b class="gold">+${s.reward_days} dias</b>. ${s.active_today ? "Hoje já conta ✔" : "Falta enviar hoje."}</div>
+      <div class="gbar" style="margin-top:6px"><div style="width:${(s.progress / s.target) * 100}%"></div></div></div></div>`;
+}
+function achProgress(a) {
+  const f = a.id === "marathon" ? dur : ["loot_kk", "xp_kk", "slayer"].includes(a.id) ? kk : fmt;
+  return `${f(a.value)} / ${f(a.target)}`;
+}
+function achCard(a) {
+  return `<div class="ach ${a.unlocked ? "on" : "lock"}"><div class="em">${a.emoji}</div><b>${esc(a.title)}</b><p>${esc(a.description)}</p>
+    ${a.unlocked ? `<div class="done-tag">✔ Desbloqueada</div>`
+                 : `<div class="gbar"><div style="width:${a.pct}%"></div></div><div class="hint">${achProgress(a)}</div>`}</div>`;
+}
+async function loadAch() {
+  const el = $("#achBody");
+  el.innerHTML = skeleton("list");
+  let d;
+  try { d = await api("GET", `/api/achievements/${encodeURIComponent(S.nick)}`); }
+  catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  el.innerHTML = `${streakCard(d.streak)}
+    <h2>${esc(d.name)} · ${d.unlocked} de ${d.total} conquistas</h2>
+    <div class="ach-grid">${[...d.achievements].sort((a, b) => b.unlocked - a.unlocked || b.pct - a.pct).map(achCard).join("")}</div>
+    <div class="hint" style="margin-top:10px">As conquistas são do personagem (quem tem acesso ao app pode ver). A sequência de dias é do seu código de acesso.</div>`;
+  await diffAchievements(d);
+}
+
+/* ---------- card para compartilhar ---------- */
+const SHARE = new Map();
+let shareSeq = 0;
+function shareButton(kind, obj) {
+  const id = "s" + (++shareSeq);
+  SHARE.set(id, { kind, obj });
+  return `<button class="link" data-share="${id}" style="margin-top:10px">🖼️ Card para compartilhar</button>`;
+}
+function rr(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function fitFont(ctx, text, weight, max, maxW, family = "system-ui, Segoe UI, sans-serif") {
+  let size = max;
+  do { ctx.font = `${weight} ${size}px ${family}`; size -= 4; } while (ctx.measureText(text).width > maxW && size > 20);
+}
+function drawBase(ctx, W, H, kicker, when) {
+  ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, W, H);
+  let g = ctx.createRadialGradient(W / 2, 250, 0, W / 2, 250, 900);
+  g.addColorStop(0, "rgba(242,201,76,0.13)"); g.addColorStop(1, "rgba(242,201,76,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  g = ctx.createRadialGradient(W / 2, H + 100, 0, W / 2, H + 100, 800);
+  g.addColorStop(0, "rgba(124,140,255,0.08)"); g.addColorStop(1, "rgba(124,140,255,0)");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // runa de fundo
+  ctx.save(); ctx.translate(W - 150, H - 230); ctx.rotate(0.3); ctx.strokeStyle = "rgba(242,201,76,0.07)"; ctx.lineWidth = 3;
+  for (const r of [300, 262, 180]) { ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke(); }
+  for (let i = 0; i < 24; i++) { const a = (i / 24) * 6.283; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 268, Math.sin(a) * 268); ctx.lineTo(Math.cos(a) * 294, Math.sin(a) * 294); ctx.stroke(); }
+  ctx.restore();
+  // moldura
+  ctx.strokeStyle = "rgba(242,201,76,0.22)"; ctx.lineWidth = 2; rr(ctx, 36, 36, W - 72, H - 72, 36); ctx.stroke();
+  // marca
+  ctx.font = "800 64px Cinzel, Georgia, serif";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "6px";
+  g = ctx.createLinearGradient(0, 100, 0, 160);
+  g.addColorStop(0, "#fff1c1"); g.addColorStop(0.55, "#f2c94c"); g.addColorStop(1, "#b8861b");
+  ctx.fillStyle = g; ctx.textAlign = "left"; ctx.fillText("4rt3mi5", 84, 158);
+  ctx.font = "600 24px system-ui, Segoe UI, sans-serif";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "5px";
+  ctx.fillStyle = "#f2c94c"; ctx.textAlign = "right"; ctx.fillText(kicker, W - 84, 122);
+  ctx.fillStyle = "#98a1b3"; if ("letterSpacing" in ctx) ctx.letterSpacing = "1px"; ctx.fillText(when, W - 84, 160);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+}
+function drawHero(ctx, W, label, value, positive, sub) {
+  ctx.textAlign = "left";
+  ctx.font = "600 26px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "4px";
+  ctx.fillText(label, 84, 292);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  fitFont(ctx, value, 800, 124, W - 168);
+  const g = ctx.createLinearGradient(0, 310, 0, 430);
+  if (positive) { g.addColorStop(0, "#fff1c1"); g.addColorStop(1, "#f2c94c"); } else { g.addColorStop(0, "#ffb3a8"); g.addColorStop(1, "#ff7a6b"); }
+  ctx.fillStyle = g; ctx.fillText(value, 80, 418);
+  ctx.font = "500 30px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#c9cfdb"; ctx.fillText(sub, 84, 474);
+  const line = ctx.createLinearGradient(84, 0, W - 84, 0);
+  line.addColorStop(0, "rgba(242,201,76,0.7)"); line.addColorStop(1, "rgba(242,201,76,0)");
+  ctx.fillStyle = line; ctx.fillRect(84, 520, W - 168, 2);
+}
+function drawFooter(ctx, W, H) {
+  ctx.textAlign = "center"; ctx.font = "500 24px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+  ctx.fillText("4rt3mi5 · divida o loot e guarde suas hunts", W / 2, H - 78);
+}
+function drawHuntCard(ctx, W, H, h) {
+  const me = nk(S.nick);
+  drawBase(ctx, W, H, "PARTY HUNT", `${new Date(h.started_at).toLocaleDateString("pt-BR")} · ${dur(h.duration_seconds)}`);
+  drawHero(ctx, W, "RENDEU PARA CADA UM", `${h.profit_each >= 0 ? "+" : "−"}${fmt(Math.abs(h.profit_each))} gp`, h.profit_each >= 0,
+           `${fmt(h.profit_each_per_hour)} gp/h por pessoa · PT de ${h.players_count}`);
+  const totalDmg = h.players.reduce((a, p) => a + Math.max(0, p.damage || 0), 0) || 1;
+  const totalHeal = h.players.reduce((a, p) => a + Math.max(0, p.healing || 0), 0) || 1;
+  const rows = [...h.players].sort((a, b) => (b.damage || 0) - (a.damage || 0)).slice(0, 5);
+  ctx.textAlign = "left"; ctx.font = "600 24px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "4px";
+  ctx.fillText("QUEM FEZ O QUÊ", 84, 590);
+  if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+  rows.forEach((p, i) => {
+    const y = 650 + i * 116, mine = nk(p.name) === me, col = VOC_HEX[vocKey(S.voc[nk(p.name)])];
+    const dmg = Math.round((Math.max(0, p.damage || 0) / totalDmg) * 100), heal = Math.round((Math.max(0, p.healing || 0) / totalHeal) * 100);
+    ctx.fillStyle = col; ctx.beginPath(); ctx.arc(96, y - 11, 10, 0, 6.283); ctx.fill();
+    ctx.textAlign = "left"; ctx.font = `${mine ? 800 : 700} 36px system-ui, Segoe UI, sans-serif`; ctx.fillStyle = mine ? "#f2c94c" : "#e9ecf2";
+    ctx.fillText(p.name + (p.is_leader ? " 👑" : ""), 120, y);
+    ctx.textAlign = "right"; ctx.font = "600 28px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#e9ecf2";
+    ctx.fillText(`${dmg}% do dano`, W - 84, y);
+    ctx.fillStyle = "#232836"; rr(ctx, 84, y + 18, W - 168, 14, 7); ctx.fill();
+    ctx.fillStyle = col; rr(ctx, 84, y + 18, Math.max(14, (W - 168) * dmg / 100), 14, 7); ctx.fill();
+    if (mine) { ctx.strokeStyle = "#f2c94c"; ctx.lineWidth = 2; rr(ctx, 84, y + 18, Math.max(14, (W - 168) * dmg / 100), 14, 7); ctx.stroke(); }
+    ctx.textAlign = "left"; ctx.font = "500 24px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+    ctx.fillText(`cura ${heal}% · balance ${kk(p.balance)} · ${S.voc[nk(p.name)] || ""}`, 84, y + 66);
+  });
+  if (h.players.length > 5) { ctx.fillStyle = "#98a1b3"; ctx.font = "500 24px system-ui, Segoe UI, sans-serif"; ctx.fillText(`+${h.players.length - 5} jogadores`, 84, 650 + 5 * 116 - 20); }
+  drawFooter(ctx, W, H);
+}
+function drawSoloCard(ctx, W, H, s) {
+  drawBase(ctx, W, H, "HUNT SESSION", `${new Date(s.started_at).toLocaleDateString("pt-BR")} · ${dur(s.duration_seconds)}`);
+  const xph = s.duration_seconds ? Math.round(s.xp * 3600 / s.duration_seconds) : 0;
+  drawHero(ctx, W, "LUCRO LÍQUIDO", `${s.net_profit >= 0 ? "+" : "−"}${fmt(Math.abs(s.net_profit))} gp`, s.net_profit >= 0,
+           `${S.nick}${s.place ? " · " + s.place.name : ""}`);
+  const stats = [["XP", kk(s.xp)], ["XP/h", kk(xph)], ["Damage/h", kk(s.damage_h)], ["Healing/h", kk(s.healing_h)]];
+  const bw = (W - 168 - 24) / 2;
+  stats.forEach(([k, v], i) => {
+    const x = 84 + (i % 2) * (bw + 24), y = 570 + Math.floor(i / 2) * 150;
+    ctx.fillStyle = "#1d212d"; rr(ctx, x, y, bw, 126, 22); ctx.fill();
+    ctx.strokeStyle = "#2a2f3d"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.textAlign = "left"; ctx.font = "600 24px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3"; ctx.fillText(k, x + 28, y + 46);
+    ctx.font = "800 48px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = i < 2 ? "#f2c94c" : "#e9ecf2"; ctx.fillText(v, x + 28, y + 102);
+  });
+  const top = (s.loot || []).filter((i) => i.value > 0).slice(0, 4);
+  let y = 900;
+  if (top.length) {
+    ctx.font = "600 24px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "4px";
+    ctx.fillText("LOOT QUE MAIS RENDEU", 84, y);
+    if ("letterSpacing" in ctx) ctx.letterSpacing = "0px";
+    top.forEach((it, i) => {
+      const yy = y + 56 + i * 54, name = (S.prices[it.key] || {}).name || it.key;
+      ctx.textAlign = "left"; ctx.font = "600 30px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#e9ecf2";
+      ctx.fillText(`${fmt(it.count)}x ${name}`, 84, yy);
+      ctx.textAlign = "right"; ctx.fillStyle = "#f2c94c"; ctx.fillText(kk(it.value) + " gp", W - 84, yy);
+    });
+    y += 56 + top.length * 54;
+  }
+  if (s.kills && s.kills.length) {
+    ctx.textAlign = "left"; ctx.font = "500 26px system-ui, Segoe UI, sans-serif"; ctx.fillStyle = "#98a1b3";
+    const txt = "Mais mortos: " + s.kills.slice(0, 3).map((k) => `${fmt(k.count)}x ${k.key}`).join(" · ");
+    fitFont(ctx, txt, 500, 26, W - 168); ctx.fillText(txt, 84, Math.min(y + 30, H - 140));
+  }
+  drawFooter(ctx, W, H);
+}
+async function openShare(id) {
+  const { kind, obj } = SHARE.get(id) || {};
+  if (!kind) return;
+  openModal(`<h3>🖼️ Card para compartilhar</h3><canvas id="shareCanvas" width="1080" height="1350" aria-label="Prévia do card"></canvas>
+    <div class="actions" id="shareActions"></div><div class="hint" id="shareMsg"></div>`);
+  if (kind === "hunt") await ensureVocations(obj.players.map((p) => p.name));
+  try { await document.fonts.load("800 64px Cinzel"); } catch {}
+  const c = $("#shareCanvas");
+  if (!c) return;
+  const ctx = c.getContext("2d");
+  (kind === "hunt" ? drawHuntCard : drawSoloCard)(ctx, c.width, c.height, obj);
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  const file = new File([blob], `4rt3mi5-${kind === "hunt" ? "party" : "sessao"}-${obj.started_at.slice(0, 10)}.png`, { type: "image/png" });
+  const acts = [];
+  if (navigator.canShare && navigator.canShare({ files: [file] })) acts.push(`<button class="btn" data-share-act="share">Compartilhar</button>`);
+  if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) acts.push(`<button class="btn2" data-share-act="copy">Copiar imagem</button>`);
+  acts.push(`<button class="btn2" data-share-act="save">Baixar PNG</button>`, `<button class="btn2" data-close-modal>Fechar</button>`);
+  $("#shareActions").innerHTML = acts.join("");
+  $("#shareActions").onclick = async (e) => {
+    const b = e.target.closest("[data-share-act]");
+    if (!b) return;
+    const msg = $("#shareMsg");
+    try {
+      if (b.dataset.shareAct === "share") await navigator.share({ files: [file], title: "4rt3mi5" });
+      if (b.dataset.shareAct === "copy") { await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]); msg.textContent = "Imagem copiada. Cole no Discord ou no WhatsApp."; }
+      if (b.dataset.shareAct === "save") {
+        const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: file.name });
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+        msg.textContent = "Imagem salva na pasta de downloads.";
+      }
+    } catch (err) { if (err && err.name !== "AbortError") msg.textContent = "Não deu certo por aqui. Tente outra opção."; }
+  };
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-share]"); if (b) { e.preventDefault(); openShare(b.dataset.share); } });
+
+/* ---------- janelas ---------- */
+function openModal(html) { $("#modalBox").innerHTML = html; $("#modal").classList.remove("hidden"); }
+function closeModal() { $("#modal").classList.add("hidden"); $("#modalBox").innerHTML = ""; }
+$("#modal").addEventListener("click", (e) => { if (e.target.id === "modal" || e.target.closest("[data-close-modal]")) closeModal(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!$("#modal").classList.contains("hidden")) closeModal();
+  $("#sheet").classList.add("hidden");
+});
+
+/* ---------- colar direto (Ctrl+V em qualquer tela, ou o botão 📋) ---------- */
+function detectPaste(t) {
+  if (!t || t.length > 200000 || !/Session data:/i.test(t)) return null;
+  if (/Loot Type:/i.test(t)) return "party";
+  if (/XP Gain:/i.test(t)) return "solo";
+  return null;
+}
+function pasteSummary(t) {
+  const s = (t.match(/Session:\s*([\d:]+h?)/i) || [])[1], d = (t.match(/From\s+(\d{4}-\d{2}-\d{2})/i) || [])[1];
+  return [s && "Sessão de " + s, d && "em " + dayLabel(d)].filter(Boolean).join(" ") || "Texto do analyser";
+}
+async function offerPaste(kind, t) {
+  S.pasteText = t;
+  const sheet = $("#sheet");
+  if (kind === "party") {
+    sheet.innerHTML = `<b>📋 Party Hunt Analyser detectado</b>
+      <div class="muted" style="font-size:14px; margin-top:2px">${esc(pasteSummary(t))}. Enviar para o Lootsplit em nome de ${esc(S.nick)}?</div>
+      <div class="actions"><button class="btn" data-paste-go="party">Enviar agora</button><button class="btn2" data-paste-cancel>Cancelar</button></div>`;
+  } else {
+    await ensurePlaces();
+    const last = +(await kv.get("last_place")) || 0, place = (S.places || []).find((p) => p.id === last);
+    sheet.innerHTML = `<b>📋 Hunt Analyser (sessão solo) detectado</b>
+      <div class="muted" style="font-size:14px; margin-top:2px">${esc(pasteSummary(t))}.${place ? ` Hunt: <b style="color:var(--text)">${esc(place.name)}</b> (a última que você usou).` : " Escolha em qual hunt foi."}</div>
+      <div class="actions">${place ? `<button class="btn" data-paste-go="solo">Enviar agora</button><button class="btn2" data-paste-go="solo-pick">Outra hunt</button>`
+                                   : `<button class="btn" data-paste-go="solo-pick">Escolher a hunt</button>`}
+        <button class="btn2" data-paste-cancel>Cancelar</button></div>`;
+  }
+  sheet.classList.remove("hidden");
+}
+document.addEventListener("paste", (e) => {
+  if ($("#app").classList.contains("hidden")) return;
+  if (e.target && e.target.closest && e.target.closest("input, textarea, [contenteditable]")) return;  // colando numa caixa: normal
+  const t = (e.clipboardData || window.clipboardData).getData("text");
+  const kind = detectPaste(t);
+  if (!kind) return;
+  e.preventDefault();
+  offerPaste(kind, t);
+});
+document.addEventListener("click", async (e) => {
+  if (e.target.closest("[data-paste-cancel]")) { $("#sheet").classList.add("hidden"); return; }
+  const g = e.target.closest("[data-paste-go]");
+  if (g) {
+    $("#sheet").classList.add("hidden");
+    const t = S.pasteText;
+    if (g.dataset.pasteGo === "party") { go("loot"); $("#lootText").value = t; $("#lootBtn").click(); return; }
+    go("stack");
+    await initStackPicker();
+    $("#stackText").value = t;
+    if (g.dataset.pasteGo === "solo") $("#stackBtn").click();
+    else { const inp = $("#stackPlace .pk-in"); inp.value = ""; inp.focus(); }
+    return;
+  }
+  const p = e.target.closest("[data-paste-into]");
+  if (p) {
+    const box = document.getElementById(p.dataset.pasteInto);
+    const err = p.dataset.pasteInto === "lootText" ? $("#lootErr") : $("#stackErr");
+    try {
+      const t = await navigator.clipboard.readText();
+      if (!t.trim()) { err.textContent = "A área de transferência está vazia. Copie o texto no Tibia primeiro."; return; }
+      box.value = t; err.textContent = "";
+    } catch { err.textContent = "O navegador não deixou ler a área de transferência. Toque e segure na caixa e escolha Colar."; box.focus(); }
+  }
+});
+
+/* ---------- ícone na tela inicial (só com "Sim" da pessoa) ---------- */
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); deferredInstall = e; updateInstallItem(); });
+window.addEventListener("appinstalled", () => { deferredInstall = null; kv.set("install_state", "done"); updateInstallItem(); });
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const canInstall = () => !S.desktop && !isStandalone() && (!!deferredInstall || isIOS());
+function updateInstallItem() { $("#installItem").classList.toggle("hidden", !canInstall()); }
+async function offerInstall() {
+  updateInstallItem();
+  if (!canInstall() || $("#app").classList.contains("hidden") || !$("#modal").classList.contains("hidden")) return;
+  if ((await kv.get("install_state")) === "done") return;
+  if (Date.now() - (+(await kv.get("install_later")) || 0) < 30 * 864e5) return;  // "agora não": pergunta de novo em 30 dias
+  showInstallDialog();
+}
+function showInstallDialog() {
+  openModal(`<h3>📲 Adicionar o 4rt3mi5 à tela inicial?</h3>
+    <p class="muted" style="margin:0 0 4px">Se você tocar em <b style="color:var(--text)">Sim, adicionar</b>:</p>
+    <ul>
+      <li>Um ícone do 4rt3mi5 (o anel dourado com a flecha) aparece na tela inicial do celular, ou no menu Iniciar do PC.</li>
+      <li>Tocando no ícone, o 4rt3mi5 abre em tela cheia, sem a barra do navegador.</li>
+      <li>É só um atalho para este site: nada mais é instalado, nenhuma permissão é pedida e você remove quando quiser, como qualquer ícone.</li>
+      ${isIOS() ? "<li>No iPhone e no iPad quem cria o ícone é o Safari: vamos mostrar os 2 toques necessários.</li>"
+                : "<li>O navegador ainda mostra uma confirmação dele antes de criar o ícone.</li>"}
+    </ul>
+    <p class="muted" style="font-size:13px; margin:6px 0 0">Tocando em "Agora não", nada é criado. Dá para fazer depois em ☰ → 📲 Adicionar à tela inicial.</p>
+    <div class="actions"><button class="btn" id="instYes">Sim, adicionar</button><button class="btn2" id="instNo">Agora não</button></div>`);
+  $("#instYes").addEventListener("click", async () => {
+    if (deferredInstall) {
+      closeModal();
+      deferredInstall.prompt();
+      const r = await deferredInstall.userChoice.catch(() => null);
+      deferredInstall = null;
+      if (r && r.outcome === "accepted") kv.set("install_state", "done");
+      updateInstallItem();
+    } else if (isIOS()) {
+      $("#modalBox").innerHTML = `<h3>Adicionar no iPhone ou iPad</h3>
+        <ol class="steps" style="color:var(--text); font-size:15px"><li>Toque em <b>Compartilhar</b> (o quadrado com a seta ↑) na barra do Safari.</li>
+        <li>Escolha <b>Adicionar à Tela de Início</b> e confirme.</li></ol>
+        <div class="actions"><button class="btn2" data-close-modal>Entendi</button></div>`;
+    }
+  });
+  $("#instNo").addEventListener("click", () => { kv.set("install_later", String(Date.now())); closeModal(); });
+}
+$("#installItem").addEventListener("click", () => { closeDrawer(); showInstallDialog(); });
+
 boot();
 </script>
 </body>

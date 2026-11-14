@@ -20,8 +20,29 @@ app desktop abre a mesma página numa janela própria.
    (`4RT3MI5-XXXXXX`). A pessoa cola no comentário do personagem no tibia.com; o app confere pelo
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
-4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Meus personagens**, trocar personagem, sair.
+4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Hunts**, **Conquistas**, **Meus personagens**,
+   **Novidades**, trocar personagem, sair.
 5. Sem conexão: tela de abertura com o aviso, tentando de novo a cada 10 s.
+6. **Colar direto:** com o texto do analyser copiado, Ctrl+V em qualquer tela abre o aviso "Enviar agora".
+
+## Conquistas e sequência de dias (0.10.0)
+
+- 13 conquistas por personagem (`artemis/core/achievements.py`), calculadas das sessões e party hunts.
+- **Sequência:** dias seguidos (horário de Brasília) em que o código de acesso enviou alguma hunt ou sessão.
+  A cada **30 dias seguidos** o código ganha **+7 dias** de validade, uma vez por bloco de 30 dias
+  (tabela `key_rewards`). O app explica a regra no Início e em 🏆 Conquistas.
+
+## Música
+
+As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o
+projeto. Anthem na abertura, Special Boss Lairs em Hunts, "King Tibianus, Queen Eloise, Emperor Kruzak" no
+Stacker. Volume baixo, sem repetir, e botão de som em todas as telas (o app lembra volume/mudo). Para tirar
+a música, apague as faixas de `TRACKS` em `index.html`.
+
+## Ícone na tela inicial
+
+`manifest.webmanifest` + `icon-*.png` (gerados por `tools/make_icons.py`). O site só pede ao navegador para
+criar o ícone depois que a pessoa toca em **Sim, adicionar** no aviso que explica o que vai acontecer.
 
 ## Regras de acesso
 
@@ -59,7 +80,8 @@ docker compose exec server python -m artemis.server keys revoke ART-XXXX-XXXX  #
 Sem Docker: `start_server.bat` e `admin.bat create "Nome" | list | renew | reset | revoke`.
 
 Banco: `data/artemis.db` (abre no DB Browser for SQLite). Tabelas: `access_keys`, `key_chars`,
-`devices`, `verifications`, `hunts` + `hunt_players`, `solo_sessions`.
+`devices`, `verifications`, `hunts` + `hunt_players`, `solo_sessions`, `key_rewards` (recompensas de
+sequência), `char_info` (vocação para colorir a PT), entre outras.
 
 ## Desenvolvimento
 
@@ -72,7 +94,11 @@ python -m venv .venv
 .venv\Scripts\python -m unittest discover -s tests -t .
 .venv\Scripts\python -m artemis.server      # servidor + site em http://localhost:8000
 .venv\Scripts\python run_desktop.py         # app desktop
+.venv\Scripts\python tools\demo_server.py   # DEMO com dados de teste em http://localhost:8765
 ```
+
+O servidor de demonstração usa um banco próprio (`demo-data/`, fora do Git), não consulta o TibiaData e
+entra com o código `ART-DEMO-TEST` + nick `Atx Buubo`. Serve para conferir telas e gravar vídeos.
 
 ## Segurança dos dados sensíveis
 
@@ -90,7 +116,7 @@ python -m venv .venv
 - **Anti-abuso (0.9.0):** limite por IP (240 leituras/min, 40 alterações/min, 30 envios/10 min),
   corpo máximo de 512 KB, campos validados (tamanho, formato, faixas de valores), no máximo 30 hunts
   criadas por código, nomes impossíveis nem consultam o TibiaData, CORS só para o app local,
-  CSP no site (só carrega imagens da TibiaWiki/tibiamaps e fontes do Google), container Docker
+  CSP no site (só carrega imagens da TibiaWiki/tibiamaps, fontes do Google e áudio de `static.tibia.com`), container Docker
   sem root e sem cabeçalho de versão do servidor. Um teste garante que o código de acesso de um
   usuário nunca aparece nas respostas vistas por outro.
 - **Atualizações do app:** só aceita manifesto e instalador das Releases oficiais

@@ -20,6 +20,7 @@ import sys
 FORBIDDEN_FILES = [
     ".env", "*/.env", ".env.*", "*.db", "*.db-wal", "*.db-shm", "*.sqlite", "*.sqlite3",
     "server.json", "*/server.json", "data/*", "*.pem", "*.key", "*.pfx", "*.p12", "id_rsa*", "*.log",
+    ".claude/*",   # subagentes/skills locais: descrevem as defesas do servidor
 ]
 ALLOWED_FILES = [".env.example"]
 
