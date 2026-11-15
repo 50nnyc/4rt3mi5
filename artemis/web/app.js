@@ -173,6 +173,10 @@ async function paintDownload(el) {
     <div class="hint">O app no seu PC, com a mesma conta do site e atualização automática.</div>
     <a class="btn dlBtn" href="${esc(d.available ? d.url : d.page)}" ${d.available ? "" : `target="_blank" rel="noopener"`}>⬇ Baixar o app${d.available ? ` (v${esc(d.version)})` : ""}</a>
     <div class="dlMeta">${vt}<a href="${esc(d.page)}" target="_blank" rel="noopener">📦 Página oficial no GitHub</a></div>
+    <details class="dlHelp"><summary>Apareceu "O Windows protegeu o computador"?</summary>
+      <p>É o aviso que o Windows mostra para programas novos, ainda com poucos downloads. Toque em <b>Mais informações</b>
+        e depois em <b>Executar assim mesmo</b>. Se quiser conferir antes, o link do VirusTotal acima mostra a análise
+        do arquivo por dezenas de antivírus.</p></details>
   </div>`;
 }
 
