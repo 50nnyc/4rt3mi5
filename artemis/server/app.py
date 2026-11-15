@@ -379,6 +379,11 @@ def _parse_manifest(raw: bytes) -> dict | None:
     expected = f"{RELEASES_REPO}/releases/download/v{version}/4rt3mi5-Setup-{version}.exe"
     if not _VERSION_RX.fullmatch(version) or url != expected or not _SHA_RX.fullmatch(sha):
         return None
+    # 0.17.1: a Release também traz o launcher congelado (sempre os mesmos bytes, então o SmartScreen não reclama).
+    # Quando o manifesto diz o SHA-256 dele, o botão do site entrega o launcher no lugar do instalador da versão.
+    lsha = str(m.get("launcher_sha256", "")).lower()
+    if _SHA_RX.fullmatch(lsha):
+        url, sha = f"{RELEASES_REPO}/releases/download/v{version}/4rt3mi5-Launcher.exe", lsha
     return {"version": version, "url": url, "sha256": sha, "virustotal": f"https://www.virustotal.com/gui/file/{sha}"}
 
 

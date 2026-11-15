@@ -1,0 +1,4 @@
+# O launcher é congelado: o Git nunca pode mexer nos bytes dele (o SHA-256 está em launcher/SHA256.txt).
+*.exe binary
+*.png binary
+*.ico binary

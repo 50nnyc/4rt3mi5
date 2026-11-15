@@ -30,11 +30,19 @@ if ($LASTEXITCODE -ne 0) { throw "Inno Setup falhou" }
 $setup = "dist\4rt3mi5-Setup-$version.exe"
 $sha = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
 if (-not $DownloadBaseUrl) { $DownloadBaseUrl = "https://github.com/50nnyc/4rt3mi5/releases/download/v$version" }
+# Launcher congelado (launcher\4rt3mi5-Launcher.exe): vai junto em toda Release, sempre com os mesmos bytes.
+# Se alguém recompilar sem querer, o hash muda e a reputação do SmartScreen se perde: aqui isso trava o build.
+$launcher = "launcher\4rt3mi5-Launcher.exe"
+$launcherSha = (Get-FileHash $launcher -Algorithm SHA256).Hash.ToLower()
+$esperado = ((Get-Content launcher\SHA256.txt -TotalCount 1) -split '\s+')[0].ToLower()
+if ($launcherSha -ne $esperado) { throw "launcher\4rt3mi5-Launcher.exe mudou ($launcherSha), mas launcher\SHA256.txt diz $esperado." }
+Copy-Item $launcher dist\4rt3mi5-Launcher.exe -Force
 $manifest = [ordered]@{
-    version = $version
-    url     = "$DownloadBaseUrl/4rt3mi5-Setup-$version.exe"
-    sha256  = $sha
-    notes   = ""
+    version         = $version
+    url             = "$DownloadBaseUrl/4rt3mi5-Setup-$version.exe"
+    sha256          = $sha
+    launcher_sha256 = $launcherSha
+    notes           = ""
 }
 $manifest | ConvertTo-Json | Out-File -Encoding utf8 dist\latest.json
 Write-Host "Pronto: $setup"

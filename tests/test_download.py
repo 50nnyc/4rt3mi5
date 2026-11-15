@@ -32,6 +32,23 @@ class ManifestTests(unittest.TestCase):
                     "https://github.com/50nnyc/4rt3mi5/releases/download/v0.16.0/4rt3mi5-Setup-0.17.0.exe"):
             self.assertIsNone(server._parse_manifest(raw({**GOOD, "url": url})), url)
 
+    def test_launcher_congelado_tem_preferencia(self):
+        lsha = "b" * 64
+        info = server._parse_manifest(raw({**GOOD, "launcher_sha256": lsha}))
+        self.assertEqual(info["url"], "https://github.com/50nnyc/4rt3mi5/releases/download/v0.17.0/4rt3mi5-Launcher.exe")
+        self.assertEqual(info["version"], "0.17.0")
+        self.assertEqual(info["virustotal"], f"https://www.virustotal.com/gui/file/{lsha}")
+        # SHA do launcher inválido: continua com o instalador da versão
+        self.assertEqual(server._parse_manifest(raw({**GOOD, "launcher_sha256": "x"}))["url"], GOOD["url"])
+
+    def test_launcher_do_repositorio_bate_com_o_hash_registrado(self):
+        import hashlib
+        from pathlib import Path
+        pasta = Path(__file__).resolve().parent.parent / "launcher"
+        esperado = (pasta / "SHA256.txt").read_text(encoding="utf-8").split()[0]
+        self.assertEqual(hashlib.sha256((pasta / "4rt3mi5-Launcher.exe").read_bytes()).hexdigest(), esperado,
+                         "o launcher congelado mudou: a reputação do SmartScreen se perde")
+
     def test_recusa_sha_ou_versao_invalidos(self):
         self.assertIsNone(server._parse_manifest(raw({**GOOD, "sha256": "xyz"})))
         self.assertIsNone(server._parse_manifest(raw({**GOOD, "version": "0.17"})))
