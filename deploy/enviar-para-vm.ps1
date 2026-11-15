@@ -75,7 +75,9 @@ chmod 600 .env 2>/dev/null || true
 if ! command -v docker >/dev/null 2>&1; then echo 'FALTA_DOCKER'; exit 0; fi
 # Sem banco/.env ainda (antes da migração): não liga, senão nasceria um banco vazio com outra senha
 if [ ! -f data/artemis.db ] || [ ! -f .env ]; then echo 'SEM_BANCO'; exit 0; fi
-docker compose --profile public up -d --build
+PROF="--profile public"
+grep -qE '^\s*SITE_DOMAIN\s*=\s*\S' .env && PROF="`$PROF --profile dominio"
+docker compose `$PROF up -d --build
 sleep 8
 curl -fsS -m 10 http://localhost:8000/api/health >/dev/null && echo 'SERVIDOR_OK' || echo 'SERVIDOR_AINDA_SUBINDO'
 "@

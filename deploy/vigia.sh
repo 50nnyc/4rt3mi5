@@ -16,29 +16,38 @@ cd "$ROOT" || exit 1
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S')  $*" >> "$LOG"; }
 ok_url() { curl -fsS -m 15 -H 'ngrok-skip-browser-warning: 1' -o /dev/null "$1"; }
 
-domain=""
-if [ -f .env ]; then
-  domain=$(grep -E '^\s*NGROK_DOMAIN\s*=' .env | head -n1 | cut -d= -f2- | tr -d " \"'\r" | sed -E 's#^https?://##; s#/+$##')
-fi
+envval() { [ -f .env ] && grep -E "^\s*$1\s*=" .env | head -n1 | cut -d= -f2- | tr -d " \"'\r" | sed -E 's#^https?://##; s#/+$##'; }
+domain=$(envval NGROK_DOMAIN)
+site=$(envval SITE_DOMAIN)
+PROF=(--profile public); [ -n "$site" ] && PROF+=(--profile dominio)
 local_url="http://localhost:8000/api/health"
 public_url=""
 [ -n "$domain" ] && public_url="https://$domain/api/health"
+site_url=""
+[ -n "$site" ] && site_url="https://$site/api/health"
 
 local=false; public=null; fix=null
 ok_url "$local_url" && local=true
 if [ -n "$public_url" ]; then ok_url "$public_url" && public=true || public=false; fi
+# Domínio próprio (Caddy): se o servidor responde mas o domínio não, reinicia o Caddy
+if [ "$local" = true ] && [ -n "$site_url" ] && ! ok_url "$site_url"; then
+  log "Domínio $site não respondeu: reiniciando o Caddy."
+  docker compose "${PROF[@]}" up -d caddy >/dev/null 2>&1; docker compose "${PROF[@]}" restart caddy >/dev/null 2>&1
+  sleep 15
+  if ok_url "$site_url"; then log "Domínio voltou depois de reiniciar o Caddy."; else public=false; fi
+fi
 
 if [ "$local" = false ]; then
   fix='"servidor reiniciado"'
   log "Servidor local não respondeu: subindo os containers."
-  docker compose --profile public up -d >/dev/null 2>&1; log "docker compose up -d -> código $?"
+  docker compose "${PROF[@]}" up -d >/dev/null 2>&1; log "docker compose up -d -> código $?"
   sleep 45
   ok_url "$local_url" && local=true
   if [ -n "$public_url" ]; then ok_url "$public_url" && public=true || public=false; fi
 elif [ "$public" = false ]; then
   fix='"ngrok reiniciado"'
   log "Site pela internet não respondeu: reiniciando o ngrok."
-  docker compose --profile public restart ngrok >/dev/null 2>&1; log "docker compose restart ngrok -> código $?"
+  docker compose "${PROF[@]}" restart ngrok >/dev/null 2>&1; log "docker compose restart ngrok -> código $?"
   sleep 25
   ok_url "$public_url" && public=true || public=false
 fi

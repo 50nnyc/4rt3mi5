@@ -284,6 +284,15 @@ Free"), com o **mesmo domínio do ngrok**. Assim nada muda para os apps instalad
 | `deploy/enviar-para-vm.ps1` | este PC | envia o código e religa na VM; `-Migrar` leva também `data\` e `.env` (uma vez) |
 | `deploy/painel-vm.bat` | este PC | abre o painel admin da VM por um túnel SSH (o bloqueio pela internet continua) |
 | `deploy/puxar-backup.ps1` / `.bat` | este PC | copia o backup diário da VM para `backup-vm\` (agendado todo dia) |
+| `deploy/manter-ativa.sh` | VM (cron, 10 min) | evita a Oracle recolher a VM grátis por ociosidade |
+| `deploy/Caddyfile` + `abrir-portas-web.sh` | VM | HTTPS automático no domínio `SITE_DOMAIN` (perfil `dominio` do compose) |
+
+**Endereço do site:** https://artemis-hunt.duckdns.org (DuckDNS grátis + Caddy com Let's Encrypt, sem a página de
+aviso do ngrok). O domínio do ngrok continua funcionando para os apps já instalados.
+
+**Download do app:** o site mostra o botão "Baixar o app" (só no navegador, nunca dentro do app) e
+`/download` sempre leva ao instalador da última Release do GitHub. O link do VirusTotal usa o SHA-256 do
+`latest.json`: depois de cada versão, envie o `.exe` em virustotal.com uma vez para o relatório existir.
 
 Na migração, a pasta `data\` vai inteira: o `server.json` tem o "pepper" das senhas, e sem ele nenhuma conta entra.
 

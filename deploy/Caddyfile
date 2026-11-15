@@ -1,0 +1,8 @@
+# Caddy: HTTPS automático (Let's Encrypt) no domínio do .env (SITE_DOMAIN, ex.: artemis-hunt.duckdns.org).
+# Só roda com o perfil "dominio" do docker-compose (ligado sozinho quando SITE_DOMAIN está no .env).
+# O Caddy sempre troca o X-Forwarded-For pelo IP real de quem acessou (não confia no que vem de fora),
+# e esse cabeçalho faz o servidor bloquear o painel admin por aqui, como já acontece pelo ngrok.
+{$SITE_DOMAIN} {
+	encode gzip
+	reverse_proxy server:8000
+}

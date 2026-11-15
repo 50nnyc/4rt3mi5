@@ -125,6 +125,21 @@ deve mostrar picos a cada 10 minutos.
 - Por segurança, crie um alerta: **Billing → Budgets → Create budget** com valor de R$ 5 e alerta por e-mail.
   Se algum dia aparecer cobrança, você fica sabendo na hora.
 
+## 10. Domínio grátis com HTTPS (DuckDNS)
+Sem a página de aviso do ngrok e com um endereço mais fácil: **https://artemis-hunt.duckdns.org**.
+1. Em **duckdns.org**, entre (GitHub ou Google), crie o subdomínio e coloque o **IP público da VM** em "current ip".
+2. Na Oracle: VM → **Networking** → clique na *subnet* → *Security* → a **Default Security List** → **Add Ingress
+   Rules**. Crie duas regras com *Source CIDR* `0.0.0.0/0`, *IP Protocol* TCP, *Destination port* `80` e depois `443`.
+3. Na VM, libere as mesmas portas no firewall do Ubuntu: `bash ~/4rt3mi5/deploy/abrir-portas-web.sh`.
+4. Coloque `SITE_DOMAIN=artemis-hunt.duckdns.org` no `.env` da VM e do PC. A partir daí os scripts ligam o
+   **Caddy** (`docker compose --profile dominio`), que pede e renova o certificado HTTPS sozinho.
+
+O domínio do ngrok continua funcionando junto: os apps já instalados não precisam mudar nada. O painel admin
+continua bloqueado pelo domínio (o Caddy manda cabeçalhos de proxy, como o ngrok).
+
+> Só ponha o `SITE_DOMAIN` no `.env` da VM **depois** dos passos 1 a 3. Sem DNS e portas prontos, o certificado
+> falha, e o Let's Encrypt limita as tentativas que falham.
+
 ---
 
 ## Dia a dia

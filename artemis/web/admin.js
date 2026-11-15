@@ -1,5 +1,5 @@
 /* 4rt3mi5 — script de admin.html (fica fora do HTML para o CSP bloquear qualquer script embutido). */
-const SITE = "https://quiver-procedure-resolved.ngrok-free.dev";
+const SITE = "https://artemis-hunt.duckdns.org";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const day = (iso) => new Date(iso).toLocaleDateString("pt-BR");

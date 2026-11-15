@@ -35,6 +35,12 @@ class CspTests(unittest.TestCase):
     def test_connect_src_is_limited(self):
         connect = re.search(r"connect-src ([^;]+);", self.csp((WEB / "index.html").read_text(encoding="utf-8"))).group(1)
         self.assertNotIn(" https: ", f" {connect} ")  # nada de "qualquer site https"
+        self.assertNotIn("*.duckdns.org", connect)    # só o domínio exato, nunca qualquer subdomínio do DuckDNS
+
+    def test_desktop_default_server_is_allowed_by_csp(self):
+        from artemis.desktop.config import DEFAULT_SERVER_URL
+        connect = re.search(r"connect-src ([^;]+);", self.csp((WEB / "index.html").read_text(encoding="utf-8"))).group(1)
+        self.assertIn(DEFAULT_SERVER_URL, connect.split())  # senão o app desktop novo não conversa com o servidor
 
     def test_scripts_served(self):
         r = self.client.get("/app.js")

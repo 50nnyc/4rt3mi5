@@ -30,3 +30,27 @@ services:
     command: ["http", "server:8000", "--url=${NGROK_DOMAIN:?Preencha NGROK_DOMAIN no arquivo .env}"]
     ports:
       - "127.0.0.1:4040:4040"   # painel do ngrok (mostra as requisições inteiras): só neste PC
+
+  # Domínio próprio com HTTPS automático (ex.: DuckDNS grátis), sem a página de aviso do ngrok.
+  # Liga com --profile dominio (os scripts da pasta deploy/ fazem isso sozinhos quando SITE_DOMAIN está no .env).
+  # Precisa das portas 80 e 443 abertas na VM (deploy/GUIA-VM.md). O ngrok continua funcionando junto.
+  caddy:
+    image: caddy:2
+    container_name: artemis-caddy
+    profiles: ["dominio"]
+    restart: unless-stopped
+    depends_on:
+      - server
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-}   # vazio fora do perfil "dominio" (assim o resto do arquivo não exige)
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data       # certificados do HTTPS (não precisa de backup: o Caddy pede de novo)
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

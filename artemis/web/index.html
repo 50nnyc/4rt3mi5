@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d12">
 <!-- Segurança: só carrega o que o app precisa (bloqueia scripts e envios para outros servidores) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; media-src https://static.tibia.com; connect-src 'self' https://api.tibiadata.com https://*.ngrok-free.dev https://*.ngrok-free.app https://*.ngrok.app https://*.ngrok.dev http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; media-src https://static.tibia.com; connect-src 'self' https://api.tibiadata.com https://artemis-hunt.duckdns.org https://*.ngrok-free.dev https://*.ngrok-free.app https://*.ngrok.app https://*.ngrok.dev http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>4rt3mi5</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -84,6 +84,13 @@
   .loginBtns, .row2 { display: flex; gap: 10px; margin-top: 12px; }
   .loginBtns > button, .row2 > button { flex: 1; margin-top: 0; }
   .loginBtns .on { outline: 2px solid var(--gold); }
+  /* download do app para Windows (só aparece no site, nunca dentro do app) */
+  .dlCard { text-align: center; }
+  a.btn.dlBtn { display: block; box-sizing: border-box; border-radius: 10px; text-decoration: none; }
+  .dlMeta { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 8px; font-size: 13px; }
+  .dlMeta a { color: var(--accent); text-decoration: none; }
+  .dlMeta a:hover { text-decoration: underline; }
+  .gate .dlCard { margin-top: 22px; }
   .card.flash { animation: flash 1.2s ease-out; }
   @keyframes flash { 0% { box-shadow: 0 0 0 3px var(--gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
   .card.store { position: relative; padding-top: 22px; border-color: rgba(76,209,138,.4); }
@@ -425,6 +432,7 @@
       <div class="err" id="registerErr"></div>
     </div>
     <div class="hint hidden" id="serverLine"></div>
+    <div id="dlLogin"></div>
   </div>
 </section>
 

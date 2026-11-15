@@ -355,6 +355,69 @@ def health():
     return {"ok": True, "app": APP_NAME, "version": __version__}
 
 
+# ------------------------------------------------------------------ download do instalador (botão do site)
+# O instalador fica nas Releases públicas do GitHub. O latest.json da última versão diz o endereço exato e o
+# SHA-256 do arquivo; com o SHA-256 o site mostra o link do relatório do VirusTotal daquela versão.
+RELEASES_REPO = "https://github.com/50nnyc/4rt3mi5"
+RELEASE_MANIFEST_URL = f"{RELEASES_REPO}/releases/latest/download/latest.json"
+RELEASES_PAGE = f"{RELEASES_REPO}/releases/latest"
+DL_CACHE_OK, DL_CACHE_FAIL = 600, 60   # segundos: guarda a resposta do GitHub (e um erro por pouco tempo)
+_dl_cache: dict = {"at": -1e9, "ttl": 0, "info": None}
+_VERSION_RX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}")
+_SHA_RX = re.compile(r"[0-9a-f]{64}")
+
+
+def _parse_manifest(raw: bytes) -> dict | None:
+    """Valida o latest.json: só aceita instalador do próprio repositório, com versão e SHA-256 no formato certo."""
+    try:
+        m = json.loads(raw.decode("utf-8-sig"))  # o build.ps1 grava com BOM
+    except (UnicodeDecodeError, ValueError):
+        return None
+    if not isinstance(m, dict):
+        return None
+    version, url, sha = str(m.get("version", "")), str(m.get("url", "")), str(m.get("sha256", "")).lower()
+    expected = f"{RELEASES_REPO}/releases/download/v{version}/4rt3mi5-Setup-{version}.exe"
+    if not _VERSION_RX.fullmatch(version) or url != expected or not _SHA_RX.fullmatch(sha):
+        return None
+    return {"version": version, "url": url, "sha256": sha, "virustotal": f"https://www.virustotal.com/gui/file/{sha}"}
+
+
+def _fetch_manifest() -> dict | None:
+    import urllib.request
+    try:
+        req = urllib.request.Request(RELEASE_MANIFEST_URL, headers={"User-Agent": "4rt3mi5-server"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            return _parse_manifest(r.read(20_000))
+    except OSError:
+        return None
+
+
+def download_info() -> dict | None:
+    now = time.monotonic()
+    if now - _dl_cache["at"] > _dl_cache["ttl"]:
+        info = _fetch_manifest()
+        _dl_cache.update(at=now, ttl=DL_CACHE_OK if info else DL_CACHE_FAIL, info=info)
+    return _dl_cache["info"]
+
+
+@app.get("/api/download")
+def download_meta():
+    """Versão, link e VirusTotal do instalador para Windows (público; o botão do site usa)."""
+    info = download_info()
+    if not info:
+        return {"available": False, "page": RELEASES_PAGE}
+    return {"available": True, "version": info["version"], "url": "/download", "sha256": info["sha256"],
+            "virustotal": info["virustotal"], "page": RELEASES_PAGE}
+
+
+@app.get("/download", include_in_schema=False)
+def download_redirect():
+    """Endereço curto e fixo do instalador: manda para o arquivo da última versão no GitHub."""
+    info = download_info()
+    return RedirectResponse(info["url"] if info else RELEASES_PAGE, status_code=302,
+                            headers={"Cache-Control": "no-store"})
+
+
 # ------------------------------------------------------------------ imagens da TibiaWiki guardadas no banco
 # O site pede /img/wiki/<Nome>.gif; na primeira vez o servidor busca na TibiaWiki BR e guarda no banco.
 # Depois disso a imagem sai do banco, sem depender da wiki. Se a wiki não responder, o navegador é

@@ -154,9 +154,27 @@ function showLogin(mode = "") {
   $("#resetBox").classList.add("hidden"); $("#forgotBox").innerHTML = "";
   $("#forgotBtn").classList.remove("hidden"); $("#haveResetBtn").classList.add("hidden");
   if (mode) setTimeout(() => $(mode === "login" ? "#loginUser" : "#regUser").focus(), 50);
+  paintDownload($("#dlLogin"));
 }
 $("#showLogin").addEventListener("click", () => showLogin("login"));
 $("#showRegister").addEventListener("click", () => showLogin("register"));
+
+/* ---------- download do app para Windows: só no site (dentro do app desktop não faz sentido) ---------- */
+let dlInfo = null;
+async function paintDownload(el) {
+  if (!el) return;
+  if (S.desktop) { el.innerHTML = ""; return; }
+  if (!dlInfo) dlInfo = await fetch("/api/download").then((r) => r.json()).catch(() => null);
+  const d = dlInfo;
+  if (!d) { el.innerHTML = ""; return; }
+  const vt = d.available ? `<a href="${esc(d.virustotal)}" target="_blank" rel="noopener">🛡️ Verificado no VirusTotal</a>` : "";
+  el.innerHTML = `<div class="card dlCard">
+    <b>💻 4rt3mi5 para Windows</b>
+    <div class="hint">O app no seu PC, com a mesma conta do site e atualização automática.</div>
+    <a class="btn dlBtn" href="${esc(d.available ? d.url : d.page)}" ${d.available ? "" : `target="_blank" rel="noopener"`}>⬇ Baixar o app${d.available ? ` (v${esc(d.version)})` : ""}</a>
+    <div class="dlMeta">${vt}<a href="${esc(d.page)}" target="_blank" rel="noopener">📦 Página oficial no GitHub</a></div>
+  </div>`;
+}
 
 /* 0.17.0: "Esqueceu conta/senha?" → pedido ao adm pelo WhatsApp; o adm manda um código para criar nova senha */
 $("#forgotBtn").addEventListener("click", () => {
@@ -1130,7 +1148,9 @@ async function loadHome() {
                 ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
     <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
     <h2>Todas as hunts (${hunts.length})</h2>
-    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}`;
+    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}
+    <div id="dlHome" style="margin-top:18px"></div>`;
+  paintDownload($("#dlHome"));
   countUp(el);
   if (hunts.length) {
     renderPtRank();
