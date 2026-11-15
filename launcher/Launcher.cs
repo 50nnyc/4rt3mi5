@@ -60,7 +60,7 @@ namespace Artemis
     class LauncherForm : Form
     {
         // ---------------------------------------------------------------- constantes
-        const string LauncherVersion = "1.0";
+        const string LauncherVersion = "1.1";
         const string ManifestUrl = "https://github.com/50nnyc/4rt3mi5/releases/latest/download/latest.json";
         const string TrustedPrefix = "https://github.com/50nnyc/4rt3mi5/releases/";
         static readonly string[] TrustedHosts = { "github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com" };
@@ -243,7 +243,9 @@ namespace Artemis
                 {
                     string loc = resp.Headers["Location"]; resp.Close();
                     if (string.IsNullOrEmpty(loc)) throw new Exception("Redirecionamento sem destino.");
-                    url = new Uri(u, loc).ToString();
+                    // AbsoluteUri mantém o link assinado do GitHub como veio (%2B, %2F, %3A...).
+                    // ToString() decodifica esses caracteres, a assinatura deixa de bater e o GitHub responde 403.
+                    url = new Uri(u, loc).AbsoluteUri;
                     continue;
                 }
                 if (code != 200) { resp.Close(); throw new Exception("O GitHub respondeu " + code + "."); }

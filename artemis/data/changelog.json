@@ -1,6 +1,14 @@
 {
   "releases": [
     {
+      "version": "0.17.2",
+      "date": "2026-11-15",
+      "title": "Launcher corrigido",
+      "changes": [
+        "🌙 O launcher do 4rt3mi5 voltou a instalar e atualizar o app: às vezes ele parava com o erro \"O GitHub respondeu 403\". Se você baixou o launcher antes, baixe de novo pelo botão \"Baixar o app\"."
+      ]
+    },
+    {
       "version": "0.17.1",
       "date": "2026-11-15",
       "title": "Endereço novo e menu renovado",
