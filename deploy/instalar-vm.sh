@@ -8,6 +8,7 @@
 #   - instala o Docker (script oficial) e deixa o usuário usar sem sudo
 #   - coloca o fuso horário de Brasília
 #   - agenda o vigia (deploy/vigia.sh) a cada 5 minutos no cron
+#   - agenda o deploy/manter-ativa.sh (evita a Oracle recolher a VM por ociosidade)
 # Não abre porta nenhuma: o acesso de fora é pelo ngrok (conexão de saída). Só o SSH fica aberto.
 set -euo pipefail
 
@@ -44,6 +45,10 @@ chmod +x "$PROJ/deploy/"*.sh
 linha="*/5 * * * * $PROJ/deploy/vigia.sh >/dev/null 2>&1"
 # (crontab -l dá erro quando ainda não há agenda; o "|| true" evita que o set -e pare o script)
 { crontab -l 2>/dev/null | grep -v 'deploy/vigia.sh' || true; echo "$linha"; } | crontab -
+
+# Mantém a VM "não ociosa" para a Oracle não recolher (1 min de CPU a cada 10, prioridade mínima)
+linha="*/10 * * * * $PROJ/deploy/manter-ativa.sh >/dev/null 2>&1"
+{ crontab -l 2>/dev/null | grep -v 'deploy/manter-ativa.sh' || true; echo "$linha"; } | crontab -
 
 echo
 echo "== Pronto. Saia e entre de novo no SSH (para o grupo docker valer) e rode:"
