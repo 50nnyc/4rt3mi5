@@ -82,6 +82,20 @@ cat > "$STATUS.tmp" <<EOF
 EOF
 mv "$STATUS.tmp" "$STATUS"
 
-if [ "$ok" = false ] && [ "$prev_ok" = true ]; then log "FORA DO AR: $msg"
-elif [ "$ok" = true ] && [ "$prev_ok" = false ]; then log "Voltou ao ar."
-elif [ "$fix" != null ] && [ "$ok" = true ]; then log "Estava fora do ar e voltou depois de: ${fix//\"/}."; fi
+# Aviso no celular pelo ntfy.sh (app grátis "ntfy"): só quando NTFY_TOPIC está no .env.
+# O tópico funciona como senha: quem souber o nome recebe os avisos, então use um nome longo e aleatório.
+topic=$(envval NTFY_TOPIC)
+notify() {  # $1 = título (sem acento), $2 = prioridade, $3 = etiqueta, $4 = texto
+  [ -n "$topic" ] || return 0
+  curl -fsS -m 10 -o /dev/null -H "Title: $1" -H "Priority: $2" -H "Tags: $3" -d "$4" "https://ntfy.sh/$topic" \
+    || log "Não consegui mandar o aviso pelo ntfy."
+}
+
+if [ "$ok" = false ] && [ "$prev_ok" = true ]; then
+  log "FORA DO AR: $msg"; notify "4rt3mi5 fora do ar" high rotating_light "$msg. O vigia vai tentar de novo em 5 minutos."
+elif [ "$ok" = true ] && [ "$prev_ok" = false ]; then
+  log "Voltou ao ar."; notify "4rt3mi5 voltou ao ar" default white_check_mark "Fora do ar desde $prev_down."
+elif [ "$fix" != null ] && [ "$ok" = true ]; then
+  log "Estava fora do ar e voltou depois de: ${fix//\"/}."
+  notify "4rt3mi5 caiu e voltou sozinho" low wrench "O vigia resolveu: ${fix//\"/}."
+fi

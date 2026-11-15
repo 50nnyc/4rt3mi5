@@ -119,20 +119,52 @@
   .scrim.open { opacity: 1; pointer-events: auto; }
   nav.drawer { position: fixed; top: 0; bottom: 0; left: 0; width: min(300px, 84vw); z-index: 50; background: var(--card);
                border-right: 1px solid var(--line); transform: translateX(-102%); transition: transform .22s ease;
-               display: flex; flex-direction: column; padding: 18px 12px; }
-  nav.drawer.open { transform: none; }
-  .drawer .me { padding: 6px 10px 16px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
-  .drawer .me b { font-size: 18px; display: block; }
-  .drawer button.item { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 13px 12px; background: none; font-size: 16px; }
-  .drawer button.item:hover, .drawer button.item.active { background: var(--card2); }
-  .drawer button.item.active { color: var(--gold); font-weight: 700; }
-  .drawer button.item.sub { padding-left: 38px; font-size: 14px; color: var(--muted); }
-  .drawer button.item.sub.active { color: var(--gold); }
+               display: flex; flex-direction: column; padding: 18px 12px; overflow-y: auto; overscroll-behavior: contain;
+               scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+               background-image: radial-gradient(120% 40% at 0% 0%, rgba(242,201,76,.07), transparent 70%); }
+  nav.drawer.open { transform: none; box-shadow: 8px 0 32px rgba(0,0,0,.45); }
+  .drawer .me { display: flex; gap: 12px; align-items: center; padding: 4px 8px 16px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+  .drawer .me-txt { min-width: 0; }
+  .drawer .me b { font-size: 18px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .drawer .me .muted { font-size: 13px; }
+  .drawer .avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+                    font: 800 17px var(--logo); color: #1a1405; background: linear-gradient(135deg, var(--gold2), var(--gold) 55%, #b8890f);
+                    box-shadow: 0 0 0 2px var(--card), 0 0 0 3px rgba(242,201,76,.45), 0 0 18px rgba(242,201,76,.25); }
+  .drawer .group { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+                   padding: 12px 12px 3px; opacity: .75; }
+  .drawer button.item { position: relative; display: flex; gap: 12px; align-items: center; width: 100%; text-align: left;
+                        padding: 9px 12px; margin: 1px 0; background: none; font-size: 15.5px; border-radius: 10px;
+                        transition: background .15s, color .15s; }
+  .drawer button.item .ic { flex: none; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+                            font-size: 17px; background: var(--card2); border: 1px solid var(--line); transition: border-color .15s, box-shadow .15s; }
+  .drawer button.item:hover { background: var(--card2); }
+  .drawer button.item:hover .ic { border-color: rgba(242,201,76,.35); }
+  .drawer button.item.active { color: var(--gold); font-weight: 700;
+                               background: linear-gradient(90deg, rgba(242,201,76,.14), rgba(242,201,76,.02) 80%); }
+  .drawer button.item.active::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 3px;
+                                       background: var(--gold); box-shadow: 0 0 10px rgba(242,201,76,.7); }
+  .drawer button.item.active .ic { border-color: rgba(242,201,76,.55); box-shadow: 0 0 12px rgba(242,201,76,.22); }
+  .drawer button.item.sub { padding: 6px 12px 6px 56px; font-size: 14px; color: var(--muted); }
+  .drawer button.item.sub::after { content: ""; position: absolute; left: 27px; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+  .drawer button.item.sub.active { color: var(--gold); background: none; }
+  .drawer button.item.sub.active::before { left: 25px; top: 9px; bottom: 9px; }
+  .drawer button.item.quiet { color: var(--muted); }
+  .drawer .badge { margin-left: auto; min-width: 22px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 800;
+                   text-align: center; color: #1a1405; background: var(--gold); box-shadow: 0 0 10px rgba(242,201,76,.35); }
+  .drawer .badge.hidden { display: none; }
+  .drawer .status { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .drawer .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .drawer .status.on .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .drawer .status.off .dot { background: var(--red); box-shadow: 0 0 8px var(--red); }
+  nav.drawer.open > * { animation: drawerIn .28s ease both; animation-delay: calc(var(--i, 0) * 18ms); }
+  @keyframes drawerIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { nav.drawer.open > * { animation: none; } nav.drawer { transition: none; } }
   .boss-class { font-size: 11px; padding: 1px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; }
   .boss-class.nemesis { color: var(--red); border-color: rgba(255,122,107,.4); }
   .boss-class.archfoe { color: var(--gold); border-color: rgba(242,201,76,.4); }
   .boss-class.bane { color: var(--accent); border-color: rgba(124,140,255,.4); }
-  .drawer .foot { margin-top: auto; padding: 10px 12px 0; border-top: 1px solid var(--line); }
+  .drawer .foot { margin-top: auto; padding: 12px 12px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .drawer button.item.quiet { margin-bottom: 14px; }
 
   .action { border-radius: 12px; padding: 14px; margin-top: 14px; }
   .action.pay { background: rgba(255, 122, 107, .1); border: 1px solid rgba(255, 122, 107, .4); }
@@ -526,24 +558,29 @@
   </header>
   <div class="scrim" id="scrim"></div>
   <nav class="drawer" id="drawer" aria-label="Menu">
-    <div class="me"><b id="drawerName"></b><span class="muted" id="drawerInfo"></span></div>
-    <button class="item" data-page="home">🏠 Início</button>
-    <button class="item" data-page="loot">💰 Lootsplit</button>
-    <button class="item" data-page="stack">📈 Hunt Session Stacker</button>
-    <button class="item" data-page="boss" data-btab="all">👑 Rotação de bosses</button>
-    <button class="item sub" data-page="boss" data-btab="solo">↳ Solo</button>
-    <button class="item sub" data-page="boss" data-btab="party">↳ Party</button>
-    <button class="item" data-page="hunts">🗺️ Hunts</button>
-    <button class="item" data-page="rank">🥇 Ranking entre amigos</button>
-    <button class="item" data-page="ach">🏆 Conquistas</button>
-    <button class="item" data-page="chars">👤 Meus personagens</button>
-    <button class="item" data-page="news">📰 Novidades <span class="pill hidden" id="newsDot">novo</span></button>
-    <button class="item hidden" id="renewItem">🔑 Renove 7 dias grátis da sua chave</button>
-    <button class="item hidden" id="installItem">📲 Adicionar à tela inicial</button>
-    <div style="height:10px"></div>
-    <button class="item" id="changeNick">🔁 Trocar personagem</button>
-    <button class="item" id="logout">🚪 Sair da conta</button>
-    <div class="foot muted" id="drawerFoot"></div>
+    <div class="me"><span class="avatar" id="drawerAvatar" aria-hidden="true"></span>
+      <div class="me-txt"><b id="drawerName"></b><span class="muted" id="drawerInfo"></span></div></div>
+    <button class="item" data-page="home"><span class="ic">🏠</span>Início</button>
+    <div class="group">Caçar</div>
+    <button class="item" data-page="loot"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
+    <button class="item" data-page="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
+    <button class="item" data-page="hunts"><span class="ic">🗺️</span>Hunts</button>
+    <div class="group">Bosses</div>
+    <button class="item" data-page="boss" data-btab="all"><span class="ic">👑</span>Rotação de bosses</button>
+    <button class="item sub" data-page="boss" data-btab="solo">Solo</button>
+    <button class="item sub" data-page="boss" data-btab="party">Party</button>
+    <div class="group">Progresso</div>
+    <button class="item" data-page="rank"><span class="ic">🥇</span>Ranking entre amigos</button>
+    <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
+    <div class="group">Conta</div>
+    <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
+    <button class="item" data-page="news"><span class="ic">📰</span>Novidades <span class="badge hidden" id="newsDot">novo</span></button>
+    <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
+    <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
+    <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
+    <button class="item quiet" id="logout"><span class="ic">🚪</span>Sair da conta</button>
+    <div class="foot muted"><div class="status" id="srvStatus"><i class="dot"></i><span>Conferindo o servidor…</span></div>
+      <div id="drawerFoot"></div></div>
   </nav>
 
   <main>

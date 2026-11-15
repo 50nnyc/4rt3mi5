@@ -728,6 +728,7 @@ function openApp() {
   $("#topWho").textContent = S.nick;
   $("#brandHome").dataset.nick = S.nick;
   $("#drawerName").textContent = S.nick;
+  $("#drawerAvatar").textContent = initials(S.nick);
   $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
   updateDrawerFoot();
   $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = ""; $("#bossResult").innerHTML = ""; $("#bossAsk").innerHTML = "";
@@ -738,7 +739,29 @@ function openApp() {
   setTimeout(offerInstall, 2500);
   setTimeout(flushDrafts, 1500);
 }
-function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
+/** "Sir Kalor" → "SK"; "Druida" → "DR". Só para o círculo dourado do menu. */
+function initials(name) {
+  const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return "?";
+  return (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0].slice(0, 2)).toUpperCase();
+}
+// entrada em cascata dos itens do menu (o atraso de cada um vem de --i)
+[...$("#drawer").children].forEach((c, i) => c.style.setProperty("--i", i));
+let srvCheckedAt = 0;
+async function paintServerStatus() {
+  if (Date.now() - srvCheckedAt < 30000) return;  // no máximo uma conferência a cada 30 s
+  srvCheckedAt = Date.now();
+  const box = $("#srvStatus"), ok = await serverOk();
+  box.classList.toggle("on", ok); box.classList.toggle("off", !ok);
+  box.querySelector("span").textContent = ok ? "Servidor online" : "Servidor fora do ar";
+}
+/** Contador dourado ao lado do item do menu (0 ou vazio esconde). */
+function setBadge(id, n) {
+  const b = $("#" + id);
+  b.textContent = n > 99 ? "99+" : String(n || "");
+  b.classList.toggle("hidden", !n);
+}
+function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); paintServerStatus(); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
@@ -961,6 +984,10 @@ document.addEventListener("click", async (e) => {
     }
     r.hunt.kind = h.kind;
     await afterHuntChange(r.hunt);
+    if (S.homeHunts) {  // contador de acertos do menu sem esperar voltar ao Início
+      S.homeHunts = S.homeHunts.map((x) => (huntRef(x) === huntRef(r.hunt) ? r.hunt : x));
+      setBadge("lootBadge", S.homeHunts.filter((x) => { const v = view(x, S.nick); return v.pendingPay || v.pendingGet; }).length);
+    }
   } catch (err) {
     btn.disabled = false;
     if (err.status === 401) return;
@@ -1132,6 +1159,7 @@ async function loadHome() {
     if (v.pendingPay) { owe += v.pendingPay; oweN++; }
     if (v.pendingGet) { due += v.pendingGet; dueN++; }
   });
+  setBadge("lootBadge", oweN + dueN);
   const pendingCard = owe || due ? `<div class="card"><b>💸 Acertos pendentes</b>
     ${owe ? `<div class="neg" style="margin-top:4px">Você ainda deve ${fmt(owe)} gp em ${oweN} ${oweN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     ${due ? `<div class="pos" style="margin-top:4px">Falta receber ${fmt(due)} gp de ${dueN} ${dueN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
