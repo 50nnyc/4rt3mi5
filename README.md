@@ -271,6 +271,22 @@ cloudflared tunnel --url http://localhost:8000
 
 O endereço vai em `DEFAULT_SERVER_URL` (`artemis/desktop/config.py`) ou na tela do código → "alterar".
 
+## Servidor na nuvem (VM grátis)
+
+Para o servidor ficar no ar 24 h sem depender deste PC, ele pode rodar numa VM grátis (Oracle Cloud "Always
+Free"), com o **mesmo domínio do ngrok**. Assim nada muda para os apps instalados. O passo a passo completo está em
+**[deploy/GUIA-VM.md](deploy/GUIA-VM.md)**. Resumo dos arquivos:
+
+| Arquivo | Onde roda | Para quê |
+|---|---|---|
+| `deploy/instalar-vm.sh` | VM (uma vez) | atualiza o Ubuntu, instala o Docker, fuso de Brasília, agenda o vigia |
+| `deploy/vigia.sh` | VM (cron, 5 min) | mesmo papel do `tools/vigia.ps1`: religa servidor/ngrok e grava `data/vigia.json` |
+| `deploy/enviar-para-vm.ps1` | este PC | envia o código e religa na VM; `-Migrar` leva também `data\` e `.env` (uma vez) |
+| `deploy/painel-vm.bat` | este PC | abre o painel admin da VM por um túnel SSH (o bloqueio pela internet continua) |
+| `deploy/puxar-backup.ps1` / `.bat` | este PC | copia o backup diário da VM para `backup-vm\` (agendado todo dia) |
+
+Na migração, a pasta `data\` vai inteira: o `server.json` tem o "pepper" das senhas, e sem ele nenhuma conta entra.
+
 ## Lançar versão nova
 
 1. Altere `__version__` em `artemis/__init__.py` e faça commit.
