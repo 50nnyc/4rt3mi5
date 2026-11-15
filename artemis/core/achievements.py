@@ -29,36 +29,46 @@ def today() -> date:
     return datetime.now(LOCAL_TZ).date()
 
 
-def runs(days: set[date]) -> list[tuple[date, int]]:
-    """Sequências de dias consecutivos: [(primeiro_dia, tamanho)], em ordem."""
-    out: list[tuple[date, int]] = []
+def runs(days: set[date], frozen: set[date] = frozenset()) -> list[tuple[date, int]]:
+    """Sequências de dias consecutivos: [(primeiro_dia, tamanho)], em ordem.
+    0.17.0: dias `frozen` (chave vencida) não contam nem quebram a sequência — ela fica congelada."""
+    out: list[list] = []  # [primeiro, tamanho, último]
     for d in sorted(days):
-        if out and out[-1][0] + timedelta(days=out[-1][1]) == d:
-            out[-1] = (out[-1][0], out[-1][1] + 1)
-        else:
-            out.append((d, 1))
-    return out
+        if out:
+            last = out[-1][2]
+            gap = (last + timedelta(days=i) for i in range(1, (d - last).days))
+            if all(g in frozen for g in gap):
+                out[-1][1] += 1
+                out[-1][2] = d
+                continue
+        out.append([d, 1, d])
+    return [(first, size) for first, size, _ in out]
 
 
-def current_streak(days: set[date], ref: date | None = None) -> int:
-    """Dias seguidos até hoje. Se hoje ainda não teve envio, a sequência de ontem continua valendo."""
+def current_streak(days: set[date], ref: date | None = None, frozen: set[date] = frozenset()) -> int:
+    """Dias seguidos até hoje. Se hoje ainda não teve envio, a sequência de ontem continua valendo.
+    Dia sem envio quebra a sequência; dia com a chave vencida (`frozen`) só é pulado."""
     ref = ref or today()
-    start = ref if ref in days else ref - timedelta(days=1)
+    d = ref if ref in days else ref - timedelta(days=1)
     n = 0
-    while start - timedelta(days=n) in days:
-        n += 1
+    while True:
+        if d in days:
+            n += 1
+        elif d not in frozen:
+            break
+        d -= timedelta(days=1)
     return n
 
 
-def streak_rewards(days: set[date]) -> list[str]:
+def streak_rewards(days: set[date], frozen: set[date] = frozenset()) -> list[str]:
     """Ids das recompensas merecidas: um por bloco completo de 30 dias em cada sequência."""
     return [f"streak{STREAK_TARGET}:{first.isoformat()}:{n}"
-            for first, size in runs(days) for n in range(1, size // STREAK_TARGET + 1)]
+            for first, size in runs(days, frozen) for n in range(1, size // STREAK_TARGET + 1)]
 
 
-def streak_info(days: set[date], ref: date | None = None) -> dict:
+def streak_info(days: set[date], ref: date | None = None, frozen: set[date] = frozenset()) -> dict:
     ref = ref or today()
-    cur = current_streak(days, ref)
+    cur = current_streak(days, ref, frozen)
     return {
         "current": cur,
         "target": STREAK_TARGET,
@@ -68,6 +78,9 @@ def streak_info(days: set[date], ref: date | None = None) -> dict:
         "active_today": ref in days,
         # últimos 30 dias, do mais antigo para hoje
         "calendar": [(ref - timedelta(days=i)) in days for i in range(STREAK_TARGET - 1, -1, -1)],
+        # 0.17.0: dias congelados (chave vencida), na mesma ordem do calendário
+        "calendar_frozen": [(ref - timedelta(days=i)) in frozen and (ref - timedelta(days=i)) not in days
+                            for i in range(STREAK_TARGET - 1, -1, -1)],
     }
 
 
@@ -106,7 +119,8 @@ DEFINITIONS = [
 ]
 
 
-def evaluate(name: str, solo: list[dict], hunts: list[dict], sold_items: int = 0) -> list[dict]:
+def evaluate(name: str, solo: list[dict], hunts: list[dict], sold_items: int = 0,
+             frozen: set[date] = frozenset()) -> list[dict]:
     """Conquistas de um personagem.
 
     solo: sessões do Stacker com `xp`, `duration_seconds`, `loot_value`, `place_id`, `kills` e `started_at`.
@@ -116,7 +130,7 @@ def evaluate(name: str, solo: list[dict], hunts: list[dict], sold_items: int = 0
     longs = [s for s in solo if s["duration_seconds"] >= MIN_RATE_SECONDS]
     hunt_days = {date.fromisoformat(s["started_at"][:10]) for s in solo}
     hunt_days |= {date.fromisoformat(h["started_at"][:10]) for h in hunts if h.get("started_at")}
-    best_run = max((size for _, size in runs(hunt_days)), default=0)
+    best_run = max((size for _, size in runs(hunt_days, frozen)), default=0)
     values = {
         "first_solo": len(solo),
         "first_party": len(hunts),

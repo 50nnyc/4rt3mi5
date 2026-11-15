@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import secrets
 import sqlite3
@@ -9,7 +10,14 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from argon2 import PasswordHasher
+from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
+
 from artemis.core.report import apply_rules
+
+_PH = PasswordHasher()  # Argon2id com os parâmetros recomendados pela biblioteca (RFC 9106)
+# hash de mentira só para gastar o mesmo tempo quando a conta não existe (não corresponde a senha nenhuma)
+_DUMMY_HASH = "argon2p$" + _PH.hash(secrets.token_hex(16))
 
 MAX_KEY_DAYS = 30
 
@@ -20,6 +28,46 @@ def hash_token(token: str) -> str:
 _KEY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # sem 0/O/1/I para não confundir
 
 SCHEMA = """
+-- 0.16.0: contas com senha (login antes da chave). Uma chave por conta.
+CREATE TABLE IF NOT EXISTS accounts (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    username       TEXT NOT NULL,
+    username_key   TEXT UNIQUE NOT NULL,
+    pw_hash        TEXT NOT NULL,          -- pbkdf2_sha256$iterações$sal$hash (a senha nunca é guardada)
+    created_at     TEXT NOT NULL,
+    access_key     TEXT UNIQUE REFERENCES access_keys(key) ON DELETE SET NULL,
+    store_claimed  INTEGER NOT NULL DEFAULT 0,   -- já gerou a chave grátis na loja (só uma vez por conta)
+    last_login     TEXT
+);
+CREATE TABLE IF NOT EXISTS account_sessions (
+    token       TEXT PRIMARY KEY,           -- só o hash
+    account_id  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    created_at  TEXT NOT NULL,
+    last_seen   TEXT NOT NULL
+);
+-- 0.17.0: código de uso único (gerado pelo adm) para a pessoa criar uma nova senha. Só o hash fica guardado.
+CREATE TABLE IF NOT EXISTS password_resets (
+    code_hash   TEXT PRIMARY KEY,
+    account_id  INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    expires_at  TEXT NOT NULL
+);
+-- 0.17.0: períodos em que a chave ficou vencida: a sequência de dias fica congelada (não zera) nesses dias
+CREATE TABLE IF NOT EXISTS key_pauses (
+    key       TEXT NOT NULL REFERENCES access_keys(key) ON DELETE CASCADE,
+    start_at  TEXT NOT NULL,
+    end_at    TEXT NOT NULL
+);
+-- 0.16.0: pedidos de recuperação do código (o adm chama no WhatsApp)
+CREATE TABLE IF NOT EXISTS recovery_requests (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id  INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+    username    TEXT NOT NULL,
+    whatsapp    TEXT NOT NULL,
+    character   TEXT,
+    reason      TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    done_at     TEXT
+);
 -- 0.13.0: entradas no app/site por código (só o painel do criador vê)
 CREATE TABLE IF NOT EXISTS key_logins (
     key     TEXT NOT NULL,
@@ -364,12 +412,55 @@ class Store:
             return None
         return dict(row)
 
+    def get_key(self, key: str) -> dict | None:
+        """A chave como está no banco, mesmo vencida (para renovar)."""
+        row = self._conn.execute("SELECT * FROM access_keys WHERE key = ?", (normalize_key(key),)).fetchone()
+        return dict(row) if row else None
+
+    @staticmethod
+    def is_expired(k: dict) -> bool:
+        return not k.get("lifetime") and k["expires_at"] <= _iso(utcnow())
+
+    def _note_pause(self, key: str) -> None:
+        """Chave vencida voltando a valer: guarda o período parado (a sequência de dias fica congelada nele).
+        Chamar com o lock já pego, ANTES de mudar o vencimento."""
+        row = self._conn.execute("SELECT expires_at, lifetime FROM access_keys WHERE key = ?", (key,)).fetchone()
+        now = _iso(utcnow())
+        if row and row["expires_at"] <= now:
+            self._conn.execute("INSERT INTO key_pauses VALUES (?, ?, ?)", (key, row["expires_at"], now))
+
+    def pause_days(self, key: str) -> set:
+        """Dias (de Brasília) em que a chave esteve vencida."""
+        from artemis.core.achievements import local_day
+        out = set()
+        for r in self._conn.execute("SELECT start_at, end_at FROM key_pauses WHERE key = ?", (normalize_key(key or ""),)):
+            d, end = local_day(r["start_at"]), local_day(r["end_at"])
+            while d <= end:
+                out.add(d)
+                d += timedelta(days=1)
+        return out
+
+    def renew_account_key(self, key: str) -> bool:
+        """0.17.0: renovação grátis pela conta, também para chave já vencida (volta a valer 7 dias a partir de agora).
+        Só quando faltam menos de 3 dias (ou já venceu). Nunca tira dias."""
+        key = normalize_key(key)
+        now = utcnow()
+        with self._lock:
+            self._note_pause(key)
+            cur = self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at < ? AND lifetime = 0",
+                                     (_iso(now + timedelta(days=self.FREE_RENEW_DAYS)), key,
+                                      _iso(now + timedelta(days=self.RENEW_WINDOW_DAYS))))
+            self._conn.commit()
+        return cur.rowcount > 0
+
     def purge_expired(self) -> int:
         """Apaga chaves vencidas (e, em cascata, personagens/aparelhos ligados) e verificações velhas.
-        Códigos vitalícios ("amigo do adm") nunca são apagados."""
+        Códigos vitalícios ("amigo do adm") nunca são apagados. 0.17.0: chave ligada a uma conta também não é
+        apagada ao vencer: a pessoa só perde o acesso até renovar."""
         now = _iso(utcnow())
         with self._lock:
-            cur = self._conn.execute("DELETE FROM access_keys WHERE expires_at <= ? AND lifetime = 0", (now,))
+            cur = self._conn.execute("DELETE FROM access_keys WHERE expires_at <= ? AND lifetime = 0 AND key NOT IN "
+                                     "(SELECT access_key FROM accounts WHERE access_key IS NOT NULL)", (now,))
             self._conn.execute("DELETE FROM verifications WHERE expires_at <= ?", (now,))
             self._conn.commit()
             return cur.rowcount
@@ -379,6 +470,7 @@ class Store:
         if not 1 <= days <= MAX_KEY_DAYS:
             raise ValueError(f"A validade deve ser de 1 a {MAX_KEY_DAYS} dias.")
         with self._lock:
+            self._note_pause(normalize_key(key))
             self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
                                (_iso(utcnow() + timedelta(days=days)), normalize_key(key)))
             self._conn.commit()
@@ -398,15 +490,18 @@ class Store:
             return cur.rowcount
 
     FREE_RENEW_DAYS = 7
+    RENEW_WINDOW_DAYS = 3   # 0.15.0: a renovação grátis só abre quando faltam menos de 3 dias
 
     def renew_free(self, key: str) -> tuple[bool, dict | None]:
-        """Renovação grátis pelo próprio usuário: completa para 7 dias a partir de agora, só se faltar menos que isso.
-        Nunca tira dias. Devolve (renovou?, chave)."""
+        """Renovação grátis pelo próprio usuário: volta a valer 7 dias a partir de agora, só quando faltam menos de 3 dias
+        e a chave já tem personagem verificado. Nunca tira dias. Devolve (renovou?, chave)."""
         key = normalize_key(key)
-        new = _iso(utcnow() + timedelta(days=self.FREE_RENEW_DAYS))
+        now = utcnow()
+        new = _iso(now + timedelta(days=self.FREE_RENEW_DAYS))
+        window = _iso(now + timedelta(days=self.RENEW_WINDOW_DAYS))
         with self._lock:
-            cur = self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at < ? AND lifetime = 0",
-                                     (new, key, new))
+            cur = self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at < ? AND lifetime = 0 "
+                                     "AND main_char IS NOT NULL", (new, key, window))
             self._conn.commit()
         return cur.rowcount > 0, self.validate_key(key)
 
@@ -414,6 +509,10 @@ class Store:
         """Liga/desliga o código vitalício. Ao desligar um código já vencido, ele ganha 7 dias (não some na hora)."""
         key = normalize_key(key)
         with self._lock:
+            if on:  # se estava vencida, os dias parados ficam congelados na sequência
+                self._note_pause(key)
+                self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at <= ?",
+                                   (_iso(utcnow()), key, _iso(utcnow())))
             self._conn.execute("UPDATE access_keys SET lifetime = ? WHERE key = ?", (int(on), key))
             if not on:
                 self._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ? AND expires_at <= ?",
@@ -480,6 +579,8 @@ class Store:
             k["trusted"] = bool(k.get("trusted"))
             k["lifetime"] = bool(k.get("lifetime"))
             k["chars"] = self.key_chars(k["key"])
+            acc = self.account_for_key(k["key"])
+            k["account"] = acc["username"] if acc else None
             k["logins_7d"], k["last_login"] = self._conn.execute(
                 "SELECT COUNT(*), (SELECT MAX(at) FROM key_logins WHERE key = ?) FROM key_logins WHERE key = ? AND at >= ?",
                 (k["key"], k["key"], _iso(utcnow() - timedelta(days=7)))).fetchone()
@@ -519,6 +620,199 @@ class Store:
         rows = self._conn.execute("SELECT name, verified_at FROM key_chars WHERE key = ? ORDER BY name", (key,)).fetchall()
         return [{"name": r["name"], "verified_at": r["verified_at"], "is_main": name_key(r["name"]) == name_key(main or "")}
                 for r in rows]
+
+    # ------------------------------------------------------------------ 0.16.0: contas (login com senha)
+    PW_ITERATIONS = 200_000   # só para conferir hashes antigos (0.16.0); os novos são Argon2id
+    SESSION_DAYS = 90   # sessão de conta parada por mais que isso pede a senha de novo
+    pepper: str | None = None  # 0.17.0: segredo fora do banco (server.json ou ARTEMIS_PW_PEPPER)
+
+    @staticmethod
+    def _hash_pw(password: str, salt: str, iterations: int) -> str:
+        return hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt), iterations).hex()
+
+    def _peppered(self, password: str) -> str:
+        """HMAC-SHA256 da senha com o pepper. Sem o pepper (que não está no banco), o hash guardado não serve para nada."""
+        if not self.pepper:
+            raise RuntimeError("pepper das senhas não configurado")
+        return hmac.new(bytes.fromhex(self.pepper), password.encode(), hashlib.sha256).hexdigest()
+
+    def _new_pw_hash(self, password: str) -> str:
+        # 0.17.0: Argon2id (resistente a placa de vídeo) sobre o HMAC com pepper. Ninguém, nem o adm, recupera a senha.
+        return "argon2p$" + _PH.hash(self._peppered(password))
+
+    def _pw_ok(self, stored: str, password: str) -> bool:
+        if stored.startswith("argon2p$"):
+            try:
+                return _PH.verify(stored[len("argon2p$"):], self._peppered(password))
+            except (VerifyMismatchError, VerificationError, InvalidHashError):
+                return False
+        _, iterations, salt, digest = stored.split("$")  # pbkdf2 da 0.16.0 (trocado no próximo login certo)
+        return secrets.compare_digest(self._hash_pw(password, salt, int(iterations)), digest)
+
+    def set_password(self, account_id: int, password: str) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE accounts SET pw_hash = ? WHERE id = ?", (self._new_pw_hash(password), account_id))
+            self._conn.execute("DELETE FROM account_sessions WHERE account_id = ?", (account_id,))  # sai de todo lugar
+            self._conn.commit()
+
+    def create_account(self, username: str, password: str) -> dict | None:
+        """Nova conta; None se o nome já existe (sem diferenciar maiúsculas)."""
+        pw = self._new_pw_hash(password)
+        with self._lock:
+            try:
+                cur = self._conn.execute("INSERT INTO accounts (username, username_key, pw_hash, created_at) VALUES (?, ?, ?, ?)",
+                                         (username, username.lower(), pw, _iso(utcnow())))
+            except sqlite3.IntegrityError:
+                return None
+            self._conn.commit()
+        return self.account(cur.lastrowid)
+
+    def account(self, account_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM accounts WHERE id = ?", (account_id,)).fetchone()
+        return dict(row) if row else None
+
+    def check_password(self, username: str, password: str) -> dict | None:
+        row = self._conn.execute("SELECT * FROM accounts WHERE username_key = ?", (username.lower(),)).fetchone()
+        if row is None:
+            self._pw_ok(_DUMMY_HASH, password)  # mesmo tempo de resposta com ou sem conta
+            return None
+        if not self._pw_ok(row["pw_hash"], password):
+            return None
+        if not row["pw_hash"].startswith("argon2p$") or _PH.check_needs_rehash(row["pw_hash"][len("argon2p$"):]):
+            with self._lock:  # hash antigo/fraco: troca pelo atual agora que a senha foi conferida
+                self._conn.execute("UPDATE accounts SET pw_hash = ? WHERE id = ?", (self._new_pw_hash(password), row["id"]))
+                self._conn.commit()
+        return dict(row)
+
+    def new_account_session(self, account_id: int) -> str:
+        token = secrets.token_urlsafe(32)
+        now = _iso(utcnow())
+        with self._lock:
+            self._conn.execute("INSERT INTO account_sessions VALUES (?, ?, ?, ?)", (hash_token(token), account_id, now, now))
+            self._conn.execute("UPDATE accounts SET last_login = ? WHERE id = ?", (now, account_id))
+            self._conn.execute("DELETE FROM account_sessions WHERE last_seen < ?",
+                               (_iso(utcnow() - timedelta(days=self.SESSION_DAYS)),))
+            self._conn.commit()
+        return token
+
+    def account_by_token(self, token: str) -> dict | None:
+        if not token:
+            return None
+        h = hash_token(token)
+        row = self._conn.execute(
+            "SELECT a.* FROM account_sessions s JOIN accounts a ON a.id = s.account_id WHERE s.token = ? AND s.last_seen >= ?",
+            (h, _iso(utcnow() - timedelta(days=self.SESSION_DAYS)))).fetchone()
+        if row is None:
+            return None
+        with self._lock:
+            self._conn.execute("UPDATE account_sessions SET last_seen = ? WHERE token = ?", (_iso(utcnow()), h))
+            self._conn.commit()
+        return dict(row)
+
+    def end_account_session(self, token: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM account_sessions WHERE token = ?", (hash_token(token or ""),))
+            self._conn.commit()
+
+    def account_for_key(self, key: str) -> dict | None:
+        row = self._conn.execute("SELECT * FROM accounts WHERE access_key = ?", (normalize_key(key),)).fetchone()
+        return dict(row) if row else None
+
+    def link_account_key(self, account_id: int, key: str, store_claim: bool = False) -> bool:
+        """Liga a chave à conta. False se a conta já tem outra chave válida ou a chave já é de outra conta."""
+        key = normalize_key(key)
+        acc = self.account(account_id)
+        other = self.account_for_key(key)
+        if acc is None or (other and other["id"] != account_id):
+            return False
+        if acc["access_key"] and acc["access_key"] != key and self.validate_key(acc["access_key"]):
+            return False
+        with self._lock:
+            self._conn.execute("UPDATE accounts SET access_key = ?, store_claimed = store_claimed OR ? WHERE id = ?",
+                               (key, int(store_claim), account_id))
+            self._conn.commit()
+        return True
+
+    def add_recovery(self, account: dict | None, whatsapp: str, reason: str, character: str | None,
+                     username: str = "") -> int:
+        """account None = pedido de quem não consegue entrar (esqueceu conta/senha); username é o que a pessoa lembra."""
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO recovery_requests (account_id, username, whatsapp, character, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                (account["id"] if account else None, account["username"] if account else username, whatsapp, character,
+                 reason, _iso(utcnow())))
+            self._conn.commit()
+        return cur.lastrowid
+
+    def count_open_recoveries(self, reason: str) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM recovery_requests WHERE done_at IS NULL AND reason = ?",
+                                  (reason,)).fetchone()[0]
+
+    def account_by_name(self, username: str) -> dict | None:
+        row = self._conn.execute("SELECT * FROM accounts WHERE username_key = ?", ((username or "").lower(),)).fetchone()
+        return dict(row) if row else None
+
+    RESET_HOURS = 24
+
+    def new_reset_code(self, account_id: int) -> str:
+        """Código de uso único para criar nova senha (o adm manda pelo WhatsApp). Substitui o anterior."""
+        raw = "".join(secrets.choice(_KEY_ALPHABET) for _ in range(10))
+        code = f"SENHA-{raw[:5]}-{raw[5:]}"
+        with self._lock:
+            self._conn.execute("DELETE FROM password_resets WHERE account_id = ? OR expires_at < ?", (account_id, _iso(utcnow())))
+            self._conn.execute("INSERT INTO password_resets VALUES (?, ?, ?)",
+                               (hash_token(code), account_id, _iso(utcnow() + timedelta(hours=self.RESET_HOURS))))
+            self._conn.commit()
+        return code
+
+    def use_reset_code(self, username: str, code: str, new_password: str) -> dict | None:
+        """Confere conta + código; se certo, troca a senha (sai de todos os aparelhos) e apaga o código."""
+        acc = self.account_by_name(username)
+        code = normalize_key(code)
+        if acc is None or not code:
+            return None
+        row = self._conn.execute("SELECT 1 FROM password_resets WHERE code_hash = ? AND account_id = ? AND expires_at > ?",
+                                 (hash_token(code), acc["id"], _iso(utcnow()))).fetchone()
+        if row is None:
+            return None
+        with self._lock:
+            self._conn.execute("DELETE FROM password_resets WHERE account_id = ?", (acc["id"],))
+            self._conn.commit()
+        self.set_password(acc["id"], new_password)
+        return self.account(acc["id"])
+
+    def open_recoveries(self, account_id: int | None = None) -> list[dict]:
+        if account_id is not None:
+            sql, args = "SELECT * FROM recovery_requests WHERE done_at IS NULL AND account_id = ?", (account_id,)
+        else:
+            sql, args = "SELECT * FROM recovery_requests WHERE done_at IS NULL ORDER BY created_at", ()
+        return [dict(r) for r in self._conn.execute(sql, args)]
+
+    def finish_recovery(self, request_id: int) -> bool:
+        with self._lock:
+            cur = self._conn.execute("UPDATE recovery_requests SET done_at = ? WHERE id = ? AND done_at IS NULL",
+                                     (_iso(utcnow()), request_id))
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    # 0.15.0: uma chave por conta. Cada personagem só pode estar em uma chave, e cada chave tem até 50 personagens.
+    MAX_CHARS_PER_KEY = 50
+
+    def char_owner(self, name: str) -> str | None:
+        """Chave onde o personagem já está cadastrado (ou None)."""
+        row = self._conn.execute("SELECT key FROM key_chars WHERE name_key = ?", (name_key(name),)).fetchone()
+        return row[0] if row else None
+
+    def char_count(self, key: str) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM key_chars WHERE key = ?", (normalize_key(key),)).fetchone()[0]
+
+    def add_char_manual(self, key: str, name: str) -> None:
+        """Validação manual do criador: vincula o personagem sem código de verificação (o 1º vira main)."""
+        key = normalize_key(key)
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO key_chars VALUES (?, ?, ?, ?)", (key, name_key(name), name, _iso(utcnow())))
+            self._conn.execute("UPDATE access_keys SET main_char = ? WHERE key = ? AND main_char IS NULL", (name, key))
+            self._conn.commit()
 
     def is_linked(self, key: str, name: str) -> bool:
         return self._conn.execute("SELECT 1 FROM key_chars WHERE key = ? AND name_key = ?",

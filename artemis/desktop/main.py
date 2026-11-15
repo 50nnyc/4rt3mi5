@@ -13,7 +13,7 @@ from artemis import APP_NAME, __version__
 from . import secure, updater
 from .config import CONFIG_DIR, Config
 
-SECRET_KEYS = {"key", "token"}  # código de acesso e token do aparelho: criptografados no PC
+SECRET_KEYS = {"key", "token", "acct"}  # código de acesso, token do aparelho e sessão da conta: criptografados no PC
 
 
 def web_dir() -> Path:

@@ -91,6 +91,7 @@ class BossServerTests(unittest.TestCase):
         for cache in (server._char_cache, server._last_check, server._exp_cache, server._hits, server._fails):
             cache.clear()
         COMMENTS.clear()
+        server.store._conn.execute("DELETE FROM key_chars")  # 0.15.0: personagem em uma chave só
         self.patch = mock.patch.object(server, "fetch_character", fake_fetch)
         self.patch.start()
         self.hs = mock.patch.object(server, "fetch_experience", lambda *a, **k: None)

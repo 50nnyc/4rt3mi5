@@ -70,6 +70,10 @@ class V013Tests(unittest.TestCase):
         r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
         self.assertFalse(r["renewed"])
         self.assertGreaterEqual(r["days_left"], 29)
+        # 0.15.0: com 4 dias ainda não abre (só com menos de 3)
+        server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
+                                   (_iso(utcnow() + timedelta(days=4)), self.key))
+        self.assertFalse(self.client.post("/api/key/renew-free", headers=self.h(token)).json()["renewed"])
         # faltam 2 dias: volta para 7
         server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
                                    (_iso(utcnow() + timedelta(days=2)), self.key))
@@ -91,15 +95,23 @@ class V013Tests(unittest.TestCase):
     def test_store_free_key(self):
         server.store._conn.execute("DELETE FROM store_claims")
         server.store.set_meta("store_free", "on")
-        self.assertEqual(self.client.get("/api/store").json(), {"free": True, "free_days": 7})
-        r = self.client.post("/api/store/free")
+        self.assertEqual(self.client.get("/api/store").json(),
+                         {"free": True, "free_days": 7})
+        self.assertEqual(self.client.post("/api/store/free").status_code, 401)  # 0.16.0: precisa estar logado
+        import secrets
+        def acct():
+            r = self.client.post("/api/account/register", json={"username": "loja" + secrets.token_hex(4), "password": "senha123"})
+            return {"X-Account-Token": r.json()["token"]}
+        a = acct()
+        r = self.client.post("/api/store/free", headers=a)
         self.assertEqual(r.status_code, 200, r.text)
         key = r.json()["key"]
         self.assertEqual(self.client.post("/api/auth", headers={"X-Access-Key": key}).status_code, 200)
-        self.assertEqual(self.client.post("/api/store/free").status_code, 429)  # 1 por dia por pessoa
+        self.assertEqual(self.client.post("/api/store/free", headers=a).status_code, 409)  # 1 vez por conta
+        self.assertEqual(self.client.post("/api/store/free", headers=acct()).status_code, 429)  # 1 por dia por pessoa
         server.store._conn.execute("DELETE FROM store_claims")
         self.client.post("/api/admin/store", json={"on": False}, headers=self.admin)
-        self.assertEqual(self.client.post("/api/store/free").status_code, 403)
+        self.assertEqual(self.client.post("/api/store/free", headers=acct()).status_code, 403)
         self.assertFalse(self.client.get("/api/store").json()["free"])
         server.store.set_meta("store_free", "on")
 

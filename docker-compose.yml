@@ -12,7 +12,7 @@ services:
     environment:
       TZ: "<-03>3"     # horário de Brasília (sem precisar instalar tzdata na imagem)
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"   # só este PC (o acesso de fora é pelo ngrok)
     volumes:
       - ./data:/data   # banco SQLite (data/artemis.db) fica na pasta do projeto
 
@@ -29,4 +29,4 @@ services:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:?Preencha NGROK_AUTHTOKEN no arquivo .env}
     command: ["http", "server:8000", "--url=${NGROK_DOMAIN:?Preencha NGROK_DOMAIN no arquivo .env}"]
     ports:
-      - "4040:4040"    # painel do ngrok em http://localhost:4040
+      - "127.0.0.1:4040:4040"   # painel do ngrok (mostra as requisições inteiras): só neste PC

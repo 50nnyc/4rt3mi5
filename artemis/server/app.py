@@ -68,14 +68,23 @@ def load_config() -> dict:
     cfg = {"host": "0.0.0.0", "port": 8000}
     if CONFIG_PATH.exists():
         cfg.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+    changed = False
     if not cfg.get("admin_token"):  # senha do painel de administração (só do criador)
         cfg["admin_token"] = secrets.token_urlsafe(18)
+        changed = True
+    # 0.17.0: "pepper" das senhas das contas. Fica FORA do banco: quem copiar só o banco (ou um backup dele) não
+    # consegue testar senha nenhuma. Se ARTEMIS_PW_PEPPER estiver definido no ambiente (.env), ele vale.
+    if not cfg.get("pw_pepper"):
+        cfg["pw_pepper"] = secrets.token_hex(32)
+        changed = True
+    if changed:
         CONFIG_PATH.write_text(json.dumps(cfg, indent=2), encoding="utf-8")
     return cfg
 
 
 CONFIG = load_config()
 store = Store(DATA_DIR / "artemis.db")
+store.pepper = os.environ.get("ARTEMIS_PW_PEPPER") or CONFIG["pw_pepper"]
 
 # Tabela de itens/NPCs da TibiaWiki BR (gerada pelo importador, versionada no projeto).
 WIKI_FILE = Path(__file__).resolve().parent.parent / "data" / "tibiawiki.json"
@@ -144,7 +153,8 @@ MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa di
 RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (máx., janela em s) por IP
               "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
 UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
-                "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free"}
+                "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free",
+                "/api/account/register", "/api/recovery", "/api/recovery/login"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
 _hits: dict[tuple[str, str], deque] = {}
 
@@ -237,7 +247,7 @@ app.add_middleware(
     CORSMiddleware,  # o app desktop carrega o site localmente (127.0.0.1) e chama a API daqui
     allow_origin_regex=r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$",  # outros sites não podem usar a API pelo navegador
     allow_methods=["GET", "POST", "DELETE"],
-    allow_headers=["X-Access-Key", "X-Device-Token", "Content-Type", "ngrok-skip-browser-warning"],
+    allow_headers=["X-Access-Key", "X-Device-Token", "X-Account-Token", "Content-Type", "ngrok-skip-browser-warning"],
 )
 
 
@@ -423,12 +433,220 @@ def _log_login(request: Request, access: dict) -> None:
 
 
 @app.post("/api/auth")
-def auth(request: Request, session: tuple = Depends(optional_device)):
+def auth(request: Request, session: tuple = Depends(optional_device), x_account_token: str = Header(default="")):
     access, device = session
     if device is not None:  # abertura do app/site já liberado = 1 entrada (histórico do painel do criador)
         _log_login(request, access)
+    acc = store.account_by_token(x_account_token) if x_account_token else None
+    owner = store.account_for_key(access["key"]) if acc else None
     return {"valid": True, "expires_at": user_expires(access), "claimed": bool(access.get("main_char")),
-            "device_verified": device is not None}
+            "device_verified": device is not None,
+            "other_account": bool(owner and owner["id"] != acc["id"])}  # 0.16.0: código já é de outra conta
+
+
+# ------------------------------------------------------------------ 0.16.0: contas (login com senha)
+USERNAME_RE = re.compile(r"[A-Za-z0-9]{3,20}")
+PASSWORD_RE = re.compile(r"[A-Za-z0-9_!@-]{6,64}")
+LOGIN_FAIL_LIMIT = 30     # 30 senhas erradas...
+LOGIN_BLOCK = 30 * 60     # ...bloqueiam o IP por 30 minutos
+WRONG_PASSWORD = "Conta/Senha incorreta(s)."  # 0.17.0: não diz qual dos dois está errado
+LOGIN_BLOCKED = "Muitas tentativas com senha errada. Por segurança, o acesso ficou bloqueado por 30 minutos."
+ACCOUNT_NEEDED = "Entre na sua conta de novo."
+_login_fails: dict[str, int] = {}
+_login_blocked: dict[str, float] = {}
+
+
+class AccountIn(BaseModel):
+    username: Annotated[str, Field(max_length=40)]
+    password: Annotated[str, Field(max_length=100)]
+    confirm: Annotated[str | None, Field(default=None, max_length=100)] = None
+    device_token: Annotated[str, Field(default="", max_length=100)] = ""
+
+
+def require_account(x_account_token: str = Header(default="")) -> dict:
+    acc = store.account_by_token(x_account_token)
+    if acc is None:
+        raise HTTPException(401, {"message": ACCOUNT_NEEDED, "reason": "account"})
+    return acc
+
+
+def _login_check_blocked(ip: str) -> None:
+    until = _login_blocked.get(ip)
+    if until and time.monotonic() < until:
+        raise HTTPException(429, {"message": LOGIN_BLOCKED, "reason": "login_blocked"})
+    if until:
+        _login_blocked.pop(ip, None)
+
+
+def _login_fail(ip: str) -> None:
+    n = _login_fails.get(ip, 0) + 1
+    if n >= LOGIN_FAIL_LIMIT:
+        _login_blocked[ip] = time.monotonic() + LOGIN_BLOCK
+        _login_fails.pop(ip, None)
+        raise HTTPException(429, {"message": LOGIN_BLOCKED, "reason": "login_blocked"})
+    _login_fails[ip] = n
+    if len(_login_fails) > 5000:
+        for k in list(_login_fails)[:1000]:
+            _login_fails.pop(k, None)
+
+
+def _account_enter(acc: dict, token: str, device_token: str = "") -> dict:
+    """Depois da senha (ou ao reabrir): devolve a chave da conta e um aparelho liberado, se já houver personagem."""
+    out = {"token": token, "username": acc["username"], "key": None, "device_token": None, "expires_at": None,
+           "store_claimed": bool(acc["store_claimed"]), "key_expired": False}
+    key = store.get_key(acc["access_key"]) if acc["access_key"] else None
+    if key is None:
+        return out
+    out.update(key=key["key"], expires_at=user_expires(key))
+    if store.is_expired(key):  # 0.17.0: chave vencida continua na conta; a pessoa renova e volta de onde parou
+        out["key_expired"] = True
+        return out
+    if key.get("main_char"):  # a conta já passou pela verificação: este aparelho entra direto
+        out["device_token"] = (device_token if store.device_valid(key["key"], device_token)
+                               else store.issue_device(key["key"], key["main_char"]))
+    return out
+
+
+@app.post("/api/account/register")
+def account_register(body: AccountIn):
+    if not USERNAME_RE.fullmatch(body.username):
+        raise HTTPException(422, "A conta deve ter de 3 a 20 letras ou números, sem espaços nem caracteres especiais.")
+    if not PASSWORD_RE.fullmatch(body.password):
+        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os especiais _ ! @ -")
+    if body.confirm is not None and body.confirm != body.password:
+        raise HTTPException(422, "As senhas não são iguais.")
+    acc = store.create_account(body.username, body.password)
+    if acc is None:
+        raise HTTPException(409, "Essa conta já existe. Escolha outro nome ou toque em Entrar.")
+    return _account_enter(acc, store.new_account_session(acc["id"]))
+
+
+@app.post("/api/account/login")
+def account_login(body: AccountIn, request: Request):
+    ip = client_ip(request)
+    _login_check_blocked(ip)
+    acc = store.check_password(body.username.strip(), body.password)
+    if acc is None:
+        _login_fail(ip)
+        raise HTTPException(401, {"message": WRONG_PASSWORD, "reason": "password"})
+    _login_fails.pop(ip, None)
+    return _account_enter(acc, store.new_account_session(acc["id"]), body.device_token)
+
+
+class ResumeIn(BaseModel):
+    device_token: Annotated[str, Field(default="", max_length=100)] = ""
+
+
+@app.post("/api/account/resume")
+def account_resume(body: ResumeIn, x_account_token: str = Header(default=""), acc: dict = Depends(require_account)):
+    """Reabrir o app/site já logado."""
+    return _account_enter(acc, x_account_token, body.device_token)
+
+
+@app.post("/api/account/renew")
+def account_renew(x_account_token: str = Header(default=""), acc: dict = Depends(require_account)):
+    """0.17.0: renovação grátis de 7 dias pela conta, inclusive com a chave já vencida."""
+    key = store.get_key(acc["access_key"]) if acc["access_key"] else None
+    if key is None:
+        raise HTTPException(404, "Sua conta ainda não tem chave de acesso.")
+    renewed = store.renew_account_key(key["key"])
+    return {**_account_enter(store.account(acc["id"]), x_account_token), "renewed": renewed}
+
+
+class ResetIn(BaseModel):
+    username: Annotated[str, Field(max_length=40)]
+    code: Annotated[str, Field(max_length=40)]
+    password: Annotated[str, Field(max_length=100)]
+    confirm: Annotated[str | None, Field(default=None, max_length=100)] = None
+
+
+@app.post("/api/account/reset")
+def account_reset(body: ResetIn, request: Request):
+    """0.17.0: nova senha com o código de uso único que o adm mandou pelo WhatsApp."""
+    ip = client_ip(request)
+    _login_check_blocked(ip)
+    if not PASSWORD_RE.fullmatch(body.password):
+        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os especiais _ ! @ -")
+    if body.confirm is not None and body.confirm != body.password:
+        raise HTTPException(422, "As senhas não são iguais.")
+    acc = store.use_reset_code(body.username.strip(), body.code, body.password)
+    if acc is None:
+        _login_fail(ip)  # conta com as senhas erradas: 30 erros bloqueiam o IP
+        raise HTTPException(401, {"message": "Conta ou código incorretos (ou o código já venceu).", "reason": "password"})
+    _login_fails.pop(ip, None)
+    return _account_enter(acc, store.new_account_session(acc["id"]))
+
+
+@app.post("/api/account/logout")
+def account_logout(x_account_token: str = Header(default="")):
+    store.end_account_session(x_account_token)
+    return {"ok": True}
+
+
+@app.post("/api/account/link")
+def account_link(access: dict = Depends(require_session), acc: dict = Depends(require_account)):
+    """Liga à conta a chave que acabou de passar pela verificação neste aparelho."""
+    if not store.link_account_key(acc["id"], access["key"]):
+        raise HTTPException(409, {"message": "Esse código de acesso já pertence a outra conta.", "reason": "key_taken"})
+    return {"ok": True, "key": access["key"]}
+
+
+WHATSAPP_RE = re.compile(r"\d{10,15}")
+RECOVERY_REASONS = {"lost_code", "char_taken", "key_taken"}
+
+
+class RecoveryIn(BaseModel):
+    whatsapp: Annotated[str, Field(max_length=30)]
+    reason: Annotated[str, Field(max_length=20)]
+    character: Annotated[str | None, Field(default=None, max_length=NAME_MAX)] = None
+
+
+@app.post("/api/recovery")
+def recovery(body: RecoveryIn, acc: dict = Depends(require_account)):
+    """Pedido para o adm chamar no WhatsApp e recuperar o código de acesso."""
+    phone = re.sub(r"\D", "", body.whatsapp)
+    if not WHATSAPP_RE.fullmatch(phone):
+        raise HTTPException(422, "Digite o WhatsApp com DDD, só números (ex.: 21 99999-9999).")
+    if body.reason not in RECOVERY_REASONS:
+        raise HTTPException(422, "Motivo inválido.")
+    if body.character and not _VALID_NAME.fullmatch(body.character):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    if len(store.open_recoveries(acc["id"])) >= 3:
+        raise HTTPException(429, "Você já enviou pedidos. Aguarde o administrador entrar em contato.")
+    store.add_recovery(acc, phone, body.reason, body.character)
+    return {"ok": True}
+
+
+class LostLoginIn(BaseModel):
+    whatsapp: Annotated[str, Field(max_length=30)]
+    username: Annotated[str, Field(default="", max_length=40)] = ""
+    character: Annotated[str | None, Field(default=None, max_length=NAME_MAX)] = None
+
+
+LOST_LOGIN_PER_IP = 3          # pedidos por IP a cada 24 h (rota sem login)
+LOST_LOGIN_MAX_OPEN = 100      # teto de pedidos abertos desse tipo
+_lost_login_hits: dict[str, list[float]] = {}
+
+
+@app.post("/api/recovery/login")
+def recovery_login(body: LostLoginIn, request: Request):
+    """0.17.0: "Esqueceu conta/senha?" — quem não consegue entrar deixa o WhatsApp para o adm."""
+    phone = re.sub(r"\D", "", body.whatsapp)
+    if not WHATSAPP_RE.fullmatch(phone):
+        raise HTTPException(422, "Escolha o país e digite o WhatsApp com DDD, só números.")
+    username = body.username.strip()
+    if username and not USERNAME_RE.fullmatch(username):
+        username = ""  # o que a pessoa lembra pode estar errado; só guarda se for um nome possível
+    if body.character and not _VALID_NAME.fullmatch(body.character):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    ip = client_ip(request)
+    now = time.monotonic()
+    hits = [t for t in _lost_login_hits.get(ip, []) if now - t < 86400]
+    if len(hits) >= LOST_LOGIN_PER_IP or store.count_open_recoveries("lost_login") >= LOST_LOGIN_MAX_OPEN:
+        raise HTTPException(429, "Você já enviou pedidos. Aguarde o administrador entrar em contato.")
+    _lost_login_hits[ip] = hits + [now]
+    store.add_recovery(None, phone, "lost_login", body.character, username)
+    return {"ok": True}
 
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
@@ -465,9 +683,12 @@ def store_info():
 
 
 @app.post("/api/store/free")
-def store_free(request: Request):
+def store_free(request: Request, acc: dict = Depends(require_account)):
     if not _store_free_on():
         raise HTTPException(403, "A chave gratuita está pausada no momento. Peça um código para quem te indicou o 4rt3mi5.")
+    # 0.16.0: a loja gera a chave uma vez só por conta (é o cadastro)
+    if acc["store_claimed"] or (acc["access_key"] and store.validate_key(acc["access_key"])):
+        raise HTTPException(409, "Sua conta já gerou a chave gratuita. Se perdeu o acesso, fale com o administrador.")
     ip_hash = hashlib.sha256((STORE_SALT + client_ip(request)).encode()).hexdigest()
     day_ago = datetime.now(timezone.utc) - timedelta(days=1)
     if store.store_claims_since(day_ago, ip_hash):
@@ -475,14 +696,29 @@ def store_free(request: Request):
     if store.store_claims_since(day_ago) >= STORE_FREE_PER_DAY:
         raise HTTPException(429, "As chaves gratuitas de hoje acabaram. Tente de novo amanhã.")
     store.add_store_claim(ip_hash)
-    k = store.create_key(STORE_FREE_DAYS, "Loja (grátis)")
+    k = store.create_key(STORE_FREE_DAYS, f"Loja (grátis) · {acc['username']}")
+    store.link_account_key(acc["id"], k["key"], store_claim=True)
     return {"key": k["key"], "expires_at": k["expires_at"]}
+
+
+CHAR_TAKEN = "Este character já possui código de acesso."
+
+
+def _check_char_free(key: str, name: str) -> None:
+    """0.15.0: personagem em uma chave só, e no máximo 50 personagens por chave."""
+    owner = store.char_owner(name)
+    if owner and owner != key:
+        raise HTTPException(409, {"message": CHAR_TAKEN, "reason": "char_taken"})
+    if not owner and store.char_count(key) >= store.MAX_CHARS_PER_KEY:
+        raise HTTPException(400, f"Sua chave já tem {store.MAX_CHARS_PER_KEY} personagens, o máximo. "
+                                 "Remova um em Meus personagens para adicionar outro.")
 
 
 @app.post("/api/verify/start")
 def verify_start(body: CharIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
     ch = char_or_404(body.character)
+    _check_char_free(access["key"], ch.name)
     # Contato de confiança (main forçado pelo criador): entra direto, sem código de verificação.
     if access.get("trusted") and store.is_linked(access["key"], ch.name):
         token = device or store.issue_device(access["key"], ch.name)
@@ -512,6 +748,7 @@ def verify_check(body: CodeIn, request: Request, session: tuple = Depends(option
             "hint": "Confira se salvou o comentário no tibia.com. O TibiaData pode levar alguns minutos para atualizar; "
                     "vamos conferir de novo sozinhos.",
         })
+    _check_char_free(access["key"], ch.name)  # outra chave pode ter verificado o mesmo personagem nesse meio tempo
     token = store.complete_verification(access["key"], v["code"], ch.name, device)
     _log_login(request, access)
     return {"token": token, "character": ch.name, "me": me_payload(access)}
@@ -524,13 +761,16 @@ def me(access: dict = Depends(require_session)):
 
 @app.post("/api/key/renew-free")
 def renew_free(access: dict = Depends(require_session)):
-    """0.14.0: o próprio usuário renova 7 dias grátis (só completa até 7 dias; nunca tira dias)."""
+    """0.14.0: o próprio usuário renova 7 dias grátis. 0.15.0: só quando faltam menos de 3 dias e com personagem verificado."""
     if access.get("lifetime"):
         return {"renewed": False, "days_left": None, "me": me_payload(access)}
+    if not access.get("main_char"):
+        raise HTTPException(403, "Verifique um personagem antes de renovar a chave.")
     renewed, current = store.renew_free(access["key"])
     current = current or access
     left = (datetime.fromisoformat(current["expires_at"]) - datetime.now(timezone.utc)).total_seconds() / 86400
-    return {"renewed": renewed, "days_left": int(left), "free_days": store.FREE_RENEW_DAYS, "me": me_payload(current)}
+    return {"renewed": renewed, "days_left": int(left), "free_days": store.FREE_RENEW_DAYS,
+            "window_days": store.RENEW_WINDOW_DAYS, "me": me_payload(current)}
 
 
 @app.post("/api/chars/main")
@@ -678,7 +918,7 @@ def _upload_days(key: str) -> set:
 def grant_rewards(key: str) -> list[dict]:
     """Concede (uma vez só) +7 dias de validade a cada 30 dias seguidos enviando hunts/sessões."""
     out = []
-    for rid in ach.streak_rewards(_upload_days(key)):
+    for rid in ach.streak_rewards(_upload_days(key), store.pause_days(key)):
         r = store.grant_reward(key, rid, ach.STREAK_REWARD_DAYS)
         if r:
             out.append(r)
@@ -686,7 +926,7 @@ def grant_rewards(key: str) -> list[dict]:
 
 
 def streak_payload(key: str) -> dict:
-    info = ach.streak_info(_upload_days(key))
+    info = ach.streak_info(_upload_days(key), frozen=store.pause_days(key))
     current = store.validate_key(key) or {}
     info.update(rewards=store.rewards(key), expires_at=user_expires(current))
     return info
@@ -705,7 +945,7 @@ def achievements(name: str, access: dict = Depends(require_session)):
     sessions, _ = _enriched_sessions(name, access)
     hunts = store.hunts_for_player(name)
     granted = grant_rewards(access["key"])
-    items = ach.evaluate(name, sessions, hunts, store.sold_count(name))
+    items = ach.evaluate(name, sessions, hunts, store.sold_count(name), store.pause_days(store.char_owner(name) or ""))
     return {"name": name, "achievements": items, "unlocked": sum(a["unlocked"] for a in items), "total": len(items),
             "streak": streak_payload(access["key"]), "granted": granted}
 
@@ -1424,7 +1664,10 @@ def require_admin(request: Request, x_admin_token: str = Header(default="")) -> 
 
 class NewKeyIn(BaseModel):
     label: str = ""
-    days: int = 30
+    days: int = 7   # 0.15.0: ignorado; toda chave nasce com NEW_KEY_DAYS
+
+
+NEW_KEY_DAYS = 7   # 0.15.0: toda chave nova (painel ou loja) começa com 7 dias
 
 
 class DaysIn(BaseModel):
@@ -1432,7 +1675,7 @@ class DaysIn(BaseModel):
 
 
 def _admin_key(key: str) -> dict:
-    k = store.validate_key(key)
+    k = store.get_key(key)  # 0.17.0: inclui chave vencida de conta (o adm pode renovar)
     if k is None:
         raise HTTPException(404, "Código não encontrado (ou já vencido e apagado).")
     return k
@@ -1462,7 +1705,7 @@ def admin_status():
 @app.post("/api/admin/keys", dependencies=[Depends(require_admin)])
 def admin_create(body: NewKeyIn):
     try:
-        return store.create_key(body.days, body.label.strip())
+        return store.create_key(NEW_KEY_DAYS, body.label.strip())
     except ValueError as e:
         raise HTTPException(422, str(e))
 
@@ -1507,6 +1750,47 @@ def admin_screens(days: int = 7):
     return {"days": days, "screens": store.screen_report(since.isoformat())}
 
 
+RECOVERY_LABEL = {"lost_code": "Código de acesso: perdeu o código", "char_taken": "Código de acesso: personagem já tem código",
+                  "key_taken": "Código de acesso: código já está em outra conta",
+                  "lost_login": "Conta/senha: esqueceu a conta ou a senha"}
+
+
+@app.get("/api/admin/recovery", dependencies=[Depends(require_admin)])
+def admin_recovery():
+    """0.16.0: quem pediu ajuda para recuperar o código (o painel abre o WhatsApp).
+    0.17.0: também "esqueceu conta/senha", com as contas que batem com o que a pessoa lembra."""
+    out = []
+    for r in store.open_recoveries():
+        acc = store.account(r["account_id"]) if r["account_id"] else None
+        owner = store.char_owner(r["character"]) if r["character"] else None
+        candidates = {}
+        if r["reason"] == "lost_login":
+            for a in (store.account_by_name(r["username"]), store.account_for_key(owner) if owner else None):
+                if a:
+                    candidates[a["id"]] = {"id": a["id"], "username": a["username"], "key": a["access_key"]}
+        out.append({**r, "kind": "login" if r["reason"] == "lost_login" else "code",
+                    "reason_label": RECOVERY_LABEL.get(r["reason"], r["reason"]),
+                    "account_key": acc["access_key"] if acc else None, "char_key": owner,
+                    "candidates": list(candidates.values())})
+    return out
+
+
+@app.post("/api/admin/accounts/{account_id}/reset-code", dependencies=[Depends(require_admin)])
+def admin_reset_code(account_id: int):
+    """0.17.0: código de uso único (24 h) para a pessoa criar nova senha. O adm nunca vê nem define a senha."""
+    acc = store.account(account_id)
+    if acc is None:
+        raise HTTPException(404, "Conta não encontrada.")
+    return {"username": acc["username"], "code": store.new_reset_code(account_id), "hours": store.RESET_HOURS}
+
+
+@app.post("/api/admin/recovery/{request_id}/done", dependencies=[Depends(require_admin)])
+def admin_recovery_done(request_id: int):
+    if not store.finish_recovery(request_id):
+        raise HTTPException(404, "Pedido não encontrado (ou já resolvido).")
+    return {"done": True}
+
+
 @app.post("/api/admin/store", dependencies=[Depends(require_admin)])
 def admin_store(body: OnIn):
     store.set_meta("store_free", "on" if body.on else "off")
@@ -1517,8 +1801,27 @@ def admin_store(body: OnIn):
 def admin_force_main(key: str, body: CharIn):
     _admin_key(key)
     ch = char_or_404(body.character, fresh=True)
+    _admin_char_free(key, ch.name)
     store.force_main(key, ch.name)
     return {"key": normalize_key(key), "main_char": ch.name, "trusted": True}
+
+
+def _admin_char_free(key: str, name: str) -> None:
+    owner = store.char_owner(name)
+    if owner and owner != normalize_key(key):
+        raise HTTPException(409, f"{name} já está na chave {owner}. Tire de lá (Resetar dono) antes.")
+    if not owner and store.char_count(key) >= store.MAX_CHARS_PER_KEY:
+        raise HTTPException(400, f"Essa chave já tem {store.MAX_CHARS_PER_KEY} personagens.")
+
+
+@app.post("/api/admin/keys/{key}/chars", dependencies=[Depends(require_admin)])
+def admin_add_char(key: str, body: CharIn):
+    """0.15.0: validação manual — o criador vincula um personagem sem código de verificação."""
+    _admin_key(key)
+    ch = char_or_404(body.character, fresh=True)
+    _admin_char_free(key, ch.name)
+    store.add_char_manual(key, ch.name)
+    return {"key": normalize_key(key), "character": ch.name, "chars": store.key_chars(normalize_key(key))}
 
 
 @app.post("/api/admin/keys/{key}/untrust", dependencies=[Depends(require_admin)])
@@ -1547,6 +1850,20 @@ def admin_page(request: Request):
     if any(h in request.headers for h in _PROXY_HEADERS):
         raise HTTPException(404)
     return FileResponse(WEB_DIR / "admin.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/admin.js", include_in_schema=False)
+def admin_script(request: Request):
+    """0.17.0: script do painel fora do HTML (CSP sem 'unsafe-inline'); só no PC do criador, como o painel."""
+    if any(h in request.headers for h in _PROXY_HEADERS):
+        raise HTTPException(404)
+    return FileResponse(WEB_DIR / "admin.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/app.js", include_in_schema=False)
+def app_script():
+    """0.17.0: script do site fora do HTML (CSP sem 'unsafe-inline')."""
+    return FileResponse(WEB_DIR / "app.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 # ------------------------------------------------------------------ site

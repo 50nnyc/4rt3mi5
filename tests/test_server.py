@@ -37,6 +37,8 @@ class ServerTests(unittest.TestCase):
         self.patch.start()
         self.hs = mock.patch.object(server, "fetch_experience", lambda *a, **k: None)
         self.hs.start()
+        # 0.15.0: cada personagem só pode estar em uma chave; testes anteriores usam os mesmos nicks
+        server.store._conn.execute("DELETE FROM key_chars")
         self.key = server.store.create_key(30, "teste")["key"]
 
     def tearDown(self):
@@ -143,7 +145,6 @@ class ServerTests(unittest.TestCase):
     def test_admin_create_renew_and_trusted_contact(self):
         admin = {"X-Admin-Token": server.CONFIG["admin_token"]}
         k = self.client.post("/api/admin/keys", json={"label": "Amigo", "days": 7}, headers=admin).json()
-        self.assertEqual(self.client.post("/api/admin/keys", json={"days": 31}, headers=admin).status_code, 422)
         r = self.client.post(f"/api/admin/keys/{k['key']}/renew", json={"days": 15}, headers=admin)
         self.assertEqual(r.status_code, 200)
         self.assertGreater(r.json()["expires_at"], k["expires_at"])
@@ -167,9 +168,9 @@ class ServerTests(unittest.TestCase):
 
     def test_admin_renew_all(self):
         admin = {"X-Admin-Token": server.CONFIG["admin_token"]}
-        a = self.client.post("/api/admin/keys", json={"days": 3}, headers=admin).json()
-        b = self.client.post("/api/admin/keys", json={"days": 7}, headers=admin).json()
-        c = self.client.post("/api/admin/keys", json={"days": 30}, headers=admin).json()
+        a = server.store.create_key(3)  # 0.15.0: o painel sempre cria com 7 dias
+        b = server.store.create_key(7)
+        c = server.store.create_key(30)
         self.assertEqual(self.client.post("/api/admin/keys/renew-all", json={"days": 15}).status_code, 401)
         self.assertEqual(self.client.post("/api/admin/keys/renew-all", json={"days": 31}, headers=admin).status_code, 422)
         r = self.client.post("/api/admin/keys/renew-all", json={"days": 15}, headers=admin)

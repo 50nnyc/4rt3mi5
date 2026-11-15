@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>4rt3mi5 · Administração</title>
 <style>
@@ -49,6 +49,10 @@
   #toast.show { opacity: 1; }
   .hidden { display: none !important; }
   .badge.life { color: #1a1400; background: var(--gold); border-color: var(--gold); font-weight: 700; }
+  .badge.login { color: #08131f; background: #7cc8ff; border-color: #7cc8ff; font-weight: 700; }
+  .recItem { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .recItem:last-child { border-bottom: 0; }
+  a.wa { display: inline-block; padding: 7px 12px; border-radius: 8px; background: #1f8f4e; color: #fff; text-decoration: none; font-weight: 700; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
   th:first-child, td:first-child { text-align: left; }
@@ -77,6 +81,8 @@
     <h2>Situação do servidor</h2>
     <div class="card" id="status"><span class="muted">Carregando…</span></div>
     <div id="expiring"></div>
+    <h2>Pedidos de recuperação <span id="recCount"></span></h2>
+    <div class="card" id="recovery"><span class="muted">Carregando…</span></div>
     <div class="row" style="margin-top:26px">
       <h2 style="margin:0">Uso das telas</h2>
       <div class="seg" id="screenDays" style="margin-left:auto"><button data-days="7" class="on">7 dias</button><button data-days="30">30 dias</button></div>
@@ -86,9 +92,7 @@
     <div class="card">
       <form id="createForm" class="row">
         <input id="label" class="grow" placeholder="Para quem é (ex.: Atx Buubo)" autocomplete="off">
-        <div class="seg" id="createDays">
-          <button type="button" data-days="7">7 dias</button><button type="button" data-days="15">15 dias</button><button type="button" data-days="30" class="on">30 dias</button>
-        </div>
+        <span class="muted">vale 7 dias</span>
         <button class="primary">Criar código</button>
       </form>
       <div class="err" id="createErr"></div>
@@ -110,257 +114,6 @@
 </main>
 <div id="toast"></div>
 
-<script>
-"use strict";
-const SITE = "https://quiver-procedure-resolved.ngrok-free.dev";
-const $ = (s, el = document) => el.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const day = (iso) => new Date(iso).toLocaleDateString("pt-BR");
-const daysLeft = (iso) => Math.ceil((new Date(iso) - Date.now()) / 86400000);
-const store = { get: (k) => { try { return sessionStorage.getItem(k); } catch { return null; } },
-                set: (k, v) => { try { v == null ? sessionStorage.removeItem(k) : sessionStorage.setItem(k, v); } catch {} } };
-let TOKEN = store.get("admin_token");
-let KEYS = [];
-let createDays = 30;
-
-function toast(msg) {
-  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2200);
-}
-async function copy(text) {
-  try { await navigator.clipboard.writeText(text); } catch {
-    const ta = Object.assign(document.createElement("textarea"), { value: text });
-    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-  }
-  toast("Copiado!");
-}
-function inviteText(k) {
-  return `🏹 Você foi convidado para testar o 4rt3mi5!\n\n`
-    + `O app que ajuda na sua hunt de Tibia: lootsplit da PT, Hunt Session Stacker, metas, rotação de bosses e muito mais.\n\n`
-    + `Estamos na fase beta, com a versão quase finalizada. Se achar algum erro ou tiver uma ideia, me conta: sua opinião ajuda a deixar o app pronto.\n\n`
-    + `🔑 Seu código de acesso: ${k.key}\n(válido até ${day(k.expires_at)})\n\n`
-    + `SITE: ${SITE}`;
-}
-
-async function api(method, path, body) {
-  const res = await fetch(path, {
-    method, headers: { "X-Admin-Token": TOKEN || "", ...(body ? { "Content-Type": "application/json" } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (res.status === 401) { logout("Senha de administrador inválida."); throw new Error("401"); }
-  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Erro ${res.status}`);
-  return data;
-}
-
-function logout(msg = "") {
-  TOKEN = null; store.set("admin_token", null);
-  $("#panel").classList.add("hidden"); $("#logout").classList.add("hidden");
-  $("#login").classList.remove("hidden"); $("#loginErr").textContent = msg;
-  $("#token").value = ""; $("#token").focus();
-}
-async function enter() {
-  try { KEYS = await api("GET", "/api/admin/keys"); } catch (e) { if (e.message !== "401") $("#loginErr").textContent = e.message; return; }
-  $("#login").classList.add("hidden");
-  $("#panel").classList.remove("hidden"); $("#logout").classList.remove("hidden");
-  render();
-  loadStatus();
-  loadScreens();
-}
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); }
-const when = (iso) => iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—";
-async function loadStatus() {
-  let s;
-  try { s = await api("GET", "/api/admin/status"); } catch { return; }
-  const v = s.vigia;
-  const vigia = !v ? `<span class="badge">vigia não instalado</span> <span class="muted">rode <code>vigia.bat</code> uma vez para instalar</span>`
-    : v.ok ? `<span class="badge ok">site no ar</span> <span class="muted">conferido ${esc(when(v.checked_at))}</span>`
-    : `<span class="badge warn">site fora do ar</span> <span class="muted">${esc(v.message || "")} · desde ${esc(when(v.down_since))}</span>`;
-  $("#status").innerHTML = `<div class="grid">
-      <div><span class="muted">Vigia do site (ngrok)</span><b>${vigia}</b></div>
-      <div><span class="muted">Último backup automático</span><b>${esc(when(s.last_backup))}</b></div>
-      <div><span class="muted">Backups guardados</span><b>${s.backups.length} de ${s.keep} (data/backups)</b></div>
-      <div><span class="muted">Loja: chave grátis</span><b>${s.store_free ? `<span class="badge ok">ligada</span>` : `<span class="badge warn">pausada</span>`}
-        <button id="storeToggle" style="margin-left:6px">${s.store_free ? "Pausar" : "Ligar"}</button></b></div>
-    </div>`;
-  $("#storeToggle").onclick = async () => {
-    try { await api("POST", "/api/admin/store", { on: !s.store_free }); toast(s.store_free ? "Chave grátis pausada" : "Chave grátis ligada"); loadStatus(); } catch {}
-  };
-}
-const PAGE_PT = { home: "🏠 Início", loot: "💰 Lootsplit", stack: "📈 Hunt Session Stacker", boss: "👑 Rotação de bosses", hunts: "🗺️ Hunts",
-                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades" };
-let screenDays = 7;
-async function loadScreens() {
-  let r;
-  try { r = await api("GET", `/api/admin/screens?days=${screenDays}`); } catch { return; }
-  if (!r.screens.length) { $("#screens").innerHTML = `<span class="muted">Ninguém abriu o app nesse período (ou a versão nova ainda não foi usada).</span>`; return; }
-  $("#screens").innerHTML = `<div class="tablewrap"><table><tr><th>Tela</th><th>Visitas</th><th>Fizeram algo</th><th>Só olharam</th></tr>${r.screens.map((s) => {
-    const idle = Math.max(0, s.views - s.actions), pct = s.views ? Math.round(idle * 100 / s.views) : 0;
-    return `<tr><td>${esc(PAGE_PT[s.page] || s.page)}</td><td>${s.views}</td><td>${s.actions}</td>
-      <td><span class="badge ${pct >= 70 ? "warn" : ""}">${pct}%</span></td></tr>`;
-  }).join("")}</table></div>
-  <div class="muted" style="margin-top:8px">Contagem por tela, sem dizer quem. "Fizeram algo" = tocaram em botão, campo ou colaram texto na tela.</div>`;
-}
-$("#screenDays").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-days]"); if (!b) return;
-  screenDays = +b.dataset.days;
-  $("#screenDays").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
-  loadScreens();
-});
-/** Códigos que vencem em até 7 dias, para renovar a tempo. */
-function expiringBlock() {
-  const soon = KEYS.filter((k) => !k.lifetime && daysLeft(k.expires_at) <= 7).sort((a, b) => a.expires_at.localeCompare(b.expires_at));
-  if (!soon.length) return "";
-  return `<h2>Vencem nesta semana (${soon.length})</h2><div class="card">${soon.map((k) => {
-    const left = daysLeft(k.expires_at);
-    return `<div class="row" style="padding:4px 0"><span class="key" style="font-size:14px">${esc(k.key)}</span>
-      <b>${esc(k.label || k.main_char || "—")}</b>
-      <span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"} (${day(k.expires_at)})</span>
-      <span class="muted">último uso: ${esc(lastUse(k))}</span></div>`;
-  }).join("")}</div>`;
-}
-function lastUse(k) {
-  if (!k.last_seen) return "nunca";
-  const d = Math.floor((Date.now() - new Date(k.last_seen)) / 86400000);
-  return d <= 0 ? "hoje" : d === 1 ? "ontem" : `há ${d} dias`;
-}
-
-function keyCard(k) {
-  const left = daysLeft(k.expires_at);
-  const status = k.trusted ? `<span class="badge trust">contato de confiança</span>`
-    : k.main_char ? `<span class="badge ok">verificado</span>` : `<span class="badge">aguardando 1º acesso</span>`;
-  const chars = k.chars.map((c) => esc(c.name) + (c.is_main ? " (main)" : "")).join(", ") || "—";
-  return `<div class="card" data-key="${esc(k.key)}">
-    <div class="row">
-      <span class="key">${esc(k.key)}</span>
-      <button data-act="copy-key">Copiar código</button>
-      <button data-act="copy-invite">Copiar convite</button>
-      <span style="margin-left:auto" class="row">${status}
-        ${k.lifetime ? `<span class="badge life">⭐ amigo do adm · vitalício</span>`
-          : `<span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"}</span>`}</span>
-    </div>
-    <div class="grid">
-      <div><span class="muted">Para</span><b>${esc(k.label || "—")}</b></div>
-      <div><span class="muted">Main</span><b>${esc(k.main_char || "—")}</b></div>
-      <div><span class="muted">Personagens</span><b>${chars}</b></div>
-      <div><span class="muted">Vence em</span><b>${k.lifetime ? "nunca" : day(k.expires_at)}</b></div>
-      <div><span class="muted">Aparelhos liberados</span><b>${k.devices}</b></div>
-      <div><span class="muted">Último uso</span><b>${esc(lastUse(k))}</b></div>
-      <div><span class="muted">Entradas (7 dias)</span><b>${k.logins_7d} <button data-act="logins" style="padding:2px 8px; font-size:12px">ver histórico</button></b></div>
-      <div><span class="muted">Criado em</span><b>${day(k.created_at)}</b></div>
-    </div>
-    <div class="logins hidden" data-logins></div>
-    <div class="actions">
-      ${k.lifetime ? "" : `<div class="row"><span class="muted" style="width:150px">Renovar a partir de hoje</span>
-        <button data-act="renew" data-days="7">7 dias</button><button data-act="renew" data-days="15">15 dias</button><button data-act="renew" data-days="30">30 dias</button></div>`}
-      <div class="row"><span class="muted" style="width:150px">Amigo do adm</span>
-        <button data-act="lifetime">${k.lifetime ? "Tirar vitalício" : "⭐ Tornar vitalício"}</button>
-        <span class="muted">${k.lifetime ? "Nunca vence; a pessoa não vê data de vencimento." : "O código nunca vence e a data some para a pessoa."}</span></div>
-      <div class="row"><span class="muted" style="width:150px">Forçar main (confiança)</span>
-        <input class="grow" data-input="main" placeholder="Nick do main character" value="" style="max-width:280px">
-        <button data-act="trust">Definir main sem verificação</button>
-        ${k.trusted ? `<button data-act="untrust">Remover confiança</button>` : ""}</div>
-      <div class="row"><span class="muted" style="width:150px">Outros</span>
-        <button data-act="reset">Resetar dono</button><button data-act="revoke" class="danger">Apagar código</button></div>
-      <div class="err" data-err></div>
-    </div>
-  </div>`;
-}
-
-function render() {
-  const q = $("#filter").value.trim().toLowerCase();
-  const shown = KEYS.filter((k) => !q || [k.key, k.label, k.main_char, ...k.chars.map((c) => c.name)].join(" ").toLowerCase().includes(q));
-  $("#count").textContent = `(${KEYS.length})`;
-  $("#expiring").innerHTML = expiringBlock();
-  $("#list").innerHTML = shown.map(keyCard).join("") || `<p class="muted">Nenhum código ${q ? "encontrado" : "válido no momento"}.</p>`;
-}
-
-$("#loginForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  TOKEN = $("#token").value.trim(); store.set("admin_token", TOKEN); $("#loginErr").textContent = ""; enter();
-});
-$("#logout").addEventListener("click", () => logout());
-$("#refresh").addEventListener("click", () => reload().then(() => toast("Atualizado")));
-$("#filter").addEventListener("input", render);
-$("#createDays").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-days]"); if (!b) return;
-  createDays = +b.dataset.days;
-  $("#createDays").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
-});
-$("#createForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const btn = e.currentTarget.querySelector(".primary"); btn.disabled = true; $("#createErr").textContent = "";
-  try {
-    const k = await api("POST", "/api/admin/keys", { label: $("#label").value, days: createDays });
-    $("#label").value = "";
-    $("#created").innerHTML = `<div class="card created" style="margin:12px 0 0">
-      <div class="muted">Código criado para ${esc(k.label || "—")} · vale até ${day(k.expires_at)}</div>
-      <div class="row" style="margin-top:6px"><span class="key">${esc(k.key)}</span>
-        <button id="cKey">Copiar código</button><button id="cInv" class="primary">Copiar convite</button></div></div>`;
-    $("#cKey").onclick = () => copy(k.key);
-    $("#cInv").onclick = () => copy(inviteText(k));
-    await reload();
-  } catch (err) { if (err.message !== "401") $("#createErr").textContent = err.message; }
-  finally { btn.disabled = false; }
-});
-
-$("#renewAll").addEventListener("click", async (e) => {
-  const b = e.target.closest("[data-days]"); if (!b) return;
-  const days = +b.dataset.days; $("#renewAllErr").textContent = "";
-  const fewer = KEYS.filter((k) => !k.lifetime && new Date(k.expires_at) < Date.now() + days * 86400000).length;
-  if (!fewer) { toast(`Todos já têm ${days} dias ou mais`); return; }
-  if (!confirm(`Completar para ${days} dias os ${fewer} código${fewer === 1 ? "" : "s"} que têm menos que isso?\n\nQuem já tem mais dias (e os vitalícios) não muda.`)) return;
-  b.disabled = true;
-  try { const r = await api("POST", "/api/admin/keys/renew-all", { days }); toast(`${r.renewed} código${r.renewed === 1 ? "" : "s"} renovado${r.renewed === 1 ? "" : "s"}`); await reload(); }
-  catch (ex) { if (ex.message !== "401") $("#renewAllErr").textContent = ex.message; }
-  finally { b.disabled = false; }
-});
-
-$("#list").addEventListener("click", async (e) => {
-  const b = e.target.closest("[data-act]"); if (!b) return;
-  const card = b.closest("[data-key]"), key = card.dataset.key, k = KEYS.find((x) => x.key === key);
-  const err = $("[data-err]", card); err.textContent = "";
-  const act = b.dataset.act;
-  try {
-    if (act === "copy-key") return copy(key);
-    if (act === "copy-invite") return copy(inviteText(k));
-    if (act === "logins") {
-      const box = $("[data-logins]", card);
-      if (!box.classList.contains("hidden")) { box.classList.add("hidden"); return; }
-      const list = await api("GET", `/api/admin/keys/${key}/logins`);
-      box.innerHTML = list.length ? `<b>Últimas entradas</b> (aberturas com 30 min de intervalo contam uma vez):<br>`
-        + list.map((x) => `${esc(when(x.at))} · ${x.client === "app" ? "app Windows" : "site"}`).join("<br>")
-        : "Nenhuma entrada registrada ainda (o histórico começou na versão 0.13.0).";
-      box.classList.remove("hidden");
-      return;
-    }
-    b.disabled = true;
-    if (act === "lifetime") {
-      const on = !k.lifetime;
-      if (!confirm(on ? `Tornar ${key} vitalício (amigo do adm)? Ele nunca mais vence.`
-                      : `Tirar o vitalício de ${key}? Ele volta a ter vencimento (se já passou, ganha 7 dias).`)) return;
-      await api("POST", `/api/admin/keys/${key}/lifetime`, { on }); toast(on ? "⭐ Agora é vitalício" : "Vitalício removido");
-    }
-    if (act === "renew") { const r = await api("POST", `/api/admin/keys/${key}/renew`, { days: +b.dataset.days }); toast(`Renovado até ${day(r.expires_at)}`); }
-    if (act === "trust") {
-      const name = $("[data-input=main]", card).value.trim();
-      if (!name) { err.textContent = "Digite o nick do main character."; return; }
-      const r = await api("POST", `/api/admin/keys/${key}/trust`, { character: name });
-      toast(`${r.main_char} definido como main (confiança)`);
-    }
-    if (act === "untrust") { await api("POST", `/api/admin/keys/${key}/untrust`); toast("Confiança removida"); }
-    if (act === "reset" && confirm(`Resetar o dono de ${key}? Personagens e aparelhos serão desvinculados e a pessoa precisará verificar de novo.`)) {
-      await api("POST", `/api/admin/keys/${key}/reset`); toast("Dono resetado");
-    }
-    if (act === "revoke" && confirm(`Apagar o código ${key}? Quem usa este código perde o acesso na hora.`)) {
-      await api("DELETE", `/api/admin/keys/${key}`); toast("Código apagado");
-    }
-    await reload();
-  } catch (ex) { if (ex.message !== "401") err.textContent = ex.message; }
-  finally { b.disabled = false; }
-});
-
-if (TOKEN) enter(); else logout();
-</script>
+<script src="admin.js"></script>
 </body>
 </html>

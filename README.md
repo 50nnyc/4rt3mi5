@@ -93,6 +93,67 @@ hash com sal que muda a cada reinício, o banco nunca guarda o IP) e no máximo 
 Só completa para 7 dias a partir de agora quando falta menos que isso; nunca tira dias. Códigos vitalícios
 não veem o item.
 
+**Senhas, esqueci a senha e chave vencida (0.17.0):**
+- **Hash da senha:** Argon2id (`argon2-cffi`, só no servidor) sobre um HMAC-SHA256 da senha com um **pepper**.
+  O pepper fica **fora do banco**: `pw_pepper` em `data/server.json` (criado sozinho), ou `ARTEMIS_PW_PEPPER` no
+  ambiente, que tem prioridade. Quem copiar só o banco ou um backup dele não consegue testar senha nenhuma.
+  Hashes PBKDF2 da 0.16.0 são trocados por Argon2id no próximo login certo.
+- ⚠️ **Guarde uma cópia do `server.json` (ou do pepper) fora do PC.** Se ele se perder, nenhuma senha confere mais
+  e todo mundo precisa do código de nova senha.
+- **Mensagem de erro:** login errado mostra "Conta/Senha incorreta(s).", sem dizer qual dos dois errou.
+- **Esqueceu conta/senha?:** pede o WhatsApp, a conta e um personagem que a pessoa lembre
+  (`POST /api/recovery/login`, sem login, até 3 pedidos por IP por dia). No painel, o pedido aparece em azul
+  (🔐 Conta/senha), separado dos pedidos de código de acesso (🔑). O painel mostra as contas que batem com o que a
+  pessoa lembra e o botão **Gerar código p/ nova senha**: um código `SENHA-…` de uso único, válido por 24 horas,
+  guardado só como hash. Depois disso, o botão do WhatsApp já leva a mensagem com o código. A pessoa usa
+  "Já recebi um código para criar nova senha". Trocar a senha encerra a conta em todos os aparelhos.
+  O adm nunca vê nem define a senha de ninguém.
+- **WhatsApp com país:** o campo tem a bandeira e o DDI de cada país, com busca por qualquer parte do nome. O número
+  é salvo com o código do país, e o link `wa.me` usa o número como está.
+- **Chave vencida de conta:** ela não é mais apagada. Só as chaves sem conta continuam sendo apagadas ao vencer.
+  Ao entrar, a conta vê "Chave vencida" e renova 7 dias grátis na hora (`POST /api/account/renew`).
+- **Sequência congelada:** os dias em que a chave ficou vencida (tabela `key_pauses`) não contam nem zeram a
+  sequência, a recompensa de 30 dias nem a conquista "Semana perfeita". No calendário, eles aparecem em azul
+  tracejado. Um dia sem envio com a chave ativa continua zerando a sequência.
+
+**Endurecimento (0.17.0):**
+- **Portas:** no `docker-compose.yml`, a 8000 (servidor) e a 4040 (painel do ngrok) só abrem para este PC
+  (`127.0.0.1`). O painel do ngrok mostra cada requisição inteira, com senhas de login, e antes ficava visível
+  para toda a rede de casa. O acesso de fora continua pelo ngrok.
+- **CSP sem `'unsafe-inline'` nos scripts:** o código saiu do HTML para `artemis/web/app.js` (site) e
+  `artemis/web/admin.js` (painel; `/admin.js` só sai no PC, como o `/admin`). Imagens que falham usam
+  `data-err="hide|remove"` em vez de `onerror=`. O `connect-src` só permite o próprio site, `api.tibiadata.com`,
+  domínios do ngrok e `127.0.0.1`/`localhost`. Se trocar o servidor do app de PC para outro domínio, inclua-o no
+  CSP de `index.html`. O teste `tests/test_csp.py` falha se algum script ou evento voltar para dentro do HTML.
+- **Cache offline:** o `sw.js` (cache `artemis-v2`) guarda `/` e `/app.js`. O `/admin` nunca vai para o cache.
+
+**Conta com senha (0.16.0):**
+- Antes da chave vem a tela de login: **Entrar** (Conta e Senha) ou **Criar uma conta** (Conta, Senha e Confirmar
+  senha). A conta aceita só letras e números (3 a 20). A senha aceita só letras, números e `_ ! @ -` (6 a 64).
+- A senha é guardada só como hash PBKDF2-SHA256 com sal (tabela `accounts`). A sessão da conta (`X-Account-Token`)
+  fica no banco só como hash e expira depois de 90 dias parada.
+- Senha errada mostra "Senha incorreta, tente novamente." Na 30ª senha errada, o IP fica bloqueado por 30 minutos
+  (`LOGIN_FAIL_LIMIT` e `LOGIN_BLOCK` em `app.py`). O contador fica na memória e zera quando o servidor reinicia.
+- **Primeiro acesso da conta:** gerar a chave grátis (uma vez por conta; ela já fica ligada à conta) ou **Já tenho um código**. Depois de verificar o personagem, a chave fica ligada à conta
+  (`POST /api/account/link`). Em outro aparelho, basta conta e senha para cair direto na escolha do personagem.
+- Quem já usava o app com código neste aparelho tem a chave ligada à conta sozinha, no primeiro login.
+- **Código errado:** a tela pergunta "Tem certeza que possui um código de acesso?". **Sim** pede o WhatsApp.
+  **Não** mostra a geração da chave. Se o personagem digitado já está em outra chave, a tela diz "Este character
+  já possui código de acesso" e pede o WhatsApp.
+- O painel mostra **Pedidos de recuperação**, com o botão **💬 Abrir conversa no WhatsApp** (`wa.me`, abre o
+  WhatsApp Web ou o app) e o botão **✔ Resolvido**. Cada card de código mostra a **Conta** dona.
+- A API antiga (código + token do aparelho) continua funcionando. O login é exigido pelas telas.
+
+**Uma chave por conta (0.15.0):**
+- A loja é o cadastro: o aparelho que já gerou uma chave (ou já entrou com uma) não gera outra.
+- Cada personagem só pode estar em **uma** chave. Verificar um personagem que já está em outra chave dá erro 409.
+  Cada chave tem no máximo **50** personagens (`MAX_CHARS_PER_KEY` em `db.py`).
+- No painel, **Validar personagem → Adicionar sem verificação** vincula um personagem na mão
+  (`POST /api/admin/keys/{key}/chars`). Se ele está em outra chave, use **Resetar dono** lá antes.
+- Toda chave nova nasce com **7 dias** (`NEW_KEY_DAYS` em `app.py`), pelo painel ou pela loja. O painel continua
+  podendo renovar por 7/15/30 dias.
+- O item de renovação grátis só aparece quando faltam **menos de 3 dias** e a chave tem personagem verificado.
+
 ## Música
 
 As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o

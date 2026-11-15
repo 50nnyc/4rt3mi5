@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.17.0",
+      "date": "2026-11-15",
+      "title": "Senhas protegidas e chave vencida",
+      "changes": [
+        "🔒 Todas as senhas são criptografadas com Argon2id, o padrão mais forte do mercado. Ninguém, nem o administrador, consegue saber a sua senha.",
+        "🆘 Novo \"Esqueceu conta/senha?\" na tela de Entrar: deixe seu WhatsApp e o administrador te manda um código para criar uma nova senha.",
+        "🌎 O campo de WhatsApp agora tem o país com bandeira e o código dele. Toque na bandeira e pesquise digitando qualquer parte do nome do país.",
+        "⏰ Chave vencida? Ao entrar na conta você renova grátis na hora e volta a usar o app, com os mesmos personagens e bônus.",
+        "❄️ Enquanto a chave está vencida, a sua sequência de dias fica congelada: ao renovar, ela continua de onde parou. Um dia sem enviar com a chave ativa ainda zera a sequência.",
+        "🛡️ Mais proteção no site: ele só roda o código do próprio 4rt3mi5 e só conversa com os servidores que ele usa."
+      ]
+    },
+    {
+      "version": "0.16.0",
+      "date": "2026-11-15",
+      "title": "Conta com senha",
+      "changes": [
+        "🔐 Agora o 4rt3mi5 tem conta com senha: toque em \"Criar uma conta\" (conta só com letras e números) ou em \"Entrar\". Em outro celular ou PC, basta entrar na conta: não precisa verificar o personagem de novo.",
+        "🔑 No primeiro acesso da conta, gere a sua chave grátis ou digite o código de acesso que você já tem. Quem já usava o app neste aparelho tem o código ligado à conta sozinho.",
+        "🆘 Perdeu o código ou o seu personagem já tem código de acesso? Deixe o seu WhatsApp e o administrador entra em contato para recuperar.",
+        "🔒 Muitas senhas erradas seguidas bloqueiam o acesso por um tempo, para proteger a sua conta."
+      ]
+    },
+    {
+      "version": "0.15.0",
+      "date": "2026-11-14",
+      "title": "Uma chave por conta",
+      "changes": [
+        "🔑 A loja agora é o seu cadastro: você gera a sua chave gratuita uma vez só. Toda chave começa com 7 dias.",
+        "👥 Uma chave por conta, com até 50 personagens. Cada personagem só pode estar em uma chave: verifique pelo comentário do tibia.com ou peça ao adm para validar.",
+        "🔄 O item \"Renove 7 dias grátis da sua chave\" aparece no menu ☰ quando faltam menos de 3 dias. A renovação continua grátis."
+      ]
+    },
+    {
       "version": "0.14.0",
       "date": "2026-11-14",
       "title": "Renovação grátis",
