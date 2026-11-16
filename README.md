@@ -20,14 +20,39 @@ app desktop abre a mesma página numa janela própria.
    (`4RT3MI5-XXXXXX`). A pessoa cola no comentário do personagem no tibia.com; o app confere pelo
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
-4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Rotação de bosses** (Solo / Party), **Hunts**, **Ranking entre amigos**, **Conquistas**, **Meus personagens**,
-   **Novidades**, **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair.
-7. **Idioma (0.19.0):** ⚙️ Configurações → português, inglês, espanhol ou japonês (também na tela de login).
-   O app é escrito em português; `artemis/web/i18n.js` traduz o que aparece na tela com os dicionários
-   `i18n-en.json`, `i18n-es.json` e `i18n-ja.json` (chave = texto em português, `{0}` = valor que muda).
-   Texto novo na interface ou mensagem nova do servidor → acrescente a tradução nos três arquivos
-   (`tests/test_i18n.py` confere chaves iguais e os textos do `index.html`). Nomes do Tibia e as Novidades
-   ficam como estão.
+4. Menu ☰ (0.20.0): **Início**; **Solo** → Hunt Session Stacker e Boss (solo); **Party** → Lootsplit e Boss (party);
+   **Progresso** → Hunts, Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
+   **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair. Solo → Stacker já abre a janela para colar.
+7. **Idioma (0.19.0 / 0.20.0):** ⚙️ Configurações → português, inglês, espanhol, japonês, alemão, polonês,
+   francês ou russo (também na tela de login). O app é escrito em português; `artemis/web/i18n.js` traduz o que
+   aparece na tela com os dicionários `i18n-<en|es|ja|de|pl|fr|ru>.json` (chave = texto em português,
+   `{0}` = valor que muda). Texto novo na interface ou mensagem nova do servidor → acrescente a tradução nos
+   sete arquivos (`tests/test_i18n.py` confere chaves iguais e os textos do `index.html`). Nomes do Tibia ficam
+   como no jogo. **Padrão sempre português:** o idioma do sistema não escolhe sozinho; só o toque nos botões
+   de idioma fica salvo no aparelho (chave `idioma`). As **Novidades** vêm traduzidas do próprio
+   `changelog.json` (campo `tr` com os sete idiomas em cada versão).
+8. **Tipo de player (0.20.0):** perguntado na criação da conta ("Você se considera um:", antes de informar o
+   main; quem já tinha conta responde uma vez ao entrar) e trocado em ⚙️ Configurações (com confirmação;
+   o tipo atual aparece como "(Atual)"). Vale para a conta (tabela `player_prefs`). A lista de tipos que a
+   pessoa pode escolher vem do servidor (`player_types` em `/api/me`). Decide as perguntas depois de salvar:
+   - **Stacker:** salva primeiro (sem local); Comum e Hardcore → "Deseja salvar qual a hunt você caçou?";
+     Hardcore → também "Deseja compartilhar o Input Analyzer?". Novato só salva.
+   - **Lootsplit:** nenhuma pergunta depois de colar (o importante é quem paga quem). O local, a própria sessão
+     (`party_sessions`) e o Input Analyzer (`damage_inputs`) ficam como opções no card. Comum e Hardcore juntam
+     os dois; o Novato não. Os membros veem tudo em "📎 Compartilhado pela PT"; quem não estava na PT não vê.
+   - **Diferença com o Party Hunt Analyser:** só quando a sessão é do mesmo período da party hunt (±60 s).
+     Loot type Leader → compara só os supplies; Market → loot, supplies e balance. Aviso discreto no card.
+   - **"hunt sem local":** escolher o local é livre; trocar depois, no máximo 2 vezes (`place_edits`). Na 3ª o
+     servidor recusa e o app mostra "Para alterar novamente entre em contato com o administrador."
+     No painel do administrador, tocar num personagem mostra as hunts dele; dá para trocar o local (sem gastar
+     as trocas da pessoa) e liberar as 2 trocas de novo.
+10. **Chave sem vencimento (0.20.0):** toda chave de acesso é vitalícia (o banco marca todas ao abrir). Não há
+   mais renovação nem aviso de vencimento; a sequência de dias continua, mas não dá mais dias de validade.
+   - **Input Analyzer** (`artemis/core/damage.py`): total, Max-DPS, tipos de dano e fontes; `(other)` só entra
+     no total. Salvou, não edita (409). A comparação de 🗺️ Hunts mostra o % de dano por elemento e por criatura.
+9. **Privacidade (0.20.0):** quem vê o Stacker de outro personagem recebe só o geral (XP, balance, tempo);
+   criaturas, itens, loot, lucro líquido, metas e lista de venda ficam só com o dono. Na comparação de Hunts,
+   criaturas e itens aparecem sem quantidade. 📊 **Comparar minhas hunts** (XP/h e balance/h por local) é só do dono.
 5. Sem conexão: tela de abertura com o aviso, tentando de novo a cada 10 s.
 6. **Colar direto:** com o texto do analyser copiado, Ctrl+V em qualquer tela abre o aviso "Enviar agora".
 

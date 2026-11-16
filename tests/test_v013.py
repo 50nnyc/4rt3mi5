@@ -33,9 +33,10 @@ class V013Tests(unittest.TestCase):
         self.client.post("/api/admin/keys/renew-all", json={"days": 30}, headers=self.admin)
         row = server.store._conn.execute("SELECT expires_at FROM access_keys WHERE key = ?", (self.key,)).fetchone()
         self.assertLess(row[0], _iso(utcnow()))
-        # desligar um vitalício já vencido dá 7 dias (não some na hora)
+        # 0.20.0: nenhuma chave volta a ter vencimento, nem desligando o vitalício
         r = self.client.post(f"/api/admin/keys/{self.key}/lifetime", json={"on": False}, headers=self.admin)
-        self.assertGreater(r.json()["expires_at"], _iso(utcnow() + timedelta(days=6)))
+        self.assertTrue(r.json()["lifetime"])
+        self.assertEqual(self.client.post("/api/auth", headers=self.h(token)).status_code, 200)
 
     def test_login_history(self):
         self.client.post("/api/auth", headers=self.h())  # sem aparelho liberado não conta
@@ -63,26 +64,12 @@ class V013Tests(unittest.TestCase):
         self.assertEqual(rep["news"]["actions"], 0)
         self.assertEqual(self.client.get("/api/admin/screens").status_code, 401)
 
-    def test_renew_free_only_tops_up_to_7_days(self):
+    def test_renew_free_has_nothing_to_renew(self):
+        """0.20.0: a chave não vence, então não há o que renovar e nenhuma data aparece."""
         token = self.verify("Hilay")[1].json()["token"]
         self.assertEqual(self.client.post("/api/key/renew-free", headers=self.h()).status_code, 401)
-        # tem 30 dias: não mexe
-        r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
-        self.assertFalse(r["renewed"])
-        self.assertGreaterEqual(r["days_left"], 29)
-        # 0.15.0: com 4 dias ainda não abre (só com menos de 3)
-        server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
-                                   (_iso(utcnow() + timedelta(days=4)), self.key))
-        self.assertFalse(self.client.post("/api/key/renew-free", headers=self.h(token)).json()["renewed"])
-        # faltam 2 dias: volta para 7
         server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
                                    (_iso(utcnow() + timedelta(days=2)), self.key))
-        r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
-        self.assertTrue(r["renewed"])
-        self.assertEqual(r["days_left"], 6)  # 7 dias menos alguns segundos
-        self.assertGreater(r["me"]["expires_at"], _iso(utcnow() + timedelta(days=6, hours=23)))
-        # vitalício: nada a renovar e nada aparece
-        server.store.set_lifetime(self.key, True)
         r = self.client.post("/api/key/renew-free", headers=self.h(token)).json()
         self.assertEqual((r["renewed"], r["me"]["expires_at"]), (False, None))
 

@@ -59,6 +59,13 @@
   th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
   .logins { margin-top: 8px; font-size: 13px; color: var(--muted); }
   .tablewrap { overflow-x: auto; }
+  /* 0.20.0: hunts do personagem */
+  .charbtn { padding: 2px 8px; font-size: 14px; margin: 2px 4px 2px 0; }
+  .charbtn.on { border-color: var(--gold); color: var(--gold); }
+  .hunts { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .hunts td select { max-width: 220px; }
+  .hunts td .row { justify-content: flex-end; }
+  select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card2); color: var(--text); }
 </style>
 </head>
 <body>
@@ -92,7 +99,7 @@
     <div class="card">
       <form id="createForm" class="row">
         <input id="label" class="grow" placeholder="Para quem é (ex.: Atx Buubo)" autocomplete="off">
-        <span class="muted">vale 7 dias</span>
+        <span class="muted">não vence</span>
         <button class="primary">Criar código</button>
       </form>
       <div class="err" id="createErr"></div>
@@ -103,11 +110,6 @@
       <h2 style="margin:0">Códigos válidos <span id="count"></span></h2>
       <input id="filter" class="grow" placeholder="Filtrar por nome, código ou personagem" style="margin-left:auto; max-width:340px">
       <button id="refresh">Atualizar</button>
-    </div>
-    <div class="card row" id="renewAll" style="margin-top:12px">
-      <span class="muted" style="width:150px" title="Só quem tem menos dias que isso ganha; ninguém perde dias">Completar todos para</span>
-      <button data-days="7">7 dias</button><button data-days="15">15 dias</button><button data-days="30">30 dias</button>
-      <span class="err" id="renewAllErr"></span>
     </div>
     <div id="list" style="margin-top:12px"></div>
   </section>

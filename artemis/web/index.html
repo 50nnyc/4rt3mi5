@@ -218,6 +218,24 @@
   .langs button.on .tag { background: var(--gold); }
   .langs.compact { grid-template-columns: repeat(4, auto); justify-content: center; gap: 6px; margin-top: 14px; }
   .langs.compact button { padding: 6px 9px; font-size: 13px; gap: 6px; background: none; }
+  /* 0.20.0: tipo de player, local da hunt e Input Analyzer */
+  .ptypes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .ptypes button { display: flex; align-items: center; gap: 10px; background: var(--card2); border: 1px solid var(--line);
+                   padding: 12px; text-align: left; }
+  .ptypes .pt-ic { font-size: 20px; }
+  .ptypes button.on { border-color: var(--gold); color: var(--gold2); box-shadow: inset 0 0 0 1px var(--gold); }
+  .ptypes button b { display: block; line-height: 1.25; }
+  .ptypes .pt-cur { display: block; font-size: 12px; font-weight: 600; color: var(--gold); }
+  .tagbtn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 13px;
+            border: 1px dashed rgba(242,201,76,.6); background: rgba(242,201,76,.08); color: var(--gold); cursor: pointer; }
+  .tagbtn.warn { border-color: rgba(255,122,107,.6); background: rgba(255,122,107,.08); color: var(--red); }
+  .tagline-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  .dmg { border: 1px solid var(--line); background: var(--card2); border-radius: 12px; padding: 10px 12px; margin-top: 8px; }
+  .dmg .row { padding: 2px 0; }
+  .member-shared { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
+  .flow-step { margin-top: 10px; }
+  .flow-step .row2 { display: flex; gap: 8px; margin-top: 10px; }
+  .flow-step .row2 > * { flex: 1; margin: 0; }
   @media (max-width: 480px) {
     .langs.compact { grid-template-columns: repeat(2, auto); }
     /* cabeçalho com ⚙️: botões um pouco menores para o logo caber inteiro */
@@ -445,7 +463,7 @@
         <input id="loginUser" autocomplete="username" autocapitalize="off" spellcheck="false" maxlength="20" style="margin-top:6px">
         <label class="muted" for="loginPass" style="display:block; margin-top:10px">Senha:</label>
         <input id="loginPass" type="password" autocomplete="current-password" maxlength="64" style="margin-top:6px">
-        <div class="hint">Na senha é aceito números, letras e caracteres especiais _ ! @ -</div>
+        <div class="hint">Na senha são aceitos números, letras e os caracteres especiais _ ! @ -</div>
         <button class="btn" type="submit">Entrar</button>
       </form>
       <div class="err" id="loginErr"></div>
@@ -520,10 +538,10 @@
       <div class="storeTag">GRÁTIS</div>
       <h3>🎁 Gere sua chave gratuita agora mesmo!</h3>
       <ul class="muted">
-        <li>Acesso completo ao 4rt3mi5 por <b id="freeDays">7</b> dias, renovável de graça</li>
+        <li>Acesso FREE ao 4rt3mi5</li>
         <li>Uma chave por conta, com até 50 personagens</li>
         <li>Lootsplit, Hunt Session Stacker, Rotação de bosses, metas e ranking</li>
-        <li>Seus dados ficam salvos mesmo depois que a chave vence</li>
+        <li>Seus dados ficam salvos na sua conta</li>
       </ul>
       <button class="btn" id="storeFree" type="button">Gerar minha chave grátis</button>
       <div class="err" id="storeErr"></div>
@@ -546,6 +564,20 @@
       <div id="keyRecovery"></div>
     </div>
     <button class="link" id="acctOut" style="margin-top:10px">← sair da conta</button>
+  </div>
+</section>
+
+<!-- 0.20.0: na criação da conta (e uma vez para quem já tinha conta): "Você se considera um:" -->
+<section id="ptypeScreen" class="gate hidden">
+  <div class="box" style="max-width:480px">
+    <div class="logo">4rt3mi5</div>
+    <div class="card">
+      <h3 style="margin:0 0 10px">Você se considera um:</h3>
+      <div class="ptypes" id="ptypeAsk" role="radiogroup" aria-label="Tipo de player"></div>
+      <div class="banner ok hidden" id="ptypeAskDesc" style="margin-top:12px"></div>
+      <button class="btn hidden" id="ptypeAskGo" type="button">Continuar</button>
+      <div class="hint">Dá para trocar depois em ⚙️ Configurações.</div>
+    </div>
   </div>
 </section>
 
@@ -586,15 +618,14 @@
     <div class="me"><span class="avatar" id="drawerAvatar" aria-hidden="true"></span>
       <div class="me-txt"><b id="drawerName"></b><span class="muted" id="drawerInfo"></span></div></div>
     <button class="item" data-page="home"><span class="ic">🏠</span>Início</button>
-    <div class="group">Caçar</div>
+    <div class="group">Solo</div>
+    <button class="item" data-page="stack" data-open="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
+    <button class="item" data-page="boss" data-btab="solo"><span class="ic">👑</span>Boss</button>
+    <div class="group">Party</div>
     <button class="item" data-page="loot"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
-    <button class="item" data-page="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
-    <button class="item" data-page="hunts"><span class="ic">🗺️</span>Hunts</button>
-    <div class="group">Bosses</div>
-    <button class="item" data-page="boss" data-btab="all"><span class="ic">👑</span>Rotação de bosses</button>
-    <button class="item sub" data-page="boss" data-btab="solo">Solo</button>
-    <button class="item sub" data-page="boss" data-btab="party">Party</button>
+    <button class="item" data-page="boss" data-btab="party"><span class="ic">👑</span>Boss</button>
     <div class="group">Progresso</div>
+    <button class="item" data-page="hunts"><span class="ic">🗺️</span>Hunts</button>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Ranking entre amigos</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
     <div class="group">Conta</div>
@@ -627,13 +658,8 @@
     <div id="pageStack" class="hidden">
       <h1>Hunt Session Stacker</h1>
       <div class="card">
-        <label class="muted" for="stackText">Cole aqui o Hunt Analyser (sessão individual)</label>
-        <textarea id="stackText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Raw XP Gain: ...&#10;XP Gain: ..."></textarea>
-        <button class="btn2 paste-btn" data-paste-into="stackText" type="button">📋 Colar da área de transferência</button>
-        <label class="muted" style="display:block; margin-top:12px">Em qual hunt foi essa sessão?</label>
-        <div id="stackPlace" style="margin-top:6px"></div>
-        <button class="btn" id="stackBtn">Adicionar sessão</button>
-        <div class="err" id="stackErr"></div>
+        <button class="btn" id="stackOpen" type="button" style="margin-top:0">＋ Colar Hunt Session Analyzer</button>
+        <div class="hint">Cole a sessão, salve, e depois diga em qual hunt foi (pode deixar para depois).</div>
       </div>
       <div id="stackResult"></div>
     </div>
@@ -706,11 +732,17 @@
 
     <div id="pageSettings" class="hidden">
       <h1>Configurações</h1>
-      <p class="muted" style="margin-top:-4px">Preferências deste aparelho.</p>
+      <p class="muted" style="margin-top:-4px">Suas preferências no 4rt3mi5.</p>
+      <h2>🎮 Tipo de player</h2>
+      <div class="card">
+        <div class="ptypes" id="playerTypes" role="radiogroup" aria-label="Tipo de player"></div>
+        <div class="hint" id="playerTypeHint" style="margin-top:10px"></div>
+        <div class="err" id="playerTypeErr"></div>
+      </div>
       <h2>🌐 Idioma</h2>
       <div class="card">
         <div class="langs" id="settingsLang" aria-label="Idioma"></div>
-        <div class="hint" style="margin-top:10px">O app inteiro muda na hora. Nomes do Tibia (itens, criaturas, bosses e hunts) e as Novidades continuam como estão.</div>
+        <div class="hint" style="margin-top:10px">O app inteiro muda na hora. Nomes do Tibia (itens, criaturas, bosses e hunts) continuam como no jogo. Sem escolha, o app abre em português.</div>
       </div>
     </div>
 

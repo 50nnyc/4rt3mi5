@@ -37,6 +37,7 @@ from pydantic import BaseModel, Field
 from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
 from artemis.core import bosses as boss_core
+from artemis.core import damage as damage_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
@@ -315,7 +316,9 @@ def user_expires(access: dict) -> str | None:
 def me_payload(access: dict) -> dict:
     current = store.validate_key(access["key"]) or access
     return {"expires_at": user_expires(current), "main_char": current.get("main_char"),
-            "chars": store.key_chars(access["key"])}
+            "chars": store.key_chars(access["key"]), "player_type": store.player_type(access["key"]),
+            "player_type_chosen": store.player_type_chosen(access["key"]),
+            "player_types": list(_open_player_types()), "player_type_info": _extra_type_info()}
 
 
 NAME_MAX = 40          # nomes do Tibia têm até 29 caracteres
@@ -769,7 +772,7 @@ def store_free(request: Request, acc: dict = Depends(require_account)):
     return {"key": k["key"], "expires_at": k["expires_at"]}
 
 
-CHAR_TAKEN = "Este character já possui código de acesso."
+CHAR_TAKEN = "Este personagem já possui código de acesso."
 
 
 def _check_char_free(key: str, name: str) -> None:
@@ -824,6 +827,41 @@ def verify_check(body: CodeIn, request: Request, session: tuple = Depends(option
 
 @app.get("/api/me")
 def me(access: dict = Depends(require_session)):
+    return me_payload(access)
+
+
+class PlayerTypeIn(BaseModel):
+    player_type: Annotated[str, Field(max_length=20)]
+
+
+# Tipos que a pessoa pode escolher. Tipos extras podem ser ligados no .env
+# (ARTEMIS_EXTRA_PLAYER_TYPES); nome e descrição em data/player_types.json.
+PLAYER_TYPES_OPEN = ("hardcore", "comum", "novato")
+SHARING_TYPES = ("hardcore", "comum", "tipo_extra")  # quem junta sessão e Input Analyzer ao que é da PT
+
+
+def _open_player_types() -> tuple:
+    extra = [t.strip() for t in os.environ.get("ARTEMIS_EXTRA_PLAYER_TYPES", "").split(",")]
+    return PLAYER_TYPES_OPEN + tuple(t for t in extra if t in store.PLAYER_TYPES and t not in PLAYER_TYPES_OPEN)
+
+
+def _extra_type_info() -> dict:
+    extra = [t for t in _open_player_types() if t not in PLAYER_TYPES_OPEN]
+    if not extra:
+        return {}
+    try:
+        info = json.loads((DATA_DIR / "player_types.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        info = {}
+    return {t: info.get(t, {}) for t in extra}
+
+
+@app.post("/api/prefs/player-type")
+def set_player_type(body: PlayerTypeIn, access: dict = Depends(require_session)):
+    """0.20.0: tipo de player (na criação da conta e em ⚙️ Configurações; vale para a conta toda)."""
+    if body.player_type not in _open_player_types():
+        raise HTTPException(422, "Tipo de player inválido.")
+    store.set_player_type(access["key"], body.player_type)
     return me_payload(access)
 
 
@@ -893,9 +931,79 @@ def _delete_own(table: str, row_id: int, access: dict) -> None:
     (store.delete_hunt if table == "hunts" else store.delete_solo)(row_id)
 
 
+# 0.20.0: o que cada membro da PT juntou ao lootsplit. Quantidade de criaturas e de itens fica só com o dono.
+_MEMBER_PUBLIC = ("started_at", "ended_at", "duration_seconds", "xp", "raw_xp", "balance", "supplies",
+                  "damage", "damage_h", "healing", "healing_h")
+
+
+def _input_view(i: dict) -> dict:
+    return {**i, **damage_core.summary(i)}
+
+
+SAME_PERIOD_SECONDS = 60  # folga entre o relógio do Hunt Session Analyser e o do Party Hunt Analyser
+
+
+def _discrepancy(s: dict, h: dict) -> list[str]:
+    """Sessão do membro x a linha dele no Party Hunt Analyser. Só conta quando é o mesmo período da party hunt.
+    Loot type Leader: o loot fica com o líder, então só os supplies são comparados. Market: loot, supplies e balance."""
+    try:
+        same = all(abs((datetime.fromisoformat(s[a]) - datetime.fromisoformat(h[b])).total_seconds()) <= SAME_PERIOD_SECONDS
+                   for a, b in (("started_at", "started_at"), ("ended_at", "ended_at")))
+    except (KeyError, TypeError, ValueError):
+        return []
+    p = next((p for p in h.get("players", []) if name_key(p["name"]) == name_key(s["name"])), None)
+    if not same or p is None:
+        return []
+    mine = {"supplies": s.get("supplies", 0), "balance": s.get("balance", 0),
+            "loot": s.get("balance", 0) + s.get("supplies", 0)}  # no Tibia, Balance = Loot − Supplies
+    fields = ("supplies",) if (h.get("loot_type") or "").strip().lower() == "leader" else ("loot", "supplies", "balance")
+    return [f for f in fields if p.get(f) is not None and mine[f] != p[f]]
+
+
+def _member_view(s: dict, access: dict, h: dict | None = None) -> dict:
+    own = s.get("uploader_key") == access["key"]
+    out = {"name": s["name"], "own": own, **{k: s.get(k, 0) for k in _MEMBER_PUBLIC}}
+    out["discrepancy"] = _discrepancy(s, h) if h else []
+    out["xp_h"] = _per_hour(out["xp"], out["duration_seconds"])
+    out["balance_h"] = _per_hour(out["balance"], out["duration_seconds"])
+    if own:
+        out["kills"] = [{"key": c, "count": n} for c, n in s.get("kills", [])]
+        out["loot"] = [{"key": k, "count": n} for k, n in s.get("loot", [])]
+    return out
+
+
+def _place_ref(place_id: int | None, cache: dict) -> dict | None:
+    if not place_id:
+        return None
+    if place_id not in cache:
+        p = store.place(place_id)
+        cache[place_id] = {"id": p["id"], "name": p["name"]} if p else None
+    return cache[place_id]
+
+
+def _hunts_out(hunts: list[dict], access: dict) -> list[dict]:
+    """Lootsplits para a tela: local da hunt e, só para quem estava na PT, o que os membros compartilharam."""
+    mine = {name_key(c["name"]) for c in store.key_chars(access["key"])}
+    ids = [h["id"] for h in hunts if h.get("id")]
+    inputs, members = store.inputs_for("hunt", ids), store.party_sessions_for(ids)
+    places: dict = {}
+    out = []
+    for h in hunts:
+        in_party = any(name_key(p["name"]) in mine for p in h["players"])
+        hid = h.get("id")
+        raw = dict(h)
+        h = _public(h, access)
+        h["place"] = _place_ref(h.get("place_id"), places)
+        h["in_party"] = in_party
+        h["inputs"] = [_input_view(i) for i in inputs.get(hid, [])] if in_party else []
+        h["member_sessions"] = [_member_view(s, access, raw) for s in members.get(hid, [])] if in_party else []
+        out.append(h)
+    return out
+
+
 @app.get("/api/hunts/{name}")
 def player_hunts(name: str, access: dict = Depends(require_session)):
-    return {"hunts": [_public(h, access) for h in store.hunts_for_player(name)]}
+    return {"hunts": _hunts_out(store.hunts_for_player(name), access)}
 
 
 @app.delete("/api/hunt/{hunt_id}")
@@ -922,6 +1030,11 @@ def _load_hunt(kind: str, hunt_id: int) -> dict:
     return h
 
 
+def _hunt_payload(kind: str, hunt_id: int, access: dict) -> dict:
+    h = _load_hunt(kind, hunt_id)
+    return _hunts_out([h], access)[0] if kind == "hunt" else _public(h, access)
+
+
 def _set_rules(kind: str, hunt_id: int, body: RulesIn, access: dict) -> dict:
     """Regras de divisão: só quem enviou o lootsplit define. Zera as marcações de "já paguei"."""
     h = _load_hunt(kind, hunt_id)
@@ -937,7 +1050,7 @@ def _set_rules(kind: str, hunt_id: int, body: RulesIn, access: dict) -> dict:
         raise HTTPException(422, "Pelo menos um jogador precisa continuar na divisão igual.")
     rules = {"excluded": excluded, "fixed": fixed} if excluded or fixed else None
     store.set_split_rules(kind, hunt_id, rules, access["key"])
-    return {"hunt": _public(_load_hunt(kind, hunt_id), access)}
+    return {"hunt": _hunt_payload(kind, hunt_id, access)}
 
 
 def _set_paid(kind: str, hunt_id: int, body: PaidIn, access: dict) -> dict:
@@ -951,7 +1064,7 @@ def _set_paid(kind: str, hunt_id: int, body: PaidIn, access: dict) -> dict:
         raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.",
                                   "hint": FORBIDDEN_HINT})
     store.set_paid(kind, hunt_id, t["payer"], t["receiver"], t["amount"], access["key"], body.paid)
-    return {"hunt": _public(_load_hunt(kind, hunt_id), access)}
+    return {"hunt": _hunt_payload(kind, hunt_id, access)}
 
 
 @app.post("/api/hunt/{hunt_id}/rules")
@@ -975,7 +1088,106 @@ def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
     report = _parse_party(body.raw_text)
     uploader = require_uploader(body.nickname, access)
     hunt, created = store.add_hunt(report, body.raw_text, uploader, access["key"])
-    return {"created": created, "hunt": _public(hunt, access), "rewards": grant_rewards(access["key"])}
+    return {"created": created, "hunt": _hunts_out([hunt], access)[0], "rewards": grant_rewards(access["key"])}
+
+
+# ------------------------------------------------------------------ 0.20.0: local da hunt, Input Analyser e sessões da PT
+PLACE_EDIT_LIMIT = 2  # trocas do local depois de definido; a primeira escolha não conta
+PLACE_LOCKED = "Para alterar novamente entre em contato com o administrador."
+INPUT_ONLY_HARDCORE = "O Player Novato não compartilha o Input Analyzer. Troque o tipo de player em ⚙️ Configurações."
+SESSION_NOT_NOVATO = "O Player Novato não compartilha a sessão. Troque o tipo de player em ⚙️ Configurações."
+INPUT_LOCKED = "Esse Input Analyzer já foi salvo e não pode ser editado."
+
+
+class PlaceSet(BaseModel):
+    place_id: int = Field(ge=1)
+
+
+class RawIn(BaseModel):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+
+
+class MemberRawIn(RawIn):
+    nickname: Name
+
+
+def _change_place(table: str, row_id: int, place_id: int, access: dict) -> dict:
+    """Define o local (grátis) ou troca (no máximo 2 vezes; depois só o administrador)."""
+    st = store.place_state(table, row_id)
+    if st is None:
+        raise HTTPException(404, "Não encontrado (talvez tenha sido apagado).")
+    if st["uploader_key"] != access["key"]:
+        raise HTTPException(403, "Só quem enviou pode definir o local da hunt.")
+    place = store.place(place_id)
+    if place is None:
+        raise HTTPException(404, "Hunt não encontrada.")
+    if st["place_id"] != place_id:
+        is_change = st["place_id"] is not None
+        if is_change and st["place_edits"] >= PLACE_EDIT_LIMIT:
+            raise HTTPException(403, PLACE_LOCKED)
+        store.update_place(table, row_id, place_id, is_change)
+        st = store.place_state(table, row_id)
+    return {"place": {"id": place["id"], "name": place["name"]}, "place_edits": st["place_edits"],
+            "locked": st["place_edits"] >= PLACE_EDIT_LIMIT}
+
+
+def _parse_input(raw: str) -> dict:
+    try:
+        return damage_core.parse_input(raw)
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+
+
+def _require_type(access: dict, allowed: tuple, message: str) -> None:
+    if store.player_type(access["key"]) not in allowed:
+        raise HTTPException(403, message)
+
+
+def _party_member(hunt_id: int, nickname: str, access: dict) -> tuple[dict, str]:
+    """Personagem do código que estava nesse lootsplit."""
+    h = _load_hunt("hunt", hunt_id)
+    name = require_uploader(nickname, access)
+    if name_key(name) not in {name_key(p["name"]) for p in h["players"]}:
+        raise HTTPException(403, {"message": NOT_IN_PARTY_HUNT, "hint": "Use o personagem que estava na PT."})
+    return h, name
+
+
+NOT_IN_PARTY_HUNT = "Seu personagem não está nesse lootsplit."
+
+
+@app.post("/api/hunt/{hunt_id}/place")
+def hunt_place(hunt_id: int, body: PlaceSet, access: dict = Depends(require_session)):
+    return _change_place("hunts", hunt_id, body.place_id, access)
+
+
+@app.post("/api/hunt/{hunt_id}/input")
+def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
+    """Input Analyser de um membro da PT (só Player Hardcore). Salvou, não edita."""
+    _require_type(access, SHARING_TYPES, INPUT_ONLY_HARDCORE)
+    _, name = _party_member(hunt_id, body.nickname, access)
+    data = _parse_input(body.raw_text)
+    row, created = store.add_input("hunt", hunt_id, name, data, access["key"])
+    if not created:
+        raise HTTPException(409, INPUT_LOCKED)
+    return {"input": _input_view(row), "hunt": _hunt_payload("hunt", hunt_id, access)}
+
+
+@app.post("/api/hunt/{hunt_id}/session")
+def hunt_member_session(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
+    """Hunt Session Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore)."""
+    _require_type(access, SHARING_TYPES, SESSION_NOT_NOVATO)
+    h, name = _party_member(hunt_id, body.nickname, access)
+    try:
+        session = parse_solo_session(body.raw_text)
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+    ended = h.get("ended_at")
+    if ended and not boss_core.overlaps(session.started_at, session.ended_at, h["started_at"], ended):
+        raise HTTPException(422, "Essa sessão não é do mesmo horário do lootsplit.")
+    _, created = store.add_party_session(hunt_id, name, session.to_dict(), access["key"])
+    if not created:
+        raise HTTPException(409, "Você já juntou a sua sessão a esse lootsplit.")
+    return {"hunt": _hunt_payload("hunt", hunt_id, access)}
 
 
 # ------------------------------------------------------------------ conquistas e sequência de dias
@@ -1214,7 +1426,54 @@ def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
         s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
         s["loot_value"] = sum(it["value"] for it in items)
         s["net_profit"] = s["loot_value"] - s["supplies"]  # lucro líquido real: loot pelos preços de NPC - supplies
+    # 0.20.0: Input Analyser de cada sessão (só aparece para quem enviou)
+    inputs = store.inputs_for("solo", [s["id"] for s in sessions if s["can_delete"]])
+    for s in sessions:
+        got = inputs.get(s["id"]) or []
+        s["input"] = _input_view(got[0]) if got else None
+        s["place_locked"] = s.get("place_edits", 0) >= PLACE_EDIT_LIMIT
     return sessions, prices
+
+
+# 0.20.0: quantidade de criaturas mortas e de itens coletados é do dono do personagem; os outros veem só o geral
+_OWNER_ONLY_SESSION = ("kills", "loot", "loot_value", "net_profit", "input", "place_edits", "place_locked")
+
+
+def _generic_only(data: dict) -> dict:
+    for s in data["sessions"]:
+        for k in _OWNER_ONLY_SESSION:
+            s.pop(k, None)
+    p = data["period"]
+    p.update(items=[], kills=[], loot_value=0, net_profit=0, net_profit_per_hour=0, unpriced=0)
+    data.update(prices={}, goals=[], sell=[], alerts=[], by_place=None,
+                records=[r for r in data["records"] if r["label"] not in ("Maior lucro líquido/h", "Maior loot numa sessão")])
+    return data
+
+
+def _by_place(sessions: list[dict]) -> dict | None:
+    """📊 Comparar as suas hunts: XP/h e balance/h de cada local (sessões de 10 min ou mais)."""
+    acc: dict[int, dict] = {}
+    for s in sessions:
+        if not s.get("place") or s["duration_seconds"] < COMPARE_MIN_SECONDS:
+            continue
+        a = acc.setdefault(s["place"]["id"], {"place": s["place"]["name"], "sessions": 0, "seconds": 0, "xp": 0,
+                                              "balance": 0, "best_xp_h": 0, "best_gold_h": None})
+        a["sessions"] += 1
+        a["seconds"] += s["duration_seconds"]
+        a["xp"] += s["xp"]
+        a["balance"] += s["balance"]
+        a["best_xp_h"] = max(a["best_xp_h"], _per_hour(s["xp"], s["duration_seconds"]))
+        g = _per_hour(s["balance"], s["duration_seconds"])
+        a["best_gold_h"] = g if a["best_gold_h"] is None else max(a["best_gold_h"], g)
+    rows = []
+    for a in acc.values():
+        rows.append({"place": a["place"], "sessions": a["sessions"], "hours": round(a["seconds"] / 3600, 1),
+                     "xp_h": _per_hour(a["xp"], a["seconds"]), "gold_h": _per_hour(a["balance"], a["seconds"]),
+                     "best_xp_h": a["best_xp_h"], "best_gold_h": a["best_gold_h"] or 0})
+    if not rows:
+        return None
+    rows.sort(key=lambda r: -r["xp_h"])
+    return {"rows": rows, "best_xp": rows[0]["place"], "best_gold": max(rows, key=lambda r: r["gold_h"])["place"]}
 
 
 @app.get("/api/stacker/{name}")
@@ -1241,8 +1500,9 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
     }
     day = sessions[0]["started_at"][:10] if sessions else None
     sell = _sell_list(name, sessions, prices)
-    return {
-        "is_owner": store.is_linked(access["key"], name),
+    owner = store.is_linked(access["key"], name)
+    data = {
+        "is_owner": owner,
         "day": day,
         "day_totals": _totals([s for s in sessions if s["started_at"][:10] == day]),
         "lifetime": _totals(sessions),
@@ -1254,7 +1514,9 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
         "records": _records(sessions),
         "sell": sell,
         "alerts": [it for it in sell if it["reached"]],
+        "by_place": _by_place(sessions),
     }
+    return data if owner else _generic_only(data)
 
 
 def require_owner(name: str, access: dict) -> None:
@@ -1305,10 +1567,6 @@ class PlaceIn(BaseModel):
     city: Annotated[str, Field(max_length=40)] | None = None
 
 
-class PlaceSet(BaseModel):
-    place_id: int | None = Field(default=None, ge=1)
-
-
 # Nomes de hunt criados por usuários: letras (com acento), números, espaço e pontuação simples.
 _PLACE_NAME = re.compile(r"[\w À-ÿ'().,&/-]+")
 PLACES_PER_KEY = 30
@@ -1334,15 +1592,27 @@ def create_place(body: PlaceIn, access: dict = Depends(require_session)):
 
 @app.post("/api/stacker/session/{session_id}/place")
 def set_place(session_id: int, body: PlaceSet, access: dict = Depends(require_session)):
-    exists, owner = store.uploader_of("solo_sessions", session_id)
-    if not exists:
+    """Local da sessão: escolher é livre; trocar depois, só 2 vezes (0.20.0)."""
+    out = _change_place("solo_sessions", session_id, body.place_id, access)
+    row = store.solo_session(session_id)
+    out["compare"] = _compare_with_average(row["name"], row) if row else None
+    return out
+
+
+@app.post("/api/stacker/session/{session_id}/input")
+def solo_input(session_id: int, body: RawIn, access: dict = Depends(require_session)):
+    """Input Analyser da sessão do Stacker (só Player Hardcore). Salvou, não edita."""
+    _require_type(access, SHARING_TYPES, INPUT_ONLY_HARDCORE)
+    row = store.solo_session(session_id)
+    if row is None:
         raise HTTPException(404, "Sessão não encontrada.")
-    if owner != access["key"]:
-        raise HTTPException(403, "Só quem enviou pode alterar a hunt da sessão.")
-    if body.place_id is not None and store.place(body.place_id) is None:
-        raise HTTPException(404, "Hunt não encontrada.")
-    store.set_session_place(session_id, body.place_id)
-    return {"ok": True}
+    if row["uploader_key"] != access["key"]:
+        raise HTTPException(403, "Só quem enviou a sessão pode juntar o Input Analyzer.")
+    data = _parse_input(body.raw_text)
+    saved, created = store.add_input("solo", session_id, row["name"], data, access["key"])
+    if not created:
+        raise HTTPException(409, INPUT_LOCKED)
+    return {"input": _input_view(saved)}
 
 
 @app.get("/api/places/ranking")
@@ -1357,7 +1627,8 @@ def places_ranking(sort: str = "xp", min_level: int | None = None, max_level: in
 def places_compare(ids: str, nick: str = "", access: dict = Depends(require_session)):
     place_ids = [int(i) for i in ids.split(",") if i.strip().isdigit()][:3]
     general = {r["id"]: r for r in store.place_stats(place_ids=place_ids)}
-    mine = {r["id"]: r for r in store.place_stats(place_ids=place_ids, name=nick)} if nick else {}
+    own = bool(nick) and store.is_linked(access["key"], nick)  # "Seu XP/h" só do próprio personagem
+    mine = {r["id"]: r for r in store.place_stats(place_ids=place_ids, name=nick)} if own else {}
     out = []
     for pid in place_ids:
         p = store.place(pid)
@@ -1370,9 +1641,13 @@ def places_compare(ids: str, nick: str = "", access: dict = Depends(require_sess
         for it in items:
             it["value"] = it["count"] * prices[it["key"]]["unit_price"]
             it["name"] = prices[it["key"]]["name"]
+        # 0.20.0: dados de todos os jogadores saem só como lista (sem quantidade de criaturas e de loot)
+        top_items = sorted((it for it in items if it["value"] > 0), key=lambda it: -it["value"])[:5]
+        inputs = store.inputs_for_place(pid)
         out.append({"place": p, "stats": general.get(pid), "mine": mine.get(pid),
-                    "top_kills": [{"key": k, "count": n} for k, n in kills],
-                    "top_items": sorted((it for it in items if it["value"] > 0), key=lambda it: -it["value"])[:5]})
+                    "top_kills": [{"key": k} for k, _ in kills],
+                    "top_items": [{"key": it["key"], "name": it["name"]} for it in top_items],
+                    "damage": damage_core.combine(inputs) if inputs else None})
     return out
 
 
@@ -1752,7 +2027,53 @@ def _admin_key(key: str) -> dict:
 @app.get("/api/admin/keys", dependencies=[Depends(require_admin)])
 def admin_keys():
     store.purge_expired()
-    return store.keys_overview()
+    keys = store.keys_overview()
+    for k in keys:  # 0.20.0: tipo de player de cada conta
+        k["player_type"] = store.player_type(k["key"]) if store.player_type_chosen(k["key"]) else None
+    return keys
+
+
+# ------------------------------------------------------------------ 0.20.0: hunts de um personagem (local e trocas)
+class AdminPlaceIn(BaseModel):
+    kind: Literal["solo", "hunt"]
+    id: int = Field(ge=1)
+    place_id: int | None = Field(default=None, ge=1)
+    reset_edits: bool = False
+
+
+@app.get("/api/admin/chars/{name}/hunts", dependencies=[Depends(require_admin)])
+def admin_char_hunts(name: str):
+    """Sessões do Stacker e lootsplits do personagem, com o local e quantas trocas já foram usadas."""
+    places: dict = {}
+    sessions = [{"id": s["id"], "started_at": s["started_at"], "duration_seconds": s["duration_seconds"], "xp": s["xp"],
+                 "balance": s["balance"], "place": _place_ref(s.get("place_id"), places), "place_edits": s.get("place_edits", 0)}
+                for s in store.solo_for_player(name)]
+    hunts = [{"id": h["id"], "started_at": h["started_at"], "duration_seconds": h["duration_seconds"],
+              "players": [p["name"] for p in h["players"]], "place": _place_ref(h.get("place_id"), places),
+              "place_edits": h.get("place_edits", 0)}
+             for h in store.hunts_for_player(name)]
+    return {"name": name, "sessions": sessions, "hunts": hunts, "edit_limit": PLACE_EDIT_LIMIT}
+
+
+@app.get("/api/admin/places", dependencies=[Depends(require_admin)])
+def admin_places():
+    return [{"id": p["id"], "name": p["name"], "city": p.get("city")} for p in store.places()]
+
+
+@app.post("/api/admin/place", dependencies=[Depends(require_admin)])
+def admin_place(body: AdminPlaceIn):
+    """O administrador troca o local (sem gastar as trocas da pessoa) e/ou libera de novo as 2 trocas."""
+    table = "solo_sessions" if body.kind == "solo" else "hunts"
+    if store.place_state(table, body.id) is None:
+        raise HTTPException(404, "Não encontrado (talvez tenha sido apagado).")
+    if body.place_id is not None:
+        if store.place(body.place_id) is None:
+            raise HTTPException(404, "Hunt não encontrada.")
+        store.update_place(table, body.id, body.place_id, False)
+    if body.reset_edits:
+        store.reset_place_edits(table, body.id)
+    st = store.place_state(table, body.id)
+    return {"place": _place_ref(st["place_id"], {}), "place_edits": st["place_edits"], "edit_limit": PLACE_EDIT_LIMIT}
 
 
 VIGIA_FILE = DATA_DIR / "vigia.json"  # escrito pelo tools/vigia.ps1 (Agendador do Windows)
@@ -1949,8 +2270,8 @@ def service_worker():
 _STATIC = {"manifest.webmanifest": "application/manifest+json", "icon-192.png": "image/png",
            "icon-512.png": "image/png", "icon-maskable.png": "image/png"}
 # 0.19.0: idiomas (motor + dicionários). Sem cache longo: tradução nova chega na hora.
-_I18N = {"i18n.js": "text/javascript", "i18n-en.json": "application/json",
-         "i18n-es.json": "application/json", "i18n-ja.json": "application/json"}
+I18N_LANGS = ("en", "es", "ja", "de", "pl", "fr", "ru")  # 0.20.0: + alemão, polonês, francês e russo
+_I18N = {"i18n.js": "text/javascript", **{f"i18n-{c}.json": "application/json" for c in I18N_LANGS}}
 
 
 @app.get("/{filename}", include_in_schema=False)

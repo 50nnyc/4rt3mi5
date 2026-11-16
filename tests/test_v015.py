@@ -64,13 +64,12 @@ class V015Tests(unittest.TestCase):
         self.assertGreater(exp, _iso(utcnow() + timedelta(days=6, hours=23)))
         self.assertLess(exp, _iso(utcnow() + timedelta(days=7, minutes=1)))
 
-    def test_renew_needs_verified_character(self):
+    def test_renew_free_has_nothing_to_do(self):
+        """0.20.0: a chave não vence, então a renovação grátis nunca muda nada."""
         server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
                                    (_iso(utcnow() + timedelta(days=1)), self.key))
-        # sem personagem verificado não há sessão; força o caminho direto no banco
-        self.assertFalse(server.store.renew_free(self.key)[0])
         server.store.add_char_manual(self.key, "Hilay")
-        self.assertTrue(server.store.renew_free(self.key)[0])
+        self.assertFalse(server.store.renew_free(self.key)[0])
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ function inviteText(k) {
   return `🏹 Você foi convidado para testar o 4rt3mi5!\n\n`
     + `O app que ajuda na sua hunt de Tibia: lootsplit da PT, Hunt Session Stacker, metas, rotação de bosses e muito mais.\n\n`
     + `Estamos na fase beta, com a versão quase finalizada. Se achar algum erro ou tiver uma ideia, me conta: sua opinião ajuda a deixar o app pronto.\n\n`
-    + `🔑 Seu código de acesso: ${k.key}\n(válido até ${day(k.expires_at)})\n\n`
+    + `🔑 Seu código de acesso: ${k.key}\n\n`
     + `SITE: ${SITE}`;
 }
 
@@ -156,18 +156,9 @@ $("#screenDays").addEventListener("click", (e) => {
   $("#screenDays").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
   loadScreens();
 });
-/** Códigos que vencem em até 7 dias, para renovar a tempo. */
-function expiringBlock() {
-  const soon = KEYS.filter((k) => !k.lifetime && daysLeft(k.expires_at) <= 7).sort((a, b) => a.expires_at.localeCompare(b.expires_at));
-  if (!soon.length) return "";
-  return `<h2>Vencem nesta semana (${soon.length})</h2><div class="card">${soon.map((k) => {
-    const left = daysLeft(k.expires_at);
-    return `<div class="row" style="padding:4px 0"><span class="key" style="font-size:14px">${esc(k.key)}</span>
-      <b>${esc(k.label || k.main_char || "—")}</b>
-      <span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"} (${day(k.expires_at)})</span>
-      <span class="muted">último uso: ${esc(lastUse(k))}</span></div>`;
-  }).join("")}</div>`;
-}
+/** 0.20.0: os códigos não vencem mais, então não há lista de "vencem nesta semana". */
+function expiringBlock() { return ""; }
+const PTYPE_LABEL = { hardcore: "🔥 Player Hardcore", comum: "⚔️ Player Comum", novato: "🌱 Player Novato" };
 function lastUse(k) {
   if (!k.last_seen) return "nunca";
   const d = Math.floor((Date.now() - new Date(k.last_seen)) / 86400000);
@@ -175,38 +166,31 @@ function lastUse(k) {
 }
 
 function keyCard(k) {
-  const left = daysLeft(k.expires_at);
   const status = k.trusted ? `<span class="badge trust">contato de confiança</span>`
     : k.main_char ? `<span class="badge ok">verificado</span>` : `<span class="badge">aguardando 1º acesso</span>`;
-  const chars = k.chars.map((c) => esc(c.name) + (c.is_main ? " (main)" : "")).join(", ") || "—";
+  // 0.20.0: tocar no personagem mostra as hunts dele (local e trocas)
+  const chars = k.chars.map((c) => `<button class="charbtn" data-act="char-hunts" data-char="${esc(c.name)}" title="Ver as hunts de ${esc(c.name)}">${esc(c.name)}${c.is_main ? " (main)" : ""}</button>`).join("") || "—";
   return `<div class="card" data-key="${esc(k.key)}">
     <div class="row">
       <span class="key">${esc(k.key)}</span>
       <button data-act="copy-key">Copiar código</button>
       <button data-act="copy-invite">Copiar convite</button>
-      <span style="margin-left:auto" class="row">${status}
-        ${k.lifetime ? `<span class="badge life">⭐ amigo do adm · vitalício</span>`
-          : left <= 0 ? `<span class="badge warn">vencida (a conta pode renovar)</span>`
-          : `<span class="badge ${left <= 3 ? "warn" : ""}">vence em ${left} dia${left === 1 ? "" : "s"}</span>`}</span>
+      <span style="margin-left:auto" class="row">${status}</span>
     </div>
     <div class="grid">
       <div><span class="muted">Para</span><b>${esc(k.label || "—")}</b></div>
       <div><span class="muted">Conta</span><b>${esc(k.account || "—")}</b></div>
       <div><span class="muted">Main</span><b>${esc(k.main_char || "—")}</b></div>
-      <div><span class="muted">Personagens</span><b>${chars}</b></div>
-      <div><span class="muted">Vence em</span><b>${k.lifetime ? "nunca" : day(k.expires_at)}</b></div>
+      <div><span class="muted">Tipo de player</span><b>${esc(PTYPE_LABEL[k.player_type] || "ainda não escolheu")}</b></div>
+      <div style="grid-column:1/-1"><span class="muted">Personagens (toque para ver as hunts)</span><div>${chars}</div></div>
       <div><span class="muted">Aparelhos liberados</span><b>${k.devices}</b></div>
       <div><span class="muted">Último uso</span><b>${esc(lastUse(k))}</b></div>
       <div><span class="muted">Entradas (7 dias)</span><b>${k.logins_7d} <button data-act="logins" style="padding:2px 8px; font-size:12px">ver histórico</button></b></div>
       <div><span class="muted">Criado em</span><b>${day(k.created_at)}</b></div>
     </div>
     <div class="logins hidden" data-logins></div>
+    <div class="hunts hidden" data-hunts></div>
     <div class="actions">
-      ${k.lifetime ? "" : `<div class="row"><span class="muted" style="width:150px">Renovar a partir de hoje</span>
-        <button data-act="renew" data-days="7">7 dias</button><button data-act="renew" data-days="15">15 dias</button><button data-act="renew" data-days="30">30 dias</button></div>`}
-      <div class="row"><span class="muted" style="width:150px">Amigo do adm</span>
-        <button data-act="lifetime">${k.lifetime ? "Tirar vitalício" : "⭐ Tornar vitalício"}</button>
-        <span class="muted">${k.lifetime ? "Nunca vence; a pessoa não vê data de vencimento." : "O código nunca vence e a data some para a pessoa."}</span></div>
       <div class="row"><span class="muted" style="width:150px">Validar personagem</span>
         <input class="grow" data-input="char" placeholder="Nick do personagem" value="" style="max-width:280px">
         <button data-act="add-char">Adicionar sem verificação</button>
@@ -244,7 +228,7 @@ $("#createForm").addEventListener("submit", async (e) => {
     const k = await api("POST", "/api/admin/keys", { label: $("#label").value });
     $("#label").value = "";
     $("#created").innerHTML = `<div class="card created" style="margin:12px 0 0">
-      <div class="muted">Código criado para ${esc(k.label || "—")} · vale até ${day(k.expires_at)}</div>
+      <div class="muted">Código criado para ${esc(k.label || "—")} · não vence</div>
       <div class="row" style="margin-top:6px"><span class="key">${esc(k.key)}</span>
         <button id="cKey">Copiar código</button><button id="cInv" class="primary">Copiar convite</button></div></div>`;
     $("#cKey").onclick = () => copy(k.key);
@@ -254,17 +238,53 @@ $("#createForm").addEventListener("submit", async (e) => {
   finally { btn.disabled = false; }
 });
 
-$("#renewAll").addEventListener("click", async (e) => {
-  const b = e.target.closest("[data-days]"); if (!b) return;
-  const days = +b.dataset.days; $("#renewAllErr").textContent = "";
-  const fewer = KEYS.filter((k) => !k.lifetime && new Date(k.expires_at) < Date.now() + days * 86400000).length;
-  if (!fewer) { toast(`Todos já têm ${days} dias ou mais`); return; }
-  if (!confirm(`Completar para ${days} dias os ${fewer} código${fewer === 1 ? "" : "s"} que têm menos que isso?\n\nQuem já tem mais dias (e os vitalícios) não muda.`)) return;
-  b.disabled = true;
-  try { const r = await api("POST", "/api/admin/keys/renew-all", { days }); toast(`${r.renewed} código${r.renewed === 1 ? "" : "s"} renovado${r.renewed === 1 ? "" : "s"}`); await reload(); }
-  catch (ex) { if (ex.message !== "401") $("#renewAllErr").textContent = ex.message; }
-  finally { b.disabled = false; }
-});
+/* ---------- 0.20.0: hunts do personagem (local da hunt e trocas usadas) ---------- */
+let PLACES = null;
+const durTxt = (s) => `${Math.floor(s / 3600)}h${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}`;
+async function placeOptions() {
+  if (!PLACES) PLACES = await api("GET", "/api/admin/places");
+  return PLACES.map((p) => `<option value="${p.id}">${esc(p.name)}${p.city ? " · " + esc(p.city) : ""}</option>`).join("");
+}
+function huntRow(kind, x, limit, opts) {
+  const used = `${x.place_edits}/${limit}`;
+  const who = kind === "hunt" ? `<div class="muted">${esc(x.players.join(", "))}</div>` : `<div class="muted">${(x.xp || 0).toLocaleString("pt-BR")} XP</div>`;
+  return `<tr data-row="${kind}:${x.id}"><td>${kind === "hunt" ? "💰 Lootsplit" : "📈 Stacker"} · ${esc(when(x.started_at))} · ${durTxt(x.duration_seconds)}${who}</td>
+    <td>${x.place ? esc(x.place.name) : `<span class="badge warn">sem local</span>`}</td>
+    <td><span class="badge ${x.place_edits >= limit ? "warn" : ""}">${used}</span></td>
+    <td><div class="row"><select data-place-select aria-label="Nova hunt"><option value="">Trocar hunt…</option>${opts}</select>
+      <button data-place-save>Salvar</button>
+      <button data-place-reset ${x.place_edits ? "" : "disabled"} title="A pessoa volta a poder trocar o local ${limit} vezes">Liberar trocas</button></div></td></tr>`;
+}
+async function showCharHunts(card, name, btn) {
+  const box = $("[data-hunts]", card);
+  if (box.dataset.char === name && !box.classList.contains("hidden")) { box.classList.add("hidden"); btn.classList.remove("on"); return; }
+  card.querySelectorAll(".charbtn").forEach((b) => b.classList.toggle("on", b === btn));
+  box.dataset.char = name; box.classList.remove("hidden");
+  box.innerHTML = `<span class="muted">Carregando as hunts de ${esc(name)}…</span>`;
+  const [d, opts] = await Promise.all([api("GET", `/api/admin/chars/${encodeURIComponent(name)}/hunts`), placeOptions()]);
+  const rows = [...d.sessions.map((s) => huntRow("solo", s, d.edit_limit, opts)), ...d.hunts.map((h) => huntRow("hunt", h, d.edit_limit, opts))];
+  box.innerHTML = `<b>Hunts de ${esc(d.name)}</b> <span class="muted">(${d.sessions.length} sessões do Stacker · ${d.hunts.length} lootsplits)</span>
+    ${rows.length ? `<div class="tablewrap" style="margin-top:6px"><table><tr><th>Hunt</th><th>Local</th><th>Trocas usadas</th><th></th></tr>${rows.join("")}</table></div>
+      <div class="muted" style="margin-top:6px">A pessoa troca o local sozinha ${d.edit_limit} vezes. Aqui você troca sem gastar as trocas dela, ou libera as ${d.edit_limit} trocas de novo.</div>`
+      : `<div class="muted" style="margin-top:6px">Nenhuma sessão ou lootsplit ainda.</div>`}`;
+}
+$("#list").addEventListener("click", async (e) => {
+  const save = e.target.closest("[data-place-save]"), reset = e.target.closest("[data-place-reset]");
+  if (!save && !reset) return;
+  e.stopPropagation();
+  const tr = e.target.closest("[data-row]"), [kind, id] = tr.dataset.row.split(":");
+  const card = tr.closest("[data-key]"), err = $("[data-err]", card), box = $("[data-hunts]", card);
+  const placeId = +$("[data-place-select]", tr).value || null;
+  if (save && !placeId) { toast("Escolha a hunt na lista"); return; }
+  if (reset && !confirm("Liberar de novo as trocas de local para essa hunt?")) return;
+  (save || reset).disabled = true;
+  try {
+    await api("POST", "/api/admin/place", { kind, id: +id, place_id: save ? placeId : null, reset_edits: !!reset });
+    toast(save ? "Local trocado" : "Trocas liberadas");
+    const btn = [...card.querySelectorAll(".charbtn")].find((b) => b.dataset.char === box.dataset.char);
+    box.dataset.char = ""; await showCharHunts(card, btn.dataset.char, btn);
+  } catch (ex) { (save || reset).disabled = false; if (ex.message !== "401") err.textContent = ex.message; }
+}, true);
 
 $("#list").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-act]"); if (!b) return;
@@ -274,6 +294,7 @@ $("#list").addEventListener("click", async (e) => {
   try {
     if (act === "copy-key") return copy(key);
     if (act === "copy-invite") return copy(inviteText(k));
+    if (act === "char-hunts") return showCharHunts(card, b.dataset.char, b);
     if (act === "logins") {
       const box = $("[data-logins]", card);
       if (!box.classList.contains("hidden")) { box.classList.add("hidden"); return; }

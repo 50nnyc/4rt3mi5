@@ -1,6 +1,98 @@
 {
   "releases": [
     {
+      "version": "0.20.0",
+      "date": "2026-11-16",
+      "title": "Menu Solo e Party, tipo de player e chave sem prazo",
+      "changes": [
+        "☰ Menu novo: Solo (📈 Hunt Session Stacker e 👑 Boss) e Party (💰 Lootsplit e 👑 Boss). No Stacker, a janela para colar o Hunt Session Analyzer já abre sozinha.",
+        "💾 Salve primeiro e diga a hunt depois: a sessão fica salva mesmo sem o local, com o aviso \"hunt sem local\" para escolher quando quiser (depois de escolhido, o local pode ser trocado 2 vezes). No lootsplit não há perguntas: a divisão aparece na hora, e o local, a sua sessão e o Input Analyzer ficam como opções no próprio card.",
+        "🎮 Ao criar a conta, diga que tipo de player você é: Hardcore, Comum ou Novato. Dá para trocar quando quiser em ⚙️ Configurações, e o tipo decide o que o app pergunta e o que você compartilha.",
+        "🛡️ Junte o Input Analyzer: quanto você apanhou, o elemento e as criaturas que mais bateram. No lootsplit, cada um da PT junta a sua sessão e o seu Input Analyzer, e a PT toda vê. Se a sessão de alguém não bater com o Party Hunt Analyser, aparece um aviso discreto.",
+        "📊 Comparar minhas hunts: veja em qual hunt você fez mais XP e mais lucro no mesmo tempo. A comparação de 🗺️ Hunts mostra o dano que cada lugar dá. 🔒 A quantidade de criaturas e de loot agora fica só com o dono.",
+        "🔑 A chave de acesso não vence mais: nada de renovar. 🌐 Mais idiomas: alemão, polonês, francês e russo. O app sempre abre em português, e as Novidades aparecem no idioma que você escolher, inclusive as das versões antigas."
+      ],
+      "tr": {
+        "en": {
+          "title": "Solo and Party menu, player type and keys that never expire",
+          "changes": [
+            "☰ New menu: Solo (📈 Hunt Session Stacker and 👑 Boss) and Party (💰 Lootsplit and 👑 Boss). In the Stacker, the window to paste the Hunt Session Analyzer opens by itself.",
+            "💾 Save first and say the hunt later: the session is saved even without a spot, with a \"hunt with no spot\" tag so you can pick it whenever you want (once picked, the spot can be changed 2 times). The lootsplit asks no questions: the split shows up right away, and the spot, your session and the Input Analyzer are options on the card itself.",
+            "🎮 When you create your account, say what type of player you are: Hardcore, Regular or Beginner. You can change it anytime in ⚙️ Settings, and the type decides what the app asks and what you share.",
+            "🛡️ Add the Input Analyzer: how much damage you took, and the element and creatures that hit you the most. In the lootsplit, each party member adds their session and Input Analyzer, and the whole party sees them. If someone's session doesn't match the Party Hunt Analyser, a discreet notice shows up.",
+            "📊 Compare my hunts: see at which hunt you made more XP and more profit in the same time. The 🗺️ Hunts comparison shows the damage each place deals. 🔒 The number of creatures and loot now stays with the owner only.",
+            "🔑 Your access key no longer expires: no more renewing. 🌐 More languages: German, Polish, French and Russian. The app always opens in Portuguese, and What's new shows up in the language you choose, including older versions."
+          ]
+        },
+        "es": {
+          "title": "Menú Solo y Party, tipo de jugador y claves que no vencen",
+          "changes": [
+            "☰ Menú nuevo: Solo (📈 Hunt Session Stacker y 👑 Boss) y Party (💰 Lootsplit y 👑 Boss). En el Stacker, la ventana para pegar el Hunt Session Analyzer se abre sola.",
+            "💾 Guarda primero y di la hunt después: la sesión queda guardada aunque no tenga lugar, con el aviso \"hunt sin lugar\" para elegirlo cuando quieras (una vez elegido, el lugar se puede cambiar 2 veces). El lootsplit no hace preguntas: el reparto aparece al instante, y el lugar, tu sesión y el Input Analyzer son opciones en la propia tarjeta.",
+            "🎮 Al crear tu cuenta, di qué tipo de jugador eres: Hardcore, Común o Novato. Puedes cambiarlo cuando quieras en ⚙️ Configuración, y el tipo decide qué pregunta la app y qué compartes.",
+            "🛡️ Agrega el Input Analyzer: cuánto daño recibiste, y el elemento y las criaturas que más te pegaron. En el lootsplit, cada miembro de la party agrega su sesión y su Input Analyzer, y toda la party los ve. Si la sesión de alguien no coincide con el Party Hunt Analyser, aparece un aviso discreto.",
+            "📊 Comparar mis hunts: mira en qué hunt hiciste más XP y más ganancia en el mismo tiempo. La comparación de 🗺️ Hunts muestra el daño que hace cada lugar. 🔒 La cantidad de criaturas y de loot ahora queda solo para el dueño.",
+            "🔑 Tu clave de acceso ya no vence: no hay que renovarla. 🌐 Más idiomas: alemán, polaco, francés y ruso. La app siempre se abre en portugués, y las Novedades aparecen en el idioma que elijas, incluso las de versiones anteriores."
+          ]
+        },
+        "ja": {
+          "title": "ソロ・パーティメニュー、プレイヤータイプ、期限のないキー",
+          "changes": [
+            "☰ 新メニュー：ソロ（📈 Hunt Session Stackerと👑 ボス）とパーティ（💰 Lootsplitと👑 ボス）。Stackerでは、Hunt Session Analyzerを貼り付ける画面が自動で開きます。",
+            "💾 先に保存して、狩場はあとで：セッションは場所なしでも保存され、「場所未設定」からいつでも選べます（選んだ後は2回まで変更可能）。lootsplitでは質問はありません：分配がすぐに表示され、狩場、自分のセッション、Input Analyzerはカードからあとで追加できます。",
+            "🎮 アカウント作成時に、プレイヤータイプ（ハードコア、一般、初心者）を選びます。⚙️ 設定でいつでも変更でき、タイプによってアプリが何を聞くか、何を共有するかが決まります。",
+            "🛡️ Input Analyzerを追加：受けたダメージ量、一番多かった属性とクリーチャー。lootsplitでは、PTの各メンバーが自分のセッションとInput Analyzerを追加し、PT全員が見られます。誰かのセッションがParty Hunt Analyserと一致しない場合は、控えめなお知らせが出ます。",
+            "📊 自分の狩りを比較：同じ時間でどの狩場が一番XPと利益が多かったかが分かります。🗺️ Huntsの比較では各狩場で受けるダメージも表示。🔒 クリーチャーとlootの数は持ち主だけが見られるようになりました。",
+            "🔑 アクセスキーの有効期限がなくなりました：更新は不要です。🌐 言語を追加：ドイツ語、ポーランド語、フランス語、ロシア語。アプリは常にポルトガル語で開き、お知らせは過去のバージョンも含めて選んだ言語で表示されます。"
+          ]
+        },
+        "de": {
+          "title": "Solo- und Party-Menü, Spielertyp und Schlüssel ohne Ablauf",
+          "changes": [
+            "☰ Neues Menü: Solo (📈 Hunt Session Stacker und 👑 Boss) und Party (💰 Lootsplit und 👑 Boss). Im Stacker öffnet sich das Fenster zum Einfügen des Hunt Session Analyzers von selbst.",
+            "💾 Erst speichern, die Hunt später angeben: Die Session wird auch ohne Ort gespeichert, mit dem Hinweis \"Hunt ohne Ort\", um ihn jederzeit zu wählen (danach kann der Ort 2-mal geändert werden). Der Lootsplit stellt keine Fragen: Die Teilung erscheint sofort, und Ort, deine Session und der Input Analyzer sind Optionen direkt auf der Karte.",
+            "🎮 Gib beim Erstellen des Kontos an, welcher Spielertyp du bist: Hardcore, Normal oder Anfänger. Du kannst das jederzeit unter ⚙️ Einstellungen ändern, und der Typ bestimmt, was die App fragt und was du teilst.",
+            "🛡️ Füge den Input Analyzer hinzu: wie viel Schaden du bekommen hast und welches Element und welche Kreaturen am meisten getroffen haben. Im Lootsplit fügt jedes Party-Mitglied seine Session und seinen Input Analyzer hinzu, und die ganze Party sieht sie. Passt die Session von jemandem nicht zum Party Hunt Analyser, erscheint ein dezenter Hinweis.",
+            "📊 Meine Hunts vergleichen: Sieh, in welcher Hunt du in der gleichen Zeit mehr XP und mehr Profit gemacht hast. Der Vergleich unter 🗺️ Hunts zeigt den Schaden jedes Orts. 🔒 Die Anzahl an Kreaturen und Loot sieht jetzt nur noch der Besitzer.",
+            "🔑 Dein Zugangsschlüssel läuft nicht mehr ab: kein Verlängern mehr. 🌐 Mehr Sprachen: Deutsch, Polnisch, Französisch und Russisch. Die App öffnet sich immer auf Portugiesisch, und die Neuigkeiten erscheinen in der gewählten Sprache, auch die älteren Versionen."
+          ]
+        },
+        "pl": {
+          "title": "Menu Solo i Party, typ gracza i klucze bez daty ważności",
+          "changes": [
+            "☰ Nowe menu: Solo (📈 Hunt Session Stacker i 👑 Boss) oraz Party (💰 Lootsplit i 👑 Boss). W Stackerze okno do wklejenia Hunt Session Analyzera otwiera się samo.",
+            "💾 Najpierw zapisz, hunt podaj później: sesja zapisuje się nawet bez miejsca, z oznaczeniem \"hunt bez miejsca\", żeby wybrać je, kiedy zechcesz (po wyborze miejsce można zmienić 2 razy). Lootsplit nie zadaje pytań: podział pojawia się od razu, a miejsce, twoja sesja i Input Analyzer to opcje na samej karcie.",
+            "🎮 Przy tworzeniu konta powiedz, jakim typem gracza jesteś: Hardcore, Zwykły lub Początkujący. Możesz to zmienić w każdej chwili w ⚙️ Ustawieniach, a typ decyduje, o co pyta aplikacja i czym się dzielisz.",
+            "🛡️ Dodaj Input Analyzer: ile obrażeń otrzymałeś oraz element i potwory, które biły najmocniej. W lootsplicie każdy członek drużyny dodaje swoją sesję i Input Analyzer, a cała drużyna je widzi. Jeśli czyjaś sesja nie zgadza się z Party Hunt Analyserem, pojawia się dyskretna informacja.",
+            "📊 Porównaj moje hunty: zobacz, na którym huncie w tym samym czasie zdobyłeś najwięcej XP i zysku. Porównanie w 🗺️ Huntach pokazuje obrażenia na każdym miejscu. 🔒 Liczba potworów i lootu jest teraz widoczna tylko dla właściciela.",
+            "🔑 Twój klucz dostępu już nie wygasa: koniec z odnawianiem. 🌐 Więcej języków: niemiecki, polski, francuski i rosyjski. Aplikacja zawsze otwiera się po portugalsku, a Nowości pojawiają się w wybranym języku, także te ze starszych wersji."
+          ]
+        },
+        "fr": {
+          "title": "Menu Solo et Groupe, type de joueur et clés sans expiration",
+          "changes": [
+            "☰ Nouveau menu : Solo (📈 Hunt Session Stacker et 👑 Boss) et Groupe (💰 Lootsplit et 👑 Boss). Dans le Stacker, la fenêtre pour coller le Hunt Session Analyzer s'ouvre toute seule.",
+            "💾 Enregistrez d'abord, indiquez la hunt ensuite : la session est enregistrée même sans lieu, avec la mention \"hunt sans lieu\" pour le choisir quand vous voulez (une fois choisi, le lieu peut être changé 2 fois). Le lootsplit ne pose aucune question : le partage s'affiche tout de suite, et le lieu, votre session et l'Input Analyzer sont des options sur la carte elle-même.",
+            "🎮 En créant votre compte, indiquez quel type de joueur vous êtes : Hardcore, Classique ou Débutant. Vous pouvez le changer quand vous voulez dans ⚙️ Paramètres, et le type décide de ce que l'app demande et de ce que vous partagez.",
+            "🛡️ Ajoutez l'Input Analyzer : combien de dégâts vous avez reçus, l'élément et les créatures qui ont le plus frappé. Dans le lootsplit, chaque membre du groupe ajoute sa session et son Input Analyzer, et tout le groupe les voit. Si la session de quelqu'un ne correspond pas au Party Hunt Analyser, une petite alerte discrète apparaît.",
+            "📊 Comparer mes hunts : voyez dans quelle hunt vous avez fait le plus d'XP et de profit pour le même temps. La comparaison des 🗺️ Hunts montre les dégâts de chaque lieu. 🔒 Le nombre de créatures et de loot n'est maintenant visible que par le propriétaire.",
+            "🔑 Votre clé d'accès n'expire plus : plus besoin de la renouveler. 🌐 Plus de langues : allemand, polonais, français et russe. L'app s'ouvre toujours en portugais, et les Nouveautés s'affichent dans la langue choisie, y compris celles des anciennes versions."
+          ]
+        },
+        "ru": {
+          "title": "Меню Соло и Пати, тип игрока и бессрочные ключи",
+          "changes": [
+            "☰ Новое меню: Соло (📈 Hunt Session Stacker и 👑 Босс) и Пати (💰 Lootsplit и 👑 Босс). В Stacker окно для вставки Hunt Session Analyzer открывается само.",
+            "💾 Сначала сохраните, хант укажите потом: сессия сохраняется даже без места, с пометкой «хант без места», чтобы выбрать его, когда захотите (после выбора место можно изменить 2 раза). Лутсплит ничего не спрашивает: раздел появляется сразу, а место, ваша сессия и Input Analyzer — это опции прямо в карточке.",
+            "🎮 При создании аккаунта укажите, какой вы игрок: Хардкорный, Обычный или Новичок. Изменить это можно в любой момент в ⚙️ Настройках, а тип определяет, что спрашивает приложение и чем вы делитесь.",
+            "🛡️ Добавьте Input Analyzer: сколько урона вы получили, стихию и существ, которые били сильнее всего. В лутсплите каждый участник пати добавляет свою сессию и Input Analyzer, и вся пати их видит. Если чья-то сессия не совпадает с Party Hunt Analyser, появляется неброское уведомление.",
+            "📊 Сравнить мои ханты: посмотрите, на каком ханте за то же время вы получили больше XP и прибыли. Сравнение в 🗺️ Хантах показывает урон на каждом месте. 🔒 Количество существ и лута теперь видит только владелец.",
+            "🔑 Ваш ключ доступа больше не истекает: продлевать не нужно. 🌐 Новые языки: немецкий, польский, французский и русский. Приложение всегда открывается на португальском, а Новости показываются на выбранном языке, включая старые версии."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.19.0",
       "date": "2026-11-16",
       "title": "⚙️ Configurações e idiomas",
@@ -9,7 +101,72 @@
         "🌐 Escolha o idioma do app: português, inglês, espanhol ou japonês. Tudo muda na hora, inclusive avisos, mensagens de erro e o card de compartilhar, e a escolha fica salva no aparelho.",
         "🔑 Dá para trocar o idioma já na tela de login, antes de entrar.",
         "Nomes do Tibia (itens, criaturas, bosses e hunts) e as Novidades continuam como estão."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "⚙️ Settings and languages",
+          "changes": [
+            "⚙️ New Settings screen, in the ☰ menu and on the gear at the top of the screen.",
+            "🌐 Pick the app language: Portuguese, English, Spanish or Japanese. Everything changes right away, including notices, error messages and the share card, and your choice is saved on the device.",
+            "🔑 You can change the language right on the login screen, before signing in.",
+            "Tibia names (items, creatures, bosses and hunts) and What's new stay as they are."
+          ]
+        },
+        "es": {
+          "title": "⚙️ Configuración e idiomas",
+          "changes": [
+            "⚙️ Nueva pantalla de Configuración, en el menú ☰ y en el engranaje de la parte superior.",
+            "🌐 Elige el idioma de la app: portugués, inglés, español o japonés. Todo cambia al instante, incluidos avisos, mensajes de error y la tarjeta para compartir, y tu elección queda guardada en el dispositivo.",
+            "🔑 Puedes cambiar el idioma ya en la pantalla de inicio de sesión, antes de entrar.",
+            "Los nombres de Tibia (ítems, criaturas, bosses y hunts) y las Novedades se quedan como están."
+          ]
+        },
+        "ja": {
+          "title": "⚙️ 設定と言語",
+          "changes": [
+            "⚙️ 新しい設定画面。☰メニューと画面上部の歯車から開けます。",
+            "🌐 アプリの言語を選べます：ポルトガル語、英語、スペイン語、日本語。お知らせ、エラーメッセージ、共有カードも含めてすぐに切り替わり、選択は端末に保存されます。",
+            "🔑 ログイン前に、ログイン画面で言語を変更できます。",
+            "Tibiaの名前（アイテム、クリーチャー、ボス、狩場）とお知らせはそのままです。"
+          ]
+        },
+        "de": {
+          "title": "⚙️ Einstellungen und Sprachen",
+          "changes": [
+            "⚙️ Neuer Bildschirm Einstellungen, im Menü ☰ und über das Zahnrad oben auf dem Bildschirm.",
+            "🌐 Wähle die Sprache der App: Portugiesisch, Englisch, Spanisch oder Japanisch. Alles wechselt sofort, auch Hinweise, Fehlermeldungen und die Teilen-Karte, und die Auswahl wird auf dem Gerät gespeichert.",
+            "🔑 Die Sprache lässt sich schon auf dem Anmeldebildschirm ändern, bevor du dich anmeldest.",
+            "Tibia-Namen (Items, Kreaturen, Bosse und Hunts) und die Neuigkeiten bleiben, wie sie sind."
+          ]
+        },
+        "pl": {
+          "title": "⚙️ Ustawienia i języki",
+          "changes": [
+            "⚙️ Nowy ekran Ustawień, w menu ☰ i pod kołem zębatym u góry ekranu.",
+            "🌐 Wybierz język aplikacji: portugalski, angielski, hiszpański lub japoński. Wszystko zmienia się od razu, także komunikaty, błędy i karta do udostępnienia, a wybór zapisuje się na urządzeniu.",
+            "🔑 Język można zmienić już na ekranie logowania, zanim się zalogujesz.",
+            "Nazwy z Tibii (przedmioty, potwory, bossowie i hunty) oraz Nowości zostają bez zmian."
+          ]
+        },
+        "fr": {
+          "title": "⚙️ Paramètres et langues",
+          "changes": [
+            "⚙️ Nouvel écran Paramètres, dans le menu ☰ et sur la roue dentée en haut de l'écran.",
+            "🌐 Choisissez la langue de l'app : portugais, anglais, espagnol ou japonais. Tout change tout de suite, y compris les avis, les messages d'erreur et la carte à partager, et le choix est enregistré sur l'appareil.",
+            "🔑 Vous pouvez changer la langue dès l'écran de connexion, avant d'entrer.",
+            "Les noms de Tibia (objets, créatures, boss et hunts) et les Nouveautés restent tels quels."
+          ]
+        },
+        "ru": {
+          "title": "⚙️ Настройки и языки",
+          "changes": [
+            "⚙️ Новый экран Настроек — в меню ☰ и под шестерёнкой вверху экрана.",
+            "🌐 Выберите язык приложения: португальский, английский, испанский или японский. Всё меняется сразу, включая уведомления, сообщения об ошибках и карточку для публикации, а выбор сохраняется на устройстве.",
+            "🔑 Язык можно сменить прямо на экране входа, ещё до входа в аккаунт.",
+            "Названия из Tibia (предметы, существа, боссы и ханты) и Новости остаются как есть."
+          ]
+        }
+      }
     },
     {
       "version": "0.18.0",
@@ -19,7 +176,65 @@
         "⚡ O app de Windows se atualiza sem fechar: quando sai versão nova, aparece \"Atualizar agora\" e a tela nova entra em 1 segundo, sem perder o login.",
         "🌙 O resto da atualização instala sozinho quando você fechar o app, sem janela e sem interromper a hunt. Se tiver pressa, use \"Reiniciar agora\".",
         "🔄 Com o app aberto, ele procura versão nova a cada 30 minutos, não só ao abrir."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Updates without closing",
+          "changes": [
+            "⚡ The Windows app updates without closing: when a new version is out, \"Update now\" shows up and the new screen loads in 1 second, without logging you out.",
+            "🌙 The rest of the update installs by itself when you close the app, with no window and without interrupting your hunt. In a hurry? Use \"Restart now\".",
+            "🔄 While the app is open, it checks for a new version every 30 minutes, not only when it starts."
+          ]
+        },
+        "es": {
+          "title": "Se actualiza sin cerrar",
+          "changes": [
+            "⚡ La app de Windows se actualiza sin cerrarse: cuando sale una versión nueva, aparece \"Actualizar ahora\" y la pantalla nueva carga en 1 segundo, sin cerrar tu sesión.",
+            "🌙 El resto de la actualización se instala sola cuando cierras la app, sin ventanas y sin interrumpir la hunt. Si tienes prisa, usa \"Reiniciar ahora\".",
+            "🔄 Con la app abierta, busca una versión nueva cada 30 minutos, no solo al abrirla."
+          ]
+        },
+        "ja": {
+          "title": "閉じずにアップデート",
+          "changes": [
+            "⚡ Windowsアプリが閉じずに更新されます。新しいバージョンが出ると「今すぐ更新」が表示され、ログインしたまま1秒で新しい画面に切り替わります。",
+            "🌙 残りの更新はアプリを閉じたときに自動でインストールされます。ウィンドウは出ず、狩りの邪魔もしません。急ぐときは「今すぐ再起動」を使ってください。",
+            "🔄 アプリを開いている間、起動時だけでなく30分ごとに新しいバージョンを確認します。"
+          ]
+        },
+        "de": {
+          "title": "Update ohne Schließen",
+          "changes": [
+            "⚡ Die Windows-App aktualisiert sich, ohne sich zu schließen: Bei einer neuen Version erscheint \"Jetzt aktualisieren\" und der neue Bildschirm lädt in 1 Sekunde, ohne dass du abgemeldet wirst.",
+            "🌙 Der Rest des Updates installiert sich von selbst, wenn du die App schließt, ohne Fenster und ohne deine Hunt zu stören. Eilig? Nutze \"Jetzt neu starten\".",
+            "🔄 Solange die App offen ist, sucht sie alle 30 Minuten nach einer neuen Version, nicht nur beim Start."
+          ]
+        },
+        "pl": {
+          "title": "Aktualizacja bez zamykania",
+          "changes": [
+            "⚡ Aplikacja na Windows aktualizuje się bez zamykania: gdy wyjdzie nowa wersja, pojawi się \"Aktualizuj teraz\", a nowy ekran wczyta się w 1 sekundę, bez wylogowania.",
+            "🌙 Reszta aktualizacji zainstaluje się sama, gdy zamkniesz aplikację, bez okien i bez przerywania huntu. Spieszysz się? Użyj \"Uruchom ponownie teraz\".",
+            "🔄 Gdy aplikacja jest otwarta, sprawdza nową wersję co 30 minut, nie tylko przy starcie."
+          ]
+        },
+        "fr": {
+          "title": "Mise à jour sans fermer",
+          "changes": [
+            "⚡ L'app Windows se met à jour sans se fermer : quand une nouvelle version sort, \"Mettre à jour maintenant\" apparaît et le nouvel écran se charge en 1 seconde, sans vous déconnecter.",
+            "🌙 Le reste de la mise à jour s'installe tout seul quand vous fermez l'app, sans fenêtre et sans interrompre votre hunt. Pressé ? Utilisez \"Redémarrer maintenant\".",
+            "🔄 Tant que l'app est ouverte, elle cherche une nouvelle version toutes les 30 minutes, pas seulement au démarrage."
+          ]
+        },
+        "ru": {
+          "title": "Обновление без закрытия",
+          "changes": [
+            "⚡ Приложение для Windows обновляется без закрытия: когда выходит новая версия, появляется «Обновить сейчас», и новый экран загружается за 1 секунду, без выхода из аккаунта.",
+            "🌙 Остальная часть обновления устанавливается сама, когда вы закрываете приложение, без окон и не прерывая хант. Торопитесь? Нажмите «Перезапустить сейчас».",
+            "🔄 Пока приложение открыто, оно проверяет новую версию каждые 30 минут, а не только при запуске."
+          ]
+        }
+      }
     },
     {
       "version": "0.17.4",
@@ -27,7 +242,51 @@
       "title": "Ícone sempre atualizado",
       "changes": [
         "🏹 Quem já tinha o app instalado agora vê o ícone novo do 4rt3mi5 na área de trabalho e no menu Iniciar logo depois da atualização, sem ficar preso no ícone antigo do Python."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Icon always up to date",
+          "changes": [
+            "🏹 If you already had the app installed, you now see the new 4rt3mi5 icon on the desktop and in the Start menu right after updating, instead of the old Python icon."
+          ]
+        },
+        "es": {
+          "title": "Ícono siempre actualizado",
+          "changes": [
+            "🏹 Si ya tenías la app instalada, ahora ves el ícono nuevo de 4rt3mi5 en el escritorio y en el menú Inicio justo después de actualizar, en lugar del ícono viejo de Python."
+          ]
+        },
+        "ja": {
+          "title": "アイコンを常に最新に",
+          "changes": [
+            "🏹 すでにアプリをインストールしていた人も、更新直後からデスクトップとスタートメニューに4rt3mi5の新しいアイコンが表示されます。古いPythonのアイコンのままにはなりません。"
+          ]
+        },
+        "de": {
+          "title": "Symbol immer aktuell",
+          "changes": [
+            "🏹 Wer die App schon installiert hatte, sieht jetzt direkt nach dem Update das neue 4rt3mi5-Symbol auf dem Desktop und im Startmenü, statt des alten Python-Symbols."
+          ]
+        },
+        "pl": {
+          "title": "Ikona zawsze aktualna",
+          "changes": [
+            "🏹 Kto miał już zainstalowaną aplikację, teraz zaraz po aktualizacji widzi nową ikonę 4rt3mi5 na pulpicie i w menu Start, zamiast starej ikony Pythona."
+          ]
+        },
+        "fr": {
+          "title": "Icône toujours à jour",
+          "changes": [
+            "🏹 Si l'app était déjà installée, vous voyez maintenant la nouvelle icône de 4rt3mi5 sur le bureau et dans le menu Démarrer juste après la mise à jour, au lieu de l'ancienne icône de Python."
+          ]
+        },
+        "ru": {
+          "title": "Значок всегда актуален",
+          "changes": [
+            "🏹 Если приложение уже было установлено, сразу после обновления на рабочем столе и в меню «Пуск» появляется новый значок 4rt3mi5 вместо старого значка Python."
+          ]
+        }
+      }
     },
     {
       "version": "0.17.3",
@@ -35,7 +294,51 @@
       "title": "Ícone novo no Windows",
       "changes": [
         "🏹 O app de Windows ganhou ícone próprio: o arco dourado do 4rt3mi5 aparece na barra de tarefas, na área de trabalho, no menu Iniciar e no instalador, no lugar do ícone do Python. Se um atalho fixado continuar com o ícone antigo, desafixe e fixe o app de novo."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "New icon on Windows",
+          "changes": [
+            "🏹 The Windows app has its own icon: the golden 4rt3mi5 bow shows up on the taskbar, desktop, Start menu and installer, instead of the Python icon. If a pinned shortcut keeps the old icon, unpin the app and pin it again."
+          ]
+        },
+        "es": {
+          "title": "Ícono nuevo en Windows",
+          "changes": [
+            "🏹 La app de Windows tiene ícono propio: el arco dorado de 4rt3mi5 aparece en la barra de tareas, el escritorio, el menú Inicio y el instalador, en lugar del ícono de Python. Si un acceso anclado sigue con el ícono viejo, desáncalo y vuelve a anclar la app."
+          ]
+        },
+        "ja": {
+          "title": "Windowsの新しいアイコン",
+          "changes": [
+            "🏹 Windowsアプリに専用のアイコンができました。Pythonのアイコンの代わりに、4rt3mi5の金色の弓がタスクバー、デスクトップ、スタートメニュー、インストーラーに表示されます。ピン留めしたショートカットが古いアイコンのままなら、ピン留めを外してもう一度ピン留めしてください。"
+          ]
+        },
+        "de": {
+          "title": "Neues Symbol unter Windows",
+          "changes": [
+            "🏹 Die Windows-App hat ein eigenes Symbol: Der goldene Bogen von 4rt3mi5 erscheint in der Taskleiste, auf dem Desktop, im Startmenü und im Installer, statt des Python-Symbols. Zeigt eine angeheftete Verknüpfung noch das alte Symbol, löse die App und hefte sie erneut an."
+          ]
+        },
+        "pl": {
+          "title": "Nowa ikona w Windows",
+          "changes": [
+            "🏹 Aplikacja na Windows ma własną ikonę: złoty łuk 4rt3mi5 pojawia się na pasku zadań, pulpicie, w menu Start i w instalatorze zamiast ikony Pythona. Jeśli przypięty skrót ma starą ikonę, odepnij aplikację i przypnij ją ponownie."
+          ]
+        },
+        "fr": {
+          "title": "Nouvelle icône sous Windows",
+          "changes": [
+            "🏹 L'app Windows a sa propre icône : l'arc doré de 4rt3mi5 apparaît dans la barre des tâches, sur le bureau, dans le menu Démarrer et dans l'installateur, à la place de l'icône de Python. Si un raccourci épinglé garde l'ancienne icône, désépinglez l'app puis épinglez-la à nouveau."
+          ]
+        },
+        "ru": {
+          "title": "Новый значок в Windows",
+          "changes": [
+            "🏹 У приложения для Windows свой значок: золотой лук 4rt3mi5 на панели задач, рабочем столе, в меню «Пуск» и в установщике вместо значка Python. Если закреплённый ярлык остался со старым значком, открепите приложение и закрепите снова."
+          ]
+        }
+      }
     },
     {
       "version": "0.17.2",
@@ -43,7 +346,51 @@
       "title": "Launcher corrigido",
       "changes": [
         "🌙 O launcher do 4rt3mi5 voltou a instalar e atualizar o app: às vezes ele parava com o erro \"O GitHub respondeu 403\". Se você baixou o launcher antes, baixe de novo pelo botão \"Baixar o app\"."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Launcher fixed",
+          "changes": [
+            "🌙 The 4rt3mi5 launcher installs and updates the app again: sometimes it stopped with the error \"GitHub replied 403\". If you downloaded the launcher before, download it again with the \"Download the app\" button."
+          ]
+        },
+        "es": {
+          "title": "Launcher corregido",
+          "changes": [
+            "🌙 El launcher de 4rt3mi5 vuelve a instalar y actualizar la app: a veces se detenía con el error \"GitHub respondió 403\". Si descargaste el launcher antes, descárgalo de nuevo con el botón \"Descargar la app\"."
+          ]
+        },
+        "ja": {
+          "title": "ランチャーを修正",
+          "changes": [
+            "🌙 4rt3mi5のランチャーが再びアプリをインストール・更新できるようになりました。「GitHubが403を返しました」というエラーで止まることがありました。以前にランチャーをダウンロードした人は、「アプリをダウンロード」ボタンからもう一度ダウンロードしてください。"
+          ]
+        },
+        "de": {
+          "title": "Launcher repariert",
+          "changes": [
+            "🌙 Der 4rt3mi5-Launcher installiert und aktualisiert die App wieder: Manchmal stoppte er mit dem Fehler \"GitHub antwortete 403\". Wenn du den Launcher früher heruntergeladen hast, lade ihn über den Button \"App herunterladen\" neu."
+          ]
+        },
+        "pl": {
+          "title": "Naprawiony launcher",
+          "changes": [
+            "🌙 Launcher 4rt3mi5 znów instaluje i aktualizuje aplikację: czasem zatrzymywał się z błędem \"GitHub odpowiedział 403\". Jeśli pobrałeś launcher wcześniej, pobierz go ponownie przyciskiem \"Pobierz aplikację\"."
+          ]
+        },
+        "fr": {
+          "title": "Launcher corrigé",
+          "changes": [
+            "🌙 Le launcher de 4rt3mi5 installe et met à jour l'app à nouveau : il s'arrêtait parfois avec l'erreur \"GitHub a répondu 403\". Si vous avez téléchargé le launcher avant, retéléchargez-le avec le bouton \"Télécharger l'app\"."
+          ]
+        },
+        "ru": {
+          "title": "Лаунчер исправлен",
+          "changes": [
+            "🌙 Лаунчер 4rt3mi5 снова устанавливает и обновляет приложение: иногда он останавливался с ошибкой «GitHub ответил 403». Если вы скачали лаунчер раньше, скачайте его снова кнопкой «Скачать приложение»."
+          ]
+        }
+      }
     },
     {
       "version": "0.17.1",
@@ -56,7 +403,86 @@
         "☰ Menu renovado: itens separados em Caçar, Bosses, Progresso e Conta, com destaque dourado na tela em que você está.",
         "💰 O Lootsplit no menu mostra quantos acertos ainda estão pendentes, e o rodapé do menu mostra se o servidor está online.",
         "🛠️ O servidor agora fica numa máquina na nuvem ligada 24 horas, com conserto automático e aviso para o administrador quando algo cai."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "New address and refreshed menu",
+          "changes": [
+            "🌐 A new, easier address: artemis-hunt.duckdns.org, with a secure connection and no warning page before you get in. The old address still works.",
+            "⬇ If you open 4rt3mi5 in the browser, you see the \"Download the app\" button for Windows, with the VirusTotal scan link and what to do if Windows shows the \"Windows protected your PC\" warning.",
+            "🌙 New 4rt3mi5 launcher: a screen with Artemis on Olympus under the full moon that installs, updates and opens the app in one click. It is always the same file, so the Windows warning no longer shows up with every version.",
+            "☰ Refreshed menu: items grouped into Hunting, Bosses, Progress and Account, with a golden highlight on the screen you are on.",
+            "💰 Lootsplit in the menu shows how many settlements are still pending, and the menu footer shows whether the server is online.",
+            "🛠️ The server now runs on a cloud machine that is on 24 hours a day, with automatic repair and an alert to the admin when something goes down."
+          ]
+        },
+        "es": {
+          "title": "Dirección nueva y menú renovado",
+          "changes": [
+            "🌐 Dirección nueva y más fácil: artemis-hunt.duckdns.org, con conexión segura y sin la página de aviso antes de entrar. La dirección antigua sigue funcionando.",
+            "⬇ Si abres 4rt3mi5 en el navegador, ves el botón \"Descargar la app\" para Windows, con el enlace del análisis en VirusTotal y qué hacer si Windows muestra el aviso \"Windows protegió su PC\".",
+            "🌙 Nuevo launcher de 4rt3mi5: una pantalla con Artemisa en el Olimpo bajo la luna llena que instala, actualiza y abre la app con un clic. Siempre es el mismo archivo, así que el aviso de Windows ya no aparece en cada versión.",
+            "☰ Menú renovado: ítems separados en Cazar, Bosses, Progreso y Cuenta, con resaltado dorado en la pantalla en la que estás.",
+            "💰 El Lootsplit del menú muestra cuántos pagos siguen pendientes, y el pie del menú muestra si el servidor está en línea.",
+            "🛠️ El servidor ahora está en una máquina en la nube encendida las 24 horas, con reparación automática y aviso al administrador cuando algo se cae."
+          ]
+        },
+        "ja": {
+          "title": "新しいアドレスとメニュー刷新",
+          "changes": [
+            "🌐 新しく覚えやすいアドレス：artemis-hunt.duckdns.org。安全な接続で、入る前の警告ページもありません。古いアドレスも引き続き使えます。",
+            "⬇ ブラウザで4rt3mi5を開くと、Windows用の「アプリをダウンロード」ボタンが表示されます。VirusTotalの検査リンクと、Windowsが「WindowsによってPCが保護されました」と表示したときの対処法も載っています。",
+            "🌙 4rt3mi5の新しいランチャー：満月の下のオリンポスにいるアルテミスの画面から、ワンクリックでアプリのインストール、更新、起動ができます。ファイルはいつも同じなので、バージョンごとにWindowsの警告が出ることはなくなりました。",
+            "☰ メニューを刷新：狩り、ボス、進捗、アカウントに分かれ、今いる画面が金色で強調されます。",
+            "💰 メニューのLootsplitに未精算の数が表示され、メニュー下部にサーバーがオンラインかどうかが表示されます。",
+            "🛠️ サーバーは24時間稼働のクラウドマシンに移りました。自動復旧があり、何か止まったときは管理者に通知が届きます。"
+          ]
+        },
+        "de": {
+          "title": "Neue Adresse und neues Menü",
+          "changes": [
+            "🌐 Neue, einfachere Adresse: artemis-hunt.duckdns.org, mit sicherer Verbindung und ohne Warnseite vor dem Betreten. Die alte Adresse funktioniert weiter.",
+            "⬇ Wer 4rt3mi5 im Browser öffnet, sieht den Button \"App herunterladen\" für Windows, mit dem Link zur VirusTotal-Prüfung und was zu tun ist, wenn Windows \"Der Computer wurde durch Windows geschützt\" anzeigt.",
+            "🌙 Neuer 4rt3mi5-Launcher: ein Bildschirm mit Artemis auf dem Olymp unter dem Vollmond, der die App mit einem Klick installiert, aktualisiert und öffnet. Es ist immer dieselbe Datei, daher erscheint die Windows-Warnung nicht mehr bei jeder Version.",
+            "☰ Neues Menü: Einträge aufgeteilt in Jagen, Bosse, Fortschritt und Konto, mit goldener Hervorhebung des aktuellen Bildschirms.",
+            "💰 Der Lootsplit im Menü zeigt, wie viele Zahlungen noch offen sind, und die Fußzeile des Menüs zeigt, ob der Server online ist.",
+            "🛠️ Der Server läuft jetzt auf einer Cloud-Maschine, die 24 Stunden an ist, mit automatischer Reparatur und einer Warnung an den Administrator, wenn etwas ausfällt."
+          ]
+        },
+        "pl": {
+          "title": "Nowy adres i odświeżone menu",
+          "changes": [
+            "🌐 Nowy, łatwiejszy adres: artemis-hunt.duckdns.org, z bezpiecznym połączeniem i bez strony ostrzeżenia przed wejściem. Stary adres nadal działa.",
+            "⬇ Kto otwiera 4rt3mi5 w przeglądarce, widzi przycisk \"Pobierz aplikację\" na Windows, z linkiem do sprawdzenia w VirusTotal i instrukcją, co zrobić, gdy Windows pokaże \"System Windows ochronił ten komputer\".",
+            "🌙 Nowy launcher 4rt3mi5: ekran z Artemidą na Olimpie pod pełnią księżyca, który jednym kliknięciem instaluje, aktualizuje i otwiera aplikację. To zawsze ten sam plik, więc ostrzeżenie Windows nie pojawia się przy każdej wersji.",
+            "☰ Odświeżone menu: pozycje podzielone na Polowanie, Bossowie, Postępy i Konto, ze złotym wyróżnieniem bieżącego ekranu.",
+            "💰 Lootsplit w menu pokazuje, ile rozliczeń jeszcze czeka, a stopka menu pokazuje, czy serwer jest online.",
+            "🛠️ Serwer działa teraz na maszynie w chmurze włączonej 24 godziny, z automatyczną naprawą i powiadomieniem administratora, gdy coś padnie."
+          ]
+        },
+        "fr": {
+          "title": "Nouvelle adresse et menu renouvelé",
+          "changes": [
+            "🌐 Nouvelle adresse plus simple : artemis-hunt.duckdns.org, avec connexion sécurisée et sans page d'avertissement avant d'entrer. L'ancienne adresse fonctionne toujours.",
+            "⬇ Si vous ouvrez 4rt3mi5 dans le navigateur, vous voyez le bouton \"Télécharger l'app\" pour Windows, avec le lien de l'analyse VirusTotal et quoi faire si Windows affiche \"Windows a protégé votre ordinateur\".",
+            "🌙 Nouveau launcher de 4rt3mi5 : un écran avec Artémis sur l'Olympe sous la pleine lune, qui installe, met à jour et ouvre l'app en un clic. C'est toujours le même fichier, donc l'avertissement de Windows n'apparaît plus à chaque version.",
+            "☰ Menu renouvelé : éléments répartis en Chasser, Boss, Progression et Compte, avec l'écran actuel mis en avant en doré.",
+            "💰 Le Lootsplit du menu indique combien de paiements sont encore en attente, et le bas du menu indique si le serveur est en ligne.",
+            "🛠️ Le serveur tourne maintenant sur une machine dans le cloud allumée 24 h/24, avec réparation automatique et alerte à l'administrateur quand quelque chose tombe."
+          ]
+        },
+        "ru": {
+          "title": "Новый адрес и обновлённое меню",
+          "changes": [
+            "🌐 Новый, более простой адрес: artemis-hunt.duckdns.org, с безопасным соединением и без страницы предупреждения перед входом. Старый адрес тоже работает.",
+            "⬇ Открыв 4rt3mi5 в браузере, вы увидите кнопку «Скачать приложение» для Windows, со ссылкой на проверку в VirusTotal и инструкцией, что делать, если Windows покажет «Система Windows защитила ваш компьютер».",
+            "🌙 Новый лаунчер 4rt3mi5: экран с Артемидой на Олимпе под полной луной, который одним кликом устанавливает, обновляет и открывает приложение. Это всегда один и тот же файл, поэтому предупреждение Windows больше не появляется с каждой версией.",
+            "☰ Обновлённое меню: пункты разделены на Охоту, Боссов, Прогресс и Аккаунт, текущий экран выделен золотом.",
+            "💰 Lootsplit в меню показывает, сколько расчётов ещё ждут, а внизу меню видно, онлайн ли сервер.",
+            "🛠️ Сервер теперь работает на облачной машине, включённой круглосуточно, с автоматическим восстановлением и уведомлением администратора, если что-то падает."
+          ]
+        }
+      }
     },
     {
       "version": "0.17.0",
@@ -69,7 +495,86 @@
         "⏰ Chave vencida? Ao entrar na conta você renova grátis na hora e volta a usar o app, com os mesmos personagens e bônus.",
         "❄️ Enquanto a chave está vencida, a sua sequência de dias fica congelada: ao renovar, ela continua de onde parou. Um dia sem enviar com a chave ativa ainda zera a sequência.",
         "🛡️ Mais proteção no site: ele só roda o código do próprio 4rt3mi5 e só conversa com os servidores que ele usa."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Protected passwords and expired key",
+          "changes": [
+            "🔒 All passwords are encrypted with Argon2id, the strongest standard available. Nobody, not even the admin, can find out your password.",
+            "🆘 New \"Forgot account/password?\" on the Log in screen: leave your WhatsApp and the admin sends you a code to create a new password.",
+            "🌎 The WhatsApp field now has the country with its flag and calling code. Tap the flag and search by typing any part of the country name.",
+            "⏰ Expired key? When you sign in, you renew it for free right away and get back to the app, with the same characters and bonuses.",
+            "❄️ While your key is expired, your day streak is frozen: when you renew, it continues where it stopped. A day without sending while the key is active still resets the streak.",
+            "🛡️ More protection on the site: it only runs 4rt3mi5's own code and only talks to the servers it uses."
+          ]
+        },
+        "es": {
+          "title": "Contraseñas protegidas y clave vencida",
+          "changes": [
+            "🔒 Todas las contraseñas se cifran con Argon2id, el estándar más fuerte del mercado. Nadie, ni el administrador, puede saber tu contraseña.",
+            "🆘 Nuevo \"¿Olvidaste la cuenta o la contraseña?\" en la pantalla de Entrar: deja tu WhatsApp y el administrador te envía un código para crear una contraseña nueva.",
+            "🌎 El campo de WhatsApp ahora tiene el país con su bandera y su código. Toca la bandera y busca escribiendo cualquier parte del nombre del país.",
+            "⏰ ¿Clave vencida? Al entrar en la cuenta la renuevas gratis al instante y vuelves a usar la app, con los mismos personajes y bonos.",
+            "❄️ Mientras la clave está vencida, tu racha de días queda congelada: al renovar, sigue donde se quedó. Un día sin enviar con la clave activa todavía reinicia la racha.",
+            "🛡️ Más protección en el sitio: solo ejecuta el código del propio 4rt3mi5 y solo se comunica con los servidores que usa."
+          ]
+        },
+        "ja": {
+          "title": "パスワード保護と期限切れキー",
+          "changes": [
+            "🔒 すべてのパスワードは、現在最も強力な標準であるArgon2idで暗号化されます。管理者を含め、誰もあなたのパスワードを知ることはできません。",
+            "🆘 ログイン画面に「アカウント・パスワードを忘れた？」を追加：WhatsAppを残すと、管理者から新しいパスワードを作るためのコードが届きます。",
+            "🌎 WhatsAppの入力欄に国旗と国番号付きの国の選択が付きました。国旗をタップして、国名の一部を入力して検索できます。",
+            "⏰ キーの期限が切れた？アカウントにログインするとその場で無料で更新でき、同じキャラクターとボーナスのままアプリを使えます。",
+            "❄️ キーが期限切れの間、連続日数は凍結されます。更新すると止まったところから続きます。キーが有効なのに送信しない日があると、連続日数はリセットされます。",
+            "🛡️ サイトの保護を強化：4rt3mi5自身のコードだけを実行し、使用するサーバーとだけ通信します。"
+          ]
+        },
+        "de": {
+          "title": "Geschützte Passwörter und abgelaufener Schlüssel",
+          "changes": [
+            "🔒 Alle Passwörter werden mit Argon2id verschlüsselt, dem stärksten verfügbaren Standard. Niemand, nicht einmal der Administrator, kann dein Passwort erfahren.",
+            "🆘 Neu \"Konto/Passwort vergessen?\" auf dem Anmeldebildschirm: Hinterlasse deine WhatsApp-Nummer und der Administrator schickt dir einen Code für ein neues Passwort.",
+            "🌎 Das WhatsApp-Feld hat jetzt das Land mit Flagge und Vorwahl. Tippe auf die Flagge und suche, indem du einen beliebigen Teil des Ländernamens eingibst.",
+            "⏰ Schlüssel abgelaufen? Beim Anmelden verlängerst du ihn sofort kostenlos und nutzt die App wieder, mit denselben Charakteren und Boni.",
+            "❄️ Solange der Schlüssel abgelaufen ist, ist deine Tagesserie eingefroren: Nach der Verlängerung geht sie dort weiter, wo sie aufgehört hat. Ein Tag ohne Upload bei aktivem Schlüssel setzt die Serie weiterhin zurück.",
+            "🛡️ Mehr Schutz auf der Website: Sie führt nur den eigenen Code von 4rt3mi5 aus und spricht nur mit den Servern, die sie nutzt."
+          ]
+        },
+        "pl": {
+          "title": "Chronione hasła i wygasły klucz",
+          "changes": [
+            "🔒 Wszystkie hasła są szyfrowane Argon2id, najsilniejszym dostępnym standardem. Nikt, nawet administrator, nie pozna twojego hasła.",
+            "🆘 Nowe \"Nie pamiętasz konta/hasła?\" na ekranie logowania: zostaw swój WhatsApp, a administrator wyśle ci kod do ustawienia nowego hasła.",
+            "🌎 Pole WhatsApp ma teraz kraj z flagą i kierunkowym. Dotknij flagi i wyszukaj, wpisując dowolną część nazwy kraju.",
+            "⏰ Klucz wygasł? Po zalogowaniu odnawiasz go od razu za darmo i wracasz do aplikacji, z tymi samymi postaciami i bonusami.",
+            "❄️ Gdy klucz jest nieważny, twoja seria dni jest zamrożona: po odnowieniu kontynuuje od miejsca, w którym się zatrzymała. Dzień bez wysyłki przy aktywnym kluczu nadal zeruje serię.",
+            "🛡️ Lepsza ochrona strony: uruchamia tylko własny kod 4rt3mi5 i łączy się tylko z serwerami, których używa."
+          ]
+        },
+        "fr": {
+          "title": "Mots de passe protégés et clé expirée",
+          "changes": [
+            "🔒 Tous les mots de passe sont chiffrés avec Argon2id, le standard le plus fort du marché. Personne, pas même l'administrateur, ne peut connaître votre mot de passe.",
+            "🆘 Nouveau \"Compte/mot de passe oublié ?\" sur l'écran de connexion : laissez votre WhatsApp et l'administrateur vous envoie un code pour créer un nouveau mot de passe.",
+            "🌎 Le champ WhatsApp a maintenant le pays avec son drapeau et son indicatif. Touchez le drapeau et cherchez en tapant n'importe quelle partie du nom du pays.",
+            "⏰ Clé expirée ? En vous connectant, vous la renouvelez gratuitement tout de suite et vous retrouvez l'app, avec les mêmes personnages et bonus.",
+            "❄️ Tant que la clé est expirée, votre série de jours est gelée : en renouvelant, elle reprend là où elle s'était arrêtée. Un jour sans envoi avec la clé active remet toujours la série à zéro.",
+            "🛡️ Plus de protection sur le site : il n'exécute que le code de 4rt3mi5 et ne communique qu'avec les serveurs qu'il utilise."
+          ]
+        },
+        "ru": {
+          "title": "Защищённые пароли и истёкший ключ",
+          "changes": [
+            "🔒 Все пароли шифруются с помощью Argon2id — самого надёжного стандарта. Никто, даже администратор, не может узнать ваш пароль.",
+            "🆘 Новое «Забыли аккаунт/пароль?» на экране входа: оставьте свой WhatsApp, и администратор пришлёт код для нового пароля.",
+            "🌎 В поле WhatsApp теперь есть страна с флагом и кодом. Нажмите на флаг и ищите, вводя любую часть названия страны.",
+            "⏰ Ключ истёк? При входе вы сразу бесплатно продлеваете его и возвращаетесь в приложение с теми же персонажами и бонусами.",
+            "❄️ Пока ключ просрочен, ваша серия дней заморожена: после продления она продолжится с того же места. День без отправки при активном ключе по-прежнему обнуляет серию.",
+            "🛡️ Больше защиты на сайте: он выполняет только собственный код 4rt3mi5 и общается только с нужными ему серверами."
+          ]
+        }
+      }
     },
     {
       "version": "0.16.0",
@@ -80,7 +585,72 @@
         "🔑 No primeiro acesso da conta, gere a sua chave grátis ou digite o código de acesso que você já tem. Quem já usava o app neste aparelho tem o código ligado à conta sozinho.",
         "🆘 Perdeu o código ou o seu personagem já tem código de acesso? Deixe o seu WhatsApp e o administrador entra em contato para recuperar.",
         "🔒 Muitas senhas erradas seguidas bloqueiam o acesso por um tempo, para proteger a sua conta."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Accounts with a password",
+          "changes": [
+            "🔐 4rt3mi5 now has accounts with a password: tap \"Create an account\" (account name with letters and numbers only) or \"Log in\". On another phone or PC, just sign in to your account: no need to verify your character again.",
+            "🔑 On the account's first access, generate your free key or type the access code you already have. If you already used the app on this device, your code is linked to the account automatically.",
+            "🆘 Lost your code, or your character already has an access code? Leave your WhatsApp and the admin will contact you to recover it.",
+            "🔒 Too many wrong passwords in a row block access for a while, to protect your account."
+          ]
+        },
+        "es": {
+          "title": "Cuenta con contraseña",
+          "changes": [
+            "🔐 Ahora 4rt3mi5 tiene cuentas con contraseña: toca \"Crear una cuenta\" (nombre solo con letras y números) o \"Entrar\". En otro celular o PC, basta con entrar en la cuenta: no hace falta verificar el personaje de nuevo.",
+            "🔑 En el primer acceso de la cuenta, genera tu clave gratis o escribe el código de acceso que ya tienes. Si ya usabas la app en este dispositivo, tu código se vincula a la cuenta solo.",
+            "🆘 ¿Perdiste el código o tu personaje ya tiene código de acceso? Deja tu WhatsApp y el administrador se pone en contacto para recuperarlo.",
+            "🔒 Muchas contraseñas incorrectas seguidas bloquean el acceso por un tiempo, para proteger tu cuenta."
+          ]
+        },
+        "ja": {
+          "title": "パスワード付きアカウント",
+          "changes": [
+            "🔐 4rt3mi5にパスワード付きアカウントができました。「アカウントを作成」（英数字のみ）または「ログイン」をタップしてください。別のスマホやPCでもアカウントにログインするだけで、キャラクターを再認証する必要はありません。",
+            "🔑 アカウントの初回アクセス時に、無料キーを発行するか、持っているアクセスコードを入力してください。この端末ですでにアプリを使っていた人は、コードが自動でアカウントに紐づきます。",
+            "🆘 コードをなくした、またはキャラクターにすでにアクセスコードがある？WhatsAppを残すと、管理者が復旧のために連絡します。",
+            "🔒 アカウントを守るため、パスワードを続けて何度も間違えると、しばらくアクセスがブロックされます。"
+          ]
+        },
+        "de": {
+          "title": "Konto mit Passwort",
+          "changes": [
+            "🔐 4rt3mi5 hat jetzt Konten mit Passwort: Tippe auf \"Konto erstellen\" (nur Buchstaben und Zahlen) oder \"Anmelden\". Auf einem anderen Handy oder PC meldest du dich einfach an: Du musst den Charakter nicht erneut bestätigen.",
+            "🔑 Beim ersten Zugang zum Konto erzeugst du deinen kostenlosen Schlüssel oder gibst deinen vorhandenen Zugangscode ein. Wer die App auf diesem Gerät schon genutzt hat, bekommt den Code automatisch mit dem Konto verknüpft.",
+            "🆘 Code verloren oder hat dein Charakter schon einen Zugangscode? Hinterlasse deine WhatsApp-Nummer und der Administrator meldet sich zur Wiederherstellung.",
+            "🔒 Zu viele falsche Passwörter hintereinander sperren den Zugang für eine Weile, um dein Konto zu schützen."
+          ]
+        },
+        "pl": {
+          "title": "Konto z hasłem",
+          "changes": [
+            "🔐 4rt3mi5 ma teraz konta z hasłem: dotknij \"Utwórz konto\" (tylko litery i cyfry) lub \"Zaloguj\". Na innym telefonie czy PC po prostu zaloguj się na konto: nie trzeba ponownie weryfikować postaci.",
+            "🔑 Przy pierwszym dostępie do konta wygeneruj darmowy klucz albo wpisz kod dostępu, który już masz. Kto korzystał już z aplikacji na tym urządzeniu, ma kod powiązany z kontem automatycznie.",
+            "🆘 Zgubiłeś kod albo twoja postać ma już kod dostępu? Zostaw swój WhatsApp, a administrator skontaktuje się, żeby go odzyskać.",
+            "🔒 Wiele błędnych haseł z rzędu blokuje dostęp na jakiś czas, żeby chronić twoje konto."
+          ]
+        },
+        "fr": {
+          "title": "Compte avec mot de passe",
+          "changes": [
+            "🔐 4rt3mi5 a maintenant des comptes avec mot de passe : touchez \"Créer un compte\" (lettres et chiffres uniquement) ou \"Se connecter\". Sur un autre téléphone ou PC, il suffit de se connecter : pas besoin de vérifier à nouveau le personnage.",
+            "🔑 Au premier accès du compte, générez votre clé gratuite ou tapez le code d'accès que vous avez déjà. Si vous utilisiez déjà l'app sur cet appareil, le code est lié au compte automatiquement.",
+            "🆘 Code perdu, ou votre personnage a déjà un code d'accès ? Laissez votre WhatsApp et l'administrateur vous contacte pour le récupérer.",
+            "🔒 Trop de mauvais mots de passe d'affilée bloquent l'accès pendant un moment, pour protéger votre compte."
+          ]
+        },
+        "ru": {
+          "title": "Аккаунт с паролем",
+          "changes": [
+            "🔐 В 4rt3mi5 появились аккаунты с паролем: нажмите «Создать аккаунт» (только буквы и цифры) или «Войти». На другом телефоне или ПК просто войдите в аккаунт: подтверждать персонажа заново не нужно.",
+            "🔑 При первом входе в аккаунт создайте бесплатный ключ или введите код доступа, который у вас уже есть. Если вы уже пользовались приложением на этом устройстве, код привяжется к аккаунту сам.",
+            "🆘 Потеряли код или у вашего персонажа уже есть код доступа? Оставьте свой WhatsApp, и администратор свяжется с вами для восстановления.",
+            "🔒 Слишком много неверных паролей подряд блокируют доступ на время, чтобы защитить ваш аккаунт."
+          ]
+        }
+      }
     },
     {
       "version": "0.15.0",
@@ -90,7 +660,65 @@
         "🔑 A loja agora é o seu cadastro: você gera a sua chave gratuita uma vez só. Toda chave começa com 7 dias.",
         "👥 Uma chave por conta, com até 50 personagens. Cada personagem só pode estar em uma chave: verifique pelo comentário do tibia.com ou peça ao adm para validar.",
         "🔄 O item \"Renove 7 dias grátis da sua chave\" aparece no menu ☰ quando faltam menos de 3 dias. A renovação continua grátis."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "One key per account",
+          "changes": [
+            "🔑 The shop is now your sign-up: you generate your free key only once. Every key starts with 7 days.",
+            "👥 One key per account, with up to 50 characters. Each character can only be on one key: verify it with a tibia.com comment or ask the admin to validate it.",
+            "🔄 The \"Renew your key for 7 free days\" item shows up in the ☰ menu when fewer than 3 days are left. Renewing is still free."
+          ]
+        },
+        "es": {
+          "title": "Una clave por cuenta",
+          "changes": [
+            "🔑 La tienda ahora es tu registro: generas tu clave gratuita una sola vez. Toda clave empieza con 7 días.",
+            "👥 Una clave por cuenta, con hasta 50 personajes. Cada personaje solo puede estar en una clave: verifícalo con el comentario de tibia.com o pide al administrador que lo valide.",
+            "🔄 El ítem \"Renueva 7 días gratis de tu clave\" aparece en el menú ☰ cuando faltan menos de 3 días. La renovación sigue siendo gratis."
+          ]
+        },
+        "ja": {
+          "title": "1アカウントに1キー",
+          "changes": [
+            "🔑 ショップが登録の場になりました。無料キーの発行は1回だけです。どのキーも7日間から始まります。",
+            "👥 1アカウントに1キー、キャラクターは最大50人。各キャラクターは1つのキーにしか登録できません。tibia.comのコメントで認証するか、管理者に確認を頼んでください。",
+            "🔄 残り3日を切ると、☰メニューに「キーを7日間無料で更新」が表示されます。更新は引き続き無料です。"
+          ]
+        },
+        "de": {
+          "title": "Ein Schlüssel pro Konto",
+          "changes": [
+            "🔑 Der Shop ist jetzt deine Registrierung: Du erzeugst deinen kostenlosen Schlüssel nur einmal. Jeder Schlüssel startet mit 7 Tagen.",
+            "👥 Ein Schlüssel pro Konto, mit bis zu 50 Charakteren. Jeder Charakter kann nur in einem Schlüssel sein: Bestätige ihn per tibia.com-Kommentar oder bitte den Admin um Bestätigung.",
+            "🔄 Der Eintrag \"Verlängere deinen Schlüssel um 7 Gratistage\" erscheint im Menü ☰, wenn weniger als 3 Tage übrig sind. Die Verlängerung bleibt kostenlos."
+          ]
+        },
+        "pl": {
+          "title": "Jeden klucz na konto",
+          "changes": [
+            "🔑 Sklep jest teraz twoją rejestracją: darmowy klucz generujesz tylko raz. Każdy klucz zaczyna od 7 dni.",
+            "👥 Jeden klucz na konto, do 50 postaci. Każda postać może być tylko w jednym kluczu: zweryfikuj ją komentarzem na tibia.com albo poproś admina o potwierdzenie.",
+            "🔄 Pozycja \"Odnów klucz o 7 darmowych dni\" pojawia się w menu ☰, gdy zostaną mniej niż 3 dni. Odnowienie nadal jest darmowe."
+          ]
+        },
+        "fr": {
+          "title": "Une clé par compte",
+          "changes": [
+            "🔑 La boutique est maintenant votre inscription : vous générez votre clé gratuite une seule fois. Toute clé commence avec 7 jours.",
+            "👥 Une clé par compte, avec jusqu'à 50 personnages. Chaque personnage ne peut être que dans une clé : vérifiez-le par le commentaire de tibia.com ou demandez à l'admin de le valider.",
+            "🔄 L'élément \"Renouvelez votre clé de 7 jours gratuits\" apparaît dans le menu ☰ quand il reste moins de 3 jours. Le renouvellement reste gratuit."
+          ]
+        },
+        "ru": {
+          "title": "Один ключ на аккаунт",
+          "changes": [
+            "🔑 Магазин теперь — ваша регистрация: бесплатный ключ создаётся только один раз. Каждый ключ начинается с 7 дней.",
+            "👥 Один ключ на аккаунт, до 50 персонажей. Каждый персонаж может быть только в одном ключе: подтвердите его комментарием на tibia.com или попросите админа проверить.",
+            "🔄 Пункт «Продлите ключ на 7 бесплатных дней» появляется в меню ☰, когда остаётся меньше 3 дней. Продление по-прежнему бесплатное."
+          ]
+        }
+      }
     },
     {
       "version": "0.14.0",
@@ -98,7 +726,51 @@
       "title": "Renovação grátis",
       "changes": [
         "🔑 Novo item no menu ☰: \"Renove 7 dias grátis da sua chave\". Quando faltar menos de 7 dias, toque e sua chave volta a valer 7 dias a partir de hoje, com os mesmos personagens."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Free renewal",
+          "changes": [
+            "🔑 New item in the ☰ menu: \"Renew your key for 7 free days\". When fewer than 7 days are left, tap it and your key is valid for 7 days from today again, with the same characters."
+          ]
+        },
+        "es": {
+          "title": "Renovación gratis",
+          "changes": [
+            "🔑 Nuevo ítem en el menú ☰: \"Renueva 7 días gratis de tu clave\". Cuando falten menos de 7 días, tócalo y tu clave vuelve a valer 7 días a partir de hoy, con los mismos personajes."
+          ]
+        },
+        "ja": {
+          "title": "無料更新",
+          "changes": [
+            "🔑 ☰メニューに新項目「キーを7日間無料で更新」。残り7日を切ったらタップすると、同じキャラクターのまま、今日から7日間キーが有効になります。"
+          ]
+        },
+        "de": {
+          "title": "Kostenlose Verlängerung",
+          "changes": [
+            "🔑 Neuer Eintrag im Menü ☰: \"Verlängere deinen Schlüssel um 7 Gratistage\". Wenn weniger als 7 Tage übrig sind, tippe darauf und dein Schlüssel gilt wieder 7 Tage ab heute, mit denselben Charakteren."
+          ]
+        },
+        "pl": {
+          "title": "Darmowe odnowienie",
+          "changes": [
+            "🔑 Nowa pozycja w menu ☰: \"Odnów klucz o 7 darmowych dni\". Gdy zostanie mniej niż 7 dni, dotknij jej, a klucz znów będzie ważny 7 dni od dziś, z tymi samymi postaciami."
+          ]
+        },
+        "fr": {
+          "title": "Renouvellement gratuit",
+          "changes": [
+            "🔑 Nouvel élément dans le menu ☰ : \"Renouvelez votre clé de 7 jours gratuits\". Quand il reste moins de 7 jours, touchez-le et votre clé est de nouveau valable 7 jours à partir d'aujourd'hui, avec les mêmes personnages."
+          ]
+        },
+        "ru": {
+          "title": "Бесплатное продление",
+          "changes": [
+            "🔑 Новый пункт в меню ☰: «Продлите ключ на 7 бесплатных дней». Когда останется меньше 7 дней, нажмите его, и ключ снова будет действовать 7 дней с сегодняшнего дня, с теми же персонажами."
+          ]
+        }
+      }
     },
     {
       "version": "0.13.0",
@@ -108,7 +780,65 @@
         "🔑 Novo botão \"Gere sua nova chave\" na tela de entrada: abre a loja do 4rt3mi5, onde você gera uma chave gratuita de 7 dias na hora e já entra com ela.",
         "📊 Para saber o que melhorar, o 4rt3mi5 agora conta quantas vezes cada tela é aberta e usada (sem guardar quem foi) e registra os dias em que cada código entrou no app.",
         "🔒 A proteção contra quem tenta adivinhar códigos de acesso ficou mais forte."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Shop and free key",
+          "changes": [
+            "🔑 New \"Generate your new key\" button on the entry screen: it opens the 4rt3mi5 shop, where you generate a free 7-day key right away and sign in with it.",
+            "📊 To know what to improve, 4rt3mi5 now counts how many times each screen is opened and used (without saving who it was) and records the days each code used the app.",
+            "🔒 Protection against people trying to guess access codes is stronger."
+          ]
+        },
+        "es": {
+          "title": "Tienda y clave gratis",
+          "changes": [
+            "🔑 Nuevo botón \"Genera tu nueva clave\" en la pantalla de entrada: abre la tienda de 4rt3mi5, donde generas una clave gratuita de 7 días al instante y entras con ella.",
+            "📊 Para saber qué mejorar, 4rt3mi5 ahora cuenta cuántas veces se abre y se usa cada pantalla (sin guardar quién fue) y registra los días en que cada código entró en la app.",
+            "🔒 La protección contra quien intenta adivinar códigos de acceso es más fuerte."
+          ]
+        },
+        "ja": {
+          "title": "ショップと無料キー",
+          "changes": [
+            "🔑 入口画面に「新しいキーを発行」ボタンを追加：4rt3mi5のショップが開き、7日間の無料キーをその場で発行してそのままログインできます。",
+            "📊 改善点を知るため、4rt3mi5は各画面が開かれ使われた回数を数え（誰かは保存しません）、各コードがアプリに入った日を記録します。",
+            "🔒 アクセスコードを推測しようとする人への対策を強化しました。"
+          ]
+        },
+        "de": {
+          "title": "Shop und kostenloser Schlüssel",
+          "changes": [
+            "🔑 Neuer Button \"Erzeuge deinen neuen Schlüssel\" auf dem Startbildschirm: Er öffnet den 4rt3mi5-Shop, wo du sofort einen kostenlosen 7-Tage-Schlüssel erzeugst und dich damit anmeldest.",
+            "📊 Um zu wissen, was verbessert werden kann, zählt 4rt3mi5 jetzt, wie oft jeder Bildschirm geöffnet und genutzt wird (ohne zu speichern, wer), und erfasst die Tage, an denen jeder Code die App genutzt hat.",
+            "🔒 Der Schutz gegen das Erraten von Zugangscodes ist stärker."
+          ]
+        },
+        "pl": {
+          "title": "Sklep i darmowy klucz",
+          "changes": [
+            "🔑 Nowy przycisk \"Wygeneruj nowy klucz\" na ekranie wejścia: otwiera sklep 4rt3mi5, gdzie od razu generujesz darmowy klucz na 7 dni i wchodzisz z nim.",
+            "📊 Żeby wiedzieć, co ulepszyć, 4rt3mi5 liczy teraz, ile razy każdy ekran jest otwierany i używany (bez zapisywania kto), oraz zapisuje dni, w których każdy kod wszedł do aplikacji.",
+            "🔒 Ochrona przed zgadywaniem kodów dostępu jest silniejsza."
+          ]
+        },
+        "fr": {
+          "title": "Boutique et clé gratuite",
+          "changes": [
+            "🔑 Nouveau bouton \"Générez votre nouvelle clé\" sur l'écran d'entrée : il ouvre la boutique de 4rt3mi5, où vous générez tout de suite une clé gratuite de 7 jours et entrez avec.",
+            "📊 Pour savoir quoi améliorer, 4rt3mi5 compte maintenant combien de fois chaque écran est ouvert et utilisé (sans garder qui) et enregistre les jours où chaque code est entré dans l'app.",
+            "🔒 La protection contre ceux qui essaient de deviner les codes d'accès est plus forte."
+          ]
+        },
+        "ru": {
+          "title": "Магазин и бесплатный ключ",
+          "changes": [
+            "🔑 Новая кнопка «Создайте новый ключ» на экране входа: открывает магазин 4rt3mi5, где вы сразу получаете бесплатный ключ на 7 дней и входите с ним.",
+            "📊 Чтобы понимать, что улучшать, 4rt3mi5 теперь считает, сколько раз открывается и используется каждый экран (не сохраняя, кто это был), и записывает дни, когда каждый код заходил в приложение.",
+            "🔒 Защита от подбора кодов доступа стала сильнее."
+          ]
+        }
+      }
     },
     {
       "version": "0.12.0",
@@ -121,7 +851,86 @@
         "🥇 Novo Ranking entre amigos: XP, lucro e horas da semana ou do mês. Só aparece quem tocar em \"Entrar\", e dá para sair quando quiser.",
         "📤 Sem internet na hora de enviar? O app guarda o texto e envia sozinho quando a conexão voltar. ⏰ E avisa no Início 3 dias antes do seu código de acesso vencer.",
         "💎 Drop raro de boss: comemoração quando cai item muito raro (pela TibiaWiki) ou que vale 500 mil gp ou mais, com histórico na 👑 Rotação de bosses. Itens de boss sem NPC comprador pedem o seu preço ali mesmo, e as imagens de itens e criaturas carregam mais rápido."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Settlements, ranking and rare drops",
+          "changes": [
+            "💸 Lootsplit with \"✔ I paid\": mark each transfer you made (whoever receives can also mark \"✔ Received\"). Home shows how much you still owe or have to receive.",
+            "⚖️ Split rules: whoever sent the lootsplit can remove someone from the split or give a fixed amount to someone who only helped. The app recalculates the transfers right away.",
+            "📊 After you send a session in the 📈 Hunt Session Stacker, the app compares XP/h and balance/h with your average at that hunt.",
+            "🥇 New Ranking among friends: XP, profit and hours for the week or month. Only people who tap \"Join\" show up, and you can leave anytime.",
+            "📤 No internet when sending? The app keeps the text and sends it by itself when the connection is back. ⏰ It also warns you on Home 3 days before your access code expires.",
+            "💎 Rare boss drop: a celebration when a very rare item (per TibiaWiki) or one worth 500k gp or more drops, with history in 👑 Boss rotation. Boss items with no NPC buyer ask for your price right there, and item and creature images load faster."
+          ]
+        },
+        "es": {
+          "title": "Pagos, ranking y drops raros",
+          "changes": [
+            "💸 Lootsplit con \"✔ Ya pagué\": marca cada transferencia hecha (quien recibe también puede marcar \"✔ Recibí\"). El Inicio muestra cuánto todavía debes o tienes por recibir.",
+            "⚖️ Reglas de reparto: quien envió el lootsplit puede quitar a alguien del reparto o dar un valor fijo a quien solo ayudó. La app recalcula las transferencias al instante.",
+            "📊 Después de enviar una sesión en el 📈 Hunt Session Stacker, la app compara el XP/h y el balance/h con tu promedio en esa hunt.",
+            "🥇 Nuevo Ranking entre amigos: XP, ganancia y horas de la semana o del mes. Solo aparece quien toca \"Entrar\", y puedes salir cuando quieras.",
+            "📤 ¿Sin internet al enviar? La app guarda el texto y lo envía sola cuando vuelve la conexión. ⏰ Y avisa en el Inicio 3 días antes de que venza tu código de acceso.",
+            "💎 Drop raro de boss: celebración cuando cae un ítem muy raro (según la TibiaWiki) o que vale 500 mil gp o más, con historial en 👑 Rotación de bosses. Los ítems de boss sin NPC comprador piden tu precio ahí mismo, y las imágenes de ítems y criaturas cargan más rápido."
+          ]
+        },
+        "ja": {
+          "title": "精算、ランキング、レアドロップ",
+          "changes": [
+            "💸 Lootsplitに「✔ 支払った」：行った送金を一つずつマークできます（受け取る側も「✔ 受け取った」をマークできます）。ホームにまだ支払う額・受け取る額が表示されます。",
+            "⚖️ 分配ルール：lootsplitを送った人は、誰かを分配から外したり、手伝っただけの人に固定額を渡したりできます。アプリがすぐに送金を計算し直します。",
+            "📊 📈 Hunt Session Stackerでセッションを送ると、その狩場でのあなたの平均とXP/h、balance/hを比較します。",
+            "🥇 友達とのランキングを追加：週または月のXP、利益、時間。「参加」をタップした人だけが表示され、いつでも抜けられます。",
+            "📤 送信時にネットがない？アプリがテキストを保存し、接続が戻ったら自動で送ります。⏰ アクセスコードの期限が切れる3日前にホームでお知らせします。",
+            "💎 ボスのレアドロップ：とてもレアなアイテム（TibiaWiki基準）や50万gp以上のアイテムが出たらお祝いし、👑 ボスローテーションに履歴が残ります。NPCが買い取らないボスアイテムはその場で価格を入力でき、アイテムとクリーチャーの画像の読み込みが速くなりました。"
+          ]
+        },
+        "de": {
+          "title": "Zahlungen, Ranking und seltene Drops",
+          "changes": [
+            "💸 Lootsplit mit \"✔ Ich habe bezahlt\": Markiere jede getätigte Überweisung (wer empfängt, kann auch \"✔ Erhalten\" markieren). Die Startseite zeigt, wie viel du noch schuldest oder bekommst.",
+            "⚖️ Teilungsregeln: Wer den Lootsplit gesendet hat, kann jemanden aus der Teilung nehmen oder jemandem, der nur geholfen hat, einen festen Betrag geben. Die App berechnet die Überweisungen sofort neu.",
+            "📊 Nach dem Senden einer Session im 📈 Hunt Session Stacker vergleicht die App XP/h und Balance/h mit deinem Durchschnitt in dieser Hunt.",
+            "🥇 Neues Freunde-Ranking: XP, Profit und Stunden der Woche oder des Monats. Es erscheint nur, wer auf \"Beitreten\" tippt, und du kannst jederzeit austreten.",
+            "📤 Kein Internet beim Senden? Die App speichert den Text und sendet ihn automatisch, wenn die Verbindung zurück ist. ⏰ Außerdem warnt sie auf der Startseite 3 Tage vor Ablauf deines Zugangscodes.",
+            "💎 Seltener Boss-Drop: Feier, wenn ein sehr seltenes Item (laut TibiaWiki) oder eines im Wert von 500k gp oder mehr droppt, mit Verlauf in der 👑 Boss-Rotation. Boss-Items ohne NPC-Käufer fragen direkt dort nach deinem Preis, und Bilder von Items und Kreaturen laden schneller."
+          ]
+        },
+        "pl": {
+          "title": "Rozliczenia, ranking i rzadkie dropy",
+          "changes": [
+            "💸 Lootsplit z \"✔ Zapłaciłem\": oznacz każdy wykonany przelew (odbiorca też może oznaczyć \"✔ Otrzymałem\"). Ekran startowy pokazuje, ile jeszcze jesteś winien lub masz do odebrania.",
+            "⚖️ Zasady podziału: osoba, która wysłała lootsplit, może wykluczyć kogoś z podziału albo dać stałą kwotę komuś, kto tylko pomagał. Aplikacja od razu przelicza przelewy.",
+            "📊 Po wysłaniu sesji w 📈 Hunt Session Stacker aplikacja porównuje XP/h i balance/h z twoją średnią na tym huncie.",
+            "🥇 Nowy ranking znajomych: XP, zysk i godziny z tygodnia lub miesiąca. Pojawia się tylko ten, kto dotknie \"Dołącz\", i można wyjść w każdej chwili.",
+            "📤 Brak internetu przy wysyłaniu? Aplikacja zachowa tekst i wyśle go sama, gdy połączenie wróci. ⏰ Ostrzeże też na ekranie startowym 3 dni przed wygaśnięciem kodu dostępu.",
+            "💎 Rzadki drop z bossa: świętowanie, gdy wypadnie bardzo rzadki przedmiot (według TibiaWiki) albo wart 500k gp lub więcej, z historią w 👑 Rotacji bossów. Przedmioty z bossów bez kupca NPC proszą o twoją cenę od razu, a obrazki przedmiotów i potworów ładują się szybciej."
+          ]
+        },
+        "fr": {
+          "title": "Règlements, classement et drops rares",
+          "changes": [
+            "💸 Lootsplit avec \"✔ J'ai payé\" : marquez chaque virement effectué (celui qui reçoit peut aussi marquer \"✔ Reçu\"). L'accueil montre combien vous devez encore ou avez à recevoir.",
+            "⚖️ Règles de partage : celui qui a envoyé le lootsplit peut retirer quelqu'un du partage ou donner un montant fixe à quelqu'un qui a seulement aidé. L'app recalcule les virements tout de suite.",
+            "📊 Après l'envoi d'une session dans le 📈 Hunt Session Stacker, l'app compare l'XP/h et le balance/h avec votre moyenne dans cette hunt.",
+            "🥇 Nouveau classement entre amis : XP, profit et heures de la semaine ou du mois. N'apparaît que celui qui touche \"Entrer\", et on peut sortir quand on veut.",
+            "📤 Pas d'internet au moment d'envoyer ? L'app garde le texte et l'envoie toute seule quand la connexion revient. ⏰ Elle prévient aussi sur l'accueil 3 jours avant l'expiration de votre code d'accès.",
+            "💎 Drop rare de boss : célébration quand tombe un objet très rare (selon TibiaWiki) ou valant 500k gp ou plus, avec historique dans la 👑 Rotation des boss. Les objets de boss sans acheteur NPC demandent votre prix au même endroit, et les images d'objets et de créatures chargent plus vite."
+          ]
+        },
+        "ru": {
+          "title": "Расчёты, рейтинг и редкие дропы",
+          "changes": [
+            "💸 Lootsplit с «✔ Я заплатил»: отмечайте каждый сделанный перевод (получатель тоже может отметить «✔ Получил»). Главная показывает, сколько вы ещё должны или должны получить.",
+            "⚖️ Правила раздела: отправивший лутсплит может исключить кого-то из раздела или дать фиксированную сумму тому, кто только помогал. Приложение сразу пересчитывает переводы.",
+            "📊 После отправки сессии в 📈 Hunt Session Stacker приложение сравнивает XP/h и баланс/ч с вашим средним на этом ханте.",
+            "🥇 Новый рейтинг друзей: XP, прибыль и часы за неделю или месяц. Видны только те, кто нажал «Войти», и выйти можно в любой момент.",
+            "📤 Нет интернета при отправке? Приложение сохранит текст и отправит его само, когда связь вернётся. ⏰ А ещё предупредит на главной за 3 дня до окончания кода доступа.",
+            "💎 Редкий дроп с босса: праздник, когда выпадает очень редкий предмет (по TibiaWiki) или стоимостью от 500k gp, с историей в 👑 Ротации боссов. Предметы боссов без покупателя NPC сразу просят вашу цену, а картинки предметов и существ грузятся быстрее."
+          ]
+        }
+      }
     },
     {
       "version": "0.11.0",
@@ -134,7 +943,86 @@
         "Matou um boss no meio de uma hunt comum do 📈 Hunt Session Stacker? Ele entra na aba de bosses, com o loot estimado dele somado ao lucro de bosses.",
         "🔒 Os dados de bosses são privados: só você vê os seus, e cada lootsplit só aparece para quem estava na PT.",
         "🔈 A música ficou bem mais baixa em todo lugar. No iPhone e no iPad, onde o site não consegue baixar o volume, ela fica desligada."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Boss rotation",
+          "changes": [
+            "👑 New Boss rotation, with Solo and Party: paste the fight's Hunt Session Analyser and see profit, bosses killed, each boss's loot and items, like in the Stacker.",
+            "In Party, the app asks if you want to do the lootsplit. If yes, paste the Party Hunt Analyser: the split shows up in the bosses tab of everyone in the party. If not, the session is kept just for you.",
+            "When someone in the party sends their own session of the same boss, it joins the party's lootsplit by itself.",
+            "Killed a boss in the middle of a regular hunt in the 📈 Hunt Session Stacker? It goes to the bosses tab, with its estimated loot added to boss profit.",
+            "🔒 Boss data is private: only you see yours, and each lootsplit only shows up for whoever was in the party.",
+            "🔈 The music is much quieter everywhere. On iPhone and iPad, where the site can't lower the volume, it stays off."
+          ]
+        },
+        "es": {
+          "title": "Rotación de bosses",
+          "changes": [
+            "👑 Nueva Rotación de bosses, con Solo y Party: pega el Hunt Session Analyser de la pelea y ve la ganancia, los bosses muertos, el loot de cada boss y los ítems, como en el Stacker.",
+            "En Party, la app pregunta si quieres hacer el lootsplit. Si sí, pega el Party Hunt Analyser: el reparto aparece en la pestaña de bosses de todos los de la PT. Si no, la sesión queda guardada solo para ti.",
+            "Cuando alguien de la PT envía su propia sesión del mismo boss, se une sola al lootsplit de la party.",
+            "¿Mataste un boss en medio de una hunt común del 📈 Hunt Session Stacker? Entra en la pestaña de bosses, con su loot estimado sumado a la ganancia de bosses.",
+            "🔒 Los datos de bosses son privados: solo tú ves los tuyos, y cada lootsplit solo aparece para quien estaba en la PT.",
+            "🔈 La música está mucho más baja en todas partes. En iPhone y iPad, donde el sitio no puede bajar el volumen, queda apagada."
+          ]
+        },
+        "ja": {
+          "title": "ボスローテーション",
+          "changes": [
+            "👑 ソロとパーティのボスローテーションを追加：戦闘のHunt Session Analyserを貼り付けると、Stackerと同じように利益、倒したボス、ボスごとのloot、アイテムが見られます。",
+            "パーティでは、lootsplitをするか聞かれます。する場合はParty Hunt Analyserを貼り付けると、PT全員のボスタブに分配が表示されます。しない場合、セッションはあなただけのものとして保存されます。",
+            "PTの誰かが同じボスの自分のセッションを送ると、自動でパーティのlootsplitに合流します。",
+            "📈 Hunt Session Stackerの通常の狩りの途中でボスを倒した？ボスタブに入り、推定lootがボスの利益に加算されます。",
+            "🔒 ボスのデータは非公開です。自分のデータは自分だけが見られ、各lootsplitはPTにいた人にだけ表示されます。",
+            "🔈 どこでも音楽がかなり小さくなりました。サイトが音量を下げられないiPhoneとiPadでは、音楽はオフになります。"
+          ]
+        },
+        "de": {
+          "title": "Boss-Rotation",
+          "changes": [
+            "👑 Neue Boss-Rotation, mit Solo und Party: Füge den Hunt Session Analyser des Kampfes ein und sieh Profit, getötete Bosse, den Loot jedes Bosses und die Items, wie im Stacker.",
+            "In der Party fragt die App, ob du den Lootsplit machen willst. Wenn ja, füge den Party Hunt Analyser ein: Die Teilung erscheint im Boss-Tab aller in der Party. Wenn nicht, wird die Session nur für dich gespeichert.",
+            "Wenn jemand aus der Party seine eigene Session vom selben Boss sendet, wird sie automatisch dem Party-Lootsplit hinzugefügt.",
+            "Mitten in einer normalen Hunt im 📈 Hunt Session Stacker einen Boss getötet? Er kommt in den Boss-Tab, und sein geschätzter Loot zählt zum Boss-Profit.",
+            "🔒 Boss-Daten sind privat: Nur du siehst deine, und jeder Lootsplit erscheint nur für die, die in der Party waren.",
+            "🔈 Die Musik ist überall viel leiser. Auf iPhone und iPad, wo die Website die Lautstärke nicht senken kann, bleibt sie aus."
+          ]
+        },
+        "pl": {
+          "title": "Rotacja bossów",
+          "changes": [
+            "👑 Nowa Rotacja bossów, z Solo i Party: wklej Hunt Session Analyser z walki i zobacz zysk, zabitych bossów, loot każdego bossa i przedmioty, jak w Stackerze.",
+            "W Party aplikacja pyta, czy chcesz zrobić lootsplit. Jeśli tak, wklej Party Hunt Analyser: podział pojawi się w zakładce bossów wszystkich z drużyny. Jeśli nie, sesja zostanie zapisana tylko dla ciebie.",
+            "Gdy ktoś z drużyny wyśle własną sesję z tego samego bossa, sama dołączy do lootsplitu drużyny.",
+            "Zabiłeś bossa w trakcie zwykłego huntu w 📈 Hunt Session Stacker? Trafia do zakładki bossów, a jego szacowany loot dolicza się do zysku z bossów.",
+            "🔒 Dane bossów są prywatne: tylko ty widzisz swoje, a każdy lootsplit widzą tylko osoby, które były w drużynie.",
+            "🔈 Muzyka jest wszędzie dużo cichsza. Na iPhonie i iPadzie, gdzie strona nie może ściszyć dźwięku, jest wyłączona."
+          ]
+        },
+        "fr": {
+          "title": "Rotation des boss",
+          "changes": [
+            "👑 Nouvelle Rotation des boss, avec Solo et Groupe : collez le Hunt Session Analyser du combat et voyez le profit, les boss tués, le loot de chaque boss et les objets, comme dans le Stacker.",
+            "En Groupe, l'app demande si vous voulez faire le lootsplit. Si oui, collez le Party Hunt Analyser : le partage apparaît dans l'onglet boss de tout le groupe. Sinon, la session est gardée seulement pour vous.",
+            "Quand quelqu'un du groupe envoie sa propre session du même boss, elle rejoint toute seule le lootsplit du groupe.",
+            "Vous avez tué un boss au milieu d'une hunt normale du 📈 Hunt Session Stacker ? Il va dans l'onglet boss, avec son loot estimé ajouté au profit des boss.",
+            "🔒 Les données de boss sont privées : vous seul voyez les vôtres, et chaque lootsplit n'apparaît que pour ceux qui étaient dans le groupe.",
+            "🔈 La musique est beaucoup plus basse partout. Sur iPhone et iPad, où le site ne peut pas baisser le volume, elle reste coupée."
+          ]
+        },
+        "ru": {
+          "title": "Ротация боссов",
+          "changes": [
+            "👑 Новая Ротация боссов, с Соло и Пати: вставьте Hunt Session Analyser боя и смотрите прибыль, убитых боссов, лут каждого босса и предметы, как в Stacker.",
+            "В Пати приложение спрашивает, хотите ли вы сделать лутсплит. Если да, вставьте Party Hunt Analyser: раздел появится во вкладке боссов у всей пати. Если нет, сессия сохранится только для вас.",
+            "Когда кто-то из пати отправляет свою сессию того же босса, она сама присоединяется к лутсплиту пати.",
+            "Убили босса посреди обычного ханта в 📈 Hunt Session Stacker? Он попадёт во вкладку боссов, а его оценочный лут добавится к прибыли с боссов.",
+            "🔒 Данные боссов приватны: свои видите только вы, а каждый лутсплит видят только те, кто был в пати.",
+            "🔈 Музыка стала намного тише везде. На iPhone и iPad, где сайт не может уменьшить громкость, она выключена."
+          ]
+        }
+      }
     },
     {
       "version": "0.10.0",
@@ -147,7 +1035,86 @@
         "🖼️ Card para compartilhar a hunt ou a sessão no Discord e no WhatsApp, além de 🏅 ranking da PT por dano, cura e balance, com cor por vocação.",
         "📋 Colar direto: copie o analyser no Tibia e aperte Ctrl+V em qualquer tela (ou toque em Colar). Também tem evolução semanal de XP e lucro, itens mais valiosos ou mais dropados e imagens de itens e criaturas.",
         "Abertura nova com runa e partículas douradas, números que contam até o valor, telas de carregamento mais bonitas e a opção de pôr o ícone do 4rt3mi5 na tela inicial (só se você tocar em Sim)."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Achievements, music and card",
+          "changes": [
+            "🏆 Achievements: 13 challenges (Marathon, First kk, Guardian angel and more) with a progress bar and a celebration when you unlock one.",
+            "🔥 Day streak: send a hunt or session every day and, every 30 days in a row, your access code gets +7 days of validity by itself.",
+            "🎵 Quiet Tibia soundtrack: the Anthem on the opening screen, Special Boss Lairs in 🗺️ Hunts and the kings' theme in the Stacker. A sound button on every screen: one tap mutes it right away, and the app remembers your choice.",
+            "🖼️ A card to share the hunt or session on Discord and WhatsApp, plus a 🏅 party ranking by damage, healing and balance, colored by vocation.",
+            "📋 Paste directly: copy the analyser in Tibia and press Ctrl+V on any screen (or tap Paste). There is also weekly XP and profit progress, most valuable or most dropped items, and item and creature images.",
+            "A new opening with a rune and golden particles, numbers that count up to the value, nicer loading screens and the option to put the 4rt3mi5 icon on your home screen (only if you tap Yes)."
+          ]
+        },
+        "es": {
+          "title": "Logros, música y tarjeta",
+          "changes": [
+            "🏆 Logros: 13 desafíos (Maratón, Primer kk, Ángel de la guarda y otros) con barra de progreso y celebración cuando desbloqueas uno.",
+            "🔥 Racha de días: envía una hunt o sesión por día y, cada 30 días seguidos, tu código de acceso gana +7 días de validez solo.",
+            "🎵 Banda sonora de Tibia bajita: el Anthem en la apertura, Special Boss Lairs en 🗺️ Hunts y el tema de los reyes en el Stacker. Botón de sonido en todas las pantallas: un toque lo silencia al instante, y la app recuerda tu elección.",
+            "🖼️ Tarjeta para compartir la hunt o la sesión en Discord y WhatsApp, además de 🏅 ranking de la PT por daño, curación y balance, con color por vocación.",
+            "📋 Pegar directo: copia el analyser en Tibia y presiona Ctrl+V en cualquier pantalla (o toca Pegar). También hay evolución semanal de XP y ganancia, ítems más valiosos o más dropeados e imágenes de ítems y criaturas.",
+            "Apertura nueva con runa y partículas doradas, números que cuentan hasta el valor, pantallas de carga más bonitas y la opción de poner el ícono de 4rt3mi5 en la pantalla de inicio (solo si tocas Sí)."
+          ]
+        },
+        "ja": {
+          "title": "実績、音楽、カード",
+          "changes": [
+            "🏆 実績：13のチャレンジ（マラソン、初めてのkk、守護天使など）。進捗バー付きで、解除するとお祝いします。",
+            "🔥 連続日数：毎日ハントかセッションを送ると、30日連続ごとにアクセスコードの有効期限が自動で+7日されます。",
+            "🎵 控えめなTibiaのBGM：オープニングにAnthem、🗺️ HuntsにSpecial Boss Lairs、Stackerに王たちのテーマ。全画面にサウンドボタンがあり、1タップですぐミュートでき、選択は記憶されます。",
+            "🖼️ ハントやセッションをDiscordやWhatsAppで共有できるカードと、ダメージ、回復、balanceによる🏅 PTランキング（職業ごとの色付き）。",
+            "📋 そのまま貼り付け：Tibiaでanalyserをコピーし、どの画面でもCtrl+Vを押す（または「貼り付け」をタップ）だけ。週ごとのXPと利益の推移、最も価値のあるアイテムや最も多くドロップしたアイテム、アイテムとクリーチャーの画像もあります。",
+            "ルーンと金色の粒子の新しいオープニング、数値がカウントアップする演出、きれいになった読み込み画面、そして4rt3mi5のアイコンをホーム画面に追加するオプション（「はい」をタップしたときだけ）。"
+          ]
+        },
+        "de": {
+          "title": "Erfolge, Musik und Karte",
+          "changes": [
+            "🏆 Erfolge: 13 Herausforderungen (Marathon, Erstes kk, Schutzengel und mehr) mit Fortschrittsbalken und Feier, wenn du einen freischaltest.",
+            "🔥 Tagesserie: Sende jeden Tag eine Hunt oder Session, und alle 30 Tage am Stück bekommt dein Zugangscode automatisch +7 Tage Gültigkeit.",
+            "🎵 Leiser Tibia-Soundtrack: die Anthem beim Start, Special Boss Lairs in 🗺️ Hunts und das Thema der Könige im Stacker. Sound-Button auf jedem Bildschirm: Ein Tipp schaltet sofort stumm, und die App merkt sich deine Wahl.",
+            "🖼️ Karte zum Teilen der Hunt oder Session auf Discord und WhatsApp, dazu ein 🏅 Party-Ranking nach Schaden, Heilung und Balance, farbig nach Vokation.",
+            "📋 Direkt einfügen: Kopiere den Analyser in Tibia und drücke Strg+V auf jedem Bildschirm (oder tippe auf Einfügen). Dazu der wöchentliche Verlauf von XP und Profit, die wertvollsten oder am häufigsten gedroppten Items und Bilder von Items und Kreaturen.",
+            "Neuer Start mit Rune und goldenen Partikeln, Zahlen, die hochzählen, schönere Ladebildschirme und die Option, das 4rt3mi5-Symbol auf den Startbildschirm zu legen (nur wenn du auf Ja tippst)."
+          ]
+        },
+        "pl": {
+          "title": "Osiągnięcia, muzyka i karta",
+          "changes": [
+            "🏆 Osiągnięcia: 13 wyzwań (Maraton, Pierwsze kk, Anioł stróż i inne) z paskiem postępu i świętowaniem po odblokowaniu.",
+            "🔥 Seria dni: wysyłaj hunt lub sesję codziennie, a co 30 dni z rzędu twój kod dostępu sam dostaje +7 dni ważności.",
+            "🎵 Cicha ścieżka dźwiękowa Tibii: Anthem na otwarciu, Special Boss Lairs w 🗺️ Huntach i motyw królów w Stackerze. Przycisk dźwięku na każdym ekranie: jedno dotknięcie od razu wycisza, a aplikacja pamięta wybór.",
+            "🖼️ Karta do udostępnienia huntu lub sesji na Discordzie i WhatsAppie, plus 🏅 ranking drużyny według obrażeń, leczenia i balance, w kolorach profesji.",
+            "📋 Wklejaj od razu: skopiuj analyser w Tibii i naciśnij Ctrl+V na dowolnym ekranie (albo dotknij Wklej). Jest też tygodniowy postęp XP i zysku, najcenniejsze lub najczęściej dropione przedmioty oraz obrazki przedmiotów i potworów.",
+            "Nowe otwarcie z runą i złotymi cząsteczkami, liczby odliczające do wartości, ładniejsze ekrany ładowania i opcja dodania ikony 4rt3mi5 do ekranu głównego (tylko jeśli dotkniesz Tak)."
+          ]
+        },
+        "fr": {
+          "title": "Succès, musique et carte",
+          "changes": [
+            "🏆 Succès : 13 défis (Marathon, Premier kk, Ange gardien et d'autres) avec barre de progression et célébration quand vous en débloquez un.",
+            "🔥 Série de jours : envoyez une hunt ou une session par jour et, tous les 30 jours d'affilée, votre code d'accès gagne tout seul +7 jours de validité.",
+            "🎵 Bande-son de Tibia toute douce : l'Anthem à l'ouverture, Special Boss Lairs dans 🗺️ Hunts et le thème des rois dans le Stacker. Bouton de son sur tous les écrans : une touche coupe le son tout de suite, et l'app retient votre choix.",
+            "🖼️ Carte pour partager la hunt ou la session sur Discord et WhatsApp, plus un 🏅 classement du groupe par dégâts, soins et balance, avec une couleur par vocation.",
+            "📋 Coller directement : copiez l'analyser dans Tibia et appuyez sur Ctrl+V sur n'importe quel écran (ou touchez Coller). Il y a aussi l'évolution hebdomadaire de l'XP et du profit, les objets les plus précieux ou les plus droppés et les images des objets et créatures.",
+            "Nouvelle ouverture avec rune et particules dorées, chiffres qui défilent jusqu'à la valeur, écrans de chargement plus beaux et l'option de mettre l'icône de 4rt3mi5 sur l'écran d'accueil (seulement si vous touchez Oui)."
+          ]
+        },
+        "ru": {
+          "title": "Достижения, музыка и карточка",
+          "changes": [
+            "🏆 Достижения: 13 испытаний (Марафон, Первый kk, Ангел-хранитель и другие) с полосой прогресса и праздником при открытии.",
+            "🔥 Серия дней: отправляйте хант или сессию каждый день, и за каждые 30 дней подряд ваш код доступа сам получает +7 дней.",
+            "🎵 Тихий саундтрек Tibia: Anthem на заставке, Special Boss Lairs в 🗺️ Хантах и тема королей в Stacker. Кнопка звука на каждом экране: одно нажатие сразу выключает звук, а приложение запоминает выбор.",
+            "🖼️ Карточка, чтобы поделиться хантом или сессией в Discord и WhatsApp, плюс 🏅 рейтинг пати по урону, лечению и балансу, с цветом по профессии.",
+            "📋 Вставка сразу: скопируйте анализатор в Tibia и нажмите Ctrl+V на любом экране (или нажмите «Вставить»). Ещё есть недельная динамика XP и прибыли, самые ценные или частые предметы и картинки предметов и существ.",
+            "Новая заставка с руной и золотыми искрами, числа, отсчитывающие до значения, более красивые экраны загрузки и возможность добавить значок 4rt3mi5 на главный экран (только если нажмёте «Да»)."
+          ]
+        }
+      }
     },
     {
       "version": "0.9.0",
@@ -157,7 +1124,65 @@
         "Nova aba 📰 Novidades: mostra o que mudou em cada versão. Quando sair uma versão nova, o app avisa na tela inicial.",
         "Mais proteção contra uso malicioso: limite de envios e de requisições por pessoa, tamanho máximo dos textos colados, validação de nomes, preços e metas, e bloqueio de conteúdo externo não autorizado no site.",
         "O app de Windows só instala atualizações baixadas do GitHub oficial do 4rt3mi5 e conferidas por assinatura (SHA-256)."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "What's new and more protection",
+          "changes": [
+            "New 📰 What's new tab: shows what changed in each version. When a new version is out, the app lets you know on the home screen.",
+            "More protection against malicious use: limits on submissions and requests per person, a maximum size for pasted text, validation of names, prices and goals, and blocking of unauthorized external content on the site.",
+            "The Windows app only installs updates downloaded from the official 4rt3mi5 GitHub and checked by signature (SHA-256)."
+          ]
+        },
+        "es": {
+          "title": "Novedades y más protección",
+          "changes": [
+            "Nueva pestaña 📰 Novedades: muestra qué cambió en cada versión. Cuando sale una versión nueva, la app avisa en la pantalla de inicio.",
+            "Más protección contra el uso malicioso: límite de envíos y de solicitudes por persona, tamaño máximo de los textos pegados, validación de nombres, precios y metas, y bloqueo de contenido externo no autorizado en el sitio.",
+            "La app de Windows solo instala actualizaciones descargadas del GitHub oficial de 4rt3mi5 y verificadas por firma (SHA-256)."
+          ]
+        },
+        "ja": {
+          "title": "お知らせと保護の強化",
+          "changes": [
+            "📰 お知らせタブを追加：各バージョンの変更点を表示します。新しいバージョンが出ると、ホーム画面でお知らせします。",
+            "悪用への対策を強化：1人あたりの送信数とリクエスト数の制限、貼り付けるテキストの最大サイズ、名前・価格・目標の検証、サイト上の許可されていない外部コンテンツのブロック。",
+            "Windowsアプリは、4rt3mi5の公式GitHubからダウンロードし、署名（SHA-256）で確認した更新だけをインストールします。"
+          ]
+        },
+        "de": {
+          "title": "Neuigkeiten und mehr Schutz",
+          "changes": [
+            "Neuer Tab 📰 Neuigkeiten: zeigt, was sich in jeder Version geändert hat. Wenn eine neue Version erscheint, meldet es die App auf der Startseite.",
+            "Mehr Schutz vor Missbrauch: Limits für Uploads und Anfragen pro Person, maximale Größe der eingefügten Texte, Prüfung von Namen, Preisen und Zielen sowie Blockierung nicht erlaubter externer Inhalte auf der Website.",
+            "Die Windows-App installiert nur Updates, die vom offiziellen GitHub von 4rt3mi5 heruntergeladen und per Signatur (SHA-256) geprüft wurden."
+          ]
+        },
+        "pl": {
+          "title": "Nowości i lepsza ochrona",
+          "changes": [
+            "Nowa zakładka 📰 Nowości: pokazuje, co zmieniło się w każdej wersji. Gdy wyjdzie nowa wersja, aplikacja informuje o tym na ekranie startowym.",
+            "Lepsza ochrona przed nadużyciami: limity wysyłek i zapytań na osobę, maksymalny rozmiar wklejanych tekstów, sprawdzanie nazw, cen i celów oraz blokada nieautoryzowanych treści zewnętrznych na stronie.",
+            "Aplikacja na Windows instaluje tylko aktualizacje pobrane z oficjalnego GitHuba 4rt3mi5 i sprawdzone podpisem (SHA-256)."
+          ]
+        },
+        "fr": {
+          "title": "Nouveautés et plus de protection",
+          "changes": [
+            "Nouvel onglet 📰 Nouveautés : il montre ce qui a changé dans chaque version. Quand une nouvelle version sort, l'app prévient sur l'écran d'accueil.",
+            "Plus de protection contre les abus : limite d'envois et de requêtes par personne, taille maximale des textes collés, validation des noms, prix et objectifs, et blocage des contenus externes non autorisés sur le site.",
+            "L'app Windows n'installe que les mises à jour téléchargées depuis le GitHub officiel de 4rt3mi5 et vérifiées par signature (SHA-256)."
+          ]
+        },
+        "ru": {
+          "title": "Новости и больше защиты",
+          "changes": [
+            "Новая вкладка 📰 Новости: показывает, что изменилось в каждой версии. Когда выходит новая версия, приложение сообщает об этом на главной.",
+            "Больше защиты от злоупотреблений: лимиты отправок и запросов на человека, максимальный размер вставляемого текста, проверка имён, цен и целей и блокировка неразрешённого внешнего контента на сайте.",
+            "Приложение для Windows устанавливает только обновления, скачанные с официального GitHub 4rt3mi5 и проверенные подписью (SHA-256)."
+          ]
+        }
+      }
     },
     {
       "version": "0.8.0",
@@ -169,7 +1194,79 @@
         "\"Trocar personagem\" agora tem a opção de voltar.",
         "Seu código de acesso e o token do aparelho ficam criptografados no PC (app de Windows) e o servidor guarda o token só como hash.",
         "Muitas tentativas com código errado bloqueiam temporariamente quem está tentando adivinhar."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Back button and security",
+          "changes": [
+            "← button at the top to go back to the previous screen (your phone's \"back\" works too).",
+            "Tapping the 4rt3mi5 logo takes you Home from any screen.",
+            "\"Change character\" now has a way to go back.",
+            "Your access code and device token are encrypted on the PC (Windows app), and the server only keeps the token as a hash.",
+            "Too many attempts with a wrong code temporarily block whoever is trying to guess."
+          ]
+        },
+        "es": {
+          "title": "Botón volver y seguridad",
+          "changes": [
+            "Botón ← arriba para volver a la pantalla anterior (el \"atrás\" del celular también funciona).",
+            "Tocar el logo de 4rt3mi5 te lleva al Inicio desde cualquier pantalla.",
+            "\"Cambiar personaje\" ahora tiene la opción de volver.",
+            "Tu código de acceso y el token del dispositivo quedan cifrados en la PC (app de Windows), y el servidor guarda el token solo como hash.",
+            "Muchos intentos con un código incorrecto bloquean temporalmente a quien intenta adivinar."
+          ]
+        },
+        "ja": {
+          "title": "戻るボタンとセキュリティ",
+          "changes": [
+            "上部の←ボタンで前の画面に戻れます（スマホの「戻る」も使えます）。",
+            "4rt3mi5のロゴをタップすると、どの画面からでもホームに戻ります。",
+            "「キャラクターを変更」から戻れるようになりました。",
+            "アクセスコードと端末トークンはPC（Windowsアプリ）上で暗号化され、サーバーはトークンをハッシュとしてのみ保存します。",
+            "間違ったコードで何度も試すと、推測しようとしている人を一時的にブロックします。"
+          ]
+        },
+        "de": {
+          "title": "Zurück-Button und Sicherheit",
+          "changes": [
+            "Button ← oben, um zum vorherigen Bildschirm zurückzukehren (das \"Zurück\" des Handys funktioniert auch).",
+            "Ein Tipp auf das 4rt3mi5-Logo bringt dich von jedem Bildschirm zur Startseite.",
+            "\"Charakter wechseln\" hat jetzt eine Option zum Zurückgehen.",
+            "Dein Zugangscode und der Gerätetoken sind auf dem PC verschlüsselt (Windows-App), und der Server speichert den Token nur als Hash.",
+            "Zu viele Versuche mit falschem Code sperren vorübergehend, wer zu raten versucht."
+          ]
+        },
+        "pl": {
+          "title": "Przycisk wstecz i bezpieczeństwo",
+          "changes": [
+            "Przycisk ← u góry, żeby wrócić do poprzedniego ekranu (\"wstecz\" w telefonie też działa).",
+            "Dotknięcie logo 4rt3mi5 przenosi na start z dowolnego ekranu.",
+            "\"Zmień postać\" ma teraz opcję powrotu.",
+            "Twój kod dostępu i token urządzenia są szyfrowane na PC (aplikacja Windows), a serwer przechowuje token tylko jako hash.",
+            "Wiele prób z błędnym kodem tymczasowo blokuje tego, kto próbuje zgadywać."
+          ]
+        },
+        "fr": {
+          "title": "Bouton retour et sécurité",
+          "changes": [
+            "Bouton ← en haut pour revenir à l'écran précédent (le \"retour\" du téléphone fonctionne aussi).",
+            "Toucher le logo 4rt3mi5 ramène à l'accueil depuis n'importe quel écran.",
+            "\"Changer de personnage\" a maintenant une option pour revenir.",
+            "Votre code d'accès et le jeton de l'appareil sont chiffrés sur le PC (app Windows), et le serveur ne garde le jeton que sous forme de hash.",
+            "Trop de tentatives avec un mauvais code bloquent temporairement celui qui essaie de deviner."
+          ]
+        },
+        "ru": {
+          "title": "Кнопка «Назад» и безопасность",
+          "changes": [
+            "Кнопка ← вверху, чтобы вернуться на предыдущий экран («назад» на телефоне тоже работает).",
+            "Нажатие на логотип 4rt3mi5 ведёт на главную с любого экрана.",
+            "В «Сменить персонажа» теперь можно вернуться назад.",
+            "Ваш код доступа и токен устройства зашифрованы на ПК (приложение для Windows), а сервер хранит токен только в виде хеша.",
+            "Много попыток с неверным кодом временно блокируют того, кто пытается подобрать."
+          ]
+        }
+      }
     },
     {
       "version": "0.7.1",
@@ -179,7 +1276,65 @@
         "A previsão de level usa a tabela oficial de experiência do tibia.com.",
         "Para quem está no top 1000 de experiência do mundo, mostra a XP exata e a % do level atual.",
         "Nova tabela com quanto falta (XP, horas de hunt e dias) para os próximos levels e para os múltiplos de 50 e 100."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Exact level forecast",
+          "changes": [
+            "The level forecast uses the official experience table from tibia.com.",
+            "If you are in your world's top 1000 for experience, it shows your exact XP and the % of your current level.",
+            "New table showing how much is left (XP, hunting hours and days) for the next levels and for multiples of 50 and 100."
+          ]
+        },
+        "es": {
+          "title": "Previsión de level exacta",
+          "changes": [
+            "La previsión de level usa la tabla oficial de experiencia de tibia.com.",
+            "Si estás en el top 1000 de experiencia del mundo, muestra tu XP exacta y el % del level actual.",
+            "Nueva tabla con cuánto falta (XP, horas de hunt y días) para los próximos levels y para los múltiplos de 50 y 100."
+          ]
+        },
+        "ja": {
+          "title": "正確なレベル予測",
+          "changes": [
+            "レベル予測にtibia.comの公式経験値テーブルを使います。",
+            "ワールドの経験値トップ1000に入っている人は、正確なXPと現在のレベルの%が表示されます。",
+            "次のレベルと50・100の倍数のレベルまで、あとどれくらい（XP、狩りの時間、日数）かを示す表を追加しました。"
+          ]
+        },
+        "de": {
+          "title": "Genaue Level-Prognose",
+          "changes": [
+            "Die Level-Prognose nutzt die offizielle Erfahrungstabelle von tibia.com.",
+            "Wer in den Top 1000 der Welt bei der Erfahrung ist, sieht die genaue XP und den % des aktuellen Levels.",
+            "Neue Tabelle, wie viel bis zu den nächsten Levels und zu den Vielfachen von 50 und 100 fehlt (XP, Jagdstunden und Tage)."
+          ]
+        },
+        "pl": {
+          "title": "Dokładna prognoza levelu",
+          "changes": [
+            "Prognoza levelu używa oficjalnej tabeli doświadczenia z tibia.com.",
+            "Kto jest w top 1000 doświadczenia na świecie, widzi dokładne XP i % obecnego levelu.",
+            "Nowa tabela pokazuje, ile brakuje (XP, godziny huntu i dni) do kolejnych leveli i do wielokrotności 50 i 100."
+          ]
+        },
+        "fr": {
+          "title": "Prévision de level exacte",
+          "changes": [
+            "La prévision de level utilise le tableau officiel d'expérience de tibia.com.",
+            "Si vous êtes dans le top 1000 d'expérience du monde, elle montre votre XP exacte et le % du level actuel.",
+            "Nouveau tableau avec ce qu'il reste (XP, heures de hunt et jours) pour les prochains levels et pour les multiples de 50 et 100."
+          ]
+        },
+        "ru": {
+          "title": "Точный прогноз уровня",
+          "changes": [
+            "Прогноз уровня использует официальную таблицу опыта с tibia.com.",
+            "Тем, кто в топ-1000 мира по опыту, показывается точный XP и % текущего уровня.",
+            "Новая таблица: сколько осталось (XP, часы ханта и дни) до следующих уровней и до кратных 50 и 100."
+          ]
+        }
+      }
     },
     {
       "version": "0.7.0",
@@ -190,7 +1345,72 @@
         "No envio de sessão, escolha a hunt (campo que filtra enquanto digita).",
         "🎯 Metas de XP e loot por dia e por semana, com barra de progresso.",
         "📈 Previsão de level, lucro líquido real, 🧺 lista de venda com aviso de quantidade e 🏆 recordes pessoais."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Hunts menu, goals and records",
+          "changes": [
+            "New 🗺️ Hunts menu: ranking by XP/h and gold/h, average level of who hunts at each place, level filter and comparison of up to 3 hunts.",
+            "When sending a session, pick the hunt (a field that filters as you type).",
+            "🎯 Daily and weekly XP and loot goals, with a progress bar.",
+            "📈 Level forecast, real net profit, 🧺 sell list with quantity warnings and 🏆 personal records."
+          ]
+        },
+        "es": {
+          "title": "Menú Hunts, metas y récords",
+          "changes": [
+            "Nuevo menú 🗺️ Hunts: ranking por XP/h y gold/h, level promedio de quien caza en cada hunt, filtro por level y comparación de hasta 3 hunts.",
+            "Al enviar una sesión, elige la hunt (un campo que filtra mientras escribes).",
+            "🎯 Metas de XP y loot por día y por semana, con barra de progreso.",
+            "📈 Previsión de level, ganancia neta real, 🧺 lista de venta con aviso de cantidad y 🏆 récords personales."
+          ]
+        },
+        "ja": {
+          "title": "Huntsメニュー、目標、記録",
+          "changes": [
+            "🗺️ Huntsメニューを追加：XP/hとgold/hのランキング、各狩場で狩る人の平均レベル、レベルでの絞り込み、最大3つの狩場の比較。",
+            "セッション送信時に狩場を選べます（入力しながら絞り込める欄）。",
+            "🎯 日ごと・週ごとのXPとlootの目標、進捗バー付き。",
+            "📈 レベル予測、実際の純利益、数量の注意付き🧺 売却リスト、🏆 自己記録。"
+          ]
+        },
+        "de": {
+          "title": "Hunts-Menü, Ziele und Rekorde",
+          "changes": [
+            "Neues Menü 🗺️ Hunts: Ranking nach XP/h und Gold/h, Durchschnittslevel der Spieler in jeder Hunt, Levelfilter und Vergleich von bis zu 3 Hunts.",
+            "Beim Senden einer Session wählst du die Hunt (ein Feld, das beim Tippen filtert).",
+            "🎯 Tages- und Wochenziele für XP und Loot, mit Fortschrittsbalken.",
+            "📈 Level-Prognose, realer Nettogewinn, 🧺 Verkaufsliste mit Mengenhinweis und 🏆 persönliche Rekorde."
+          ]
+        },
+        "pl": {
+          "title": "Menu Hunty, cele i rekordy",
+          "changes": [
+            "Nowe menu 🗺️ Hunty: ranking według XP/h i gold/h, średni level polujących na każdym huncie, filtr levelu i porównanie do 3 huntów.",
+            "Przy wysyłaniu sesji wybierz hunt (pole, które filtruje podczas pisania).",
+            "🎯 Dzienne i tygodniowe cele XP i lootu, z paskiem postępu.",
+            "📈 Prognoza levelu, realny zysk netto, 🧺 lista sprzedaży z ostrzeżeniem o ilości i 🏆 rekordy osobiste."
+          ]
+        },
+        "fr": {
+          "title": "Menu Hunts, objectifs et records",
+          "changes": [
+            "Nouveau menu 🗺️ Hunts : classement par XP/h et gold/h, level moyen de ceux qui chassent dans chaque hunt, filtre par level et comparaison de jusqu'à 3 hunts.",
+            "À l'envoi d'une session, choisissez la hunt (un champ qui filtre pendant que vous tapez).",
+            "🎯 Objectifs d'XP et de loot par jour et par semaine, avec barre de progression.",
+            "📈 Prévision de level, bénéfice net réel, 🧺 liste de vente avec alerte de quantité et 🏆 records personnels."
+          ]
+        },
+        "ru": {
+          "title": "Меню Ханты, цели и рекорды",
+          "changes": [
+            "Новое меню 🗺️ Ханты: рейтинг по XP/h и gold/h, средний уровень охотников на каждом ханте, фильтр по уровню и сравнение до 3 хантов.",
+            "При отправке сессии выберите хант (поле фильтрует по мере ввода).",
+            "🎯 Цели по XP и луту на день и неделю, с полосой прогресса.",
+            "📈 Прогноз уровня, реальная чистая прибыль, 🧺 список продажи с напоминанием о количестве и 🏆 личные рекорды."
+          ]
+        }
+      }
     },
     {
       "version": "0.6.0",
@@ -201,7 +1421,72 @@
         "Preço de cada item pelo NPC que paga mais (TibiaWiki BR), com cidade e minimapa.",
         "Itens sem NPC: os jogadores informam o preço e o app usa a média.",
         "Totais por semana, 15 dias, mês, 3 meses, 6 meses e 1 ano."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Items, prices and NPCs",
+          "changes": [
+            "The Hunt Session Stacker keeps killed creatures and looted items.",
+            "Price of each item from the NPC that pays the most (TibiaWiki BR), with city and minimap.",
+            "Items with no NPC: players report the price and the app uses the average.",
+            "Totals for the week, 15 days, month, 3 months, 6 months and 1 year."
+          ]
+        },
+        "es": {
+          "title": "Ítems, precios y NPCs",
+          "changes": [
+            "El Hunt Session Stacker guarda las criaturas muertas y los ítems recogidos.",
+            "Precio de cada ítem según el NPC que más paga (TibiaWiki BR), con ciudad y minimapa.",
+            "Ítems sin NPC: los jugadores informan el precio y la app usa el promedio.",
+            "Totales por semana, 15 días, mes, 3 meses, 6 meses y 1 año."
+          ]
+        },
+        "ja": {
+          "title": "アイテム、価格、NPC",
+          "changes": [
+            "Hunt Session Stackerが倒したクリーチャーと拾ったアイテムを保存します。",
+            "各アイテムの価格は一番高く買うNPC（TibiaWiki BR）から。街とミニマップ付き。",
+            "NPCがいないアイテム：プレイヤーが価格を報告し、アプリが平均を使います。",
+            "週、15日、月、3か月、6か月、1年の合計。"
+          ]
+        },
+        "de": {
+          "title": "Items, Preise und NPCs",
+          "changes": [
+            "Der Hunt Session Stacker speichert getötete Kreaturen und gesammelte Items.",
+            "Preis jedes Items beim NPC, der am meisten zahlt (TibiaWiki BR), mit Stadt und Minikarte.",
+            "Items ohne NPC: Die Spieler geben den Preis an und die App nutzt den Durchschnitt.",
+            "Summen für Woche, 15 Tage, Monat, 3 Monate, 6 Monate und 1 Jahr."
+          ]
+        },
+        "pl": {
+          "title": "Przedmioty, ceny i NPC",
+          "changes": [
+            "Hunt Session Stacker zapisuje zabite potwory i zebrane przedmioty.",
+            "Cena każdego przedmiotu u NPC, który płaci najwięcej (TibiaWiki BR), z miastem i minimapą.",
+            "Przedmioty bez NPC: gracze podają cenę, a aplikacja używa średniej.",
+            "Sumy za tydzień, 15 dni, miesiąc, 3 miesiące, 6 miesięcy i 1 rok."
+          ]
+        },
+        "fr": {
+          "title": "Objets, prix et NPC",
+          "changes": [
+            "Le Hunt Session Stacker garde les créatures tuées et les objets ramassés.",
+            "Prix de chaque objet selon le NPC qui paie le plus (TibiaWiki BR), avec ville et minicarte.",
+            "Objets sans NPC : les joueurs indiquent le prix et l'app utilise la moyenne.",
+            "Totaux par semaine, 15 jours, mois, 3 mois, 6 mois et 1 an."
+          ]
+        },
+        "ru": {
+          "title": "Предметы, цены и NPC",
+          "changes": [
+            "Hunt Session Stacker сохраняет убитых существ и собранные предметы.",
+            "Цена каждого предмета у NPC, который платит больше всех (TibiaWiki BR), с городом и мини-картой.",
+            "Предметы без NPC: игроки указывают цену, а приложение берёт среднее.",
+            "Итоги за неделю, 15 дней, месяц, 3 месяца, 6 месяцев и 1 год."
+          ]
+        }
+      }
     },
     {
       "version": "0.5.0",
@@ -210,7 +1495,58 @@
       "changes": [
         "Só quem enviou uma hunt pode apagá-la.",
         "Lootsplit guarda damage e healing e mostra gráficos de contribuição (link \"Gráfico\")."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Charts and deleting",
+          "changes": [
+            "Only whoever sent a hunt can delete it.",
+            "Lootsplit keeps damage and healing and shows contribution charts (\"Chart\" link)."
+          ]
+        },
+        "es": {
+          "title": "Gráficos y eliminación",
+          "changes": [
+            "Solo quien envió una hunt puede borrarla.",
+            "El Lootsplit guarda damage y healing y muestra gráficos de contribución (enlace \"Gráfico\")."
+          ]
+        },
+        "ja": {
+          "title": "グラフと削除",
+          "changes": [
+            "ハントを削除できるのは送った人だけです。",
+            "Lootsplitがdamageとhealingを保存し、貢献度のグラフを表示します（「グラフ」リンク）。"
+          ]
+        },
+        "de": {
+          "title": "Diagramme und Löschen",
+          "changes": [
+            "Nur wer eine Hunt gesendet hat, kann sie löschen.",
+            "Der Lootsplit speichert Damage und Healing und zeigt Beitragsdiagramme (Link \"Diagramm\")."
+          ]
+        },
+        "pl": {
+          "title": "Wykresy i usuwanie",
+          "changes": [
+            "Tylko osoba, która wysłała hunt, może go usunąć.",
+            "Lootsplit zapisuje damage i healing i pokazuje wykresy udziału (link \"Wykres\")."
+          ]
+        },
+        "fr": {
+          "title": "Graphiques et suppression",
+          "changes": [
+            "Seule la personne qui a envoyé une hunt peut la supprimer.",
+            "Le Lootsplit garde damage et healing et affiche des graphiques de contribution (lien \"Graphique\")."
+          ]
+        },
+        "ru": {
+          "title": "Графики и удаление",
+          "changes": [
+            "Удалить хант может только тот, кто его отправил.",
+            "Lootsplit сохраняет damage и healing и показывает графики вклада (ссылка «График»)."
+          ]
+        }
+      }
     },
     {
       "version": "0.4.0",
@@ -219,7 +1555,58 @@
       "changes": [
         "Painel de administração para criar e renovar códigos de 7, 15 ou 30 dias.",
         "Contatos de confiança podem entrar sem código de verificação."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Creator panel",
+          "changes": [
+            "Admin panel to create and renew 7, 15 or 30-day codes.",
+            "Trusted contacts can get in without a verification code."
+          ]
+        },
+        "es": {
+          "title": "Panel del creador",
+          "changes": [
+            "Panel de administración para crear y renovar códigos de 7, 15 o 30 días.",
+            "Los contactos de confianza pueden entrar sin código de verificación."
+          ]
+        },
+        "ja": {
+          "title": "作成者パネル",
+          "changes": [
+            "7日、15日、30日のコードを作成・更新する管理パネル。",
+            "信頼できる連絡先は認証コードなしで入れます。"
+          ]
+        },
+        "de": {
+          "title": "Panel des Erstellers",
+          "changes": [
+            "Admin-Panel, um Codes für 7, 15 oder 30 Tage zu erstellen und zu verlängern.",
+            "Vertrauenswürdige Kontakte können ohne Bestätigungscode rein."
+          ]
+        },
+        "pl": {
+          "title": "Panel twórcy",
+          "changes": [
+            "Panel administracyjny do tworzenia i odnawiania kodów na 7, 15 lub 30 dni.",
+            "Zaufane kontakty mogą wejść bez kodu weryfikacyjnego."
+          ]
+        },
+        "fr": {
+          "title": "Panneau du créateur",
+          "changes": [
+            "Panneau d'administration pour créer et renouveler des codes de 7, 15 ou 30 jours.",
+            "Les contacts de confiance peuvent entrer sans code de vérification."
+          ]
+        },
+        "ru": {
+          "title": "Панель создателя",
+          "changes": [
+            "Панель администратора для создания и продления кодов на 7, 15 или 30 дней.",
+            "Доверенные контакты могут войти без кода подтверждения."
+          ]
+        }
+      }
     },
     {
       "version": "0.3.0",
@@ -228,7 +1615,58 @@
       "changes": [
         "Verificação do personagem principal com um código colocado no comentário do tibia.com.",
         "Só é possível enviar dados de personagens vinculados ao seu código."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "Main verification",
+          "changes": [
+            "Verification of your main character with a code placed in the tibia.com comment.",
+            "You can only send data for characters linked to your code."
+          ]
+        },
+        "es": {
+          "title": "Verificación del main",
+          "changes": [
+            "Verificación del personaje principal con un código puesto en el comentario de tibia.com.",
+            "Solo es posible enviar datos de personajes vinculados a tu código."
+          ]
+        },
+        "ja": {
+          "title": "メインの認証",
+          "changes": [
+            "tibia.comのコメントにコードを入れて、メインキャラクターを認証します。",
+            "自分のコードに紐づいたキャラクターのデータだけを送れます。"
+          ]
+        },
+        "de": {
+          "title": "Bestätigung des Mains",
+          "changes": [
+            "Bestätigung des Hauptcharakters mit einem Code im Kommentar auf tibia.com.",
+            "Du kannst nur Daten von Charakteren senden, die mit deinem Code verknüpft sind."
+          ]
+        },
+        "pl": {
+          "title": "Weryfikacja maina",
+          "changes": [
+            "Weryfikacja głównej postaci kodem wpisanym w komentarzu na tibia.com.",
+            "Można wysyłać dane tylko postaci powiązanych z twoim kodem."
+          ]
+        },
+        "fr": {
+          "title": "Vérification du main",
+          "changes": [
+            "Vérification du personnage principal avec un code placé dans le commentaire de tibia.com.",
+            "On ne peut envoyer que les données des personnages liés à votre code."
+          ]
+        },
+        "ru": {
+          "title": "Подтверждение мейна",
+          "changes": [
+            "Подтверждение основного персонажа кодом в комментарии на tibia.com.",
+            "Отправлять можно только данные персонажей, привязанных к вашему коду."
+          ]
+        }
+      }
     },
     {
       "version": "0.2.0",
@@ -239,7 +1677,72 @@
         "Acesso por código válido por até 30 dias.",
         "Hunt Session Stacker: totais do dia e de toda a vida.",
         "Sem internet, o app espera e tenta de novo a cada 10 segundos."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "4rt3mi5",
+          "changes": [
+            "New name: 4rt3mi5, with animated opening screens.",
+            "Access by code, valid for up to 30 days.",
+            "Hunt Session Stacker: totals for the day and for all time.",
+            "With no internet, the app waits and tries again every 10 seconds."
+          ]
+        },
+        "es": {
+          "title": "4rt3mi5",
+          "changes": [
+            "Nuevo nombre: 4rt3mi5, con pantallas de apertura animadas.",
+            "Acceso por código válido por hasta 30 días.",
+            "Hunt Session Stacker: totales del día y de toda la vida.",
+            "Sin internet, la app espera y vuelve a intentar cada 10 segundos."
+          ]
+        },
+        "ja": {
+          "title": "4rt3mi5",
+          "changes": [
+            "新しい名前：4rt3mi5。アニメーション付きのオープニング画面。",
+            "最大30日間有効なコードでアクセス。",
+            "Hunt Session Stacker：今日と全期間の合計。",
+            "ネットがないときは、アプリが待って10秒ごとに再試行します。"
+          ]
+        },
+        "de": {
+          "title": "4rt3mi5",
+          "changes": [
+            "Neuer Name: 4rt3mi5, mit animierten Startbildschirmen.",
+            "Zugang per Code, gültig bis zu 30 Tage.",
+            "Hunt Session Stacker: Summen des Tages und seit Beginn.",
+            "Ohne Internet wartet die App und versucht es alle 10 Sekunden erneut."
+          ]
+        },
+        "pl": {
+          "title": "4rt3mi5",
+          "changes": [
+            "Nowa nazwa: 4rt3mi5, z animowanymi ekranami otwarcia.",
+            "Dostęp kodem ważnym do 30 dni.",
+            "Hunt Session Stacker: sumy z dnia i z całego życia.",
+            "Bez internetu aplikacja czeka i próbuje ponownie co 10 sekund."
+          ]
+        },
+        "fr": {
+          "title": "4rt3mi5",
+          "changes": [
+            "Nouveau nom : 4rt3mi5, avec des écrans d'ouverture animés.",
+            "Accès par code valable jusqu'à 30 jours.",
+            "Hunt Session Stacker : totaux du jour et depuis le début.",
+            "Sans internet, l'app attend et réessaie toutes les 10 secondes."
+          ]
+        },
+        "ru": {
+          "title": "4rt3mi5",
+          "changes": [
+            "Новое название: 4rt3mi5, с анимированными заставками.",
+            "Доступ по коду, действующему до 30 дней.",
+            "Hunt Session Stacker: итоги за день и за всё время.",
+            "Без интернета приложение ждёт и пробует снова каждые 10 секунд."
+          ]
+        }
+      }
     },
     {
       "version": "0.1.0",
@@ -247,7 +1750,51 @@
       "title": "Primeira versão",
       "changes": [
         "Lootsplit: cole o Party Hunt Analyser e veja quanto cada um recebe ou paga, total e por hora."
-      ]
+      ],
+      "tr": {
+        "en": {
+          "title": "First version",
+          "changes": [
+            "Lootsplit: paste the Party Hunt Analyser and see how much each person receives or pays, in total and per hour."
+          ]
+        },
+        "es": {
+          "title": "Primera versión",
+          "changes": [
+            "Lootsplit: pega el Party Hunt Analyser y ve cuánto recibe o paga cada uno, en total y por hora."
+          ]
+        },
+        "ja": {
+          "title": "最初のバージョン",
+          "changes": [
+            "Lootsplit：Party Hunt Analyserを貼り付けると、各自が受け取る額・支払う額を合計と時間あたりで表示します。"
+          ]
+        },
+        "de": {
+          "title": "Erste Version",
+          "changes": [
+            "Lootsplit: Füge den Party Hunt Analyser ein und sieh, wie viel jeder bekommt oder zahlt, insgesamt und pro Stunde."
+          ]
+        },
+        "pl": {
+          "title": "Pierwsza wersja",
+          "changes": [
+            "Lootsplit: wklej Party Hunt Analyser i zobacz, ile każdy dostaje lub płaci, łącznie i na godzinę."
+          ]
+        },
+        "fr": {
+          "title": "Première version",
+          "changes": [
+            "Lootsplit : collez le Party Hunt Analyser et voyez combien chacun reçoit ou paie, au total et par heure."
+          ]
+        },
+        "ru": {
+          "title": "Первая версия",
+          "changes": [
+            "Lootsplit: вставьте Party Hunt Analyser и смотрите, сколько каждый получает или платит, всего и в час."
+          ]
+        }
+      }
     }
   ]
 }

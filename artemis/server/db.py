@@ -322,6 +322,37 @@ CREATE TABLE IF NOT EXISTS wiki_images (
     data         BLOB,                 -- NULL = não existe na wiki
     fetched_at   TEXT NOT NULL
 );
+-- 0.20.0: tipo de player da conta (hardcore / comum / novato): decide o que o app pergunta e o que ela compartilha
+CREATE TABLE IF NOT EXISTS player_prefs (
+    key         TEXT PRIMARY KEY,
+    player_type TEXT NOT NULL,
+    updated_at  TEXT NOT NULL
+);
+-- 0.20.0: Input Analyser (dano recebido). kind = 'solo' (sessão do Stacker) ou 'hunt' (lootsplit).
+-- Um por personagem em cada sessão/lootsplit; depois de salvo não muda.
+CREATE TABLE IF NOT EXISTS damage_inputs (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    kind         TEXT NOT NULL,
+    ref_id       INTEGER NOT NULL,
+    name_key     TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    data_json    TEXT NOT NULL,
+    uploader_key TEXT,
+    created_at   TEXT NOT NULL,
+    UNIQUE (kind, ref_id, name_key)
+);
+CREATE INDEX IF NOT EXISTS ix_damage_inputs ON damage_inputs(kind, ref_id);
+-- 0.20.0: Hunt Session Analyser que cada membro da PT junta ao lootsplit
+CREATE TABLE IF NOT EXISTS party_sessions (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    hunt_id      INTEGER NOT NULL REFERENCES hunts(id) ON DELETE CASCADE,
+    name_key     TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    data_json    TEXT NOT NULL,
+    uploader_key TEXT,
+    created_at   TEXT NOT NULL,
+    UNIQUE (hunt_id, name_key)
+);
 -- 0.10.0: vocação/level dos personagens (TibiaData), para colorir por vocação sem consultar toda hora
 CREATE TABLE IF NOT EXISTS char_info (
     name_key   TEXT PRIMARY KEY,
@@ -352,11 +383,60 @@ def normalize_key(key: str) -> str:
     return "".join(key.split()).upper()
 
 
+class _Result:
+    """Resultado já lido de uma consulta (o cursor não fica aberto fora da fila)."""
+    __slots__ = ("_rows", "lastrowid", "rowcount")
+
+    def __init__(self, rows: list, lastrowid, rowcount: int):
+        self._rows, self.lastrowid, self.rowcount = rows, lastrowid, rowcount
+
+    def fetchone(self):
+        return self._rows[0] if self._rows else None
+
+    def fetchall(self) -> list:
+        return list(self._rows)
+
+    def __iter__(self):
+        return iter(self._rows)
+
+
+class _SerialConn:
+    """Conexão SQLite usada por várias requisições ao mesmo tempo: cada comando espera a sua vez.
+    Sem isso, duas consultas simultâneas na mesma conexão dão "bad parameter or other API misuse"."""
+
+    def __init__(self, conn: sqlite3.Connection, lock: threading.RLock):
+        self._c, self._lock = conn, lock
+
+    def execute(self, sql: str, params=()) -> _Result:
+        with self._lock:
+            cur = self._c.execute(sql, params)
+            return _Result(cur.fetchall(), cur.lastrowid, cur.rowcount)
+
+    def executemany(self, sql: str, seq) -> _Result:
+        with self._lock:
+            cur = self._c.executemany(sql, seq)
+            return _Result([], cur.lastrowid, cur.rowcount)
+
+    def executescript(self, sql: str) -> None:
+        with self._lock:
+            self._c.executescript(sql)
+
+    def commit(self) -> None:
+        with self._lock:
+            self._c.commit()
+
+    def __getattr__(self, name):  # backup, close… (quem chama segura o _lock)
+        return getattr(self._c, name)
+
+
 class Store:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
-        self._conn = sqlite3.connect(path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
+        raw = sqlite3.connect(path, check_same_thread=False)
+        raw.row_factory = sqlite3.Row
+        # 0.20.0: o mesmo lock (reentrante) serve para os blocos "with self._lock" e para cada comando
+        self._lock = threading.RLock()
+        self._conn = _SerialConn(raw, self._lock)
         self._conn.execute("PRAGMA foreign_keys = ON")
         self._conn.execute("PRAGMA journal_mode = WAL")
         self._conn.executescript(SCHEMA)
@@ -377,11 +457,19 @@ class Store:
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN place_id INTEGER REFERENCES hunt_places(id)")
         if "level" not in solo_cols:
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN level INTEGER")
+        if "place_edits" not in solo_cols:  # 0.20.0: quantas vezes o local já foi trocado (máximo 2)
+            self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN place_edits INTEGER NOT NULL DEFAULT 0")
+        hunt_cols = {r["name"] for r in self._conn.execute("PRAGMA table_info(hunts)")}
+        if "place_id" not in hunt_cols:  # 0.20.0: em qual hunt foi o lootsplit
+            self._conn.execute("ALTER TABLE hunts ADD COLUMN place_id INTEGER REFERENCES hunt_places(id)")
+        if "place_edits" not in hunt_cols:
+            self._conn.execute("ALTER TABLE hunts ADD COLUMN place_edits INTEGER NOT NULL DEFAULT 0")
+        # 0.20.0: a chave de acesso não vence mais (todas passam a ser vitalícias)
+        self._conn.execute("UPDATE access_keys SET lifetime = 1 WHERE lifetime = 0")
         # 0.8.0: tokens de aparelho ficam só como hash (quem copiar o banco não consegue usá-los)
         for (tok,) in self._conn.execute("SELECT token FROM devices WHERE token NOT LIKE 'sha256:%'").fetchall():
             self._conn.execute("UPDATE devices SET token = ? WHERE token = ?", (hash_token(tok), tok))
         self._conn.commit()
-        self._lock = threading.Lock()
 
     # ------------------------------------------------------------------ chaves
     def create_key(self, days: int = MAX_KEY_DAYS, label: str = "") -> dict:
@@ -393,7 +481,8 @@ class Store:
         row = {"key": key, "label": label, "created_at": _iso(now), "expires_at": _iso(now + timedelta(days=days))}
         with self._lock:
             self._conn.execute(
-                "INSERT INTO access_keys (key, label, created_at, expires_at) VALUES (:key, :label, :created_at, :expires_at)",
+                # 0.20.0: toda chave nasce sem vencimento
+                "INSERT INTO access_keys (key, label, created_at, expires_at, lifetime) VALUES (:key, :label, :created_at, :expires_at, 1)",
                 row,
             )
             self._conn.commit()
@@ -508,6 +597,7 @@ class Store:
     def set_lifetime(self, key: str, on: bool) -> dict | None:
         """Liga/desliga o código vitalício. Ao desligar um código já vencido, ele ganha 7 dias (não some na hora)."""
         key = normalize_key(key)
+        on = True  # 0.20.0: nenhuma chave volta a ter vencimento
         with self._lock:
             if on:  # se estava vencida, os dias parados ficam congelados na sequência
                 self._note_pause(key)
@@ -888,6 +978,8 @@ class Store:
         report = apply_rules(json.loads(row["report_json"]), self.split_rules(kind, row["id"]))
         report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
                       uploader_key=row["uploader_key"])
+        if kind == "hunt":  # 0.20.0: local do lootsplit e quantas vezes já foi trocado
+            report.update(place_id=row["place_id"], place_edits=row["place_edits"])
         paid = {(r["payer_key"], r["receiver_key"]): r for r in self._conn.execute(
             "SELECT * FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, row["id"]))}
         for t in report["transfers"]:
@@ -962,6 +1054,7 @@ class Store:
         with self._lock:
             cur = self._conn.execute("DELETE FROM hunts WHERE id = ?", (hunt_id,))
             self._forget_split("hunt", hunt_id)
+            self._conn.execute("DELETE FROM damage_inputs WHERE kind = 'hunt' AND ref_id = ?", (hunt_id,))
             self._conn.commit()
             return cur.rowcount > 0
 
@@ -991,6 +1084,10 @@ class Store:
             self._conn.executemany("INSERT INTO solo_loot VALUES (?, ?, ?)", [(sid, i, n) for i, n in data.get("loot", [])])
             self._conn.commit()
             return dict(self._conn.execute("SELECT * FROM solo_sessions WHERE id = ?", (cur.lastrowid,)).fetchone()), True
+
+    def solo_session(self, session_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM solo_sessions WHERE id = ?", (session_id,)).fetchone()
+        return dict(row) if row else None
 
     def solo_for_player(self, name: str) -> list[dict]:
         rows = self._conn.execute(
@@ -1306,8 +1403,112 @@ class Store:
     def delete_solo(self, session_id: int) -> bool:
         with self._lock:
             cur = self._conn.execute("DELETE FROM solo_sessions WHERE id = ?", (session_id,))
+            self._conn.execute("DELETE FROM damage_inputs WHERE kind = 'solo' AND ref_id = ?", (session_id,))
             self._conn.commit()
             return cur.rowcount > 0
+
+    # ------------------------------------------------------------------ 0.20.0: tipo de player
+    PLAYER_TYPES = ("hardcore", "comum", "novato", "tipo_extra")
+    DEFAULT_PLAYER_TYPE = "comum"
+
+    def player_type(self, key: str) -> str:
+        row = self._conn.execute("SELECT player_type FROM player_prefs WHERE key = ?", (key,)).fetchone()
+        return row[0] if row and row[0] in self.PLAYER_TYPES else self.DEFAULT_PLAYER_TYPE
+
+    def player_type_chosen(self, key: str) -> bool:
+        """A pessoa já respondeu "Você se considera um:" (na criação da conta ou depois)."""
+        return self._conn.execute("SELECT 1 FROM player_prefs WHERE key = ?", (key,)).fetchone() is not None
+
+    def reset_place_edits(self, table: str, row_id: int) -> bool:
+        """Painel do administrador: libera de novo as 2 trocas de local."""
+        assert table in ("hunts", "solo_sessions")
+        with self._lock:
+            cur = self._conn.execute(f"UPDATE {table} SET place_edits = 0 WHERE id = ?", (row_id,))
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    def set_player_type(self, key: str, player_type: str) -> str:
+        if player_type not in self.PLAYER_TYPES:
+            raise ValueError("Tipo de player inválido.")
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO player_prefs VALUES (?, ?, ?)", (key, player_type, _iso(utcnow())))
+            self._conn.commit()
+        return player_type
+
+    # ------------------------------------------------------------------ 0.20.0: local da sessão / do lootsplit
+    def place_state(self, table: str, row_id: int) -> dict | None:
+        """{place_id, place_edits, uploader_key} da sessão do Stacker ou do lootsplit."""
+        assert table in ("hunts", "solo_sessions")
+        row = self._conn.execute(f"SELECT place_id, place_edits, uploader_key FROM {table} WHERE id = ?", (row_id,)).fetchone()
+        return dict(row) if row else None
+
+    def update_place(self, table: str, row_id: int, place_id: int | None, count_edit: bool) -> None:
+        assert table in ("hunts", "solo_sessions")
+        with self._lock:
+            self._conn.execute(f"UPDATE {table} SET place_id = ?, place_edits = place_edits + ? WHERE id = ?",
+                               (place_id, 1 if count_edit else 0, row_id))
+            self._conn.commit()
+
+    # ------------------------------------------------------------------ 0.20.0: Input Analyser e sessões da PT
+    def add_input(self, kind: str, ref_id: int, name: str, data: dict, uploader_key: str) -> tuple[dict, bool]:
+        """Guarda o Input Analyser. Já existe um desse personagem ali? Devolve o salvo (não dá para editar)."""
+        assert kind in ("solo", "hunt")
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM damage_inputs WHERE kind = ? AND ref_id = ? AND name_key = ?",
+                                     (kind, ref_id, name_key(name))).fetchone()
+            created = row is None
+            if created:
+                self._conn.execute(
+                    "INSERT INTO damage_inputs (kind, ref_id, name_key, name, data_json, uploader_key, created_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)", (kind, ref_id, name_key(name), name, json.dumps(data), uploader_key,
+                                                     _iso(utcnow())))
+                self._conn.commit()
+                row = self._conn.execute("SELECT * FROM damage_inputs WHERE kind = ? AND ref_id = ? AND name_key = ?",
+                                         (kind, ref_id, name_key(name))).fetchone()
+        return self._input(row), created
+
+    @staticmethod
+    def _input(row: sqlite3.Row) -> dict:
+        return {"name": row["name"], "created_at": row["created_at"], **json.loads(row["data_json"])}
+
+    def inputs_for(self, kind: str, ref_ids: list[int]) -> dict[int, list[dict]]:
+        out: dict[int, list[dict]] = {i: [] for i in ref_ids}
+        if ref_ids:
+            marks = ",".join("?" * len(ref_ids))
+            for r in self._conn.execute(f"SELECT * FROM damage_inputs WHERE kind = ? AND ref_id IN ({marks}) ORDER BY id",
+                                        (kind, *ref_ids)):
+                out[r["ref_id"]].append(self._input(r))
+        return out
+
+    def inputs_for_place(self, place_id: int) -> list[dict]:
+        """Todos os Input Analysers de sessões e lootsplits marcados naquele local."""
+        rows = self._conn.execute(
+            "SELECT d.* FROM damage_inputs d JOIN solo_sessions s ON d.kind = 'solo' AND s.id = d.ref_id WHERE s.place_id = ? "
+            "UNION ALL SELECT d.* FROM damage_inputs d JOIN hunts h ON d.kind = 'hunt' AND h.id = d.ref_id WHERE h.place_id = ?",
+            (place_id, place_id))
+        return [self._input(r) for r in rows]
+
+    def add_party_session(self, hunt_id: int, name: str, data: dict, uploader_key: str) -> tuple[dict, bool]:
+        with self._lock:
+            row = self._conn.execute("SELECT * FROM party_sessions WHERE hunt_id = ? AND name_key = ?",
+                                     (hunt_id, name_key(name))).fetchone()
+            created = row is None
+            if created:
+                self._conn.execute(
+                    "INSERT INTO party_sessions (hunt_id, name_key, name, data_json, uploader_key, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (hunt_id, name_key(name), name, json.dumps(data), uploader_key, _iso(utcnow())))
+                self._conn.commit()
+                row = self._conn.execute("SELECT * FROM party_sessions WHERE hunt_id = ? AND name_key = ?",
+                                         (hunt_id, name_key(name))).fetchone()
+        return {"name": row["name"], "uploader_key": row["uploader_key"], **json.loads(row["data_json"])}, created
+
+    def party_sessions_for(self, hunt_ids: list[int]) -> dict[int, list[dict]]:
+        out: dict[int, list[dict]] = {i: [] for i in hunt_ids}
+        if hunt_ids:
+            marks = ",".join("?" * len(hunt_ids))
+            for r in self._conn.execute(f"SELECT * FROM party_sessions WHERE hunt_id IN ({marks}) ORDER BY id", hunt_ids):
+                out[r["hunt_id"]].append({"name": r["name"], "uploader_key": r["uploader_key"], **json.loads(r["data_json"])})
+        return out
 
     # ------------------------------------------------------------------ 👑 rotação de bosses
     def add_boss_session(self, name: str, fingerprint: str, data: dict, mode: str, uploader_key: str) -> tuple[dict, bool]:

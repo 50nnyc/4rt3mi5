@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "artemis" / "web"
-LANGS = ("en", "es", "ja")
+LANGS = ("en", "es", "ja", "de", "pl", "fr", "ru")  # 0.20.0: + alemão, polonês, francês e russo
 PH = re.compile(r"\{\d+\}")
 # textos do index.html que ficam iguais em todo idioma (nomes do Tibia, marca, exemplos de formato)
 SAME = {"4rt3mi5", "Lootsplit", "Hunt Session Stacker", "Hunts", "Solo", "Party", "XP", "XP/h", "☰", "←",
@@ -69,6 +69,37 @@ class DictionaryTests(unittest.TestCase):
         self.assertEqual(missing, [], "textos do index.html sem tradução")
 
 
+class NewsTranslationTests(unittest.TestCase):
+    """0.19.1: as Novidades aparecem no idioma escolhido."""
+
+    def test_every_release_has_all_translations(self):
+        data = json.loads((ROOT / "artemis" / "data" / "changelog.json").read_text(encoding="utf-8"))
+        for r in data["releases"]:
+            tr = r.get("tr") or {}
+            for lang in LANGS:
+                with self.subTest(version=r["version"], lang=lang):
+                    t = tr.get(lang)
+                    self.assertIsNotNone(t, "versão sem tradução nas Novidades")
+                    self.assertTrue(t["title"].strip())
+                    self.assertEqual(len(t["changes"]), len(r["changes"]), "número de itens diferente do português")
+                    self.assertTrue(all(c.strip() for c in t["changes"]))
+
+    def test_api_sends_translations(self):
+        from fastapi.testclient import TestClient
+
+        from artemis.server import app as server
+        latest = TestClient(server.app).get("/api/changelog").json()["releases"][0]
+        self.assertEqual(set(latest["tr"]), set(LANGS))
+
+    def test_default_is_portuguese(self):
+        js = (WEB / "i18n.js").read_text(encoding="utf-8")
+        guess = js[js.index("function guess()"):js.index("function save(")]
+        self.assertNotIn("navigator", guess, "o idioma do sistema não pode escolher sozinho")
+        self.assertIn('return "pt-BR"', guess)
+        use = js[js.index("async function use("):js.index("function guess()")]
+        self.assertNotIn("setItem", use, "só a escolha nos botões fica salva")
+
+
 class WiringTests(unittest.TestCase):
     def test_index_loads_engine_before_app(self):
         html = (WEB / "index.html").read_text(encoding="utf-8")
@@ -78,7 +109,7 @@ class WiringTests(unittest.TestCase):
 
     def test_engine_knows_the_four_languages(self):
         js = (WEB / "i18n.js").read_text(encoding="utf-8")
-        for code in ("pt-BR", "en", "es", "ja"):
+        for code in ("pt-BR", *LANGS):
             self.assertIn(f'code: "{code}"', js)
 
     def test_server_serves_dictionaries(self):
@@ -86,7 +117,7 @@ class WiringTests(unittest.TestCase):
 
         from artemis.server import app as server
         c = TestClient(server.app)
-        for f in ("i18n.js", "i18n-en.json", "i18n-es.json", "i18n-ja.json"):
+        for f in ("i18n.js", *(f"i18n-{c}.json" for c in LANGS)):
             r = c.get("/" + f)
             self.assertEqual(r.status_code, 200, f)
             self.assertEqual(r.headers["Cache-Control"], "no-cache")
@@ -98,7 +129,7 @@ class WiringTests(unittest.TestCase):
         z = Path(tempfile.mkdtemp()) / "web.zip"
         uipack.build(WEB, z)
         names = set(zipfile.ZipFile(z).namelist())
-        self.assertTrue({"i18n.js", "i18n-en.json", "i18n-es.json", "i18n-ja.json"} <= names)
+        self.assertTrue({"i18n.js", *(f"i18n-{c}.json" for c in LANGS)} <= names)
 
 
 if __name__ == "__main__":

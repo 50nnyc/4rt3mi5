@@ -119,34 +119,29 @@ class V017Tests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/recovery/login", json={"whatsapp": "5521999990000"},
                                           headers={"X-Forwarded-For": "6.6.6.6"}).status_code, 429)
 
-    def test_expired_account_key_is_kept_and_renews(self):
+    def test_old_expiry_date_no_longer_blocks(self):
+        """0.20.0: a chave não vence mais. Uma data de vencimento antiga não tira o acesso."""
         name, acc = self.register()
         a = {"X-Account-Token": acc["token"]}
         token = self.verify("Hilay")[1].json()["token"]
         self.client.post("/api/account/link", headers={**self.h(token), **a})
-        expired = _iso(utcnow() - timedelta(days=2))
-        server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?", (expired, self.key))
+        server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
+                                   (_iso(utcnow() - timedelta(days=2)), self.key))
         server.store.purge_expired()
-        self.assertIsNotNone(server.store.get_key(self.key))  # não foi apagada
-        self.assertEqual(server.store.char_owner("Hilay"), self.key)  # personagens continuam
-        self.assertEqual(self.client.get("/api/me", headers=self.h(token)).status_code, 401)  # mas sem acesso
+        self.assertIsNotNone(server.store.get_key(self.key))
+        self.assertEqual(self.client.get("/api/me", headers=self.h(token)).status_code, 200)
+        me = self.client.get("/api/me", headers=self.h(token)).json()
+        self.assertIsNone(me["expires_at"])
         r = self.client.post("/api/account/login", json={"username": name, "password": PW}).json()
-        self.assertTrue(r["key_expired"])
-        self.assertIsNone(r["device_token"])
-        r = self.client.post("/api/account/renew", headers={"X-Account-Token": r["token"]}).json()
-        self.assertTrue(r["renewed"])
         self.assertFalse(r["key_expired"])
-        self.assertTrue(r["device_token"])
-        self.assertGreater(r["expires_at"], _iso(utcnow() + timedelta(days=6, hours=23)))
-        # os dias vencidos ficaram guardados para congelar a sequência
-        self.assertIn(ach.local_day(expired), server.store.pause_days(self.key))
-        self.assertIn(ach.today(), server.store.pause_days(self.key))
+        self.assertIsNone(r["expires_at"])
 
-    def test_orphan_expired_key_still_purged(self):
+    def test_keys_are_never_purged(self):
         k = server.store.create_key(1, "sem conta")["key"]
         server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?", (_iso(utcnow() - timedelta(days=1)), k))
         server.store.purge_expired()
-        self.assertIsNone(server.store.get_key(k))
+        self.assertIsNotNone(server.store.get_key(k))
+        self.assertTrue(server.store.get_key(k)["lifetime"])
 
 
 if __name__ == "__main__":

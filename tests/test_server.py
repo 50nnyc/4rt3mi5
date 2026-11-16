@@ -64,10 +64,11 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/auth", headers={"X-Access-Key": self.key.lower()}).status_code, 200)
         with self.assertRaises(ValueError):
             server.store.create_key(31)
+        # 0.20.0: a chave não vence mais (uma data antiga não tira o acesso)
         server.store._conn.execute("UPDATE access_keys SET expires_at = ? WHERE key = ?",
                                    (_iso(utcnow() - timedelta(seconds=1)), self.key))
-        self.assertEqual(self.client.post("/api/auth", headers=self.h()).status_code, 401)
-        self.assertNotIn(self.key, [k["key"] for k in server.store.list_keys()])
+        self.assertEqual(self.client.post("/api/auth", headers=self.h()).status_code, 200)
+        self.assertIn(self.key, [k["key"] for k in server.store.list_keys()])
 
     def test_needs_verification_before_use(self):
         r = self.client.get("/api/hunts/Hilay", headers=self.h())
@@ -175,10 +176,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.client.post("/api/admin/keys/renew-all", json={"days": 31}, headers=admin).status_code, 422)
         r = self.client.post("/api/admin/keys/renew-all", json={"days": 15}, headers=admin)
         self.assertEqual(r.status_code, 200)
-        self.assertGreaterEqual(r.json()["renewed"], 2)
+        self.assertEqual(r.json()["renewed"], 0)  # 0.20.0: nenhuma chave vence, nada a renovar
         keys = {x["key"]: x for x in self.client.get("/api/admin/keys", headers=admin).json()}
-        self.assertEqual(keys[a["key"]]["expires_at"][:10], keys[b["key"]]["expires_at"][:10])
-        self.assertGreater(keys[a["key"]]["expires_at"], b["expires_at"])
+        self.assertTrue(all(keys[k["key"]]["lifetime"] for k in (a, b, c)))
         self.assertEqual(keys[c["key"]]["expires_at"], c["expires_at"])  # quem tem mais dias não perde nada
 
     def test_only_uploader_can_delete(self):
@@ -262,7 +262,9 @@ class ServerTests(unittest.TestCase):
         cmp_ = self.client.get(f"/api/places/compare?ids={dragon},{places['Mintwallin']}&nick=Knightzao", headers=h).json()
         self.assertEqual(cmp_[0]["mine"]["sessions"], 1)
         self.assertIsNone(cmp_[1]["stats"])
-        self.assertEqual(cmp_[0]["top_kills"][0], {"key": "dragon", "count": 240})
+        self.assertEqual(cmp_[0]["top_kills"][0], {"key": "dragon"})  # 0.20.0: sem quantidade (dado de cada jogador)
+        other_view = self.client.get(f"/api/places/compare?ids={dragon}&nick=Knightzao", headers=h2).json()
+        self.assertIsNone(other_view[0]["mine"])  # "Seu XP/h" só do próprio personagem
         # nova hunt criada pelo usuário
         self.assertEqual(self.client.post("/api/places", json={"name": "Minha Hunt Secreta"}, headers=h).json()["source"], "user")
         # metas: só o dono altera

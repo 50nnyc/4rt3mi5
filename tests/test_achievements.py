@@ -90,23 +90,14 @@ class AchievementApiTests(unittest.TestCase):
             server.store._conn.execute("UPDATE solo_sessions SET created_at = ? WHERE id = ?", (_iso(when), row["id"]))
         server.store._conn.commit()
 
-    def test_30_days_in_a_row_add_7_days_once(self):
+    def test_30_days_in_a_row_keep_counting_without_days(self):
+        """0.20.0: a chave não vence, então a sequência continua contando, mas não dá mais dias de validade."""
         before = server.store.validate_key(self.key)["expires_at"]
-        self._upload_on_days(29)
+        self._upload_on_days(30)
         r = self.client.get("/api/streak", headers=self.h()).json()
-        self.assertEqual((r["current"], r["granted"]), (29, []))
-        self._upload_on_days(30)  # mais um dia (o 30º)
-        r = self.client.get("/api/streak", headers=self.h()).json()
-        self.assertEqual(r["current"], 30)
-        self.assertEqual(len(r["granted"]), 1)
-        after = server.store.validate_key(self.key)["expires_at"]
-        gained = datetime.fromisoformat(after) - datetime.fromisoformat(before)
-        self.assertEqual(round(gained.total_seconds() / 86400), 7)
-        # não ganha de novo pelo mesmo bloco de 30 dias
-        again = self.client.get("/api/streak", headers=self.h()).json()
-        self.assertEqual(again["granted"], [])
-        self.assertEqual(server.store.validate_key(self.key)["expires_at"], after)
-        self.assertEqual(len(again["rewards"]), 1)
+        self.assertEqual((r["current"], r["granted"]), (30, []))
+        self.assertEqual(server.store.validate_key(self.key)["expires_at"], before)
+        self.assertIsNone(r["expires_at"])
 
     def test_uploads_report_rewards_and_achievements(self):
         r = self.client.post("/api/stacker", json={"raw_text": SOLO, "nickname": "Hilay"}, headers=self.h())

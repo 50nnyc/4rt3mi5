@@ -12,10 +12,17 @@ const I18N = (() => {
     { code: "en", name: "English", tag: "EN", locale: "en-US" },
     { code: "es", name: "Español", tag: "ES", locale: "es-ES" },
     { code: "ja", name: "日本語", tag: "JA", locale: "ja-JP" },
+    // 0.20.0
+    { code: "de", name: "Deutsch", tag: "DE", locale: "de-DE" },
+    { code: "pl", name: "Polski", tag: "PL", locale: "pl-PL" },
+    { code: "fr", name: "Français", tag: "FR", locale: "fr-FR" },
+    { code: "ru", name: "Русский", tag: "RU", locale: "ru-RU" },
   ];
   const ATTRS = ["placeholder", "title", "aria-label", "alt"];
   const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "TEXTAREA", "INPUT", "CODE", "PRE", "NOSCRIPT", "CANVAS", "SVG"]);
-  const STORE = "lang";
+  // só a escolha feita pela pessoa fica salva (0.19.1); "lang" era gravado até sem escolher
+  const STORE = "idioma";
+  try { localStorage.removeItem("lang"); } catch {}
   const PH = /\{(\d+)\}/g;
 
   let lang = "pt-BR";
@@ -163,23 +170,19 @@ const I18N = (() => {
       code = "pt-BR"; compile({}); // sem dicionário (offline?): fica em português
     }
     lang = code;
-    try { localStorage.setItem(STORE, code); } catch {}
     if (document.body) applyAll();
     listeners.forEach((fn) => { try { fn(code); } catch {} });
     return code;
   }
 
-  /** Idioma inicial: o salvo neste aparelho ou o do sistema. */
+  /** Idioma inicial: o que a pessoa escolheu neste aparelho; sem escolha, sempre português (Brasil). */
   function guess() {
     try { const s = localStorage.getItem(STORE); if (s && LANGS.some((l) => l.code === s)) return s; } catch {}
-    const nav = (navigator.languages || [navigator.language || ""]).map((x) => String(x).toLowerCase());
-    for (const n of nav) {
-      if (n.startsWith("pt")) return "pt-BR";
-      if (n.startsWith("ja")) return "ja";
-      if (n.startsWith("es")) return "es";
-      if (n.startsWith("en")) return "en";
-    }
     return "pt-BR";
+  }
+  /** Guarda a escolha feita nos botões de idioma. */
+  function save(code) {
+    try { localStorage.setItem(STORE, code); } catch {}
   }
 
   // ---------- fora do DOM: avisos, canvas, números e datas ----------
@@ -215,6 +218,7 @@ const I18N = (() => {
       + `<span class="tag" aria-hidden="true">${l.tag}</span><span lang="${l.code}">${l.name}</span></button>`).join("");
     el.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", async () => {
       const code = await use(b.dataset.lang);
+      save(code);
       el.querySelectorAll("[data-lang]").forEach((x) => x.classList.toggle("on", x.dataset.lang === code));
       if (onPick) onPick(code);
     }));
@@ -222,5 +226,5 @@ const I18N = (() => {
   }
   function onChange(fn) { listeners.push(fn); }
 
-  return { LANGS, t, use, guess, picker, onChange, get lang() { return lang; }, get locale() { return info(lang).locale; } };
+  return { LANGS, STORE, t, use, guess, save, picker, onChange, get lang() { return lang; }, get locale() { return info(lang).locale; } };
 })();
