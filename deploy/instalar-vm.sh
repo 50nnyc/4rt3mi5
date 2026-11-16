@@ -46,6 +46,11 @@ linha="*/5 * * * * $PROJ/deploy/vigia.sh >/dev/null 2>&1"
 # (crontab -l dá erro quando ainda não há agenda; o "|| true" evita que o set -e pare o script)
 { crontab -l 2>/dev/null | grep -v 'deploy/vigia.sh' || true; echo "$linha"; } | crontab -
 
+# Relatório no celular (ntfy, precisa de NTFY_TOPIC no .env): resumo às 2h, 8h, 14h e 20h; alertas a cada 15 min
+linha1="0 2,8,14,20 * * * $PROJ/deploy/relatorio.sh >/dev/null 2>&1"
+linha2="*/15 * * * * $PROJ/deploy/relatorio.sh --alertas >/dev/null 2>&1"
+{ crontab -l 2>/dev/null | grep -v 'deploy/relatorio.sh' || true; echo "$linha1"; echo "$linha2"; } | crontab -
+
 # Mantém a VM "não ociosa" para a Oracle não recolher (1 min de CPU a cada 10, prioridade mínima)
 linha="*/10 * * * * $PROJ/deploy/manter-ativa.sh >/dev/null 2>&1"
 { crontab -l 2>/dev/null | grep -v 'deploy/manter-ativa.sh' || true; echo "$linha"; } | crontab -

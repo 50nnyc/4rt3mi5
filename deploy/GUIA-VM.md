@@ -140,6 +140,22 @@ continua bloqueado pelo domínio (o Caddy manda cabeçalhos de proxy, como o ngr
 > Só ponha o `SITE_DOMAIN` no `.env` da VM **depois** dos passos 1 a 3. Sem DNS e portas prontos, o certificado
 > falha, e o Let's Encrypt limita as tentativas que falham.
 
+## 11. Ficar de olho pelo celular
+São dois vigias que se completam:
+
+**De dentro da VM (ntfy):** com `NTFY_TOPIC` no `.env` da VM, o celular recebe:
+- do `deploy/vigia.sh` (a cada 5 min): "fora do ar", "voltou ao ar" e "caiu e voltou sozinho";
+- do `deploy/relatorio.sh`: um resumo às 2h, 8h, 14h e 20h (no ar, versão, containers, disco, memória, último
+  backup e última queda) e, a cada 15 min, alerta se o disco passar de 85%, o backup atrasar mais de 30 h ou um
+  container parar.
+
+Instale o app **ntfy** (Android/iPhone) → **+** → assine o tópico que está em `data\ntfy-celular.txt` neste PC
+(o mesmo link abre no navegador). O tópico funciona como senha: não compartilhe. Os avisos só levam status da
+máquina, nunca tokens, códigos ou dados de usuários. Para testar na hora: `ssh artemis-vm "4rt3mi5/deploy/relatorio.sh"`.
+
+**De fora (UptimeRobot, grátis):** se a VM inteira cair, ela não consegue avisar. Crie um monitor *HTTP(s)* para
+`https://artemis-hunt.duckdns.org/api/health` a cada 5 min e ligue as notificações no app dele.
+
 ---
 
 ## Dia a dia
