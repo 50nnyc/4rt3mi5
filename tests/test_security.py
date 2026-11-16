@@ -65,6 +65,12 @@ class ServerSecurityTests(unittest.TestCase):
         self.assertEqual(self.client.get("/api/health", headers=h).status_code, 200)  # health nunca bloqueia
         server._hits.clear()
 
+    def test_health_aceita_head(self):  # 0.18.1: monitor externo (UptimeRobot) testa com HEAD
+        r = self.client.head("/api/health")
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.content, b"")
+        self.assertEqual(self.client.head("/api/changelog").status_code, 405)  # só o health ganhou HEAD
+
     def test_cors_so_app_local(self):
         ok = self.client.get("/api/health", headers={"Origin": "http://127.0.0.1:51234"})
         self.assertEqual(ok.headers.get("access-control-allow-origin"), "http://127.0.0.1:51234")

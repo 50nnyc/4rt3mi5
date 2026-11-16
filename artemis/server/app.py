@@ -350,7 +350,7 @@ def changelog():
     return {"version": __version__, "releases": data.get("releases", [])}
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])  # HEAD: monitores externos (UptimeRobot grátis só usa HEAD)
 def health():
     return {"ok": True, "app": APP_NAME, "version": __version__}
 
