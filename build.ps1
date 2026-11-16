@@ -13,8 +13,9 @@ python -m unittest discover -s tests -t .
 if ($LASTEXITCODE -ne 0) { throw "Testes falharam" }
 
 # O app desktop leva junto a interface (artemis/web) e abre numa janela WebView2.
-python -m PyInstaller --noconfirm --clean --windowed --name 4rt3mi5 `
-    --add-data "artemis/web;web" --exclude-module fastapi --exclude-module uvicorn run_desktop.py
+# --icon: ícone do .exe (área de trabalho, menu Iniciar e barra de tarefas); o .ico vai junto para a janela.
+python -m PyInstaller --noconfirm --clean --windowed --name 4rt3mi5 --icon artemis/desktop/4rt3mi5.ico `
+    --add-data "artemis/web;web" --add-data "artemis/desktop/4rt3mi5.ico;." --exclude-module fastapi --exclude-module uvicorn run_desktop.py
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller falhou" }
 
 $iscc = (Get-Command iscc.exe -ErrorAction SilentlyContinue).Source

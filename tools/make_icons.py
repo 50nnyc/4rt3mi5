@@ -39,10 +39,11 @@ def _gold(y):
     return _mix(GOLD_TOP, GOLD_MID, y / 0.55) if y < 0.55 else _mix(GOLD_MID, GOLD_LOW, (y - 0.55) / 0.45)
 
 
-def _mark(x, y, s):
-    """True se (x, y) — em 0..1, centrado — cai no desenho dourado (escala s em torno do centro)."""
+def _mark(x, y, s, t=0.05):
+    """True se (x, y) — em 0..1, centrado — cai no desenho dourado (escala s em torno do centro).
+
+    t é a espessura do traço: nos tamanhos pequenos (barra de tarefas) ela cresce para o desenho não sumir."""
     x, y = 0.5 + (x - 0.5) / s, 0.5 + (y - 0.5) / s
-    t = 0.05
     r = math.hypot(x - 0.5, y - 0.5)
     if abs(r - 0.33) < t / 2:
         return True
@@ -64,6 +65,9 @@ def _mark(x, y, s):
 def render(size: int, maskable: bool) -> bytes:
     s = 0.72 if maskable else 0.86      # área segura do ícone "maskable" (Android corta em círculo)
     corner = 0.0 if maskable else 0.22
+    t = max(0.05, 1.7 / (size * s))     # traço com pelo menos ~1,7 px em qualquer tamanho
+    if size <= 24:
+        s = 0.95                         # 16/24 px: desenho ocupa mais o quadrado
     rows = []
     for py in range(size):
         row = bytearray([0])
@@ -79,7 +83,7 @@ def render(size: int, maskable: bool) -> bytes:
                         if math.hypot(x - cx, y - cy) > corner:
                             continue
                     cov_bg += 1
-                    if _mark(x, y, s):
+                    if _mark(x, y, s, t):
                         cov_mark += 1
                         c = _gold(y)
                     else:
@@ -99,7 +103,26 @@ def render(size: int, maskable: bool) -> bytes:
             + chunk(b"IDAT", zlib.compress(raw, 9)) + chunk(b"IEND", b""))
 
 
+ICO_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
+ICO_PATH = Path(__file__).resolve().parent.parent / "artemis" / "desktop" / "4rt3mi5.ico"
+
+
+def make_ico() -> bytes:
+    """Ícone do Windows (.ico) com vários tamanhos, cada um em PNG (aceito desde o Windows Vista)."""
+    imgs = [(n, render(n, False)) for n in ICO_SIZES]
+    head = struct.pack("<HHH", 0, 1, len(imgs))
+    offset = 6 + 16 * len(imgs)
+    entries, data = b"", b""
+    for n, png in imgs:
+        dim = 0 if n >= 256 else n  # 0 = 256 no formato .ico
+        entries += struct.pack("<BBBBHHII", dim, dim, 0, 0, 1, 32, len(png), offset + len(data))
+        data += png
+    return head + entries + data
+
+
 if __name__ == "__main__":
     for name, size, mask in (("icon-192.png", 192, False), ("icon-512.png", 512, False), ("icon-maskable.png", 512, True)):
         (WEB / name).write_bytes(render(size, mask))
         print("gerado", name)
+    ICO_PATH.write_bytes(make_ico())
+    print("gerado", ICO_PATH.name)

@@ -16,6 +16,26 @@ from .config import CONFIG_DIR, Config
 SECRET_KEYS = {"key", "token", "acct"}  # código de acesso, token do aparelho e sessão da conta: criptografados no PC
 
 
+APP_ID = "4rt3mi5.App"  # igual ao AppUserModelID dos atalhos (packaging/installer.iss)
+
+
+def icon_path() -> str | None:
+    base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    p = base / "4rt3mi5.ico"
+    return str(p) if p.exists() else None
+
+
+def _taskbar_identity() -> None:
+    """Faz a barra de tarefas tratar a janela como o 4rt3mi5 (e não como python.exe): ícone e agrupamento próprios."""
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_ID)
+    except Exception:  # noqa: BLE001 - só cosmético
+        pass
+
+
 def web_dir() -> Path:
     base = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
     return base / "web" if (base / "web").exists() else base / "artemis" / "web"
@@ -80,6 +100,7 @@ class Bridge:
 
 def main() -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    _taskbar_identity()
     # Deixa a trilha da abertura tocar sem precisar de um clique antes (o volume e o mudo
     # continuam com a pessoa, pelo botão de som).
     os.environ.setdefault("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--autoplay-policy=no-user-gesture-required")
@@ -92,7 +113,7 @@ def main() -> None:
         min_size=(380, 600),
         background_color="#0b0d12",
     )
-    webview.start(http_server=True, private_mode=False, storage_path=str(CONFIG_DIR / "webview"))
+    webview.start(http_server=True, private_mode=False, storage_path=str(CONFIG_DIR / "webview"), icon=icon_path())
 
 
 if __name__ == "__main__":

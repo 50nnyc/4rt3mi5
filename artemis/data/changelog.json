@@ -1,6 +1,14 @@
 {
   "releases": [
     {
+      "version": "0.17.3",
+      "date": "2026-11-15",
+      "title": "Ícone novo no Windows",
+      "changes": [
+        "🏹 O app de Windows ganhou ícone próprio: o arco dourado do 4rt3mi5 aparece na barra de tarefas, na área de trabalho, no menu Iniciar e no instalador, no lugar do ícone do Python. Se um atalho fixado continuar com o ícone antigo, desafixe e fixe o app de novo."
+      ]
+    },
+    {
       "version": "0.17.2",
       "date": "2026-11-15",
       "title": "Launcher corrigido",

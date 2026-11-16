@@ -22,6 +22,7 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=force
 UninstallDisplayIcon={app}\4rt3mi5.exe
+SetupIconFile=..\artemis\desktop\4rt3mi5.ico
 
 [Languages]
 Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
@@ -37,8 +38,9 @@ Source: "..\dist\4rt3mi5\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdi
 Type: filesandordirs; Name: "{app}\_internal"
 
 [Icons]
-Name: "{autoprograms}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"
-Name: "{autodesktop}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; Tasks: desktopicon
+; AppUserModelID igual ao do app (artemis/desktop/main.py): a janela aberta e o atalho fixado ficam no mesmo ícone da barra.
+Name: "{autoprograms}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.exe"; AppUserModelID: "4rt3mi5.App"
+Name: "{autodesktop}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.exe"; AppUserModelID: "4rt3mi5.App"; Tasks: desktopicon
 
 [Run]
 ; instalação normal: oferece abrir no final
