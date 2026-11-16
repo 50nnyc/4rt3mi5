@@ -206,6 +206,25 @@
   .seg { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
   .seg button { background: none; border: 1px solid var(--line); padding: 5px 10px; font-size: 13px; color: var(--muted); }
   .seg button.on { border-color: var(--text); color: var(--text); font-weight: 700; }
+  /* 0.19.0: ⚙️ Configurações e idioma */
+  .gearbtn { background: var(--card2); width: 40px; height: 40px; font-size: 19px; border: 1px solid var(--line); flex: none; padding: 0; }
+  .gearbtn:hover, .gearbtn.on { border-color: var(--gold); }
+  .langs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .langs button { display: flex; align-items: center; gap: 10px; background: var(--card2); border: 1px solid var(--line);
+                  padding: 11px 12px; text-align: left; font-weight: 600; }
+  .langs button .tag { font: 800 11px/1 system-ui, sans-serif; letter-spacing: .06em; color: var(--bg); background: var(--muted);
+                       border-radius: 5px; padding: 4px 5px; min-width: 26px; text-align: center; }
+  .langs button.on { border-color: var(--gold); color: var(--gold2); box-shadow: inset 0 0 0 1px var(--gold); }
+  .langs button.on .tag { background: var(--gold); }
+  .langs.compact { grid-template-columns: repeat(4, auto); justify-content: center; gap: 6px; margin-top: 14px; }
+  .langs.compact button { padding: 6px 9px; font-size: 13px; gap: 6px; background: none; }
+  @media (max-width: 480px) {
+    .langs.compact { grid-template-columns: repeat(2, auto); }
+    /* cabeçalho com ⚙️: botões um pouco menores para o logo caber inteiro */
+    .burger, .backbtn, .gearbtn { width: 36px; height: 36px; font-size: 18px; }
+    header.top { gap: 6px !important; padding: 10px 12px; }
+  }
+  @media (max-width: 480px) { .sound input { width: 44px !important; } }
   .bars { display: grid; grid-template-columns: minmax(70px, 30%) 1fr auto; gap: 8px 10px; align-items: center; font-size: 13px; }
   .bars .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bars .nm.me { font-weight: 800; }
@@ -468,6 +487,7 @@
       <div class="err" id="registerErr"></div>
     </div>
     <div class="hint hidden" id="serverLine"></div>
+    <div class="langs compact" id="loginLang" aria-label="Idioma"></div>
     <div id="dlLogin"></div>
   </div>
 </section>
@@ -559,6 +579,7 @@
     <button class="brand" id="brandHome" title="Ir para o início" aria-label="4rt3mi5 — ir para o início">4rt3mi5</button>
     <span class="who" id="topWho"></span>
     <span id="soundSlot"></span>
+    <button class="gearbtn" id="gearBtn" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
   </header>
   <div class="scrim" id="scrim"></div>
   <nav class="drawer" id="drawer" aria-label="Menu">
@@ -579,6 +600,7 @@
     <div class="group">Conta</div>
     <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
     <button class="item" data-page="news"><span class="ic">📰</span>Novidades <span class="badge hidden" id="newsDot">novo</span></button>
+    <button class="item" data-page="settings"><span class="ic">⚙️</span>Configurações</button>
     <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
     <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
@@ -682,6 +704,16 @@
       <div id="newsList"></div>
     </div>
 
+    <div id="pageSettings" class="hidden">
+      <h1>Configurações</h1>
+      <p class="muted" style="margin-top:-4px">Preferências deste aparelho.</p>
+      <h2>🌐 Idioma</h2>
+      <div class="card">
+        <div class="langs" id="settingsLang" aria-label="Idioma"></div>
+        <div class="hint" style="margin-top:10px">O app inteiro muda na hora. Nomes do Tibia (itens, criaturas, bosses e hunts) e as Novidades continuam como estão.</div>
+      </div>
+    </div>
+
     <div id="pageChars" class="hidden">
       <h1>Meus personagens</h1>
       <p class="muted">Personagens vinculados ao seu código de acesso. Você só pode enviar Lootsplit e sessões em nome deles.
@@ -713,6 +745,7 @@
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="box" id="modalBox"></div></div>
 <div id="sheet" class="sheet hidden" role="dialog" aria-live="polite"></div>
 
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

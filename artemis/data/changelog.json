@@ -1,6 +1,17 @@
 {
   "releases": [
     {
+      "version": "0.19.0",
+      "date": "2026-11-16",
+      "title": "⚙️ Configurações e idiomas",
+      "changes": [
+        "⚙️ Nova tela de Configurações, no menu ☰ e na engrenagem do topo da tela.",
+        "🌐 Escolha o idioma do app: português, inglês, espanhol ou japonês. Tudo muda na hora, inclusive avisos, mensagens de erro e o card de compartilhar, e a escolha fica salva no aparelho.",
+        "🔑 Dá para trocar o idioma já na tela de login, antes de entrar.",
+        "Nomes do Tibia (itens, criaturas, bosses e hunts) e as Novidades continuam como estão."
+      ]
+    },
+    {
       "version": "0.18.0",
       "date": "2026-11-16",
       "title": "Atualiza sem fechar",

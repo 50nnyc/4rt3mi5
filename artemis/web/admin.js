@@ -137,7 +137,7 @@ async function loadStatus() {
   };
 }
 const PAGE_PT = { home: "🏠 Início", loot: "💰 Lootsplit", stack: "📈 Hunt Session Stacker", boss: "👑 Rotação de bosses", hunts: "🗺️ Hunts",
-                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades" };
+                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades", settings: "⚙️ Configurações" };
 let screenDays = 7;
 async function loadScreens() {
   let r;

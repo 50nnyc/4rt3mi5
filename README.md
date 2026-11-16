@@ -21,7 +21,13 @@ app desktop abre a mesma página numa janela própria.
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
 4. Menu ☰: **Início**, **Lootsplit**, **Hunt Session Stacker**, **Rotação de bosses** (Solo / Party), **Hunts**, **Ranking entre amigos**, **Conquistas**, **Meus personagens**,
-   **Novidades**, trocar personagem, sair.
+   **Novidades**, **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair.
+7. **Idioma (0.19.0):** ⚙️ Configurações → português, inglês, espanhol ou japonês (também na tela de login).
+   O app é escrito em português; `artemis/web/i18n.js` traduz o que aparece na tela com os dicionários
+   `i18n-en.json`, `i18n-es.json` e `i18n-ja.json` (chave = texto em português, `{0}` = valor que muda).
+   Texto novo na interface ou mensagem nova do servidor → acrescente a tradução nos três arquivos
+   (`tests/test_i18n.py` confere chaves iguais e os textos do `index.html`). Nomes do Tibia e as Novidades
+   ficam como estão.
 5. Sem conexão: tela de abertura com o aviso, tentando de novo a cada 10 s.
 6. **Colar direto:** com o texto do analyser copiado, Ctrl+V em qualquer tela abre o aviso "Enviar agora".
 

@@ -779,6 +779,17 @@ $("#changeNick").addEventListener("click", () => { closeDrawer(); $("#nickInput"
 $("#nickBack").addEventListener("click", () => showOnly("app"));
 $("#brandHome").addEventListener("click", () => { closeDrawer(); if (S.page !== "home") go("home"); else window.scrollTo(0, 0); });
 $("#backBtn").addEventListener("click", goBack);
+$("#gearBtn").addEventListener("click", () => { closeDrawer(); if (S.page !== "settings") go("settings"); });
+
+/* ---------- ⚙️ configurações: idioma (0.19.0) ---------- */
+// O idioma fica salvo neste aparelho (no app de Windows, junto com as outras preferências dele).
+const saveLang = (code) => kv.set("lang", code);
+I18N.picker($("#settingsLang"), saveLang);
+I18N.picker($("#loginLang"), saveLang);
+async function loadSavedLang() {
+  const saved = await kv.get("lang").catch(() => null);
+  if (saved && saved !== I18N.lang) await I18N.use(saved);
+}
 
 /* ---------- voltar: botão ← e o "voltar" do celular/navegador ---------- */
 S.navStack = [];
@@ -825,6 +836,8 @@ function go(page, opts = {}) {
   $("#pageNews").classList.toggle("hidden", page !== "news");
   $("#pageAch").classList.toggle("hidden", page !== "ach");
   $("#pageRank").classList.toggle("hidden", page !== "rank");
+  $("#pageSettings").classList.toggle("hidden", page !== "settings");
+  $("#gearBtn").classList.toggle("on", page === "settings");
   Music.forPage(page);
   if (page === "rank") loadRank();
   if (page === "news") loadNews();
@@ -2133,6 +2146,7 @@ async function boot() {
   try { quick = sessionStorage.getItem("ui-reload") === "1"; sessionStorage.removeItem("ui-reload"); } catch {}
   const [desktop] = await Promise.all([detected, sleep(quick ? 300 : 2600)]);
   S.desktop = desktop;
+  await loadSavedLang();
   if (desktop) {
     const cfg = await window.pywebview.api.get_config();
     S.api = cfg.api_base.replace(/\/$/, "");

@@ -718,7 +718,7 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
-TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news"}
+TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings"}
 
 
 class TrackIn(BaseModel):
@@ -1948,10 +1948,15 @@ def service_worker():
 # Ícone do app na tela inicial (só é instalado se a pessoa tocar em "Sim" no aviso do site).
 _STATIC = {"manifest.webmanifest": "application/manifest+json", "icon-192.png": "image/png",
            "icon-512.png": "image/png", "icon-maskable.png": "image/png"}
+# 0.19.0: idiomas (motor + dicionários). Sem cache longo: tradução nova chega na hora.
+_I18N = {"i18n.js": "text/javascript", "i18n-en.json": "application/json",
+         "i18n-es.json": "application/json", "i18n-ja.json": "application/json"}
 
 
 @app.get("/{filename}", include_in_schema=False)
 def static_file(filename: str):
+    if filename in _I18N:
+        return FileResponse(WEB_DIR / filename, media_type=_I18N[filename], headers={"Cache-Control": "no-cache"})
     if filename not in _STATIC:  # lista fechada: nenhum outro arquivo da pasta sai por aqui
         raise HTTPException(404)
     return FileResponse(WEB_DIR / filename, media_type=_STATIC[filename], headers={"Cache-Control": "max-age=86400"})
