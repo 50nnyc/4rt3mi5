@@ -23,6 +23,8 @@ WizardStyle=modern
 CloseApplications=force
 UninstallDisplayIcon={app}\4rt3mi5.exe
 SetupIconFile=..\artemis\desktop\4rt3mi5.ico
+; Ao terminar, avisa o Windows para recarregar os ícones (senão a área de trabalho segue com o ícone antigo do cache).
+ChangesAssociations=yes
 
 [Languages]
 Name: "ptbr"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
@@ -32,6 +34,8 @@ Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDesc
 
 [Files]
 Source: "..\dist\4rt3mi5\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Ícone em arquivo próprio para os atalhos: caminho novo que o cache de ícones do Windows ainda não conhece.
+Source: "..\artemis\desktop\4rt3mi5.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [InstallDelete]
 ; limpa arquivos da versão anterior
@@ -39,8 +43,8 @@ Type: filesandordirs; Name: "{app}\_internal"
 
 [Icons]
 ; AppUserModelID igual ao do app (artemis/desktop/main.py): a janela aberta e o atalho fixado ficam no mesmo ícone da barra.
-Name: "{autoprograms}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.exe"; AppUserModelID: "4rt3mi5.App"
-Name: "{autodesktop}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.exe"; AppUserModelID: "4rt3mi5.App"; Tasks: desktopicon
+Name: "{autoprograms}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.ico"; AppUserModelID: "4rt3mi5.App"
+Name: "{autodesktop}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{app}\4rt3mi5.ico"; AppUserModelID: "4rt3mi5.App"; Tasks: desktopicon
 
 [Run]
 ; instalação normal: oferece abrir no final

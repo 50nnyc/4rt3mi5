@@ -1,6 +1,14 @@
 {
   "releases": [
     {
+      "version": "0.17.4",
+      "date": "2026-11-15",
+      "title": "Ícone sempre atualizado",
+      "changes": [
+        "🏹 Quem já tinha o app instalado agora vê o ícone novo do 4rt3mi5 na área de trabalho e no menu Iniciar logo depois da atualização, sem ficar preso no ícone antigo do Python."
+      ]
+    },
+    {
       "version": "0.17.3",
       "date": "2026-11-15",
       "title": "Ícone novo no Windows",

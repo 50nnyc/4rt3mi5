@@ -28,6 +28,10 @@ class IconTests(unittest.TestCase):
         iss = (ROOT / "packaging" / "installer.iss").read_text(encoding="utf-8")
         self.assertIn("SetupIconFile=", iss)
         self.assertEqual(iss.count(f'AppUserModelID: "{desktop.APP_ID}"'), 2)
+        # 0.17.4: atalhos apontam para o .ico solto (caminho fora do cache antigo) e o Windows recarrega os ícones
+        self.assertEqual(iss.count('IconFilename: "{app}\\4rt3mi5.ico"'), 2)
+        self.assertIn('Source: "..\\artemis\\desktop\\4rt3mi5.ico"; DestDir: "{app}"', iss)
+        self.assertIn("ChangesAssociations=yes", iss)
 
     def test_window_finds_icon(self):
         self.assertEqual(Path(desktop.icon_path()), ICO)
