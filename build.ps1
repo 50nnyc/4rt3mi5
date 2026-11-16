@@ -38,12 +38,19 @@ $launcherSha = (Get-FileHash $launcher -Algorithm SHA256).Hash.ToLower()
 $esperado = ((Get-Content launcher\SHA256.txt -TotalCount 1) -split '\s+')[0].ToLower()
 if ($launcherSha -ne $esperado) { throw "launcher\4rt3mi5-Launcher.exe mudou ($launcherSha), mas launcher\SHA256.txt diz $esperado." }
 Copy-Item $launcher dist\4rt3mi5-Launcher.exe -Force
+# 0.18.0: a interface vai também avulsa, para o app trocar a tela sem fechar (artemis/desktop/uipack.py).
+$webZip = "dist\4rt3mi5-web-$version.zip"
+$webSha = (python -m artemis.desktop.uipack artemis/web $webZip).Trim()
+if ($LASTEXITCODE -ne 0) { throw "Pacote da interface falhou" }
+$bridge = [int](python -c "from artemis.desktop import uipack; print(uipack.BRIDGE)").Trim()
 $manifest = [ordered]@{
     version         = $version
     url             = "$DownloadBaseUrl/4rt3mi5-Setup-$version.exe"
     sha256          = $sha
     launcher_sha256 = $launcherSha
     notes           = ""
+    # "web" sempre por último: o launcher congelado pega o primeiro "url"/"sha256" do arquivo (o do instalador).
+    web             = [ordered]@{ url = "$DownloadBaseUrl/4rt3mi5-web-$version.zip"; sha256 = $webSha; bridge = $bridge }
 }
 $manifest | ConvertTo-Json | Out-File -Encoding utf8 dist\latest.json
 Write-Host "Pronto: $setup"

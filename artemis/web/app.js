@@ -2092,18 +2092,31 @@ function setupDesktopExtras() {
     $("#srv").textContent = S.api;
   });
 }
+// 0.18.0: a tela nova entra sem fechar o app; o resto instala sozinho quando você fechar.
+const UPDATE_EVERY_MS = 30 * 60 * 1000;
 async function checkUpdate() {
   const info = await window.pywebview.api.check_update().catch(() => null);
-  if (!info) return;
   const box = $("#update");
-  box.innerHTML = `<div class="row"><span>Nova versão <b>${esc(info.version)}</b> disponível.</span>
-    <button class="copy" id="doUpdate" style="border-color:var(--gold)">Atualizar</button></div>`;
+  if (!info || info.ui === "current") { box.classList.add("hidden"); return; }
+  if (info.ui === "ready") {
+    box.innerHTML = `<div class="row"><span>Versão <b>${esc(info.version)}</b> pronta. A tela atualiza em 1 segundo, sem fechar o app.</span>
+      <button class="copy" id="doUpdate" style="border-color:var(--gold)">Atualizar agora</button></div>`;
+    $("#doUpdate").addEventListener("click", async () => {
+      const err = await window.pywebview.api.reload_ui().catch((e) => String(e));
+      if (err) { box.textContent = "Não foi possível atualizar: " + err; return; }
+      try { sessionStorage.setItem("ui-reload", "1"); } catch {}
+      location.reload();
+    });
+  } else {
+    box.innerHTML = `<div class="row"><span>Versão <b>${esc(info.version)}</b> disponível. Ela instala sozinha quando você fechar o app.</span>
+      <button class="copy" id="doUpdate">Reiniciar agora</button></div>`;
+    $("#doUpdate").addEventListener("click", async () => {
+      box.innerHTML = "Instalando… o app vai fechar e abrir de novo sozinho.";
+      const err = await window.pywebview.api.install_update().catch((e) => String(e));
+      if (err) box.textContent = "Não foi possível atualizar: " + err;
+    });
+  }
   box.classList.remove("hidden");
-  $("#doUpdate").addEventListener("click", async () => {
-    box.innerHTML = "Baixando atualização… o app vai fechar e abrir de novo sozinho.";
-    const err = await window.pywebview.api.install_update().catch((e) => String(e));
-    if (err) box.textContent = "Não foi possível atualizar: " + err;
-  });
 }
 
 /* ---------- início ---------- */
@@ -2116,7 +2129,9 @@ async function boot() {
     Music.play("anthem");    // a abertura começa com o Anthem, baixinho
     return d;
   });
-  const [desktop] = await Promise.all([detected, sleep(2600)]);
+  let quick = false; // voltou de "Atualizar agora": abertura curta
+  try { quick = sessionStorage.getItem("ui-reload") === "1"; sessionStorage.removeItem("ui-reload"); } catch {}
+  const [desktop] = await Promise.all([detected, sleep(quick ? 300 : 2600)]);
   S.desktop = desktop;
   if (desktop) {
     const cfg = await window.pywebview.api.get_config();
@@ -2146,7 +2161,7 @@ async function boot() {
   }
   await splashHide();
   startMonitor();
-  if (desktop) checkUpdate();
+  if (desktop) { checkUpdate(); setInterval(checkUpdate, UPDATE_EVERY_MS); }
 }
 /* =====================================================================================
    0.10.0 — som, abertura, vocações, comemorações, conquistas, card, colar direto e ícone

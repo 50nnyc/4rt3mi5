@@ -43,5 +43,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" (Get-ChildItem dist\4rt3mi5-Setup-*.exe).FullName dist\4rt3mi5-Launcher.exe dist\latest.json `
+          gh release create "${{ github.ref_name }}" (Get-ChildItem dist\4rt3mi5-Setup-*.exe).FullName (Get-ChildItem dist\4rt3mi5-web-*.zip).FullName dist\4rt3mi5-Launcher.exe dist\latest.json `
             --title "${{ github.ref_name }}" --generate-notes

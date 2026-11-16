@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.18.0",
+      "date": "2026-11-16",
+      "title": "Atualiza sem fechar",
+      "changes": [
+        "⚡ O app de Windows se atualiza sem fechar: quando sai versão nova, aparece \"Atualizar agora\" e a tela nova entra em 1 segundo, sem perder o login.",
+        "🌙 O resto da atualização instala sozinho quando você fechar o app, sem janela e sem interromper a hunt. Se tiver pressa, use \"Reiniciar agora\".",
+        "🔄 Com o app aberto, ele procura versão nova a cada 30 minutos, não só ao abrir."
+      ]
+    },
+    {
       "version": "0.17.4",
       "date": "2026-11-15",
       "title": "Ícone sempre atualizado",

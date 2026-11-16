@@ -49,5 +49,12 @@ Name: "{autodesktop}\4rt3mi5"; Filename: "{app}\4rt3mi5.exe"; IconFilename: "{ap
 [Run]
 ; instalação normal: oferece abrir no final
 Filename: "{app}\4rt3mi5.exe"; Description: "Abrir o 4rt3mi5"; Flags: nowait postinstall skipifsilent
-; atualização automática (silenciosa): reabre o app sozinho
-Filename: "{app}\4rt3mi5.exe"; Flags: nowait; Check: WizardSilent
+; atualização automática (silenciosa): reabre o app sozinho, menos quando instala porque a pessoa fechou o app
+Filename: "{app}\4rt3mi5.exe"; Flags: nowait; Check: ReabrirDepois
+
+[Code]
+// 0.18.0: o app chama o instalador com /reabrir=nao quando a pessoa fecha a janela.
+function ReabrirDepois: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:reabrir|sim}') <> 'nao');
+end;
