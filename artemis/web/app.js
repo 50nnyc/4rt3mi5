@@ -992,6 +992,7 @@ function go(page, opts = {}) {
   $("#pageNews").classList.toggle("hidden", page !== "news");
   $("#pageTnews").classList.toggle("hidden", page !== "tnews");
   $("#pageCms").classList.toggle("hidden", page !== "cms");
+  $("#pageCal").classList.toggle("hidden", page !== "cal");
   $("#pageAch").classList.toggle("hidden", page !== "ach");
   $("#pageRank").classList.toggle("hidden", page !== "rank");
   $("#pageSettings").classList.toggle("hidden", page !== "settings");
@@ -1002,6 +1003,7 @@ function go(page, opts = {}) {
   if (page === "rank") loadRank();
   if (page === "news") loadNews();
   if (page === "tnews") loadTnews();
+  if (page === "cal") loadCal();
   if (page === "cms") { if (!$("#cmsFrom").value) cmsDefaults(); loadCms(); }
   if (page === "ach") loadAch();
   window.scrollTo(0, 0);
@@ -1397,6 +1399,73 @@ async function loadCms() {
 }
 $("#cmsForm").addEventListener("submit", (e) => { e.preventDefault(); loadCms(); });
 $("#cmsReset").addEventListener("click", () => { cmsDefaults(); loadCms(); });
+/* ---------- 0.22.1: 📅 calendário de eventos (o administrador cola do tibia.com; aqui vêm só os dados) ---------- */
+const CAL_COLOR = /^(#[0-9a-f]{3,8}|white)$/i;
+const calColor = (c, d) => (CAL_COLOR.test(c || "") ? c : d);
+const cap1 = (s) => s.charAt(0).toUpperCase() + s.slice(1);  // "novembro de 2026" → "Novembro de 2026"
+const calLabel = (d) => new Date(d + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+function calRanges(days, name) {
+  // dias seguidos do mesmo evento viram "11/11 – 15/11"
+  const list = Object.keys(days).sort().filter((k) => days[k].some((e) => e.name === name));
+  const out = [];
+  for (const d of list) {
+    const last = out[out.length - 1];
+    const prev = last && new Date(new Date(last.to + "T12:00:00").getTime() + 864e5).toISOString().slice(0, 10);
+    if (last && prev === d) last.to = d; else out.push({ from: d, to: d });
+  }
+  return out.map((r) => r.from === r.to ? calLabel(r.from) : `${calLabel(r.from)} – ${calLabel(r.to)}`).join(", ");
+}
+function calEventRow(name, ev, extra = "") {
+  return `<div class="cal-item"><span class="cal-sw" style="background:${calColor(ev.bg, "#555")}"></span>
+    <div><b data-i18n-skip>${esc(name)}</b>${extra}<div class="muted" style="font-size:14px" data-i18n-skip>${esc(ev.description || "")}</div></div></div>`;
+}
+function calDayInfo(c, day) {
+  const items = c.days[day] || [];
+  const title = new Date(day + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
+  return `<div class="card cal-info"><b>${esc(cap1(title))}</b>
+    ${items.length ? items.map((e) => calEventRow(e.name, c.events[e.name] || e, e.star ? ` <span class="tn-tag" title="Começa ou termina no server save deste dia">⏱ server save</span>` : "")).join("")
+      : `<p class="muted" style="margin:6px 0 0">Nenhum evento neste dia.</p>`}</div>`;
+}
+async function loadCal(month = "") {
+  const el = $("#calBody");
+  el.innerHTML = skeleton("list");
+  let d;
+  try { d = await api("GET", "/api/tibia/calendar" + (month ? "?month=" + encodeURIComponent(month) : "")); }
+  catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (!d.calendar) { el.innerHTML = `<div class="card muted">O calendário deste mês ainda não foi publicado. Volte em breve.</div>`; return; }
+  const c = d.calendar, [y, m] = d.month.split("-").map(Number);
+  const first = new Date(y, m - 1, 1), start = new Date(first.getTime() - ((first.getDay() + 6) % 7) * 864e5);  // segunda-feira
+  const today = isoDay(new Date());
+  const lead = (first.getDay() + 6) % 7, total = Math.ceil((lead + new Date(y, m, 0).getDate()) / 7) * 7;  // semanas inteiras
+  const cells = [...Array(total)].map((_, i) => isoDay(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i)));
+  const wd = [...Array(7)].map((_, i) => new Date(2024, 0, 1 + i).toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""));
+  const idx = d.months.indexOf(d.month);
+  const nav = (dir) => { const t = d.months[idx + dir]; return t ? `<button class="btn2" data-cal-month="${esc(t)}" aria-label="${dir < 0 ? "Mês anterior" : "Próximo mês"}">${dir < 0 ? "‹" : "›"}</button>` : `<span style="width:42px"></span>`; };
+  S.cal = c;
+  const sel = c.days[today] !== undefined && today.startsWith(d.month) ? today : null;
+  el.innerHTML = `<div class="card">
+      <div class="cal-head">${nav(-1)}<b>${esc(cap1(first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })))}</b>${nav(1)}</div>
+      <div class="cal-grid">${wd.map((w) => `<div class="cal-wd">${esc(w)}</div>`).join("")}
+        ${cells.map((k) => {
+          const evs = c.days[k] || [], out = !k.startsWith(d.month);
+          return `<button type="button" class="cal-day${out ? " out" : ""}${k === today ? " today" : ""}${k === sel ? " sel" : ""}" data-cal-day="${k}" aria-label="${esc(calLabel(k))}: ${evs.length} eventos">
+            <span class="n">${Number(k.slice(8))}</span>${evs.map((e) => `<span class="cal-ev${e.star ? " star" : ""}" style="background:${calColor(e.bg, "#555")}; color:${calColor(e.fg, "#fff")}" data-i18n-skip>${e.star ? "⏱ " : ""}${esc(e.name)}</span>`).join("")}</button>`;
+        }).join("")}</div>
+      <div class="hint">⏱ = o evento começa ou termina no server save daquele dia. Calendário do tibia.com © CipSoft GmbH.</div>
+    </div>
+    <div id="calDay">${sel ? calDayInfo(c, sel) : ""}</div>
+    <h2>Eventos do mês</h2><div class="card">${Object.entries(c.events).map(([n, ev]) => calEventRow(n, ev, ` <span class="muted" style="font-size:13px">· ${esc(calRanges(c.days, n))}</span>`)).join("") || `<p class="muted">Nenhum evento.</p>`}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const nav = e.target.closest("[data-cal-month]");
+  if (nav) return loadCal(nav.dataset.calMonth);
+  const day = e.target.closest("[data-cal-day]");
+  if (!day || !S.cal) return;
+  document.querySelectorAll(".cal-day.sel").forEach((x) => x.classList.remove("sel"));
+  day.classList.add("sel");
+  $("#calDay").innerHTML = calDayInfo(S.cal, day.dataset.calDay);
+  $("#calDay").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "nearest" });
+});
 // abre o texto da notícia só quando a pessoa expande (vem do banco; se faltar, o servidor tenta buscar na hora)
 document.addEventListener("toggle", async (e) => {
   const det = e.target;

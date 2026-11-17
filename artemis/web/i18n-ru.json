@@ -907,5 +907,11 @@
 "Tibia": "Tibia",
 "Ler no tibia.com ↗": "Читать на tibia.com ↗",
 "🖼️ Ver imagem": "🖼️ Открыть изображение",
-"Ferramentas": "Инструменты"
+"Ferramentas": "Инструменты",
+"Calendário": "Календарь",
+"Calendário de eventos": "Календарь событий",
+"Os eventos do Tibia no mês. Toque num dia para ver o que acontece.": "События Tibia в этом месяце. Нажмите на день, чтобы узнать, что происходит.",
+"Eventos do mês": "События месяца",
+"Nenhum evento neste dia.": "В этот день событий нет.",
+"O calendário deste mês ainda não foi publicado. Volte em breve.": "Календарь на этот месяц ещё не опубликован. Загляните позже."
 }

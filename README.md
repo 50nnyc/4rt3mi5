@@ -33,6 +33,11 @@ app desktop abre a mesma página numa janela própria.
    aos poucos a cada 30 min (`ARTEMIS_NEWS_SYNC`, em segundos; `0` desliga) e na hora em que alguém abre. Com a fonte
    fora do ar, tudo sai do banco. O HTML passa por uma lista fechada de tags (`artemis/core/tibianews.py`); imagens
    viram link. As notas de versão do app agora são **🧾 Alterações** (menu e atalho fixo no canto inferior direito).
+   **📅 Calendário (0.22.1):** o tibia.com não aceita leitura automática, então o administrador abre o Event Calendar
+   no navegador, copia o `outerHTML` da caixa *Event Schedule* e cola no painel admin (seção 📅). O servidor
+   (`artemis/core/tibiacal.py`) tira só os dados (dias, eventos, cores, ⏱ server save e descrições em texto) e guarda
+   cada colagem na tabela `tibia_calendar` (histórico só no painel; "Desfazer última" volta para a anterior). O app
+   (`/api/tibia/calendar`) mostra a colagem mais nova de cada mês, nunca o HTML colado.
    Menu ☰: **Início**; o grupo Solo/Party acima;
    **Progresso** → Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
    **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair. Solo → Stacker já abre a janela para colar.

@@ -1,6 +1,58 @@
 {
   "releases": [
     {
+      "version": "0.22.1",
+      "date": "2026-11-17",
+      "title": "Calendário de eventos",
+      "changes": [
+        "📅 Calendário no menu (seção Tibia): os eventos do mês do tibia.com no visual do 4rt3mi5, com as cores de cada evento. Toque num dia para ver o que acontece, e veja embaixo a lista do mês com as datas e a descrição de cada evento. ⏱ marca quando o evento começa ou termina no server save."
+      ],
+      "tr": {
+        "en": {
+          "title": "Event calendar",
+          "changes": [
+            "📅 Calendar in the menu (Tibia section): the month's events from tibia.com in the 4rt3mi5 look, with each event's colors. Tap a day to see what is happening, and check the month's list below with the dates and description of each event. ⏱ marks when the event starts or ends at server save."
+          ]
+        },
+        "es": {
+          "title": "Calendario de eventos",
+          "changes": [
+            "📅 Calendario en el menú (sección Tibia): los eventos del mes de tibia.com con el estilo de 4rt3mi5 y los colores de cada evento. Toca un día para ver qué pasa y consulta abajo la lista del mes con las fechas y la descripción de cada evento. ⏱ indica cuando el evento empieza o termina en el server save."
+          ]
+        },
+        "ja": {
+          "title": "イベントカレンダー",
+          "changes": [
+            "📅 メニューのTibiaセクションにカレンダーを追加：tibia.comの今月のイベントを、イベントごとの色で4rt3mi5のデザインで表示します。日付をタップするとその日の内容が見られ、下には日付と説明付きの今月の一覧があります。⏱はサーバーセーブでイベントが始まる／終わる日です。"
+          ]
+        },
+        "de": {
+          "title": "Event-Kalender",
+          "changes": [
+            "📅 Kalender im Menü (Bereich Tibia): die Events des Monats von tibia.com im Stil von 4rt3mi5, mit den Farben jedes Events. Tippe auf einen Tag, um zu sehen, was los ist, und sieh dir darunter die Monatsliste mit Daten und Beschreibung jedes Events an. ⏱ zeigt, wann ein Event mit dem Server Save beginnt oder endet."
+          ]
+        },
+        "pl": {
+          "title": "Kalendarz wydarzeń",
+          "changes": [
+            "📅 Kalendarz w menu (sekcja Tibia): wydarzenia miesiąca z tibia.com w stylu 4rt3mi5, z kolorami każdego wydarzenia. Dotknij dnia, aby zobaczyć, co się dzieje, a poniżej znajdziesz listę miesiąca z datami i opisem każdego wydarzenia. ⏱ oznacza, że wydarzenie zaczyna się lub kończy podczas server save."
+          ]
+        },
+        "fr": {
+          "title": "Calendrier des événements",
+          "changes": [
+            "📅 Calendrier dans le menu (section Tibia) : les événements du mois de tibia.com dans le style de 4rt3mi5, avec les couleurs de chaque événement. Touchez un jour pour voir ce qui s'y passe, et retrouvez en dessous la liste du mois avec les dates et la description de chaque événement. ⏱ indique qu'un événement commence ou se termine au server save."
+          ]
+        },
+        "ru": {
+          "title": "Календарь событий",
+          "changes": [
+            "📅 Календарь в меню (раздел Tibia): события месяца с tibia.com в стиле 4rt3mi5, с цветами каждого события. Нажмите на день, чтобы увидеть, что происходит, а ниже — список месяца с датами и описанием каждого события. ⏱ означает, что событие начинается или заканчивается на server save."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.22.0",
       "date": "2026-11-17",
       "title": "Solo ou Party e notícias do Tibia",

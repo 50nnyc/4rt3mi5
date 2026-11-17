@@ -907,5 +907,11 @@
 "Tibia": "Tibia",
 "Ler no tibia.com ↗": "tibia.comで読む ↗",
 "🖼️ Ver imagem": "🖼️ 画像を見る",
-"Ferramentas": "ツール"
+"Ferramentas": "ツール",
+"Calendário": "カレンダー",
+"Calendário de eventos": "イベントカレンダー",
+"Os eventos do Tibia no mês. Toque num dia para ver o que acontece.": "今月のTibiaのイベント。日付をタップすると内容が見られます。",
+"Eventos do mês": "今月のイベント",
+"Nenhum evento neste dia.": "この日のイベントはありません。",
+"O calendário deste mês ainda não foi publicado. Volte em breve.": "今月のカレンダーはまだ公開されていません。また後で確認してください。"
 }

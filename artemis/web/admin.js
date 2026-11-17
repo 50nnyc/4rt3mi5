@@ -35,7 +35,7 @@ async function api(method, path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) { logout("Senha de administrador inválida."); throw new Error("401"); }
-  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : `Erro ${res.status}`);
+  if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : (data.detail && data.detail.message) || `Erro ${res.status}`);
   return data;
 }
 
@@ -67,8 +67,38 @@ async function enter() {
   loadRecovery();
   loadContacts();
   loadReport();
+  loadCalendar();
 }
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); loadContacts(); loadReport(); }
+async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); loadContacts(); loadReport(); loadCalendar(); }
+
+/* 0.22.1: 📅 calendário do Tibia (HTML do Event Schedule colado daqui; o servidor guarda só os dados) */
+async function loadCalendar() {
+  let rows;
+  try { rows = await api("GET", "/api/admin/calendar"); } catch { return; }
+  $("#calMonths").innerHTML = rows.length
+    ? `<table><tr><th>Mês</th><th>Colagens</th><th>Última</th><th></th></tr>${rows.map((r) => `<tr><td>${esc(r.month)}</td><td>${r.versions}</td>
+        <td>${esc(new Date(r.updated_at).toLocaleString("pt-BR"))}</td><td><button class="danger" data-cal-undo="${esc(r.month)}">Desfazer última</button></td></tr>`).join("")}</table>`
+    : `<span class="muted">Nenhum calendário publicado ainda.</span>`;
+}
+$("#calSave").addEventListener("click", async () => {
+  const raw = $("#calHtml").value.trim(), btn = $("#calSave");
+  $("#calErr").textContent = ""; $("#calMsg").textContent = "";
+  if (!raw) { $("#calErr").textContent = "Cole o HTML do Event Schedule primeiro."; return; }
+  btn.disabled = true;
+  try {
+    const r = await api("POST", "/api/admin/calendar", { raw_html: raw });
+    $("#calHtml").value = "";
+    $("#calMsg").textContent = `✔ ${r.month} publicado: ${r.events.length} eventos (${r.events.join(", ")}), ${r.days_with_events} dias com evento.`;
+    loadCalendar();
+  } catch (e) { if (e.message !== "401") $("#calErr").textContent = e.message; }
+  finally { btn.disabled = false; }
+});
+$("#calMonths").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-cal-undo]");
+  if (!b || !confirm(`Desfazer a última colagem de ${b.dataset.calUndo}? Volta a valer a anterior (se houver).`)) return;
+  try { await api("DELETE", `/api/admin/calendar/${b.dataset.calUndo}`); toast("Última colagem desfeita"); loadCalendar(); }
+  catch (err) { if (err.message !== "401") toast(err.message); }
+});
 
 /* 0.16.0: quem pediu ajuda para recuperar o código; o botão abre a conversa no WhatsApp (web ou app) */
 function waLink(r, reset = null) {

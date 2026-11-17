@@ -45,7 +45,7 @@ from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
-from artemis.core import tibianews
+from artemis.core import tibiacal, tibianews
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from . import mailer
@@ -520,6 +520,18 @@ def tibia_archive(date_from: str = Query("", alias="from"), date_to: str = Query
     rows, total = store.tibia_news_search(d_from.isoformat(), d_to.isoformat(), cats, typs, q.strip())
     return {**_news_status(), "from": d_from.isoformat(), "to": d_to.isoformat(), "count": total,
             "rows": [_news_out(r) for r in rows]}
+
+
+@app.get("/api/tibia/calendar")
+def tibia_calendar(month: str = "", _: dict = Depends(require_session)):
+    """📅 Calendário de eventos (o que o administrador colou do tibia.com; a colagem mais nova de cada mês)."""
+    months = [m["month"] for m in store.calendar_months()]
+    if not months:
+        return {"months": [], "month": None, "calendar": None}
+    current = date.today().strftime("%Y-%m")
+    if month not in months:
+        month = current if current in months else min((m for m in months if m >= current), default=months[0])
+    return {"months": sorted(months), "month": month, "calendar": store.calendar(month)}
 
 
 @app.get("/api/tibia/news/{news_id}")
@@ -2330,6 +2342,34 @@ def admin_char_hunts(name: str):
               "place_edits": h.get("place_edits", 0)}
              for h in store.hunts_for_player(name)]
     return {"name": name, "sessions": sessions, "hunts": hunts, "edit_limit": PLACE_EDIT_LIMIT}
+
+
+# 0.22.1: 📅 calendário — o administrador cola o HTML do Event Schedule do tibia.com; o servidor guarda só os dados
+class CalendarIn(BaseModel):
+    raw_html: Annotated[str, Field(min_length=20, max_length=400_000)]
+
+
+@app.get("/api/admin/calendar", dependencies=[Depends(require_admin)])
+def admin_calendar():
+    return store.calendar_months()
+
+
+@app.post("/api/admin/calendar", dependencies=[Depends(require_admin)])
+def admin_calendar_save(body: CalendarIn):
+    try:
+        data = tibiacal.parse_calendar(body.raw_html)
+    except tibiacal.CalendarError as e:
+        raise HTTPException(422, str(e))
+    store.save_calendar(data["month"], data, body.raw_html)
+    busy = sum(1 for k, v in data["days"].items() if v and k.startswith(data["month"]))
+    return {"month": data["month"], "events": sorted(data["events"]), "days_with_events": busy}
+
+
+@app.delete("/api/admin/calendar/{month}", dependencies=[Depends(require_admin)])
+def admin_calendar_undo(month: str):
+    if not re.fullmatch(r"\d{4}-\d{2}", month) or not store.delete_calendar_latest(month):
+        raise HTTPException(404, "Nenhum calendário desse mês.")
+    return {"ok": True}
 
 
 @app.get("/api/admin/places", dependencies=[Depends(require_admin)])

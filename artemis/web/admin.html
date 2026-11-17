@@ -109,6 +109,17 @@
       <input id="reportMonth" type="month" style="margin-left:auto">
     </div>
     <div class="card" id="report" style="margin-top:12px"><span class="muted">Carregando…</span></div>
+    <h2>📅 Calendário do Tibia</h2>
+    <div class="card">
+      <div class="muted">No tibia.com, abra <b>News → Event Calendar</b>, clique com o botão direito na caixa <b>Event Schedule</b>
+        → <b>Inspecionar</b>, clique com o direito em <code>&lt;div id="EventSchedule"&gt;</code> → <b>Copiar → Copiar outerHTML</b> e cole aqui.
+        Para o mês seguinte, avance com o » no tibia.com e faça o mesmo. Cada colagem fica guardada; o app mostra a mais nova de cada mês.</div>
+      <textarea id="calHtml" class="report" style="min-height:140px; margin-top:10px" placeholder="&lt;div id=&quot;EventSchedule&quot; class=&quot;Box&quot;&gt; …" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:8px"><button class="primary" id="calSave">Publicar calendário</button><span class="muted" id="calMsg"></span></div>
+      <div class="err" id="calErr"></div>
+      <div id="calMonths" style="margin-top:8px"></div>
+    </div>
+
     <h2>Novo código de acesso</h2>
     <div class="card">
       <form id="createForm" class="row">

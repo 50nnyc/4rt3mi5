@@ -402,6 +402,16 @@ CREATE TABLE IF NOT EXISTS tibia_news (
     listed_at     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_tibia_news_date ON tibia_news(date);
+-- 0.22.1: calendário de eventos do Tibia colado pelo administrador. Cada colagem fica guardada (histórico nosso);
+-- o app mostra só a mais nova de cada mês, já convertida em dados.
+CREATE TABLE IF NOT EXISTS tibia_calendar (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    month       TEXT NOT NULL,                 -- AAAA-MM
+    data_json   TEXT NOT NULL,
+    raw_html    TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_tibia_calendar_month ON tibia_calendar(month, id);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -707,7 +717,7 @@ class Store:
         """Números do mês (AAAA-MM) para o relatório de visitas."""
         like = month + "%"
         c = self._conn
-        one = lambda sql, *p: c.execute(sql, p).fetchone()[0] or 0  # noqa: E731
+        one = lambda sql, *p: (c.execute(sql, p).fetchone() or [0])[0] or 0  # noqa: E731  (mês sem nenhuma linha ainda)
         days = [dict(r) for r in c.execute("SELECT day, views, visitors FROM site_visits WHERE day LIKE ? ORDER BY day", (like,))]
         logins = {r["client"]: r["n"] for r in c.execute(
             "SELECT client, COUNT(DISTINCT key) AS n FROM key_logins WHERE at LIKE ? GROUP BY client", (like,))}
@@ -1402,6 +1412,34 @@ class Store:
         rows = self._conn.execute(f"SELECT {self._TN_COLS}, content_html IS NOT NULL AS saved FROM tibia_news "
                                   f"WHERE {cond} ORDER BY date DESC, id DESC LIMIT ?", (*args, limit))
         return [dict(r) for r in rows], total
+
+    # ------------------------------------------------------------------ 📅 calendário do Tibia (0.22.1)
+    def save_calendar(self, month: str, data: dict, raw_html: str) -> int:
+        with self._lock:
+            cur = self._conn.execute("INSERT INTO tibia_calendar (month, data_json, raw_html, created_at) VALUES (?, ?, ?, ?)",
+                                     (month, json.dumps(data, ensure_ascii=False), raw_html, _iso(utcnow())))
+            self._conn.commit()
+            return cur.lastrowid
+
+    def calendar(self, month: str) -> dict | None:
+        """A colagem mais nova daquele mês (é a que o app mostra)."""
+        row = self._conn.execute("SELECT data_json, created_at FROM tibia_calendar WHERE month = ? ORDER BY id DESC LIMIT 1",
+                                 (month,)).fetchone()
+        return {**json.loads(row[0]), "updated_at": row[1]} if row else None
+
+    def calendar_months(self) -> list[dict]:
+        return [{"month": r[0], "versions": r[1], "updated_at": r[2]} for r in self._conn.execute(
+            "SELECT month, COUNT(*), MAX(created_at) FROM tibia_calendar GROUP BY month ORDER BY month DESC")]
+
+    def delete_calendar_latest(self, month: str) -> bool:
+        """Desfaz a última colagem do mês (volta a valer a anterior, se houver)."""
+        with self._lock:
+            row = self._conn.execute("SELECT MAX(id) FROM tibia_calendar WHERE month = ?", (month,)).fetchone()
+            if not row or row[0] is None:
+                return False
+            self._conn.execute("DELETE FROM tibia_calendar WHERE id = ?", (row[0],))
+            self._conn.commit()
+            return True
 
     # ------------------------------------------------------------------ 🥇 ranking entre amigos (opcional)
     def ranking_join(self, name: str, join: bool) -> None:
