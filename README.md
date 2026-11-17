@@ -189,7 +189,8 @@ não veem o item.
   fica no banco só como hash e expira depois de 90 dias parada.
 - Senha errada mostra "Senha incorreta, tente novamente." Na 30ª senha errada, o IP fica bloqueado por 30 minutos
   (`LOGIN_FAIL_LIMIT` e `LOGIN_BLOCK` em `app.py`). O contador fica na memória e zera quando o servidor reinicia.
-- **Primeiro acesso da conta:** gerar a chave grátis (uma vez por conta; ela já fica ligada à conta) ou **Já tenho um código**. Depois de verificar o personagem, a chave fica ligada à conta
+- **Primeiro acesso da conta:** gerar a chave grátis (uma vez por conta; ela já fica ligada à conta) ou
+  **Já tenho um código**. Depois de verificar o personagem, a chave fica ligada à conta
   (`POST /api/account/link`). Em outro aparelho, basta conta e senha para cair direto na escolha do personagem.
 - Quem já usava o app com código neste aparelho tem a chave ligada à conta sozinha, no primeiro login.
 - **Código errado:** a tela pergunta "Tem certeza que possui um código de acesso?". **Sim** pede o WhatsApp.
@@ -208,6 +209,22 @@ não veem o item.
 - Toda chave nova nasce com **7 dias** (`NEW_KEY_DAYS` em `app.py`), pelo painel ou pela loja. O painel continua
   podendo renovar por 7/15/30 dias.
 - O item de renovação grátis só aparece quando faltam **menos de 3 dias** e a chave tem personagem verificado.
+
+## Sem conta e conta de visitante (0.22.3)
+
+- **Sem conta:** a tela de entrada mostra, abaixo de Entrar / Criar uma conta, o **Lootsplit** (`POST /api/public/lootsplit`,
+  só calcula e devolve; nada vai para o banco) e as **2 notícias mais novas** do tibia.com (`GET /api/public/news`,
+  `PUBLIC_NEWS` em `app.py`), cada um com o convite para criar a conta grátis.
+- **Conta de visitante (só visualização):** abre todas as telas, mas o servidor recusa qualquer envio ou alteração
+  (middleware `guest_readonly`, chave com `readonly = 1`). Ficam liberados só entrar/sair, as contas que apenas
+  calculam (`/api/lootsplit/preview`, `/api/public/lootsplit`) e o contato. O personagem informado só abre as telas:
+  ele não entra em "Meus personagens" do visitante, então nada que é só do dono aparece. Criar ou trocar a senha:
+
+  ```powershell
+  docker compose exec server python -m artemis.server guest CONTA "SENHA" --char "Personagem"
+  ```
+
+  O comando recusa nome de conta que já é de um jogador. Rodar de novo troca a senha e encerra as sessões abertas.
 
 ## Música
 

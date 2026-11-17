@@ -4,6 +4,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
+import re
 import secrets
 import sqlite3
 import threading
@@ -20,6 +22,15 @@ _PH = PasswordHasher()  # Argon2id com os parâmetros recomendados pela bibliote
 _DUMMY_HASH = "argon2p$" + _PH.hash(secrets.token_hex(16))
 
 MAX_KEY_DAYS = 30
+
+BASE_PLAYER_TYPES = ("hardcore", "comum", "novato")
+_TYPE_RE = re.compile(r"[a-z][a-z_]{2,19}")
+
+
+def extra_player_types() -> tuple[str, ...]:
+    """Tipos de player extras, ligados no .env (ARTEMIS_EXTRA_PLAYER_TYPES)."""
+    raw = os.environ.get("ARTEMIS_EXTRA_PLAYER_TYPES", "")
+    return tuple(t for t in (x.strip() for x in raw.split(",")) if _TYPE_RE.fullmatch(t) and t not in BASE_PLAYER_TYPES)
 
 
 def hash_token(token: str) -> str:
@@ -506,6 +517,8 @@ class Store:
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN trusted INTEGER NOT NULL DEFAULT 0")
         if "lifetime" not in cols:  # 0.13.0: "amigo do adm" (código que nunca vence)
             self._conn.execute("ALTER TABLE access_keys ADD COLUMN lifetime INTEGER NOT NULL DEFAULT 0")
+        if "readonly" not in cols:  # 0.22.3: conta de visitante (vê tudo, não envia nem altera nada)
+            self._conn.execute("ALTER TABLE access_keys ADD COLUMN readonly INTEGER NOT NULL DEFAULT 0")
         for table in ("hunts", "solo_sessions"):  # 0.5.0: quem enviou (só ele pode apagar)
             if "uploader_key" not in {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}:
                 self._conn.execute(f"ALTER TABLE {table} ADD COLUMN uploader_key TEXT")
@@ -967,6 +980,46 @@ class Store:
                                (key, int(store_claim), account_id))
             self._conn.commit()
         return True
+
+    # ------------------------------------------------------------------ 0.22.3: conta de visitante (só visualização)
+    GUEST_LABEL = "Visitante (só visualização)"
+
+    def setup_guest(self, username: str, password: str, main_char: str, player_type: str = "hardcore") -> dict:
+        """Cria (ou atualiza a senha de) uma conta de visitante: a chave dela é só de leitura e não vence.
+        O personagem serve só para abrir as telas; ele NÃO entra em key_chars, então continua sendo de quem o
+        verificou, e o visitante não vê nada que seja só do dono. Recusa conta de outra pessoa com o mesmo nome."""
+        acc = self.account_by_name(username)
+        if acc is not None:
+            k = self.get_key(acc["access_key"]) if acc["access_key"] else None
+            if k is not None and not k.get("readonly"):
+                raise ValueError(f"A conta {acc['username']} já existe e é de um jogador. Escolha outro nome.")
+        else:
+            acc = self.create_account(username, password)
+        self.set_password(acc["id"], password)  # também encerra as sessões abertas dessa conta
+        key = acc["access_key"] if acc["access_key"] and self.get_key(acc["access_key"]) else None
+        now = _iso(utcnow())
+        with self._lock:
+            if key is None:
+                key = self.create_key(1, self.GUEST_LABEL)["key"]
+                self._conn.execute("UPDATE accounts SET access_key = ?, store_claimed = 1 WHERE id = ?", (key, acc["id"]))
+            self._conn.execute("UPDATE access_keys SET readonly = 1, lifetime = 1, trusted = 1, main_char = ?, label = ? "
+                               "WHERE key = ?", (main_char, self.GUEST_LABEL, key))
+            self._conn.execute("INSERT OR REPLACE INTO player_prefs VALUES (?, ?, ?)", (key, player_type, now))
+            self._conn.commit()
+        return {"username": acc["username"], "key": key, "main_char": main_char}
+
+    def key_readonly(self, key: str) -> bool:
+        row = self._conn.execute("SELECT readonly FROM access_keys WHERE key = ?", (normalize_key(key or ""),)).fetchone()
+        return bool(row and row[0])
+
+    def account_token_readonly(self, token: str) -> bool:
+        """A sessão de conta é de um visitante (sem atualizar o "visto por último")."""
+        if not token:
+            return False
+        row = self._conn.execute(
+            "SELECT k.readonly FROM account_sessions s JOIN accounts a ON a.id = s.account_id "
+            "JOIN access_keys k ON k.key = a.access_key WHERE s.token = ?", (hash_token(token),)).fetchone()
+        return bool(row and row[0])
 
     def add_recovery(self, account: dict | None, whatsapp: str, reason: str, character: str | None,
                      username: str = "") -> int:
@@ -1750,12 +1803,15 @@ class Store:
             return cur.rowcount > 0
 
     # ------------------------------------------------------------------ 0.20.0: tipo de player
-    PLAYER_TYPES = ("hardcore", "comum", "novato", "tipo_extra")
     DEFAULT_PLAYER_TYPE = "comum"
+
+    @staticmethod
+    def player_types() -> tuple[str, ...]:
+        return BASE_PLAYER_TYPES + extra_player_types()
 
     def player_type(self, key: str) -> str:
         row = self._conn.execute("SELECT player_type FROM player_prefs WHERE key = ?", (key,)).fetchone()
-        return row[0] if row and row[0] in self.PLAYER_TYPES else self.DEFAULT_PLAYER_TYPE
+        return row[0] if row and row[0] in self.player_types() else self.DEFAULT_PLAYER_TYPE
 
     def player_type_chosen(self, key: str) -> bool:
         """A pessoa já respondeu "Você se considera um:" (na criação da conta ou depois)."""
@@ -1770,7 +1826,7 @@ class Store:
         return cur.rowcount > 0
 
     def set_player_type(self, key: str, player_type: str) -> str:
-        if player_type not in self.PLAYER_TYPES:
+        if player_type not in self.player_types():
             raise ValueError("Tipo de player inválido.")
         with self._lock:
             self._conn.execute("INSERT OR REPLACE INTO player_prefs VALUES (?, ?, ?)", (key, player_type, _iso(utcnow())))

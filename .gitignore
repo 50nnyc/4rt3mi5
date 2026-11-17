@@ -9,6 +9,7 @@ dist/
 /data/
 /demo-data/
 /video/
+/fansite/
 .env
 .env.*
 !.env.example

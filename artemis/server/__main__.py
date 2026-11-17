@@ -4,6 +4,7 @@
     python -m artemis.server keys create --days 30 --label "Atx Buubo"
     python -m artemis.server keys list
     python -m artemis.server keys revoke ART-XXXX-XXXX
+    python -m artemis.server guest CONTA SENHA --char "Nome"   conta de visitante (só visualização)
     python -m artemis.server hunts delete 12
     python -m artemis.server stacker delete 7
 """
@@ -34,6 +35,10 @@ def main(argv: list[str] | None = None) -> None:
     rs = keys.add_parser("reset", help="desvincular dono (personagens e aparelhos)")
     rs.add_argument("key")
     sub.add_parser("admin-token", help="mostrar a senha do painel de administração")
+    g = sub.add_parser("guest", help="criar/atualizar a conta de visitante (só visualização)")
+    g.add_argument("username")
+    g.add_argument("password")
+    g.add_argument("--char", required=True, help="personagem que abre as telas (não passa a ser do visitante)")
     for name in ("hunts", "stacker"):
         d = sub.add_parser(name).add_subparsers(dest="action", required=True).add_parser("delete")
         d.add_argument("id", type=int)
@@ -71,6 +76,16 @@ def main(argv: list[str] | None = None) -> None:
     if args.cmd == "admin-token":
         print(f"Painel: http://localhost:{CONFIG['port']}/admin")
         print(f"Senha:  {CONFIG['admin_token']}")
+        return
+    if args.cmd == "guest":
+        from .app import PASSWORD_RE, USERNAME_RE
+        if not USERNAME_RE.fullmatch(args.username) or not PASSWORD_RE.fullmatch(args.password):
+            sys.exit("Conta: 3 a 20 letras/números. Senha: 6 a 64 caracteres (letras, números e _ ! @ -).")
+        try:
+            g = store.setup_guest(args.username, args.password, args.char)
+        except ValueError as e:
+            sys.exit(str(e))
+        print(f"Conta de visitante pronta: {g['username']} (só visualização; personagem das telas: {g['main_char']}).")
         return
     if args.cmd == "hunts":
         print("Hunt apagada." if store.delete_hunt(args.id) else "Hunt não encontrada.")

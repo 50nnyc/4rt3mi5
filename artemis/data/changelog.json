@@ -1,6 +1,82 @@
 {
   "releases": [
     {
+      "version": "0.22.3",
+      "date": "2026-11-17",
+      "title": "Lootsplit sem conta e créditos completos",
+      "changes": [
+        "🆓 Sem conta: a tela de entrada já tem o Lootsplit. Cole o Party Hunt Analyser e veja na hora quem transfere para quem, com os comandos e a mensagem prontos para copiar no Tibia. Nada fica salvo.",
+        "📰 Sem conta também dá para ler as 2 notícias mais novas do Tibia. Quer mais notícias no seu idioma, tudo salvo e análises de hunt a hunt? Crie sua conta: é totalmente gratuito.",
+        "👁️ Conta de visitante: vê todas as telas do app, mas não envia, não salva e não altera nada.",
+        "📚 Créditos: entrou a TibiaWiki (tibia.fandom.com), de onde vêm os bosses e o loot (licença CC BY-SA), e o TibiaData aparece como fonte das notícias do tibia.com nos Créditos e em todas as telas de notícias."
+      ],
+      "tr": {
+        "en": {
+          "title": "Lootsplit without an account and complete credits",
+          "changes": [
+            "🆓 No account needed: the login screen now has the Lootsplit. Paste the Party Hunt Analyser and instantly see who transfers to whom, with the commands and the message ready to copy into Tibia. Nothing is saved.",
+            "📰 Without an account you can also read the 2 newest Tibia news. Want more news in your language, everything saved and hunt-by-hunt analysis? Create your account: it's completely free.",
+            "👁️ Guest account: sees every screen of the app, but cannot send, save or change anything.",
+            "📚 Credits: TibiaWiki (tibia.fandom.com) was added as the source of the bosses and their loot (CC BY-SA licence), and TibiaData is shown as the source of the tibia.com news in the Credits and on every news screen."
+          ]
+        },
+        "es": {
+          "title": "Lootsplit sin cuenta y créditos completos",
+          "changes": [
+            "🆓 Sin cuenta: la pantalla de entrada ya tiene el Lootsplit. Pega el Party Hunt Analyser y ve al instante quién transfiere a quién, con los comandos y el mensaje listos para copiar en Tibia. No se guarda nada.",
+            "📰 Sin cuenta también puedes leer las 2 noticias más recientes de Tibia. ¿Quieres más noticias en tu idioma, todo guardado y análisis hunt por hunt? Crea tu cuenta: es totalmente gratis.",
+            "👁️ Cuenta de invitado: ve todas las pantallas de la app, pero no envía, no guarda ni cambia nada.",
+            "📚 Créditos: se añadió la TibiaWiki (tibia.fandom.com), de donde vienen los bosses y su loot (licencia CC BY-SA), y TibiaData aparece como fuente de las noticias de tibia.com en los Créditos y en todas las pantallas de noticias."
+          ]
+        },
+        "ja": {
+          "title": "アカウント不要のLootsplitとクレジットの充実",
+          "changes": [
+            "🆓 アカウント不要：ログイン画面でLootsplitが使えるようになりました。Party Hunt Analyserを貼り付けると、誰が誰に送金するかがすぐに分かり、コマンドとメッセージをそのままTibiaにコピーできます。何も保存されません。",
+            "📰 アカウントがなくても、最新のTibiaニュースを2件読めます。もっと多くのニュースをあなたの言語で読み、すべてを保存し、ハントごとに分析したいですか？アカウントを作成しましょう。完全無料です。",
+            "👁️ ゲストアカウント：アプリのすべての画面を見られますが、送信・保存・変更は一切できません。",
+            "📚 クレジット：ボスとそのルートの出典としてTibiaWiki（tibia.fandom.com、CC BY-SAライセンス）を追加し、tibia.comのニュースの出典としてTibiaDataをクレジットとすべてのニュース画面に表示するようにしました。"
+          ]
+        },
+        "de": {
+          "title": "Lootsplit ohne Konto und vollständige Credits",
+          "changes": [
+            "🆓 Ohne Konto: Der Anmeldebildschirm hat jetzt den Lootsplit. Füge den Party Hunt Analyser ein und sieh sofort, wer wem überweist, mit den Befehlen und der Nachricht zum Kopieren in Tibia. Nichts wird gespeichert.",
+            "📰 Ohne Konto kannst du auch die 2 neuesten Tibia-News lesen. Mehr News in deiner Sprache, alles gespeichert und Auswertungen Hunt für Hunt? Erstelle dein Konto: Es ist völlig kostenlos.",
+            "👁️ Gastkonto: sieht alle Seiten der App, kann aber nichts senden, speichern oder ändern.",
+            "📚 Credits: Das TibiaWiki (tibia.fandom.com) ist als Quelle der Bosse und ihres Loots hinzugekommen (Lizenz CC BY-SA), und TibiaData erscheint als Quelle der tibia.com-News in den Credits und auf allen News-Seiten."
+          ]
+        },
+        "pl": {
+          "title": "Lootsplit bez konta i pełne podziękowania",
+          "changes": [
+            "🆓 Bez konta: ekran logowania ma teraz Lootsplit. Wklej Party Hunt Analyser i od razu zobacz, kto komu przelewa, z komendami i wiadomością gotowymi do skopiowania do Tibii. Nic nie jest zapisywane.",
+            "📰 Bez konta możesz też przeczytać 2 najnowsze wiadomości z Tibii. Chcesz więcej wiadomości w swoim języku, wszystko zapisane i analizę hunt po huncie? Załóż konto: to całkowicie za darmo.",
+            "👁️ Konto gościa: widzi wszystkie ekrany aplikacji, ale nie może niczego wysyłać, zapisywać ani zmieniać.",
+            "📚 Podziękowania: dodano TibiaWiki (tibia.fandom.com) jako źródło bossów i ich lootu (licencja CC BY-SA), a TibiaData jest podane jako źródło wiadomości z tibia.com w Podziękowaniach i na wszystkich ekranach z wiadomościami."
+          ]
+        },
+        "fr": {
+          "title": "Lootsplit sans compte et crédits complets",
+          "changes": [
+            "🆓 Sans compte : l'écran de connexion propose maintenant le Lootsplit. Collez le Party Hunt Analyser et voyez tout de suite qui transfère à qui, avec les commandes et le message prêts à copier dans Tibia. Rien n'est enregistré.",
+            "📰 Sans compte, vous pouvez aussi lire les 2 dernières actualités de Tibia. Vous voulez plus d'actualités dans votre langue, tout enregistré et une analyse hunt par hunt ? Créez votre compte : c'est entièrement gratuit.",
+            "👁️ Compte invité : voit tous les écrans de l'application, mais ne peut rien envoyer, enregistrer ni modifier.",
+            "📚 Crédits : le TibiaWiki (tibia.fandom.com) a été ajouté comme source des boss et de leur loot (licence CC BY-SA), et TibiaData apparaît comme source des actualités de tibia.com dans les Crédits et sur tous les écrans d'actualités."
+          ]
+        },
+        "ru": {
+          "title": "Lootsplit без аккаунта и полные благодарности",
+          "changes": [
+            "🆓 Без аккаунта: на экране входа теперь есть Lootsplit. Вставьте Party Hunt Analyser и сразу увидите, кто кому переводит, с командами и сообщением, готовыми к копированию в Tibia. Ничего не сохраняется.",
+            "📰 Без аккаунта можно также прочитать 2 самые свежие новости Tibia. Хотите больше новостей на своём языке, сохранение всего и анализ каждой охоты? Создайте аккаунт: это совершенно бесплатно.",
+            "👁️ Гостевой аккаунт: видит все экраны приложения, но не может ничего отправлять, сохранять или изменять.",
+            "📚 Благодарности: добавлена TibiaWiki (tibia.fandom.com) как источник боссов и их лута (лицензия CC BY-SA), а TibiaData указан как источник новостей tibia.com в Благодарностях и на всех экранах новостей."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.22.2",
       "date": "2026-11-17",
       "title": "Menu em galhos e notícias no seu idioma",

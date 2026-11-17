@@ -29,6 +29,7 @@ from artemis.server.db import _iso  # noqa: E402
 
 random.seed(7)
 ME = "Atx Buubo"
+DEMO_USER, DEMO_PASSWORD = "demo", "demo-artemis-2026"  # só no banco de demonstração (apagado a cada início)
 PARTY = {"Atx Buubo": "Elite Knight", "Hilay": "Royal Paladin", "Jioe": "Elder Druid",
          "Vcte": "Master Sorcerer", "Kael Monge": "Exalted Monk"}
 
@@ -82,6 +83,9 @@ def seed() -> str:
     store._conn.execute("UPDATE access_keys SET key = ?", (key,))
     store._conn.commit()
     store.force_main(key, ME)
+    # 0.16.0+: o app entra por conta; conta de teste ligada à chave (só existe neste banco de demonstração)
+    acc = store.create_account(DEMO_USER, DEMO_PASSWORD)
+    store.link_account_key(acc["id"], key)
     for alt in ("Hilay",):
         store._conn.execute("INSERT OR REPLACE INTO key_chars VALUES (?, ?, ?, ?)", (key, alt.lower(), alt, _iso(datetime.now(timezone.utc))))
     store._conn.commit()
@@ -154,5 +158,5 @@ if __name__ == "__main__":
 
     access = seed()
     print("\n  4rt3mi5 DEMO  ->  http://localhost:8765")
-    print(f"  Código de acesso de teste: {access}   |   nick: {ME}\n")
+    print(f"  Código de acesso de teste: {access}   |   nick: {ME}   |   conta: {DEMO_USER} / {DEMO_PASSWORD}\n")
     uvicorn.run(server.app, host="127.0.0.1", port=8765, server_header=False, log_level="warning")

@@ -102,6 +102,17 @@
   .card.store ul { margin: 0; padding-left: 18px; font-size: 14px; }
   .storeTag { position: absolute; top: -10px; left: 14px; background: var(--green); color: #0b0d12; font: 800 11px/1 system-ui;
               letter-spacing: .1em; padding: 5px 8px; border-radius: 6px; }
+  /* 0.22.3: sem conta — Lootsplit (sem salvar) e 2 notícias, abaixo de Entrar / Criar uma conta */
+  #loginScreen { flex-direction: column; justify-content: flex-start; padding-top: 6vh; }
+  .guest { width: 100%; max-width: 640px; margin: 26px auto 0; text-align: left; }
+  .guest > h2 { text-align: center; margin: 0 0 4px; }
+  .guest > .lead { text-align: center; margin: 0 0 14px; }
+  .guest .card { margin-top: 0; }
+  .cta { border-color: rgba(242,201,76,.45); background: linear-gradient(180deg, rgba(242,201,76,.07), transparent 70%), var(--card); }
+  .cta p { margin: 0 0 6px; line-height: 1.5; }
+  .cta .btn { margin-top: 10px; }
+  .readonlyBar { background: var(--card2); border-bottom: 1px solid var(--line);
+                 padding: 8px 16px; font-size: 13px; text-align: center; color: var(--muted); }
 
   /* ---------- app ---------- */
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
@@ -672,6 +683,31 @@
     <div class="hint hidden" id="serverLine"></div>
     <div class="langs compact" id="loginLang" aria-label="Idioma"></div>
   </div>
+  <!-- 0.22.3: sem conta. O Lootsplit só calcula (nada vai para o banco) e dá para ler as 2 notícias mais novas. -->
+  <div class="guest" id="guestArea">
+    <h2>Sem conta</h2>
+    <p class="muted lead">Use o Lootsplit agora mesmo. Nada fica salvo.</p>
+    <div class="card">
+      <h3 style="margin:0 0 6px">💰 Lootsplit</h3>
+      <label class="muted" for="guestLootText">Cole aqui o Party Hunt Analyser</label>
+      <textarea id="guestLootText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Loot Type: Leader&#10;..."></textarea>
+      <button class="btn2 paste-btn" data-paste-into="guestLootText" data-paste-err="guestLootErr" type="button">📋 Colar da área de transferência</button>
+      <button class="btn" id="guestLootBtn" type="button">Calcular</button>
+      <div class="err" id="guestLootErr"></div>
+    </div>
+    <div id="guestLootResult"></div>
+    <div class="card cta">
+      <p><b>Quer deixar tudo salvo? Fazer análises de hunt a hunt? Ver o que melhorou, o que piorou, quanto profitou por semana, mês, trimestre, semestre e ano?</b></p>
+      <p>Crie sua conta aqui!! Totalmente gratuito.</p>
+      <button class="btn" type="button" data-go-register>Criar minha conta</button>
+    </div>
+    <h2 style="margin-top:22px">📰 Novidades do Tibia</h2>
+    <div id="guestNews"></div>
+    <div class="card cta">
+      <p>Se quiser ver mais notícias traduzidas no seu idioma, crie sua conta aqui! É totalmente gratuito.</p>
+      <button class="btn" type="button" data-go-register>Criar minha conta</button>
+    </div>
+  </div>
 </section>
 
 <!-- 0.17.0: a conta tem chave, mas ela venceu: renova grátis e volta de onde parou -->
@@ -693,7 +729,7 @@
   </div>
 </section>
 
-<!-- 1º acesso da conta: gerar a chave (grátis) ou digitar o código que já tem -->
+<!-- 1º acesso da conta: gerar a chave grátis ou digitar o código que já tem -->
 <section id="keyScreen" class="gate hidden">
   <div class="box" style="max-width:460px">
     <div class="logo">4rt3mi5</div>
@@ -783,6 +819,7 @@
     <span id="soundSlot"></span>
     <button class="gearbtn" id="gearBtn" type="button" aria-label="Configurações" title="Configurações">⚙️</button>
   </header>
+  <div class="readonlyBar hidden" id="readonlyBar" role="note">👁️ Conta de visitante: só visualização. Nada pode ser enviado, salvo ou alterado.</div>
   <div class="scrim" id="scrim"></div>
   <nav class="drawer" id="drawer" aria-label="Menu">
     <div class="me"><span class="avatar" id="drawerAvatar" aria-hidden="true"></span>
@@ -867,6 +904,7 @@
       </div>
       <div id="bossAsk"></div>
       <div id="bossResult"></div>
+      <div class="credit">📚 Lista de bosses e loot: <a href="https://tibia.fandom.com/" target="_blank" rel="noopener">TibiaWiki (tibia.fandom.com)</a>, licença CC BY-SA</div>
     </div>
 
     <div id="pageHunts" class="hidden">
@@ -1060,10 +1098,13 @@
       <dd>O logo do Tibia e a arte das vocações vêm do Fankit oficial da CipSoft.</dd>
       <dt><a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></dt>
       <dd>Imagens de itens, criaturas e NPCs, preços de NPC, raridade dos itens e as informações das hunts.</dd>
+      <dt><a href="https://tibia.fandom.com/" target="_blank" rel="noopener">TibiaWiki (tibia.fandom.com)</a></dt>
+      <dd>Lista de bosses e o loot de cada um, sob a licença <a href="https://creativecommons.org/licenses/by-sa/3.0/" target="_blank" rel="noopener">CC BY-SA</a>.</dd>
       <dt><a href="https://tibiamaps.io/" target="_blank" rel="noopener">TibiaMaps.io</a></dt>
       <dd>O mapa que aparece ao ver onde fica um NPC.</dd>
       <dt><a href="https://tibiadata.com/" target="_blank" rel="noopener">TibiaData</a></dt>
       <dd>Dados dos personagens: level, vocação, mundo e highscore.</dd>
+      <dd>Notícias do tibia.com (Latest News e News Archive), que continuam com copyright da CipSoft.</dd>
     </dl>
     <p class="muted">O 4rt3mi5 é um projeto de fã, sem vínculo com a CipSoft ou com esses sites.</p>
   </div>

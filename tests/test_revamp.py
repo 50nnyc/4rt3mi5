@@ -140,7 +140,9 @@ class RevampServerTests(unittest.TestCase):
         # tipo extra: fora da lista e recusado, até ser ligado no servidor
         self.assertEqual(self.client.post("/api/prefs/player-type", json={"player_type": "tipo_extra"}, headers=h).status_code, 422)
         with mock.patch.dict("os.environ", {"ARTEMIS_EXTRA_PLAYER_TYPES": "tipo_extra"}):
-            self.assertIn("tipo_extra", self.client.get("/api/me", headers=h).json()["player_types"])
+            me = self.client.get("/api/me", headers=h).json()
+            self.assertIn("tipo_extra", me["player_types"])
+            self.assertIn("tipo_extra", me["hardcore_types"])  # tipo extra conta como Hardcore
             self.assertEqual(self.client.post("/api/prefs/player-type", json={"player_type": "tipo_extra"}, headers=h).status_code, 200)
 
     def test_db_survives_parallel_requests(self):

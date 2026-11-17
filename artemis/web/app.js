@@ -154,9 +154,59 @@ function showLogin(mode = "") {
   $("#resetBox").classList.add("hidden"); $("#forgotBox").innerHTML = "";
   $("#forgotBtn").classList.remove("hidden"); $("#haveResetBtn").classList.add("hidden");
   if (mode) setTimeout(() => $(mode === "login" ? "#loginUser" : "#regUser").focus(), 50);
+  loadGuestNews();  // 0.22.3: as 2 notícias de quem ainda não tem conta
 }
 $("#showLogin").addEventListener("click", () => showLogin("login"));
 $("#showRegister").addEventListener("click", () => showLogin("register"));
+
+/* ---------- 0.22.3: sem conta — Lootsplit (só calcula; nada fica salvo) e as 2 notícias mais novas ---------- */
+async function publicFetch(method, path, body) {
+  const res = await timedFetch(S.api + path, {
+    method, headers: { ...NGROK, ...(body ? { "Content-Type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  }, 30000).catch(() => null);
+  if (!res) throw new ApiError("Sem conexão com o servidor.", 0);
+  const data = await res.json().catch(() => ({}));
+  const d = data.detail;
+  if (!res.ok) throw new ApiError(typeof d === "object" && d ? d.message : (d || `Erro ${res.status}`), res.status);
+  return data;
+}
+$("#guestLootBtn").addEventListener("click", async () => {
+  const raw = $("#guestLootText").value.trim(), err = $("#guestLootErr"), out = $("#guestLootResult");
+  if (!raw) { err.textContent = "Cole o Party Hunt Analyser primeiro."; return; }
+  const btn = $("#guestLootBtn"); btn.disabled = true; err.textContent = ""; out.innerHTML = "";
+  try {
+    const h = await publicFetch("POST", "/api/public/lootsplit", { raw_text: raw });
+    out.innerHTML = `${quickTransfers(h)}${partyMessages(h)}<h2>Detalhes</h2>${huntCard(h, "", "Resultado")}`;
+    countUp(out);
+    out.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+  } catch (e) {
+    err.textContent = e.message;
+  } finally { btn.disabled = false; }
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("[data-go-register]")) return;
+  e.preventDefault();
+  showLogin("register");
+  window.scrollTo({ top: 0, behavior: reduceMotion() ? "auto" : "smooth" });
+});
+let guestNewsLang = null;
+async function loadGuestNews() {
+  if (guestNewsLang === I18N.lang) return;
+  const el = $("#guestNews");
+  guestNewsLang = I18N.lang;
+  el.innerHTML = skeleton("list");
+  try {
+    const d = await publicFetch("GET", "/api/public/news?lang=" + encodeURIComponent(I18N.lang));
+    el.innerHTML = d.news.length
+      ? d.news.map((n) => tnCard(n)).join("") + `<p class="hint">${TN_CREDIT}</p>`
+      : `<div class="card muted">As notícias ainda estão sendo buscadas pela primeira vez. Volte em alguns minutos.</div>`;
+  } catch {
+    guestNewsLang = null;
+    el.innerHTML = `<div class="card muted">Não consegui carregar as notícias agora. Tente de novo mais tarde.</div>`;
+  }
+}
+I18N.onChange(() => { if (!$("#loginScreen").classList.contains("hidden")) loadGuestNews(); });
 
 /* ---------- download do app para Windows ----------
    0.21.0: só por dentro (☰ → 💻 App para Windows), nunca na tela de entrada nem no Início, e com o aviso
@@ -356,7 +406,7 @@ async function showFirstAccess(msg = "") {
   $("#storeFree").classList.remove("hidden");
   try {
     const s = await (await timedFetch(S.api + "/api/store", { headers: NGROK })).json();
-    $("#storeFree").classList.toggle("hidden", !s.free || !!S.storeClaimed);
+   $("#storeFree").classList.toggle("hidden", !s.free || !!S.storeClaimed);
     if (S.storeClaimed) $("#storeErr").textContent = "Sua conta já gerou a chave gratuita. Se perdeu o acesso, use \"Já tenho um código\".";
     else if (!s.free) $("#storeErr").textContent = "A chave gratuita está pausada no momento. Peça um código para quem te indicou o 4rt3mi5.";
   } catch { $("#storeErr").textContent = "Sem conexão com o servidor."; }
@@ -816,6 +866,7 @@ function openApp(landing = "home") {
   $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
   updateDrawerFoot();
   $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = ""; $("#bossResult").innerHTML = ""; $("#bossAsk").innerHTML = "";
+  $("#readonlyBar").classList.toggle("hidden", !(S.me && S.me.readonly));  // 0.22.3: conta de visitante
   showOnly("app");
   S.navStack = [];
   S.page = null;
@@ -900,7 +951,7 @@ const PTYPE_INFO = {
   novato: "🌱 O app só salva, sem perguntas. Quando quiser, toque em \"hunt sem local\" para dizer onde foi.",
 };
 const ptype = () => (S.me && S.me.player_type) || "comum";
-const isHardcore = (t = ptype()) => t === "hardcore" || t === "tipo_extra";
+const isHardcore = (t = ptype()) => ((S.me && S.me.hardcore_types) || ["hardcore"]).includes(t);
 const canShare = (t = ptype()) => t !== "novato";
 const ptypeList = () => (S.me && S.me.player_types) || ["hardcore", "comum", "novato"];
 function ptypeInfo(t) {
@@ -1371,10 +1422,13 @@ const tnSource = (n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener n
   + (n.translated ? ` <span class="hint" style="margin:0 0 0 6px">🌐 tradução automática</span>` : "");
 function tnStatus(d) {
   const when = d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  // 0.22.3: o crédito (CipSoft e TibiaData) aparece sempre, com ou sem a fonte no ar
+  const credit = `<div class="hint" style="margin:0 0 10px">${when && !d.offline ? `Atualizado em ${esc(when)} · ` : ""}${TN_CREDIT}</div>`;
   return d.offline
-    ? `<div class="banner bad" style="margin-bottom:10px">📴 A fonte das notícias está fora do ar ou em manutenção. Você está vendo o que já estava guardado${when ? ` (atualizado em ${esc(when)})` : ""}. As novas aparecem sozinhas quando ela voltar.</div>`
-    : when ? `<div class="hint" style="margin:0 0 10px">Atualizado em ${esc(when)} · conteúdo do tibia.com © CipSoft GmbH, trazido pelo TibiaData</div>` : "";
+    ? `<div class="banner bad" style="margin-bottom:10px">📴 A fonte das notícias está fora do ar ou em manutenção. Você está vendo o que já estava guardado${when ? ` (atualizado em ${esc(when)})` : ""}. As novas aparecem sozinhas quando ela voltar.</div>${credit}`
+    : credit;
 }
+const TN_CREDIT = `conteúdo do tibia.com © CipSoft GmbH, trazido pelo <a href="https://tibiadata.com/" target="_blank" rel="noopener">TibiaData</a>`;
 function tnBody(n) {
   return n.content_html != null ? `<div class="tn-body" data-i18n-skip>${n.content_html}</div>`
     : `<p class="muted">O texto desta notícia ainda não foi guardado e a fonte não respondeu agora. ${tnSource(n)}</p>`;
@@ -1522,7 +1576,8 @@ function headlineCard(n) {
     <div class="row" style="align-items:flex-start"><span class="muted" style="font-size:13px">📰 Novidades do Tibia · ${esc(tnDate(n.date))}</span>${tnTags(n)}</div>
     <b data-i18n-skip style="display:block; font-size:18px; margin-top:4px">${esc(n.title)}</b>
     <div class="home-news-body">${tnBody(n)}</div>
-    <div class="row" style="margin-top:6px"><button class="link" data-page-link="tnews">Ver todas as novidades →</button>${n.translated ? `<span class="hint" style="margin:0">🌐 tradução automática</span>` : ""}</div></article>`;
+    <div class="row" style="margin-top:6px"><button class="link" data-page-link="tnews">Ver todas as novidades →</button>${n.translated ? `<span class="hint" style="margin:0">🌐 tradução automática</span>` : ""}</div>
+    <div class="hint" style="margin:4px 0 0">${TN_CREDIT}</div></article>`;
 }
 async function loadHome() {
   const el = $("#pageHome");
@@ -3144,6 +3199,7 @@ function vocLegend() {
 }
 /** Busca a vocação de quem ainda não conhecemos. true = descobriu alguma (vale redesenhar). */
 async function ensureVocations(names) {
+  if (!S.token) return false;  // 0.22.3: sem conta (Lootsplit da tela de entrada) não consulta vocações
   if (S.char && S.nick) S.voc[nk(S.nick)] = S.char.vocation;
   const want = new Map();
   names.forEach((n) => { if (!(nk(n) in S.voc)) want.set(nk(n), n); });

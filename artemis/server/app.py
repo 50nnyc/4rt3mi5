@@ -50,7 +50,7 @@ from artemis.core import translate as translate_core
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from . import mailer
-from .db import Store, name_key, normalize_key
+from .db import BASE_PLAYER_TYPES, Store, extra_player_types, name_key, normalize_key
 
 INVALID_KEY = "Chave de acesso inválida, envie mensagem ao criador."
 DEVICE_NOT_VERIFIED = "Este aparelho ainda não foi verificado. Informe o seu main character."
@@ -169,7 +169,7 @@ async def invalid_input(_request: Request, exc: RequestValidationError):
 MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
 RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (máx., janela em s) por IP
               "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
-UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
+UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview", "/api/public/lootsplit",
                 "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free",
                 "/api/account/register", "/api/recovery", "/api/recovery/login", "/api/contact"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
@@ -231,6 +231,33 @@ async def security_headers(request: Request, call_next):
     if request.url.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"  # respostas com dados de conta não ficam em cache
     return resp
+
+
+# ------------------------------------------------------------------ 0.22.3: conta de visitante (só visualização)
+# A conta de visitante (ex.: a da CipSoft) abre todas as telas, mas não envia, salva nem altera nada no banco.
+# O bloqueio é no servidor: qualquer POST/DELETE com a chave (ou a sessão de conta) do visitante é recusado,
+# menos entrar/sair, as contas que só calculam (sem salvar) e o formulário de contato.
+GUEST_READONLY = "Conta de visitante: só visualização. Nada pode ser enviado, salvo ou alterado."
+GUEST_ALLOWED = {"/api/auth", "/api/account/login", "/api/account/resume", "/api/account/logout",
+                 "/api/lootsplit/preview", "/api/public/lootsplit", "/api/contact"}
+
+
+def _is_guest(request: Request) -> bool:
+    key = request.headers.get("x-access-key", "")
+    if key and store.key_readonly(key):
+        return True
+    return store.account_token_readonly(request.headers.get("x-account-token", ""))
+
+
+@app.middleware("http")
+async def guest_readonly(request: Request, call_next):
+    path = request.url.path
+    if (request.method not in ("GET", "HEAD", "OPTIONS") and path.startswith("/api/") and path not in GUEST_ALLOWED
+            and await asyncio.to_thread(_is_guest, request)):
+        if path == "/api/track":  # nem os contadores de uso das telas
+            return JSONResponse({"ok": True})
+        return JSONResponse(status_code=403, content={"detail": {"message": GUEST_READONLY, "reason": "readonly"}})
+    return await call_next(request)
 
 
 # ------------------------------------------------------------------ 0.21.0: visitas ao site (só contadores)
@@ -365,7 +392,8 @@ def me_payload(access: dict) -> dict:
     return {"expires_at": user_expires(current), "main_char": current.get("main_char"),
             "chars": store.key_chars(access["key"]), "player_type": store.player_type(access["key"]),
             "player_type_chosen": store.player_type_chosen(access["key"]),
-            "player_types": list(_open_player_types()), "player_type_info": _extra_type_info()}
+            "player_types": list(_open_player_types()), "player_type_info": _extra_type_info(),
+            "hardcore_types": list(_hardcore_types()), "readonly": bool(current.get("readonly"))}
 
 
 NAME_MAX = 40          # nomes do Tibia têm até 29 caracteres
@@ -1195,15 +1223,22 @@ class PlayerTypeIn(BaseModel):
     player_type: Annotated[str, Field(max_length=20)]
 
 
-# Tipos que a pessoa pode escolher. Tipos extras podem ser ligados no .env
-# (ARTEMIS_EXTRA_PLAYER_TYPES); nome e descrição em data/player_types.json.
-PLAYER_TYPES_OPEN = ("hardcore", "comum", "novato")
-SHARING_TYPES = ("hardcore", "comum", "tipo_extra")  # quem junta sessão e Input Analyzer ao que é da PT
+# Tipos que a pessoa pode escolher. Tipos extras podem ser ligados no .env (ARTEMIS_EXTRA_PLAYER_TYPES);
+# nome e descrição em data/player_types.json.
+PLAYER_TYPES_OPEN = BASE_PLAYER_TYPES
 
 
 def _open_player_types() -> tuple:
-    extra = [t.strip() for t in os.environ.get("ARTEMIS_EXTRA_PLAYER_TYPES", "").split(",")]
-    return PLAYER_TYPES_OPEN + tuple(t for t in extra if t in store.PLAYER_TYPES and t not in PLAYER_TYPES_OPEN)
+    return PLAYER_TYPES_OPEN + extra_player_types()
+
+
+def _sharing_types() -> tuple:
+    """Quem junta sessão e Input Analyzer ao que é da PT (os tipos extras contam como Hardcore)."""
+    return ("hardcore", "comum") + extra_player_types()
+
+
+def _hardcore_types() -> tuple:
+    return ("hardcore",) + extra_player_types()
 
 
 def _extra_type_info() -> dict:
@@ -1444,6 +1479,28 @@ def lootsplit_preview(body: UploadIn, _: dict = Depends(require_session)):
     return _parse_party(body.raw_text)
 
 
+# ------------------------------------------------------------------ 0.22.3: sem conta (Lootsplit e 2 notícias)
+class PublicLootIn(BaseModel):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+
+
+@app.post("/api/public/lootsplit")
+def public_lootsplit(body: PublicLootIn):
+    """Lootsplit para quem não tem conta: só calcula e devolve. Nada é gravado no banco."""
+    return _parse_party(body.raw_text)
+
+
+PUBLIC_NEWS = 2  # notícias que quem não tem conta pode ler (o resto pede a conta)
+
+
+@app.get("/api/public/news")
+def public_news(lang: str = ""):
+    """As 2 notícias mais novas do tibia.com (pela TibiaData), no idioma escolhido na tela de entrada."""
+    rows = _news_with_content(store.tibia_news_latest(("news",), PUBLIC_NEWS))
+    _translate_news(rows, _lang(lang))
+    return {"updated_at": store.meta("tibia_news_ok_at"), "news": [_news_out(r) for r in rows]}
+
+
 @app.post("/api/lootsplit")
 def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
     report = _parse_party(body.raw_text)
@@ -1524,7 +1581,7 @@ def hunt_place(hunt_id: int, body: PlaceSet, access: dict = Depends(require_sess
 @app.post("/api/hunt/{hunt_id}/input")
 def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
     """Input Analyser de um membro da PT (só Player Hardcore). Salvou, não edita."""
-    _require_type(access, SHARING_TYPES, INPUT_ONLY_HARDCORE)
+    _require_type(access, _sharing_types(), INPUT_ONLY_HARDCORE)
     _, name = _party_member(hunt_id, body.nickname, access)
     data = _parse_input(body.raw_text)
     row, created = store.add_input("hunt", hunt_id, name, data, access["key"])
@@ -1536,7 +1593,7 @@ def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_s
 @app.post("/api/hunt/{hunt_id}/session")
 def hunt_member_session(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
     """Hunt Session Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore)."""
-    _require_type(access, SHARING_TYPES, SESSION_NOT_NOVATO)
+    _require_type(access, _sharing_types(), SESSION_NOT_NOVATO)
     h, name = _party_member(hunt_id, body.nickname, access)
     try:
         session = parse_solo_session(body.raw_text)
@@ -1963,7 +2020,7 @@ def set_place(session_id: int, body: PlaceSet, access: dict = Depends(require_se
 @app.post("/api/stacker/session/{session_id}/input")
 def solo_input(session_id: int, body: RawIn, access: dict = Depends(require_session)):
     """Input Analyser da sessão do Stacker (só Player Hardcore). Salvou, não edita."""
-    _require_type(access, SHARING_TYPES, INPUT_ONLY_HARDCORE)
+    _require_type(access, _sharing_types(), INPUT_ONLY_HARDCORE)
     row = store.solo_session(session_id)
     if row is None:
         raise HTTPException(404, "Sessão não encontrada.")
@@ -2009,7 +2066,7 @@ def places_compare(ids: str, nick: str = "", mode: str = "solo", access: dict = 
     general = {r["id"]: r for r in _place_stats(mode, place_ids=place_ids)}
     own = bool(nick) and store.is_linked(access["key"], nick)  # "Seu ..." só do próprio personagem
     mine = {r["id"]: r for r in _place_stats(mode, place_ids=place_ids, name=nick)} if own else {}
-    hardcore = store.player_type(access["key"]) in ("hardcore", "tipo_extra")
+    hardcore = store.player_type(access["key"]) in _hardcore_types()
     out = []
     for pid in place_ids:
         p = store.place(pid)
