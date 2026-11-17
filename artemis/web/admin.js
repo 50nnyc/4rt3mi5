@@ -1,5 +1,5 @@
 /* 4rt3mi5 — script de admin.html (fica fora do HTML para o CSP bloquear qualquer script embutido). */
-const SITE = "https://artemis-hunt.duckdns.org";
+const SITE = "https://artemishunt.com.br";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const day = (iso) => new Date(iso).toLocaleDateString("pt-BR");
@@ -46,15 +46,29 @@ function logout(msg = "") {
   $("#token").value = ""; $("#token").focus();
 }
 async function enter() {
-  try { KEYS = await api("GET", "/api/admin/keys"); } catch (e) { if (e.message !== "401") $("#loginErr").textContent = e.message; return; }
+  try { KEYS = await api("GET", "/api/admin/keys"); } catch (e) {
+    if (e.message === "401") return;
+    // Falha que não é senha errada (túnel fechado, servidor reiniciando): mostra o login com o erro
+    // e a senha já preenchida, senão a tela fica só com o cabeçalho.
+    const net = e instanceof TypeError;
+    $("#panel").classList.add("hidden"); $("#logout").classList.add("hidden");
+    $("#login").classList.remove("hidden");
+    $("#token").value = TOKEN || "";
+    $("#loginErr").textContent = net
+      ? "Não consegui falar com o servidor. O túnel (deploy\\painel-vm.bat) está aberto? Depois clique em Entrar."
+      : e.message;
+    return;
+  }
   $("#login").classList.add("hidden");
   $("#panel").classList.remove("hidden"); $("#logout").classList.remove("hidden");
   render();
   loadStatus();
   loadScreens();
   loadRecovery();
+  loadContacts();
+  loadReport();
 }
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); }
+async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); loadContacts(); loadReport(); }
 
 /* 0.16.0: quem pediu ajuda para recuperar o código; o botão abre a conversa no WhatsApp (web ou app) */
 function waLink(r, reset = null) {
@@ -137,7 +151,79 @@ async function loadStatus() {
   };
 }
 const PAGE_PT = { home: "🏠 Início", loot: "💰 Lootsplit", stack: "📈 Hunt Session Stacker", boss: "👑 Rotação de bosses", hunts: "🗺️ Hunts",
-                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades", settings: "⚙️ Configurações" };
+                  rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades", settings: "⚙️ Configurações",
+                  download: "💻 App para Windows" };
+
+/* ---------- 0.21.0: mensagens da tela de contato ---------- */
+async function loadContacts() {
+  let r;
+  try { r = await api("GET", "/api/admin/contacts"); } catch { return; }
+  $("#contactCount").textContent = r.unread ? `(${r.unread} nova${r.unread > 1 ? "s" : ""})` : "";
+  const head = `<div class="muted" style="margin-bottom:6px">Endereço na tela: <b>${esc(r.to)}</b> ·
+    ${r.email_on ? `<span class="badge ok">e-mail ligado</span>` : `<span class="badge warn">e-mail desligado</span> (faltam ARTEMIS_SMTP_USER e ARTEMIS_SMTP_PASSWORD no .env; as mensagens ficam só aqui)`}
+    · robôs barrados pelo campo escondido: <b>${r.robots}</b></div>`;
+  if (!r.messages.length) { $("#contacts").innerHTML = head + `<span class="muted">Nenhuma mensagem ainda.</span>`; return; }
+  $("#contacts").innerHTML = head + r.messages.map((m) => `<div class="msg ${m.read_at ? "" : "unread"}">
+      <div class="row"><b>${esc(m.subject || "(sem assunto)")}</b>
+        <span class="muted">${esc(new Date(m.created_at).toLocaleString("pt-BR"))} · ${esc(m.lang)}</span>
+        ${m.sent ? `<span class="badge ok">enviado por e-mail</span>` : `<span class="badge">só no painel</span>`}</div>
+      <div class="muted">De: <a href="mailto:${esc(m.email)}" style="color:var(--accent)">${esc(m.email)}</a></div>
+      <pre>${esc(m.message)}</pre>
+      <div class="row"><button data-copy-mail="${esc(m.email)}">Copiar e-mail</button>
+        <button data-read="${m.id}" data-on="${m.read_at ? "0" : "1"}">${m.read_at ? "Marcar como não lida" : "Marcar como lida"}</button></div>
+    </div>`).join("");
+}
+$("#contacts").addEventListener("click", async (e) => {
+  const c = e.target.closest("[data-copy-mail]");
+  if (c) return copy(c.dataset.copyMail);
+  const b = e.target.closest("[data-read]");
+  if (!b) return;
+  try { await api("POST", `/api/admin/contacts/${b.dataset.read}/read`, { on: b.dataset.on === "1" }); loadContacts(); }
+  catch (err) { toast(err.message); }
+});
+
+/* ---------- 0.21.0: relatório mensal de visitas para a CipSoft (fansites@tibia.com, até o dia 3) ---------- */
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function reportText(r) {
+  const [y, m] = r.month.split("-").map(Number);
+  const n = (v) => Number(v || 0).toLocaleString("en-US");
+  const busiest = r.busiest_day ? `${r.busiest_day.day} (${n(r.busiest_day.views)} page views)` : "-";
+  const app = r.active_by_client || {};
+  return `Subject: 4rt3mi5 - traffic statistics for ${MONTHS_EN[m - 1]} ${y}\n\n`
+    + `Hello Tibia Community Management,\n\n`
+    + `here are the traffic statistics of 4rt3mi5 (${SITE}) for ${MONTHS_EN[m - 1]} ${y}:\n\n`
+    + `- Unique visitors (website): ${n(r.unique_visitors)}\n`
+    + `- Page views (website): ${n(r.page_views)}\n`
+    + `- Busiest day: ${busiest}\n`
+    + `- Active users (logged in): ${n(r.active_users)}${Object.keys(app).length ? ` (website: ${n(app.site)}, Windows app: ${n(app.app)})` : ""}\n`
+    + `- New accounts: ${n(r.new_accounts)}\n`
+    + `- Screens opened inside the app: ${n(r.screen_views)}\n`
+    + `- Hunt sessions submitted: ${n(r.sessions)}\n`
+    + `- Party loot splits submitted: ${n(r.lootsplits)}\n\n`
+    + `Unique visitors are counted without cookies and without storing IP addresses.\n\n`
+    + `Best regards,\nHilay\n4rt3mi5 - ${SITE}\n`;
+}
+async function loadReport() {
+  const input = $("#reportMonth");
+  let r;
+  try { r = await api("GET", `/api/admin/report${input.value ? `?month=${input.value}` : ""}`); } catch (err) { $("#report").innerHTML = `<span class="err">${esc(err.message)}</span>`; return; }
+  if (!input.value) input.value = r.month;
+  const n = (v) => Number(v || 0).toLocaleString("pt-BR");
+  $("#report").innerHTML = `<div class="grid">
+      <div><span class="muted">Visitantes únicos</span><b>${n(r.unique_visitors)}</b></div>
+      <div><span class="muted">Páginas vistas</span><b>${n(r.page_views)}</b></div>
+      <div><span class="muted">Usuários ativos</span><b>${n(r.active_users)}</b></div>
+      <div><span class="muted">Contas novas</span><b>${n(r.new_accounts)}</b></div>
+      <div><span class="muted">Sessões enviadas</span><b>${n(r.sessions)}</b></div>
+      <div><span class="muted">Lootsplits</span><b>${n(r.lootsplits)}</b></div>
+      <div><span class="muted">Mensagens de contato</span><b>${n(r.contacts)}</b></div>
+    </div>
+    <textarea class="report" id="reportText" readonly>${esc(reportText(r))}</textarea>
+    <div class="row" style="margin-top:8px"><button class="primary" id="reportCopy">Copiar relatório em inglês</button>
+      <span class="muted">Mande para <b>fansites@tibia.com</b> até o dia 3 de cada mês (quando o 4rt3mi5 estiver no programa de fansites).</span></div>`;
+  $("#reportCopy").addEventListener("click", () => copy($("#reportText").value));
+}
+$("#reportMonth").addEventListener("change", loadReport);
 let screenDays = 7;
 async function loadScreens() {
   let r;

@@ -62,6 +62,14 @@ if [ "${1:-}" = "--alertas" ]; then
     "Último backup do banco: $backup_txt." "Backup em dia de novo: $backup_txt."
   alerta containers "$([ ${#faltando[@]} -gt 0 ] && echo 1 || echo 0)" "4rt3mi5: container parado" \
     "Parado: ${faltando[*]:-}. O vigia tenta religar a cada 5 minutos." "Todos os containers rodando de novo."
+  # 0.21.0: lembrete do relatório mensal de visitas (programa de fansites da CipSoft: até o dia 3)
+  mes_flag="$FLAGS/relatorio-$(date +%Y-%m)"
+  if [ "$(date +%-d)" -le 3 ] && [ "$(date +%-H)" -ge 9 ] && [ ! -f "$mes_flag" ]; then
+    notify "4rt3mi5: relatorio mensal" default memo \
+      "Hora do relatório de visitas do mês passado: painel admin → Relatório mensal → Copiar relatório em inglês, e envie para fansites@tibia.com até o dia 3." \
+      && touch "$mes_flag" && log "Lembrete do relatório mensal enviado."
+    find "$FLAGS" -name 'relatorio-*' -mtime +70 -delete 2>/dev/null
+  fi
   exit 0
 fi
 

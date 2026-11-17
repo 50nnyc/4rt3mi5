@@ -1,4 +1,4 @@
-﻿// Launcher do 4rt3mi5: o "instalador sem versão".
+// Launcher do 4rt3mi5: o "instalador sem versão".
 //
 // Por que existe: o SmartScreen do Windows guarda a reputação de um .exe sem assinatura pelo hash do arquivo.
 // Cada instalador novo (4rt3mi5-Setup-X.Y.Z.exe) começava do zero e mostrava "O Windows protegeu o computador".
@@ -60,11 +60,11 @@ namespace Artemis
     class LauncherForm : Form
     {
         // ---------------------------------------------------------------- constantes
-        const string LauncherVersion = "1.1";
+        const string LauncherVersion = "1.2";
         const string ManifestUrl = "https://github.com/50nnyc/4rt3mi5/releases/latest/download/latest.json";
         const string TrustedPrefix = "https://github.com/50nnyc/4rt3mi5/releases/";
         static readonly string[] TrustedHosts = { "github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com" };
-        const string SiteUrl = "https://artemis-hunt.duckdns.org";
+        const string SiteUrl = "https://artemishunt.com.br";
         const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\{B3E1F7A2-58C4-4D9E-A1F0-7C2D4E6B9A35}_is1";
         const int W = 860, H = 520;  // tamanho lógico; a tela real é multiplicada pela escala do Windows
 
@@ -533,7 +533,7 @@ namespace Artemis
             {
                 string left = "Launcher " + LauncherVersion + (installedVersion != null && installedVersion != "0" ? "  ·  app " + installedVersion : "");
                 Shadowed(g, left, ff, Muted, new RectangleF(18, H - 30, 400, 20), new StringFormat());
-                string site = "artemis-hunt.duckdns.org  ↗";
+                string site = "artemishunt.com.br  ↗";
                 SizeF sz = g.MeasureString(site, ff);
                 siteRect = new RectangleF(W - 18 - sz.Width, H - 30, sz.Width, 20);
                 Shadowed(g, site, hover == "site" ? fu : ff, hover == "site" ? Gold : Muted, siteRect, new StringFormat());

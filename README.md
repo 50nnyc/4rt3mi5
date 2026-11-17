@@ -318,8 +318,8 @@ Free"), com o **mesmo domínio do ngrok**. Assim nada muda para os apps instalad
 | `deploy/manter-ativa.sh` | VM (cron, 10 min) | evita a Oracle recolher a VM grátis por ociosidade |
 | `deploy/Caddyfile` + `abrir-portas-web.sh` | VM | HTTPS automático no domínio `SITE_DOMAIN` (perfil `dominio` do compose) |
 
-**Endereço do site:** https://artemis-hunt.duckdns.org (DuckDNS grátis + Caddy com Let's Encrypt, sem a página de
-aviso do ngrok). O domínio do ngrok continua funcionando para os apps já instalados.
+**Endereço do site:** https://artemishunt.com.br (Caddy com Let's Encrypt). O endereço antigo
+artemis-hunt.duckdns.org continua respondendo a API para os apps já instalados, e a página leva ao domínio novo.
 
 **Download do app:** o site mostra o botão "Baixar o app" (só no navegador, nunca dentro do app) e
 `/download` sempre leva ao instalador da última Release do GitHub. O link do VirusTotal usa o SHA-256 do

@@ -125,17 +125,23 @@ deve mostrar picos a cada 10 minutos.
 - Por segurança, crie um alerta: **Billing → Budgets → Create budget** com valor de R$ 5 e alerta por e-mail.
   Se algum dia aparecer cobrança, você fica sabendo na hora.
 
-## 10. Domínio grátis com HTTPS (DuckDNS)
-Sem a página de aviso do ngrok e com um endereço mais fácil: **https://artemis-hunt.duckdns.org**.
-1. Em **duckdns.org**, entre (GitHub ou Google), crie o subdomínio e coloque o **IP público da VM** em "current ip".
+## 10. Domínio com HTTPS (artemishunt.com.br)
+Endereço do site: **https://artemishunt.com.br** (registrado no Registro.br, DNS na Cloudflare grátis).
+1. Na Cloudflare, os registros `A` de `@` e de `www` apontam para o **IP público da VM** com a nuvem **cinza
+   (DNS only)**. Com a nuvem laranja, o servidor passaria a ver o IP da Cloudflare e o limite contra abuso e o
+   bloqueio do painel deixariam de funcionar.
 2. Na Oracle: VM → **Networking** → clique na *subnet* → *Security* → a **Default Security List** → **Add Ingress
    Rules**. Crie duas regras com *Source CIDR* `0.0.0.0/0`, *IP Protocol* TCP, *Destination port* `80` e depois `443`.
 3. Na VM, libere as mesmas portas no firewall do Ubuntu: `bash ~/4rt3mi5/deploy/abrir-portas-web.sh`.
-4. Coloque `SITE_DOMAIN=artemis-hunt.duckdns.org` no `.env` da VM e do PC. A partir daí os scripts ligam o
+4. Coloque `SITE_DOMAIN=artemishunt.com.br` no `.env` da VM e do PC. A partir daí os scripts ligam o
    **Caddy** (`docker compose --profile dominio`), que pede e renova o certificado HTTPS sozinho.
 
-O domínio do ngrok continua funcionando junto: os apps já instalados não precisam mudar nada. O painel admin
-continua bloqueado pelo domínio (o Caddy manda cabeçalhos de proxy, como o ngrok).
+O endereço antigo **artemis-hunt.duckdns.org** continua no Caddyfile: a API segue respondendo por ele (apps de
+Windows e launchers antigos) e quem abre a página no navegador é levado para o domínio novo. O domínio do ngrok
+também continua funcionando. O painel admin continua bloqueado pelo domínio (o Caddy manda cabeçalhos de proxy).
+
+**E-mail:** `contato@artemishunt.com.br` chega no Gmail do administrador pelo *Email Routing* da Cloudflare
+(registros MX/SPF/DKIM criados por ela). Outros endereços do domínio são descartados.
 
 > Só ponha o `SITE_DOMAIN` no `.env` da VM **depois** dos passos 1 a 3. Sem DNS e portas prontos, o certificado
 > falha, e o Let's Encrypt limita as tentativas que falham.
@@ -154,7 +160,7 @@ Instale o app **ntfy** (Android/iPhone) → **+** → assine o tópico que está
 máquina, nunca tokens, códigos ou dados de usuários. Para testar na hora: `ssh artemis-vm "4rt3mi5/deploy/relatorio.sh"`.
 
 **De fora (UptimeRobot, grátis):** se a VM inteira cair, ela não consegue avisar. Crie um monitor *HTTP(s)* para
-`https://artemis-hunt.duckdns.org/api/health` a cada 5 min e ligue as notificações no app dele.
+`https://artemishunt.com.br/api/health` a cada 5 min e ligue as notificações no app dele.
 
 ---
 

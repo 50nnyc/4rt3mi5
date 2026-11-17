@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b0d12">
 <!-- Segurança: só carrega o que o app precisa (bloqueia scripts e envios para outros servidores) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; media-src https://static.tibia.com; connect-src 'self' https://api.tibiadata.com https://artemis-hunt.duckdns.org https://*.ngrok-free.dev https://*.ngrok-free.app https://*.ngrok.app https://*.ngrok.dev http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://www.tibiawiki.com.br https://*.tibiawiki.com.br https://tibiamaps.github.io; media-src https://static.tibia.com; connect-src 'self' https://api.tibiadata.com https://artemishunt.com.br https://artemis-hunt.duckdns.org https://*.ngrok-free.dev https://*.ngrok-free.app https://*.ngrok.app https://*.ngrok.dev http://127.0.0.1:* http://localhost:*; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
 <meta name="referrer" content="no-referrer">
 <title>4rt3mi5</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -427,6 +427,56 @@
     .play .crest .rune { animation: runeIn .01s forwards; }
     .sk, .cel-emoji, .cel-card, .sheet { animation: none; }
   }
+  /* ---------- 0.21.0: rodapé (CipSoft / Hilay), contato, créditos e download ---------- */
+  .gate { min-height: calc(100vh - 120px); }
+  .sitefoot { max-width: 760px; margin: 8px auto 0; padding: 18px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+              display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; border-top: 1px solid var(--line);
+              font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .sitefoot p { margin: 4px 0 0; max-width: 470px; }
+  .sitefoot .link { font-size: 12px; padding: 0; }
+  .sf-marks { display: flex; gap: 8px; }
+  .sf-mark { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 7px; text-decoration: none;
+             font: 800 13px/1 var(--logo); letter-spacing: .06em; color: var(--gold); border: 1px solid rgba(242, 201, 76, .35);
+             background: rgba(242, 201, 76, .06); }
+  .sf-mark.cip { font-family: system-ui, sans-serif; letter-spacing: .02em; color: var(--text); border-color: var(--line); background: var(--card2); }
+  .sf-mark:hover { border-color: var(--gold); }
+  .sf-mark.logo-img { height: 40px; padding: 2px 6px; background: none; border-color: transparent; }
+  .sf-mark img { height: 34px; width: auto; display: block; }
+  .drawer .avatar.voc { background: radial-gradient(circle at 50% 35%, var(--card2), #0b0d12); overflow: hidden; }
+  .drawer .avatar.voc img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 12%; }
+  .sf-right { white-space: nowrap; text-align: right; }
+  .sf-author { font-weight: 800; color: var(--gold) !important; font-size: 13px !important; }
+  @media (max-width: 520px) { .sitefoot { flex-direction: column; align-items: flex-start; } .sf-right { text-align: left; } }
+  body.overpage-open { overflow: hidden; }
+  body.overpage-open .sound.floating { display: none; }
+  .overpage { position: fixed; inset: 0; z-index: 82; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .op-wrap { max-width: 640px; margin: 0 auto; padding: 14px 16px 40px; }
+  .op-top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .flags { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+  .flags button { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 8px; font-size: 12px;
+                  background: var(--card2); border: 1px solid var(--line); color: var(--muted); }
+  .flags button.on { border-color: var(--gold); color: var(--gold2); box-shadow: inset 0 0 0 1px var(--gold); }
+  .flags .flag { border-radius: 2px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .18); flex: none; }
+  @media (max-width: 520px) { .flags button span { display: none; } .flags { margin-left: 0; } }
+  input.ro { color: var(--gold2); background: var(--card2); cursor: default; margin-top: 6px; }
+  #contactForm input, #contactForm textarea { margin-top: 6px; }
+  .countline { text-align: right; font-variant-numeric: tabular-nums; }
+  .hp { position: absolute !important; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+  .capRow { display: flex; align-items: center; gap: 10px; padding: 14px; margin: 10px 0; border: 1px solid var(--line);
+            border-radius: 12px; background: var(--card2); font-weight: 700; cursor: pointer; }
+  .capRow input { width: 22px; height: 22px; accent-color: var(--accent); }
+  .capBar { height: 6px; border-radius: 6px; background: var(--track); overflow: hidden; }
+  .capBar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .credit { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .credit a, .credits a { color: var(--accent); }
+  .credits dt { font-weight: 800; margin-top: 12px; }
+  .credits dt:first-child { margin-top: 0; }
+  .credits dd { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .dlWarn p { margin: 6px 0 0; }
+  .dlAgree { display: flex; align-items: center; gap: 8px; justify-content: center; margin-top: 12px; font-weight: 700; cursor: pointer; }
+  .dlAgree input { width: 18px; height: 18px; accent-color: var(--accent); }
+  a.btn.dlBtn.disabled { opacity: .45; pointer-events: none; filter: grayscale(.5); }
+  code.sha { font-size: 11px; word-break: break-all; }
 </style>
 </head>
 <body>
@@ -506,7 +556,6 @@
     </div>
     <div class="hint hidden" id="serverLine"></div>
     <div class="langs compact" id="loginLang" aria-label="Idioma"></div>
-    <div id="dlLogin"></div>
   </div>
 </section>
 
@@ -632,6 +681,7 @@
     <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
     <button class="item" data-page="news"><span class="ic">📰</span>Novidades <span class="badge hidden" id="newsDot">novo</span></button>
     <button class="item" data-page="settings"><span class="ic">⚙️</span>Configurações</button>
+    <button class="item" data-page="download" id="dlItem"><span class="ic">💻</span>App para Windows</button>
     <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
     <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
@@ -746,6 +796,11 @@
       </div>
     </div>
 
+    <div id="pageDownload" class="hidden">
+      <h1>App para Windows</h1>
+      <div id="dlPage"></div>
+    </div>
+
     <div id="pageChars" class="hidden">
       <h1>Meus personagens</h1>
       <p class="muted">Personagens vinculados ao seu código de acesso. Você só pode enviar Lootsplit e sessões em nome deles.
@@ -755,6 +810,71 @@
       <div class="card" id="linkBox"></div>
     </div>
   </main>
+</section>
+
+<!-- 0.21.0: rodapé em todas as telas — Tibia é da CipSoft (canto esquerdo) e quem criou o 4rt3mi5 (canto direito) -->
+<footer class="sitefoot" id="siteFoot">
+  <div class="sf-left">
+    <div class="sf-marks">
+      <a class="sf-mark logo-img" href="https://www.tibia.com/mmorpg/free-multiplayer-online-role-playing-game.php" target="_blank" rel="noopener" title="Tibia: site oficial" aria-label="Tibia: site oficial"><img src="fk-tibia-logo.png" alt="Tibia" width="60" height="34"></a>
+      <a class="sf-mark cip" href="https://www.cipsoft.com/en/" target="_blank" rel="noopener" title="CipSoft GmbH" aria-label="CipSoft GmbH">CipSoft</a>
+    </div>
+    <p>Tibia é uma marca registrada da CipSoft GmbH. Tibia e todo o conteúdo do jogo (imagens, músicas e textos) têm copyright da CipSoft GmbH.</p>
+    <p>O 4rt3mi5 é um projeto de fã, sem vínculo com a CipSoft. <button class="link" id="openCredits" type="button">Créditos</button></p>
+  </div>
+  <div class="sf-right">Created by <button class="link sf-author" id="openContact" type="button" title="Contato com o administrador">Hilay</button></div>
+</footer>
+
+<!-- 0.21.0: contato com o administrador (abre também sem conta) -->
+<section id="contactScreen" class="overpage hidden" role="dialog" aria-modal="true" aria-labelledby="contactTitle">
+  <div class="op-wrap">
+    <div class="op-top">
+      <button class="backbtn" type="button" data-over-close aria-label="Voltar" title="Voltar">←</button>
+      <div class="flags" id="contactLang" aria-label="Idioma"></div>
+    </div>
+    <h1 id="contactTitle">Contato com o administrador</h1>
+    <p class="muted" style="margin-top:-6px">Dúvidas, sugestões, problemas ou parcerias: escreva para o criador do 4rt3mi5. A resposta chega no seu e-mail.</p>
+    <form class="card" id="contactForm" novalidate>
+      <label class="muted" for="contactTo">Para</label>
+      <input id="contactTo" value="contato@artemishunt.com.br" readonly tabindex="-1" class="ro" data-i18n-skip>
+      <label class="muted" for="contactEmail" style="display:block; margin-top:12px">Seu e-mail</label>
+      <input id="contactEmail" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="exemplo@exemplo.com" spellcheck="false">
+      <label class="muted" for="contactSubject" style="display:block; margin-top:12px">Assunto (opcional)</label>
+      <input id="contactSubject" maxlength="120" autocomplete="off">
+      <label class="muted" for="contactMsg" style="display:block; margin-top:12px">Mensagem</label>
+      <textarea id="contactMsg" maxlength="3000" rows="9"></textarea>
+      <div class="hint countline" id="contactCount" aria-live="polite"></div>
+      <!-- campo escondido: pessoas não veem; robô que preenche é barrado -->
+      <div class="hp" aria-hidden="true"><label>Não preencha este campo <input name=":boom:" id="contactBoom" tabindex="-1" autocomplete="off"></label></div>
+      <button class="btn" type="submit" id="contactSend">Enviar</button>
+      <div class="err" id="contactErr" role="alert"></div>
+    </form>
+    <div class="card hidden" id="contactDone" role="status">
+      <h3 style="margin:0 0 6px">✅ Mensagem enviada!</h3>
+      <p class="muted" style="margin:0">Obrigado pelo contato. A resposta vai para o e-mail que você informou.</p>
+      <div class="row2"><button class="btn2" type="button" id="contactAgain">Escrever outra</button><button class="btn" type="button" data-over-close>Voltar</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 0.21.0: créditos (de onde vem o que o 4rt3mi5 mostra) -->
+<section id="creditsScreen" class="overpage hidden" role="dialog" aria-modal="true" aria-labelledby="creditsTitle">
+  <div class="op-wrap">
+    <div class="op-top"><button class="backbtn" type="button" data-over-close aria-label="Voltar" title="Voltar">←</button></div>
+    <h1 id="creditsTitle">Créditos</h1>
+    <dl class="card credits">
+      <dt><a href="https://www.cipsoft.com/en/" target="_blank" rel="noopener">CipSoft GmbH</a></dt>
+      <dd>Criadora do Tibia. Nomes, imagens, músicas e textos do jogo têm copyright da CipSoft. As músicas que tocam no 4rt3mi5 vêm do site oficial do Tibia.</dd>
+      <dd>O logo do Tibia e a arte das vocações vêm do Fankit oficial da CipSoft.</dd>
+      <dt><a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></dt>
+      <dd>Imagens de itens, criaturas e NPCs, preços de NPC, raridade dos itens e as informações das hunts.</dd>
+      <dt><a href="https://tibiamaps.io/" target="_blank" rel="noopener">TibiaMaps.io</a></dt>
+      <dd>O mapa que aparece ao ver onde fica um NPC.</dd>
+      <dt><a href="https://tibiadata.com/" target="_blank" rel="noopener">TibiaData</a></dt>
+      <dd>Dados dos personagens: level, vocação, mundo e highscore.</dd>
+    </dl>
+    <p class="muted">O 4rt3mi5 é um projeto de fã, sem vínculo com a CipSoft ou com esses sites.</p>
+  </div>
 </section>
 
 <div id="update" class="hidden"></div>

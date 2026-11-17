@@ -65,6 +65,13 @@
   .hunts { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 10px; }
   .hunts td select { max-width: 220px; }
   .hunts td .row { justify-content: flex-end; }
+  /* 0.21.0: contato e relatório */
+  .msg { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .msg:last-child { border-bottom: 0; }
+  .msg.unread { border-left: 3px solid var(--gold); padding-left: 10px; }
+  .msg pre { white-space: pre-wrap; word-break: break-word; font: inherit; margin: 8px 0; background: var(--card2); padding: 10px; border-radius: 8px; }
+  textarea.report { width: 100%; min-height: 230px; font: 13px/1.45 Consolas, ui-monospace, monospace; padding: 10px; border-radius: 9px;
+                    border: 1px solid var(--line); background: var(--card2); color: var(--text); }
   select { font: inherit; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card2); color: var(--text); }
 </style>
 </head>
@@ -95,6 +102,13 @@
       <div class="seg" id="screenDays" style="margin-left:auto"><button data-days="7" class="on">7 dias</button><button data-days="30">30 dias</button></div>
     </div>
     <div class="card" id="screens" style="margin-top:12px"><span class="muted">Carregando…</span></div>
+    <h2>Mensagens de contato <span id="contactCount"></span></h2>
+    <div class="card" id="contacts"><span class="muted">Carregando…</span></div>
+    <div class="row" style="margin-top:26px">
+      <h2 style="margin:0">Relatório mensal de visitas (CipSoft)</h2>
+      <input id="reportMonth" type="month" style="margin-left:auto">
+    </div>
+    <div class="card" id="report" style="margin-top:12px"><span class="muted">Carregando…</span></div>
     <h2>Novo código de acesso</h2>
     <div class="card">
       <form id="createForm" class="row">

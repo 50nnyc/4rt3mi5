@@ -361,6 +361,34 @@ CREATE TABLE IF NOT EXISTS char_info (
     level      INTEGER,
     updated_at TEXT NOT NULL
 );
+-- 0.21.0: mensagens da tela "Contato com o administrador" (também vão por e-mail, se configurado)
+CREATE TABLE IF NOT EXISTS contact_messages (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at  TEXT NOT NULL,
+    email       TEXT NOT NULL,
+    subject     TEXT NOT NULL DEFAULT '',
+    message     TEXT NOT NULL,
+    lang        TEXT NOT NULL DEFAULT 'pt-BR',
+    robot       INTEGER NOT NULL DEFAULT 0,   -- preencheu o campo escondido: não é enviado a ninguém
+    sent        INTEGER NOT NULL DEFAULT 0,   -- 1 = e-mail entregue ao servidor de e-mail
+    read_at     TEXT
+);
+-- 0.21.0: visitas ao site, só contadores (relatório mensal para a CipSoft). Nada identifica quem visitou.
+CREATE TABLE IF NOT EXISTS site_visits (
+    day       TEXT PRIMARY KEY,
+    views     INTEGER NOT NULL DEFAULT 0,
+    visitors  INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS site_visitors_month (
+    month     TEXT PRIMARY KEY,
+    visitors  INTEGER NOT NULL DEFAULT 0
+);
+-- marcas embaralhadas do período atual (dia e mês) para contar visitante único; apagadas quando o período acaba
+CREATE TABLE IF NOT EXISTS visit_seen (
+    period  TEXT NOT NULL,
+    mark    TEXT NOT NULL,
+    PRIMARY KEY (period, mark)
+);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -635,6 +663,92 @@ class Store:
             self._conn.execute("INSERT OR IGNORE INTO screen_stats (day, page) VALUES (?, ?)", (day, page))
             self._conn.execute(f"UPDATE screen_stats SET {col} = {col} + 1 WHERE day = ? AND page = ?", (day, page))
             self._conn.commit()
+
+    # ---------------------------------------------------------------- 0.21.0: visitas ao site
+    def visit_salt(self) -> str:
+        """Segredo fixo do servidor para embaralhar a marca do visitante (a marca some no fim do dia/mês)."""
+        with self._lock:
+            salt = self.meta("visit_salt")
+            if not salt:
+                salt = secrets.token_hex(32)
+                self.set_meta("visit_salt", salt)
+            return salt
+
+    def count_visit(self, day: str, day_mark: str, month_mark: str) -> None:
+        """Uma página aberta. Visitante novo no dia/mês só soma se a marca ainda não apareceu no período."""
+        month = day[:7]
+        with self._lock:
+            c = self._conn
+            c.execute("INSERT OR IGNORE INTO site_visits (day) VALUES (?)", (day,))
+            new_day = c.execute("INSERT OR IGNORE INTO visit_seen VALUES (?, ?)", ("d:" + day, day_mark)).rowcount == 1
+            c.execute("UPDATE site_visits SET views = views + 1, visitors = visitors + ? WHERE day = ?", (int(new_day), day))
+            c.execute("INSERT OR IGNORE INTO site_visitors_month (month) VALUES (?)", (month,))
+            if c.execute("INSERT OR IGNORE INTO visit_seen VALUES (?, ?)", ("m:" + month, month_mark)).rowcount == 1:
+                c.execute("UPDATE site_visitors_month SET visitors = visitors + 1 WHERE month = ?", (month,))
+            # período encerrado: as marcas vão embora, só os totais ficam
+            c.execute("DELETE FROM visit_seen WHERE period LIKE 'd:%' AND period <> ?", ("d:" + day,))
+            c.execute("DELETE FROM visit_seen WHERE period LIKE 'm:%' AND period <> ?", ("m:" + month,))
+            c.commit()
+
+    def month_report(self, month: str) -> dict:
+        """Números do mês (AAAA-MM) para o relatório de visitas."""
+        like = month + "%"
+        c = self._conn
+        one = lambda sql, *p: c.execute(sql, p).fetchone()[0] or 0  # noqa: E731
+        days = [dict(r) for r in c.execute("SELECT day, views, visitors FROM site_visits WHERE day LIKE ? ORDER BY day", (like,))]
+        logins = {r["client"]: r["n"] for r in c.execute(
+            "SELECT client, COUNT(DISTINCT key) AS n FROM key_logins WHERE at LIKE ? GROUP BY client", (like,))}
+        return {
+            "month": month,
+            "page_views": sum(d["views"] for d in days),
+            "unique_visitors": one("SELECT visitors FROM site_visitors_month WHERE month = ?", month),
+            "busiest_day": max(days, key=lambda d: d["views"], default=None),
+            "days": days,
+            "new_accounts": one("SELECT COUNT(*) FROM accounts WHERE created_at LIKE ?", like),
+            "active_users": one("SELECT COUNT(DISTINCT key) FROM key_logins WHERE at LIKE ?", like),
+            "active_by_client": logins,
+            "screen_views": one("SELECT SUM(views) FROM screen_stats WHERE day LIKE ?", like),
+            "lootsplits": one("SELECT COUNT(*) FROM hunts WHERE created_at LIKE ?", like)
+                          + one("SELECT COUNT(*) FROM boss_hunts WHERE created_at LIKE ?", like),
+            "sessions": one("SELECT COUNT(*) FROM solo_sessions WHERE created_at LIKE ?", like)
+                        + one("SELECT COUNT(*) FROM boss_sessions WHERE created_at LIKE ?", like),
+            "contacts": one("SELECT COUNT(*) FROM contact_messages WHERE robot = 0 AND created_at LIKE ?", like),
+        }
+
+    # ---------------------------------------------------------------- 0.21.0: contato com o administrador
+    def add_contact(self, email: str, subject: str, message: str, lang: str, robot: bool) -> int:
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO contact_messages (created_at, email, subject, message, lang, robot) VALUES (?, ?, ?, ?, ?, ?)",
+                (_iso(utcnow()), email, subject, message, lang, int(robot)))
+            # robôs: guarda só os 200 mais recentes, para o painel mostrar quantos foram barrados
+            self._conn.execute("DELETE FROM contact_messages WHERE robot = 1 AND id NOT IN "
+                               "(SELECT id FROM contact_messages WHERE robot = 1 ORDER BY id DESC LIMIT 200)")
+            self._conn.commit()
+            return cur.lastrowid
+
+    def mark_contact(self, contact_id: int, sent: bool | None = None, read: bool | None = None) -> bool:
+        with self._lock:
+            n = 0
+            if sent is not None:
+                n = self._conn.execute("UPDATE contact_messages SET sent = ? WHERE id = ?", (int(sent), contact_id)).rowcount
+            if read is not None:
+                n = self._conn.execute("UPDATE contact_messages SET read_at = ? WHERE id = ?",
+                                       (_iso(utcnow()) if read else None, contact_id)).rowcount
+            self._conn.commit()
+            return n > 0
+
+    def contacts(self, limit: int = 100) -> dict:
+        rows = [dict(r) for r in self._conn.execute(
+            "SELECT id, created_at, email, subject, message, lang, sent, read_at FROM contact_messages "
+            "WHERE robot = 0 ORDER BY id DESC LIMIT ?", (limit,))]
+        robots = self._conn.execute("SELECT COUNT(*) FROM contact_messages WHERE robot = 1").fetchone()[0]
+        return {"messages": rows, "robots": robots,
+                "unread": self._conn.execute("SELECT COUNT(*) FROM contact_messages WHERE robot = 0 AND read_at IS NULL").fetchone()[0]}
+
+    def contacts_since(self, since: datetime) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM contact_messages WHERE robot = 0 AND created_at >= ?",
+                                  (_iso(since),)).fetchone()[0]
 
     def screen_report(self, since_day: str) -> list[dict]:
         return [dict(r) for r in self._conn.execute(

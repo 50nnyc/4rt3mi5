@@ -15,10 +15,12 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import hmac
 import json
 import os
 import secrets
 import sys
+import threading
 import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -37,6 +39,7 @@ from pydantic import BaseModel, Field
 from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
 from artemis.core import bosses as boss_core
+from artemis.core import captcha
 from artemis.core import damage as damage_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
@@ -44,6 +47,7 @@ from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
+from . import mailer
 from .db import Store, name_key, normalize_key
 
 INVALID_KEY = "Chave de acesso inválida, envie mensagem ao criador."
@@ -155,7 +159,7 @@ RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (m�
               "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
 UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview",
                 "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free",
-                "/api/account/register", "/api/recovery", "/api/recovery/login"}
+                "/api/account/register", "/api/recovery", "/api/recovery/login", "/api/contact"}
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
 _hits: dict[tuple[str, str], deque] = {}
 
@@ -214,6 +218,37 @@ async def security_headers(request: Request, call_next):
         resp.headers["Strict-Transport-Security"] = "max-age=31536000"
     if request.url.path.startswith("/api/"):
         resp.headers["Cache-Control"] = "no-store"  # respostas com dados de conta não ficam em cache
+    return resp
+
+
+# ------------------------------------------------------------------ 0.21.0: visitas ao site (só contadores)
+# Conta quem abre a página no navegador (o app de Windows abre a tela dele mesmo e não entra aqui).
+# Visitante único: uma marca embaralhada (IP + navegador + segredo do servidor) que vale só no dia/mês
+# e é apagada quando o período acaba. O IP nunca é guardado.
+_BOT_UA = re.compile(r"bot|crawl|spider|slurp|curl|wget|python|httpx|go-http|java/|okhttp|uptime|monitor|"
+                     r"headless|lighthouse|preview|facebookexternalhit|whatsapp|telegram|discord|scan", re.I)
+
+
+def _visit_mark(period: str, ip: str, ua: str) -> str:
+    return hmac.new(store.visit_salt().encode(), f"{period}|{ip}|{ua}".encode("utf-8", "replace"), hashlib.sha256).hexdigest()[:32]
+
+
+def _count_visit(ip: str, ua: str) -> None:
+    try:
+        day = ach.local_day(datetime.now(timezone.utc).isoformat()).isoformat()
+        store.count_visit(day, _visit_mark(day, ip, ua), _visit_mark(day[:7], ip, ua))
+    except Exception as e:  # contar visita nunca atrapalha a página
+        print("Falha ao contar visita:", type(e).__name__)
+
+
+@app.middleware("http")
+async def visit_counter(request: Request, call_next):
+    resp = await call_next(request)
+    if (request.method == "GET" and request.url.path == "/" and resp.status_code == 200
+            and not request.headers.get("sec-purpose", "").startswith("prefetch")):
+        ua = request.headers.get("user-agent", "")
+        if ua and not _BOT_UA.search(ua):
+            await asyncio.to_thread(_count_visit, client_ip(request), ua[:300])
     return resp
 
 
@@ -721,7 +756,8 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
-TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings"}
+TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings",
+               "download"}  # 0.21.0
 
 
 class TrackIn(BaseModel):
@@ -735,6 +771,79 @@ def track(body: TrackIn, _: dict = Depends(require_session)):
     if body.page not in TRACK_PAGES:
         raise HTTPException(422, "Tela desconhecida.")
     store.track_screen(body.page, body.action, ach.local_day(datetime.now(timezone.utc).isoformat()).isoformat())
+    return {"ok": True}
+
+
+# ------------------------------------------------------------------ 0.21.0: contato com o administrador
+# Tela aberta a qualquer pessoa (inclusive sem conta, como a CipSoft). Contra robôs: campo escondido ":boom:",
+# CAPTCHA próprio (prova de trabalho, sem script de fora) e limites por IP e por dia.
+CONTACT_EMAIL = os.environ.get("ARTEMIS_CONTACT_EMAIL", "contato@artemishunt.com.br")  # o endereço que aparece na tela
+CONTACT_MAX = 3000
+CONTACT_SUBJECT_MAX = 120
+CONTACT_PER_IP = (3, 3600)       # 3 mensagens por hora por IP
+CONTACT_PER_DAY = 60             # teto de mensagens (todas as pessoas) em 24 h
+CONTACT_LANGS = {"pt-BR", *("en", "es", "ja", "de", "pl", "fr", "ru")}
+EMAIL_RE = re.compile(r"[^@\s<>\"',;]{1,64}@[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+")
+CAPTCHA_SECRET = secrets.token_bytes(32)   # muda a cada reinício: desafios antigos deixam de valer
+_captcha_used: dict[str, float] = {}
+_contact_hits: dict[str, list[float]] = {}
+CAPTCHA_FAILED = "A confirmação de que você não é um robô expirou. Envie de novo."
+
+
+class ContactIn(BaseModel):
+    email: Annotated[str, Field(max_length=254)]
+    subject: Annotated[str, Field(default="", max_length=CONTACT_SUBJECT_MAX)] = ""
+    message: Annotated[str, Field(max_length=CONTACT_MAX)]
+    lang: Annotated[str, Field(default="pt-BR", max_length=8)] = "pt-BR"
+    captcha: dict = Field(default_factory=dict)
+    boom: Annotated[str, Field(default="", max_length=500, alias=":boom:")] = ""  # campo escondido: só robô preenche
+
+
+@app.get("/api/contact")
+def contact_info():
+    return {"to": CONTACT_EMAIL, "max": CONTACT_MAX, "subject_max": CONTACT_SUBJECT_MAX}
+
+
+@app.get("/api/contact/challenge")
+def contact_challenge():
+    return captcha.issue(CAPTCHA_SECRET)
+
+
+def _deliver_contact(contact_id: int, email: str, subject: str, message: str, lang: str, when: str) -> None:
+    if mailer.send(email, subject, message, lang, when):
+        store.mark_contact(contact_id, sent=True)
+
+
+@app.post("/api/contact")
+def contact_send(body: ContactIn, request: Request):
+    lang = body.lang if body.lang in CONTACT_LANGS else "pt-BR"
+    if body.boom.strip():  # robô: finge que deu certo (ele não percebe) e não envia nada a ninguém
+        store.add_contact(body.email[:254], "", body.message[:200], lang, robot=True)
+        return {"ok": True}
+    email = body.email.strip()
+    if not EMAIL_RE.fullmatch(email):
+        raise HTTPException(422, "Digite o seu e-mail completo, por exemplo nome@gmail.com.")
+    subject = " ".join(body.subject.split())  # sem quebras de linha (o assunto vai no cabeçalho do e-mail)
+    message = body.message.replace("\r\n", "\n").strip()
+    if len(message) < 10:
+        raise HTTPException(422, "Escreva a sua mensagem (pelo menos 10 caracteres).")
+    try:
+        captcha.verify(CAPTCHA_SECRET, body.captcha, _captcha_used)
+    except captcha.CaptchaError:
+        raise HTTPException(400, {"message": CAPTCHA_FAILED, "reason": "captcha"})
+    ip, now = client_ip(request), time.monotonic()
+    limit, window = CONTACT_PER_IP
+    hits = [t for t in _contact_hits.get(ip, []) if now - t < window]
+    if len(hits) >= limit or store.contacts_since(datetime.now(timezone.utc) - timedelta(days=1)) >= CONTACT_PER_DAY:
+        raise HTTPException(429, {"message": "Você já enviou mensagens agora há pouco. Aguarde um pouco para enviar outra.",
+                                  "reason": "rate"})
+    _contact_hits[ip] = hits + [now]
+    if len(_contact_hits) > 5000:
+        for k in list(_contact_hits)[:1000]:
+            _contact_hits.pop(k, None)
+    contact_id = store.add_contact(email, subject, message, lang, robot=False)
+    when = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
+    threading.Thread(target=_deliver_contact, args=(contact_id, email, subject, message, lang, when), daemon=True).start()
     return {"ok": True}
 
 
@@ -2139,7 +2248,34 @@ def admin_screens(days: int = 7):
     return {"days": days, "screens": store.screen_report(since.isoformat())}
 
 
-RECOVERY_LABEL = {"lost_code": "Código de acesso: perdeu o código", "char_taken": "Código de acesso: personagem já tem código",
+_MONTH_RE = re.compile(r"\d{4}-(0[1-9]|1[0-2])")
+
+
+@app.get("/api/admin/report", dependencies=[Depends(require_admin)])
+def admin_report(month: str = ""):
+    """0.21.0: números do mês para o relatório de visitas (fansites@tibia.com, até o dia 3)."""
+    if not month:  # padrão: o mês que acabou (é ele que vai no relatório do começo do mês)
+        today = ach.local_day(datetime.now(timezone.utc).isoformat())
+        month = (today.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+    if not _MONTH_RE.fullmatch(month):
+        raise HTTPException(422, "Mês no formato AAAA-MM.")
+    return store.month_report(month)
+
+
+@app.get("/api/admin/contacts", dependencies=[Depends(require_admin)])
+def admin_contacts():
+    """0.21.0: mensagens da tela de contato (e quantos robôs caíram no campo escondido)."""
+    return {**store.contacts(), "email_on": mailer.configured(), "to": CONTACT_EMAIL}
+
+
+@app.post("/api/admin/contacts/{contact_id}/read", dependencies=[Depends(require_admin)])
+def admin_contact_read(contact_id: int, body: OnIn):
+    if not store.mark_contact(contact_id, read=body.on):
+        raise HTTPException(404, "Mensagem não encontrada.")
+    return {"read": body.on}
+
+
+RECOVERY_LABEL = {"lost_code":"Código de acesso: perdeu o código", "char_taken": "Código de acesso: personagem já tem código",
                   "key_taken": "Código de acesso: código já está em outra conta",
                   "lost_login": "Conta/senha: esqueceu a conta ou a senha"}
 
@@ -2268,7 +2404,9 @@ def service_worker():
 
 # Ícone do app na tela inicial (só é instalado se a pessoa tocar em "Sim" no aviso do site).
 _STATIC = {"manifest.webmanifest": "application/manifest+json", "icon-192.png": "image/png",
-           "icon-512.png": "image/png", "icon-maskable.png": "image/png"}
+           "icon-512.png": "image/png", "icon-maskable.png": "image/png",
+           # 0.21.0: Fankit oficial da CipSoft (logo do Tibia no rodapé e arte das vocações)
+           **{f"fk-{n}.png": "image/png" for n in ("tibia-logo", "voc-knight", "voc-paladin", "voc-druid", "voc-sorcerer")}}
 # 0.19.0: idiomas (motor + dicionários). Sem cache longo: tradução nova chega na hora.
 I18N_LANGS = ("en", "es", "ja", "de", "pl", "fr", "ru")  # 0.20.0: + alemão, polonês, francês e russo
 _I18N = {"i18n.js": "text/javascript", **{f"i18n-{c}.json": "application/json" for c in I18N_LANGS}}

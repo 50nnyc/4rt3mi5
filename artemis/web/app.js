@@ -154,30 +154,47 @@ function showLogin(mode = "") {
   $("#resetBox").classList.add("hidden"); $("#forgotBox").innerHTML = "";
   $("#forgotBtn").classList.remove("hidden"); $("#haveResetBtn").classList.add("hidden");
   if (mode) setTimeout(() => $(mode === "login" ? "#loginUser" : "#regUser").focus(), 50);
-  paintDownload($("#dlLogin"));
 }
 $("#showLogin").addEventListener("click", () => showLogin("login"));
 $("#showRegister").addEventListener("click", () => showLogin("register"));
 
-/* ---------- download do app para Windows: só no site (dentro do app desktop não faz sentido) ---------- */
+/* ---------- download do app para Windows ----------
+   0.21.0: só por dentro (☰ → 💻 App para Windows), nunca na tela de entrada nem no Início, e com o aviso
+   da CipSoft: ela recomenda não baixar programas de fansites. O botão só libera depois do "Li e entendi". */
 let dlInfo = null;
 async function paintDownload(el) {
   if (!el) return;
-  if (S.desktop) { el.innerHTML = ""; return; }
+  if (S.desktop) { el.innerHTML = `<div class="card"><b>✅ Você já está no app de Windows.</b></div>`; return; }
   if (!dlInfo) dlInfo = await fetch("/api/download").then((r) => r.json()).catch(() => null);
   const d = dlInfo;
-  if (!d) { el.innerHTML = ""; return; }
+  if (!d) { el.innerHTML = `<div class="card muted">Não consegui ver a versão do app agora. Tente de novo mais tarde.</div>`; return; }
   const vt = d.available ? `<a href="${esc(d.virustotal)}" target="_blank" rel="noopener">🛡️ Verificado no VirusTotal</a>` : "";
-  el.innerHTML = `<div class="card dlCard">
-    <b>💻 4rt3mi5 para Windows</b>
-    <div class="hint">O app no seu PC, com a mesma conta do site e atualização automática.</div>
-    <a class="btn dlBtn" href="${esc(d.available ? d.url : d.page)}" ${d.available ? "" : `target="_blank" rel="noopener"`}>⬇ Baixar o app${d.available ? ` (v${esc(d.version)})` : ""}</a>
-    <div class="dlMeta">${vt}<a href="${esc(d.page)}" target="_blank" rel="noopener">📦 Página oficial no GitHub</a></div>
-    <details class="dlHelp"><summary>Apareceu "O Windows protegeu o computador"?</summary>
-      <p>É o aviso que o Windows mostra para programas novos, ainda com poucos downloads. Toque em <b>Mais informações</b>
-        e depois em <b>Executar assim mesmo</b>. Se quiser conferir antes, o link do VirusTotal acima mostra a análise
-        do arquivo por dezenas de antivírus.</p></details>
-  </div>`;
+  el.innerHTML = `<div class="banner bad dlWarn" role="note">
+      <b>⚠️ Aviso da CipSoft, criadora do Tibia</b>
+      <p>A CipSoft recomenda não baixar arquivos ou programas de fansites.</p>
+      <p>O 4rt3mi5 não é feito nem verificado pela CipSoft: é um projeto de fã. Baixe só se quiser, por sua conta.</p>
+      <p>Tudo o que o app de Windows faz funciona aqui no navegador, sem baixar nada.</p>
+    </div>
+    <div class="card dlCard">
+      <b>💻 4rt3mi5 para Windows</b>
+      <div class="hint">O app no seu PC, com a mesma conta do site e atualização automática. Não é um programa do Tibia
+        e não mexe no jogo: é só uma janela do 4rt3mi5.</div>
+      <label class="dlAgree"><input type="checkbox" id="dlAgree"> Li e entendi o aviso acima</label>
+      <a class="btn dlBtn disabled" id="dlBtn" aria-disabled="true" tabindex="-1" href="${esc(d.available ? d.url : d.page)}" ${d.available ? "" : `target="_blank" rel="noopener"`}>⬇ Baixar o app${d.available ? ` (v${esc(d.version)})` : ""}</a>
+      <div class="dlMeta">${vt}<a href="${esc(d.page)}" target="_blank" rel="noopener">📦 Página oficial no GitHub</a></div>
+      ${d.sha256 ? `<div class="hint" style="text-align:center">SHA-256: <code class="sha">${esc(d.sha256)}</code></div>` : ""}
+      <details class="dlHelp"><summary>Apareceu "O Windows protegeu o computador"?</summary>
+        <p>É o aviso que o Windows mostra para programas novos, ainda com poucos downloads. Toque em <b>Mais informações</b>
+          e depois em <b>Executar assim mesmo</b>. Se quiser conferir antes, o link do VirusTotal acima mostra a análise
+          do arquivo por dezenas de antivírus.</p></details>
+    </div>`;
+  const agree = el.querySelector("#dlAgree"), btn = el.querySelector("#dlBtn");
+  agree.addEventListener("change", () => {
+    btn.classList.toggle("disabled", !agree.checked);
+    btn.setAttribute("aria-disabled", String(!agree.checked));
+    btn.tabIndex = agree.checked ? 0 : -1;
+  });
+  btn.addEventListener("click", (e) => { if (!agree.checked) e.preventDefault(); });
 }
 
 /* 0.17.0: "Esqueceu conta/senha?" → pedido ao adm pelo WhatsApp; o adm manda um código para criar nova senha */
@@ -741,7 +758,7 @@ function openApp() {
   $("#topWho").textContent = S.nick;
   $("#brandHome").dataset.nick = S.nick;
   $("#drawerName").textContent = S.nick;
-  $("#drawerAvatar").textContent = initials(S.nick);
+  paintAvatar($("#drawerAvatar"), S.nick, S.char && S.char.vocation);
   $("#drawerInfo").textContent = `Level ${S.char.level} · ${S.char.vocation} · ${S.char.world}`;
   updateDrawerFoot();
   $("#lootResult").innerHTML = ""; $("#stackResult").innerHTML = ""; $("#bossResult").innerHTML = ""; $("#bossAsk").innerHTML = "";
@@ -901,6 +918,7 @@ function restoreNav() {
   go(st.page, { noPush: true });
 }
 window.addEventListener("popstate", () => {
+  if (Overlay.closeTop()) return;  // 0.21.0: "voltar" fecha primeiro a tela de contato/créditos
   if ($("#app").classList.contains("hidden")) return;
   if ($("#drawer").classList.contains("open")) { closeDrawer(); }
   restoreNav();
@@ -927,7 +945,9 @@ function go(page, opts = {}) {
   $("#pageAch").classList.toggle("hidden", page !== "ach");
   $("#pageRank").classList.toggle("hidden", page !== "rank");
   $("#pageSettings").classList.toggle("hidden", page !== "settings");
+  $("#pageDownload").classList.toggle("hidden", page !== "download");
   $("#gearBtn").classList.toggle("on", page === "settings");
+  if (page === "download") paintDownload($("#dlPage"));
   Music.forPage(page);
   if (page === "rank") loadRank();
   if (page === "news") loadNews();
@@ -1299,9 +1319,7 @@ async function loadHome() {
                 ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
     <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
     <h2>Todas as hunts (${hunts.length})</h2>
-    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}
-    <div id="dlHome" style="margin-top:18px"></div>`;
-  paintDownload($("#dlHome"));
+    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}`;
   countUp(el);
   if (hunts.length) {
     renderPtRank();
@@ -1427,6 +1445,8 @@ const WIKI_FILE = (name) => {
   return S.api ? "https://www.tibiawiki.com.br/wiki/Especial:Redirecionar/file/" + file : "/img/wiki/" + file;
 };
 const MAP_TILE = (x, y, z) => `https://tibiamaps.github.io/tibia-map-data/mapper/Minimap_Color_${x}_${y}_${z}.png`;
+// 0.21.0: crédito no lugar onde o conteúdo de outro site aparece
+const WIKI_CREDIT = `<div class="credit">📚 Imagens e dados de itens, criaturas e NPCs: <a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></div>`;
 S.prices = {}; S.period = 7;
 
 function itemImg(name, size = 28) {
@@ -2065,7 +2085,8 @@ function minimap(c) {
   for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++)
     tiles += `<img src="${MAP_TILE(tx + i * T, ty + j * T, z)}" alt="" style="left:${(i + 1) * T * SC}px; top:${(j + 1) * T * SC}px; width:${T * SC}px; height:${T * SC}px" data-err="remove">`;
   return `<div class="minimap" style="width:${V}px; height:${V}px"><div style="left:${ox}px; top:${oy}px">${tiles}</div><span class="pin"></span></div>
-    <div class="muted" style="margin-top:4px">${x}, ${y}, andar ${z}</div>`;
+    <div class="muted" style="margin-top:4px">${x}, ${y}, andar ${z}</div>
+    <div class="credit">🗺️ Mapa fornecido por <a href="https://tibiamaps.io/" target="_blank" rel="noopener">TibiaMaps.io</a></div>`;
 }
 function itemPopover(key) {
   const p = S.prices[key];
@@ -2078,7 +2099,8 @@ function itemPopover(key) {
           <span><b>${esc(b.npc)}</b><br><span class="muted">${esc(b.city || "")}</span></span></div>
         <div class="npc-where hidden" data-npc-where="${i}">${esc(b.location || "")}${b.coords ? minimap(b.coords) : ""}</div>`).join("")}
       ${p.buyers.length > 4 ? `<div class="muted">+${p.buyers.length - 4} NPCs pagam o mesmo preço.</div>` : ""}
-      <div class="hint">Passe o mouse (ou toque) na imagem do NPC para ver onde ele fica.</div>`;
+      <div class="hint">Passe o mouse (ou toque) na imagem do NPC para ver onde ele fica.</div>
+      ${WIKI_CREDIT}`;
   } else if (p.source === "moeda") {
     body = `<div class="muted">Moeda: vale ${fmt(p.npc_price)} gp.</div>`;
   } else {
@@ -2458,6 +2480,7 @@ async function boot() {
   try { quick = sessionStorage.getItem("ui-reload") === "1"; sessionStorage.removeItem("ui-reload"); } catch {}
   const [desktop] = await Promise.all([detected, sleep(quick ? 300 : 2600)]);
   S.desktop = desktop;
+  $("#dlItem").classList.toggle("hidden", !!desktop);  // 0.21.0: dentro do app de Windows não há o que baixar
   await loadSavedLang();
   if (desktop) {
     const cfg = await window.pywebview.api.get_config();
@@ -2653,6 +2676,14 @@ function vocKey(v) {
        : v.includes("sorcerer") ? "sorcerer" : v.includes("monk") ? "monk" : "none";
 }
 const VOC_HEX = { knight: "#e8705a", paladin: "#4fc39f", druid: "#5aa9f0", sorcerer: "#b382f2", monk: "#f0a04b", none: "#8a93a6" };
+// 0.21.0: arte oficial das vocações (Fankit da CipSoft) no círculo do personagem; Monk ainda não tem arte: fica a sigla
+const VOC_ART = new Set(["knight", "paladin", "druid", "sorcerer"]);
+function paintAvatar(el, name, vocation) {
+  const v = vocKey(vocation);
+  el.classList.toggle("voc", VOC_ART.has(v));
+  el.title = vocation || "";
+  el.innerHTML = VOC_ART.has(v) ? `<img src="fk-voc-${v}.png" alt="" data-err="remove">` : esc(initials(name));
+}
 function vstyle(name) { const v = S.voc[nk(name)]; return v ? `--vc:var(--voc-${vocKey(v)})` : ""; }
 function vdot(name) {
   const v = S.voc[nk(name)];
@@ -3258,5 +3289,160 @@ function showInstallDialog() {
   $("#instNo").addEventListener("click", () => { kv.set("install_later", String(Date.now())); closeModal(); });
 }
 $("#installItem").addEventListener("click", () => { closeDrawer(); showInstallDialog(); });
+
+/* ---------- 0.21.0: telas por cima de tudo (contato e créditos), abertas pelo rodapé ----------
+   Funcionam antes do login (a CipSoft precisa conseguir falar com a gente sem criar conta). */
+const Overlay = {
+  stack: [],
+  open(id) {
+    const el = $("#" + id);
+    if (!el.classList.contains("hidden")) return;
+    closeDrawer();
+    el.classList.remove("hidden"); el.scrollTop = 0;
+    document.body.classList.add("overpage-open");
+    this.stack.push(id);
+    try { history.pushState({ over: id }, ""); } catch {}
+  },
+  /** Fecha a de cima; devolve true se havia alguma aberta. */
+  closeTop() {
+    const id = this.stack.pop();
+    if (!id) return false;
+    $("#" + id).classList.add("hidden");
+    if (!this.stack.length) document.body.classList.remove("overpage-open");
+    return true;
+  },
+  back() { if (this.stack.length) { try { history.back(); } catch { this.closeTop(); } } },
+};
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && Overlay.stack.length && $("#modal").classList.contains("hidden")) Overlay.back();
+});
+document.querySelectorAll("[data-over-close]").forEach((b) => b.addEventListener("click", () => Overlay.back()));
+$("#openCredits").addEventListener("click", () => Overlay.open("creditsScreen"));
+
+/* Bandeiras desenhadas aqui mesmo (o Windows não desenha bandeira em emoji). */
+const FLAGS = {
+  "pt-BR": '<rect width="30" height="20" fill="#009b3a"/><path d="M15 2.5 27.5 10 15 17.5 2.5 10z" fill="#fedf00"/><circle cx="15" cy="10" r="4.6" fill="#002776"/>',
+  en: '<rect width="30" height="20" fill="#fff"/>' + [0, 2, 4, 6, 8, 10, 12].map((i) => `<rect y="${i * 20 / 13}" width="30" height="${20 / 13}" fill="#b22234"/>`).join("")
+    + '<rect width="13" height="10.77" fill="#3c3b6e"/>',
+  es: '<rect width="30" height="20" fill="#aa151b"/><rect y="5" width="30" height="10" fill="#f1bf00"/>',
+  ja: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="5.5" fill="#bc002d"/>',
+  de: '<rect width="30" height="6.67" fill="#000"/><rect y="6.67" width="30" height="6.67" fill="#dd0000"/><rect y="13.33" width="30" height="6.67" fill="#ffce00"/>',
+  pl: '<rect width="30" height="10" fill="#fff"/><rect y="10" width="30" height="10" fill="#dc143c"/>',
+  fr: '<rect width="10" height="20" fill="#0055a4"/><rect x="10" width="10" height="20" fill="#fff"/><rect x="20" width="10" height="20" fill="#ef4135"/>',
+  ru: '<rect width="30" height="6.67" fill="#fff"/><rect y="6.67" width="30" height="6.67" fill="#0039a6"/><rect y="13.33" width="30" height="6.67" fill="#d52b1e"/>',
+};
+const flagSvg = (code) => `<svg class="flag" viewBox="0 0 30 20" width="24" height="16" aria-hidden="true">${FLAGS[code] || ""}</svg>`;
+function flagPicker(el) {
+  el.setAttribute("data-i18n-skip", "");
+  el.innerHTML = I18N.LANGS.map((l) => `<button type="button" data-lang="${l.code}" class="${l.code === I18N.lang ? "on" : ""}"
+      title="${esc(l.name)}">${flagSvg(l.code)}<span lang="${l.code}">${esc(l.name)}</span></button>`).join("");
+  el.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", async () => {
+    const code = await I18N.use(b.dataset.lang);
+    saveLang(code);
+  }));
+  I18N.onChange((code) => el.querySelectorAll("[data-lang]").forEach((x) => x.classList.toggle("on", x.dataset.lang === code)));
+}
+flagPicker($("#contactLang"));
+
+/* ---------- contato com o administrador ---------- */
+const CONTACT_MAX = 3000;
+const EMAIL_RE = /^[^@\s<>"',;]{1,64}@[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$/;
+async function openContact() {
+  $("#contactForm").classList.remove("hidden");
+  $("#contactDone").classList.add("hidden");
+  $("#contactErr").textContent = "";
+  Overlay.open("contactScreen");
+  setTimeout(() => $("#contactEmail").focus(), 60);
+  const info = await fetch(S.api + "/api/contact", { headers: NGROK }).then((r) => r.json()).catch(() => null);
+  if (info && info.to) $("#contactTo").value = $("#contactTo").defaultValue = info.to;
+}
+$("#openContact").addEventListener("click", openContact);
+function paintContactCount() {
+  const n = $("#contactMsg").value.length;
+  $("#contactCount").textContent = `${n.toLocaleString("pt-BR")} / ${CONTACT_MAX.toLocaleString("pt-BR")}`;
+  $("#contactCount").classList.toggle("neg", n >= CONTACT_MAX);
+}
+$("#contactMsg").addEventListener("input", paintContactCount);
+paintContactCount();
+
+/** Acha o número que o servidor sorteou (prova de trabalho). Devolve null se a pessoa cancelar. */
+async function solveCaptcha(ch, onProgress, cancelled) {
+  if (!(window.crypto && crypto.subtle)) throw new Error("subtle");
+  const enc = new TextEncoder();
+  const target = new Uint8Array(ch.challenge.match(/../g).map((h) => parseInt(h, 16)));
+  for (let n = 0; n <= ch.maxnumber; n++) {
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", enc.encode(ch.salt + n)));
+    let same = true;
+    for (let i = 0; i < 32; i++) if (h[i] !== target[i]) { same = false; break; }
+    if (same) return n;
+    if (n % 1500 === 0) { onProgress(n / ch.maxnumber); if (cancelled()) return null; }
+  }
+  return null;
+}
+function captchaDialog() {
+  return new Promise((resolve) => {
+    let done = false, cancelled = false;
+    openModal(`<h3>🛡️ Confirme que você não é um robô</h3>
+      <p class="muted" style="margin-top:0">Isso protege o site de robôs que enviam mensagens em massa. Leva só alguns segundos.</p>
+      <label class="capRow"><input type="checkbox" id="capCheck"><span>Não sou um robô</span></label>
+      <div class="capBar hidden" id="capBar"><i id="capFill"></i></div>
+      <div class="hint" id="capMsg"></div>
+      <div class="actions"><button class="btn2" type="button" id="capCancel">Cancelar</button></div>`);
+    const finish = (v) => { if (done) return; done = true; obs.disconnect(); resolve(v); };
+    // fechou a janela (fora dela, Esc ou Cancelar): desiste
+    const obs = new MutationObserver(() => { if ($("#modal").classList.contains("hidden")) { cancelled = true; finish(null); } });
+    obs.observe($("#modal"), { attributes: true, attributeFilter: ["class"] });
+    $("#capCancel").addEventListener("click", () => { cancelled = true; closeModal(); });
+    $("#capCheck").addEventListener("change", async (e) => {
+      const box = e.target;
+      if (!box.checked) return;
+      box.disabled = true;
+      $("#capBar").classList.remove("hidden");
+      $("#capMsg").textContent = "Conferindo…";
+      try {
+        const r = await fetch(S.api + "/api/contact/challenge", { headers: NGROK, cache: "no-store" });
+        if (!r.ok) throw new Error("http");
+        const ch = await r.json();
+        const n = await solveCaptcha(ch, (p) => { $("#capFill").style.width = Math.min(96, Math.round(p * 100)) + "%"; }, () => cancelled);
+        if (n === null) { if (!cancelled) { $("#capMsg").textContent = "Não deu certo. Feche e tente de novo."; } return; }
+        $("#capFill").style.width = "100%";
+        $("#capMsg").textContent = "✅ Confirmado!";
+        await sleep(350);
+        finish({ salt: ch.salt, number: n, challenge: ch.challenge, signature: ch.signature });
+        closeModal();
+      } catch {
+        $("#capMsg").textContent = "Não consegui confirmar agora. Confira a internet e tente de novo.";
+        box.disabled = false; box.checked = false;
+      }
+    });
+  });
+}
+$("#contactForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const err = $("#contactErr"), btn = $("#contactSend");
+  const email = $("#contactEmail").value.trim(), subject = $("#contactSubject").value.trim(), message = $("#contactMsg").value.trim();
+  err.textContent = "";
+  if (!EMAIL_RE.test(email)) { err.textContent = "Digite o seu e-mail completo, por exemplo nome@gmail.com."; $("#contactEmail").focus(); return; }
+  if (message.length < 10) { err.textContent = "Escreva a sua mensagem (pelo menos 10 caracteres)."; $("#contactMsg").focus(); return; }
+  const answer = await captchaDialog();
+  if (!answer) return;
+  btn.disabled = true;
+  try {
+    const res = await timedFetch(S.api + "/api/contact", {
+      method: "POST", headers: { ...NGROK, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, subject, message, lang: I18N.lang, captcha: answer, ":boom:": $("#contactBoom").value }),
+    }, 30000);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { const d = data.detail; err.textContent = (d && d.message) || d || "Não consegui enviar agora. Tente de novo."; return; }
+    $("#contactForm").reset(); paintContactCount();
+    $("#contactForm").classList.add("hidden");
+    $("#contactDone").classList.remove("hidden");
+  } catch {
+    err.textContent = "Sem conexão com o servidor. Tente de novo quando voltar.";
+  } finally { btn.disabled = false; }
+});
+$("#contactAgain").addEventListener("click", () => {
+  $("#contactDone").classList.add("hidden"); $("#contactForm").classList.remove("hidden");
+});
 
 boot();

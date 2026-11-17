@@ -1,8 +1,25 @@
-# Caddy: HTTPS automático (Let's Encrypt) no domínio do .env (SITE_DOMAIN, ex.: artemis-hunt.duckdns.org).
+# Caddy: HTTPS automático (Let's Encrypt) no domínio do .env (SITE_DOMAIN, ex.: artemishunt.com.br).
 # Só roda com o perfil "dominio" do docker-compose (ligado sozinho quando SITE_DOMAIN está no .env).
 # O Caddy sempre troca o X-Forwarded-For pelo IP real de quem acessou (não confia no que vem de fora),
 # e esse cabeçalho faz o servidor bloquear o painel admin por aqui, como já acontece pelo ngrok.
 {$SITE_DOMAIN} {
 	encode gzip
+	reverse_proxy server:8000
+}
+
+# www.<domínio> leva para o endereço sem www.
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+# Endereço antigo (DuckDNS): o app de Windows e o launcher já instalados chamam a API por ele, então tudo
+# continua funcionando aqui. Só quem abre a página no navegador é levado para o domínio novo.
+{$LEGACY_DOMAIN:artemis-hunt.duckdns.org} {
+	encode gzip
+	@pagina {
+		method GET
+		path / /index.html
+	}
+	redir @pagina https://{$SITE_DOMAIN}{uri} permanent
 	reverse_proxy server:8000
 }

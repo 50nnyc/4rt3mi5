@@ -1,6 +1,90 @@
 {
   "releases": [
     {
+      "version": "0.21.0",
+      "date": "2026-11-16",
+      "title": "Endereço novo, contato e créditos",
+      "changes": [
+        "🌐 Endereço novo: artemishunt.com.br. O endereço antigo continua funcionando e leva você para o novo; no navegador, entre na sua conta de novo uma vez.",
+        "✉️ Contato com o administrador: toque em \"Hilay\" no rodapé de qualquer tela, até sem conta. Dá para trocar o idioma na própria tela, e uma confirmação rápida barra os robôs.",
+        "©️ Rodapé com os links do Tibia e da CipSoft, a criadora do jogo, e a tela de Créditos com os sites de onde vêm imagens, mapa e dados (TibiaWiki BR, TibiaMaps.io e TibiaData), também citados onde aparecem.",
+        "💻 O app para Windows agora fica em ☰ → App para Windows, com o aviso da CipSoft sobre baixar programas de fansites. Tudo continua funcionando no navegador, sem baixar nada.",
+        "🛡️ O círculo do seu personagem no menu ☰ mostra a arte oficial da vocação (Knight, Paladin, Druid ou Sorcerer), e o rodapé traz o logo do Tibia, ambos do Fankit oficial da CipSoft."
+      ],
+      "tr": {
+        "en": {
+          "title": "New address, contact and credits",
+          "changes": [
+            "🌐 New address: artemishunt.com.br. The old address still works and takes you to the new one; in the browser, log in to your account again once.",
+            "✉️ Contact the administrator: tap \"Hilay\" in the footer of any screen, even without an account. You can change the language on that screen, and a quick check keeps robots out.",
+            "©️ Footer with links to Tibia and CipSoft, the creator of the game, and a Credits screen with the sites that provide images, map and data (TibiaWiki BR, TibiaMaps.io and TibiaData), also credited where they appear.",
+            "💻 The Windows app is now under ☰ → Windows app, with CipSoft's notice about downloading programs from fansites. Everything still works in the browser, without downloading anything.",
+            "🛡️ Your character's circle in the ☰ menu shows the official vocation art (Knight, Paladin, Druid or Sorcerer), and the footer shows the Tibia logo, both from CipSoft's official Fankit."
+          ]
+        },
+        "es": {
+          "title": "Dirección nueva, contacto y créditos",
+          "changes": [
+            "🌐 Dirección nueva: artemishunt.com.br. La dirección antigua sigue funcionando y te lleva a la nueva; en el navegador, entra en tu cuenta de nuevo una vez.",
+            "✉️ Contactar al administrador: toca \"Hilay\" en el pie de cualquier pantalla, incluso sin cuenta. Puedes cambiar el idioma en la misma pantalla, y una confirmación rápida frena a los robots.",
+            "©️ Pie de página con los enlaces de Tibia y de CipSoft, la creadora del juego, y la pantalla de Créditos con los sitios de donde vienen imágenes, mapa y datos (TibiaWiki BR, TibiaMaps.io y TibiaData), también citados donde aparecen.",
+            "💻 La app para Windows ahora está en ☰ → App para Windows, con el aviso de CipSoft sobre descargar programas de fansites. Todo sigue funcionando en el navegador, sin descargar nada.",
+            "🛡️ El círculo de tu personaje en el menú ☰ muestra el arte oficial de la vocación (Knight, Paladin, Druid o Sorcerer), y el pie de página trae el logo de Tibia, ambos del Fankit oficial de CipSoft."
+          ]
+        },
+        "ja": {
+          "title": "新しいアドレス、お問い合わせ、クレジット",
+          "changes": [
+            "🌐 新しいアドレス：artemishunt.com.br。古いアドレスも使え、新しいアドレスに移動します。ブラウザでは一度だけ再ログインしてください。",
+            "✉️ 管理者に連絡：どの画面でもフッターの「Hilay」をタップ。アカウントがなくても使えます。その画面で言語を切り替えられ、簡単な確認でロボットを防ぎます。",
+            "©️ フッターにTibiaと開発元CipSoftへのリンクを追加。画像・地図・データの提供元（TibiaWiki BR、TibiaMaps.io、TibiaData）をまとめたクレジット画面も追加し、表示される場所にも記載しました。",
+            "💻 Windows版アプリは ☰ → Windows版アプリ に移動し、ファンサイトからのダウンロードに関するCipSoftの注意を表示します。何もダウンロードせず、ブラウザですべて使えます。",
+            "🛡️ ☰メニューのキャラクターの丸アイコンに職業の公式イラスト（Knight、Paladin、Druid、Sorcerer）を表示し、フッターにはTibiaのロゴを表示します。どちらもCipSoft公式のFankitのものです。"
+          ]
+        },
+        "de": {
+          "title": "Neue Adresse, Kontakt und Credits",
+          "changes": [
+            "🌐 Neue Adresse: artemishunt.com.br. Die alte Adresse funktioniert weiter und leitet zur neuen; im Browser meldest du dich einmal neu an.",
+            "✉️ Den Administrator kontaktieren: Tippe im Fußbereich jedes Bildschirms auf \"Hilay\", auch ohne Konto. Die Sprache lässt sich dort direkt ändern, und eine kurze Bestätigung hält Roboter fern.",
+            "©️ Fußbereich mit Links zu Tibia und CipSoft, dem Entwickler des Spiels, und ein Credits-Bildschirm mit den Seiten, von denen Bilder, Karte und Daten stammen (TibiaWiki BR, TibiaMaps.io und TibiaData), auch dort genannt, wo sie erscheinen.",
+            "💻 Die Windows-App findest du jetzt unter ☰ → App für Windows, mit dem Hinweis von CipSoft zum Herunterladen von Programmen von Fanseiten. Alles funktioniert weiterhin im Browser, ohne Download.",
+            "🛡️ Der Kreis deines Charakters im ☰-Menü zeigt die offizielle Berufungs-Grafik (Knight, Paladin, Druid oder Sorcerer), und im Fußbereich steht das Tibia-Logo, beides aus dem offiziellen Fankit von CipSoft."
+          ]
+        },
+        "pl": {
+          "title": "Nowy adres, kontakt i podziękowania",
+          "changes": [
+            "🌐 Nowy adres: artemishunt.com.br. Stary adres nadal działa i przenosi na nowy; w przeglądarce zaloguj się ponownie raz.",
+            "✉️ Kontakt z administratorem: dotknij \"Hilay\" w stopce dowolnego ekranu, nawet bez konta. Język zmienisz na tym samym ekranie, a szybkie potwierdzenie zatrzymuje roboty.",
+            "©️ Stopka z linkami do Tibii i CipSoft, twórcy gry, oraz ekran Podziękowania ze stronami, z których pochodzą obrazy, mapa i dane (TibiaWiki BR, TibiaMaps.io i TibiaData), wymienionymi też tam, gdzie się pojawiają.",
+            "💻 Aplikacja na Windows jest teraz w ☰ → Aplikacja na Windows, z ostrzeżeniem CipSoft o pobieraniu programów ze stron fanowskich. Wszystko nadal działa w przeglądarce, bez pobierania.",
+            "🛡️ Kółko Twojej postaci w menu ☰ pokazuje oficjalną grafikę profesji (Knight, Paladin, Druid lub Sorcerer), a w stopce jest logo Tibii, oba z oficjalnego Fankitu CipSoft."
+          ]
+        },
+        "fr": {
+          "title": "Nouvelle adresse, contact et crédits",
+          "changes": [
+            "🌐 Nouvelle adresse : artemishunt.com.br. L'ancienne adresse fonctionne toujours et mène à la nouvelle ; dans le navigateur, reconnectez-vous une fois.",
+            "✉️ Contacter l'administrateur : touchez \"Hilay\" dans le pied de page de n'importe quel écran, même sans compte. La langue se change sur ce même écran, et une vérification rapide bloque les robots.",
+            "©️ Pied de page avec les liens de Tibia et de CipSoft, le créateur du jeu, et un écran Crédits avec les sites qui fournissent images, carte et données (TibiaWiki BR, TibiaMaps.io et TibiaData), aussi cités là où ils apparaissent.",
+            "💻 L'app Windows se trouve maintenant dans ☰ → App pour Windows, avec l'avertissement de CipSoft sur le téléchargement de programmes depuis des fansites. Tout fonctionne toujours dans le navigateur, sans rien télécharger.",
+            "🛡️ Le cercle de votre personnage dans le menu ☰ affiche l'illustration officielle de la vocation (Knight, Paladin, Druid ou Sorcerer), et le pied de page montre le logo de Tibia, tous deux issus du Fankit officiel de CipSoft."
+          ]
+        },
+        "ru": {
+          "title": "Новый адрес, связь и источники",
+          "changes": [
+            "🌐 Новый адрес: artemishunt.com.br. Старый адрес работает и ведёт на новый; в браузере один раз войдите в аккаунт заново.",
+            "✉️ Связь с администратором: нажмите \"Hilay\" внизу любого экрана, даже без аккаунта. Язык можно сменить прямо там, а быстрая проверка отсекает роботов.",
+            "©️ Внизу страницы — ссылки на Tibia и CipSoft, создателя игры, и экран «Источники» с сайтами, откуда берутся изображения, карта и данные (TibiaWiki BR, TibiaMaps.io и TibiaData); они указаны и там, где используются.",
+            "💻 Приложение для Windows теперь в ☰ → Приложение для Windows, с предупреждением CipSoft о скачивании программ с фан-сайтов. Всё по-прежнему работает в браузере, без скачивания.",
+            "🛡️ Кружок вашего персонажа в меню ☰ показывает официальный рисунок профессии (Knight, Paladin, Druid или Sorcerer), а внизу страницы — логотип Tibia; оба из официального фанкита CipSoft."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.20.0",
       "date": "2026-11-16",
       "title": "Menu Solo e Party, tipo de player e chave sem prazo",

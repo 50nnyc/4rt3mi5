@@ -36,7 +36,12 @@ PATTERNS = [
     ("e-mail", re.compile(r"\b[A-Za-z0-9._%+-]+@(?!users\.noreply\.github\.com|example\.(com|org))[A-Za-z0-9.-]+\.[a-z]{2,}\b")),
 ]
 # Exemplos/marcadores que podem aparecer na documentação
-ALLOWED_TEXT = {"ART-XXXX-XXXX"}
+ALLOWED_TEXT = {"ART-XXXX-XXXX",
+                # 0.21.0: endereços públicos (o do site e o da CipSoft para fansites) e exemplos dos campos/testes
+                "contato@artemishunt.com.br", "fansites@tibia.com", "seu-email@gmail.com",
+                "exemplo@exemplo.com", "ejemplo@ejemplo.com", "beispiel@beispiel.de", "exemple@exemple.fr",
+                "przyklad@przyklad.pl", "nome@gmail.com", "name@gmail.com", "nombre@gmail.com", "nom@gmail.com",
+                "imie@gmail.com", "fan@exemplo.com", "teste@exemplo.com", "eu@gmail.com", "fan@x.com", "x@y.com"}
 # Dados públicos importados (TibiaWiki): só procura arquivos/segredos fortes, não e-mails
 SKIP_PATTERNS_IN = {"artemis/data/tibiawiki.json": {"e-mail"}, "artemis/data/hunts.json": {"e-mail"}}
 

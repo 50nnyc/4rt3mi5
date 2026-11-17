@@ -11,6 +11,11 @@ services:
     restart: unless-stopped
     environment:
       TZ: "<-03>3"     # horário de Brasília (sem precisar instalar tzdata na imagem)
+      # 0.21.0: tela de contato. Sem usuário/senha SMTP, as mensagens ficam só no painel admin.
+      ARTEMIS_CONTACT_EMAIL: ${ARTEMIS_CONTACT_EMAIL:-contato@artemishunt.com.br}
+      ARTEMIS_CONTACT_INBOX: ${ARTEMIS_CONTACT_INBOX:-}
+      ARTEMIS_SMTP_USER: ${ARTEMIS_SMTP_USER:-}
+      ARTEMIS_SMTP_PASSWORD: ${ARTEMIS_SMTP_PASSWORD:-}
     ports:
       - "127.0.0.1:8000:8000"   # só este PC (o acesso de fora é pelo ngrok)
     volumes:

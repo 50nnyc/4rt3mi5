@@ -13,7 +13,9 @@ LANGS = ("en", "es", "ja", "de", "pl", "fr", "ru")  # 0.20.0: + alemão, polonê
 PH = re.compile(r"\{\d+\}")
 # textos do index.html que ficam iguais em todo idioma (nomes do Tibia, marca, exemplos de formato)
 SAME = {"4rt3mi5", "Lootsplit", "Hunt Session Stacker", "Hunts", "Solo", "Party", "XP", "XP/h", "☰", "←",
-        "⚙️", "🔉", "hunt companion", "SENHA-XXXXX-XXXXX", "ART-XXXX-XXXX", "Gold/h", "Bosses"}
+        "⚙️", "🔉", "hunt companion", "SENHA-XXXXX-XXXXX", "ART-XXXX-XXXX", "Gold/h", "Bosses",
+        # 0.21.0: marcas e o nick do criador (rodapé e créditos)
+        "Tibia", "CipSoft", "CipSoft GmbH", "TibiaWiki BR", "TibiaMaps.io", "TibiaData", "Hilay", "Created by"}
 
 
 def load(lang):
