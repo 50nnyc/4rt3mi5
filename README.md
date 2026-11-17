@@ -38,6 +38,12 @@ app desktop abre a mesma página numa janela própria.
    (`artemis/core/tibiacal.py`) tira só os dados (dias, eventos, cores, ⏱ server save e descrições em texto) e guarda
    cada colagem na tabela `tibia_calendar` (histórico só no painel; "Desfazer última" volta para a anterior). O app
    (`/api/tibia/calendar`) mostra a colagem mais nova de cada mês, nunca o HTML colado.
+   **0.22.2:** menu em galhos (Ferramentas → **Solo**: Hunt Session Stacker, Boss Session Stacker, Hunts solo ·
+   **Party**: Lootsplit, Lootsplit de bosses, Hunts em party; depois **Tibia** e **Conta**). 👑 Bosses em Party recebe o
+   Party Hunt Analyser e faz o lootsplit direto. O Início mostra a notícia mais nova do Tibia (`/api/tibia/headline`) e a
+   última hunt do modo. **Tradução automática** (só notícias, News Archive e descrições do calendário): DeepL com a
+   chave `ARTEMIS_DEEPL_KEY` no `.env` (plano grátis: 500 mil caracteres/mês; limite em `ARTEMIS_TRANSLATE_MONTHLY`,
+   padrão 450 mil). Cada texto é traduzido uma vez por idioma e guardado na tabela `translations`; sem chave, fica em inglês.
    Menu ☰: **Início**; o grupo Solo/Party acima;
    **Progresso** → Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
    **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair. Solo → Stacker já abre a janela para colar.

@@ -24,6 +24,8 @@ services:
       ARTEMIS_CONTACT_INBOX: ${ARTEMIS_CONTACT_INBOX:-}
       ARTEMIS_SMTP_USER: ${ARTEMIS_SMTP_USER:-}
       ARTEMIS_SMTP_PASSWORD: ${ARTEMIS_SMTP_PASSWORD:-}
+      # 0.22.2: tradução automática das notícias/calendário do Tibia (DeepL; sem chave fica em inglês)
+      ARTEMIS_DEEPL_KEY: ${ARTEMIS_DEEPL_KEY:-}
     ports:
       - "127.0.0.1:8000:8000"   # só este PC (o acesso de fora é pelo ngrok)
     volumes:

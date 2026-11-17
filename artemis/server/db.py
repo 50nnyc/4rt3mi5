@@ -412,6 +412,14 @@ CREATE TABLE IF NOT EXISTS tibia_calendar (
     created_at  TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_tibia_calendar_month ON tibia_calendar(month, id);
+-- 0.22.2: traduções automáticas (notícias, News Archive e calendário). Chave = hash do texto original + idioma.
+CREATE TABLE IF NOT EXISTS translations (
+    src_hash    TEXT NOT NULL,
+    lang        TEXT NOT NULL,
+    text        TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (src_hash, lang)
+);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -1412,6 +1420,27 @@ class Store:
         rows = self._conn.execute(f"SELECT {self._TN_COLS}, content_html IS NOT NULL AS saved FROM tibia_news "
                                   f"WHERE {cond} ORDER BY date DESC, id DESC LIMIT ?", (*args, limit))
         return [dict(r) for r in rows], total
+
+    # ------------------------------------------------------------------ 🌐 traduções guardadas (0.22.2)
+    @staticmethod
+    def text_hash(text: str, html: bool = False) -> str:
+        return hashlib.sha256(("h:" if html else "t:").encode() + text.encode("utf-8")).hexdigest()
+
+    def translations(self, hashes: list[str], lang: str) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for i in range(0, len(hashes), 500):
+            part = hashes[i:i + 500]
+            marks = ",".join("?" * len(part))
+            for h, t in self._conn.execute(f"SELECT src_hash, text FROM translations WHERE lang = ? AND src_hash IN ({marks})",
+                                           (lang, *part)):
+                out[h] = t
+        return out
+
+    def save_translations(self, rows: list[tuple[str, str]], lang: str) -> None:
+        now = _iso(utcnow())
+        with self._lock:
+            self._conn.executemany("INSERT OR REPLACE INTO translations VALUES (?, ?, ?, ?)", [(h, lang, t, now) for h, t in rows])
+            self._conn.commit()
 
     # ------------------------------------------------------------------ 📅 calendário do Tibia (0.22.1)
     def save_calendar(self, month: str, data: dict, raw_html: str) -> int:

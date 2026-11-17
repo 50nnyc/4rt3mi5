@@ -1,6 +1,82 @@
 {
   "releases": [
     {
+      "version": "0.22.2",
+      "date": "2026-11-17",
+      "title": "Menu em galhos e notícias no seu idioma",
+      "changes": [
+        "O menu ☰ ficou em galhos: em Ferramentas, Solo leva ao Hunt Session Stacker, ao Boss Session Stacker e às Hunts solo; Party leva ao Lootsplit, ao Lootsplit de bosses e às Hunts em party. Depois vêm Tibia e Conta.",
+        "👑 Bosses segue Solo/Party: em Solo é o Boss Session Stacker (a sua sessão, só sua); em Party, cole o Party Hunt Analyser da luta e já sai o lootsplit, com quem transfere para quem e a mensagem para o chat do Tibia.",
+        "🏠 O Início destaca a notícia mais nova do Tibia e, logo abaixo, a sua última hunt: solo ou em party, conforme a chave do rodapé, sem sair da tela.",
+        "📰 Novidades, 💬 O que os CMs estão falando? e as descrições do 📅 Calendário agora aparecem no idioma escolhido em ⚙️ Configurações, com tradução automática do texto original em inglês."
+      ],
+      "tr": {
+        "en": {
+          "title": "Branch menu and news in your language",
+          "changes": [
+            "The ☰ menu now has branches: under Tools, Solo leads to the Hunt Session Stacker, the Boss Session Stacker and Solo hunts; Party leads to the Lootsplit, the Boss lootsplit and Party hunts. Tibia and Account come after that.",
+            "👑 Bosses follows Solo/Party: in Solo it is the Boss Session Stacker (your session, only yours); in Party, paste the fight's Party Hunt Analyser and you get the lootsplit right away, with who transfers to whom and the message for the Tibia chat.",
+            "🏠 Home highlights the newest Tibia news and, right below, your last hunt: solo or party, following the bottom switch, without leaving the screen.",
+            "📰 News, 💬 What are the CMs saying? and the 📅 Calendar descriptions now show in the language chosen in ⚙️ Settings, machine-translated from the original English text."
+          ]
+        },
+        "es": {
+          "title": "Menú en ramas y noticias en tu idioma",
+          "changes": [
+            "El menú ☰ ahora tiene ramas: en Herramientas, Solo lleva al Hunt Session Stacker, al Boss Session Stacker y a las Hunts solo; Party lleva al Lootsplit, al Lootsplit de bosses y a las Hunts en party. Después vienen Tibia y Cuenta.",
+            "👑 Bosses sigue Solo/Party: en Solo es el Boss Session Stacker (tu sesión, solo tuya); en Party, pega el Party Hunt Analyser de la pelea y sale el lootsplit al instante, con quién transfiere a quién y el mensaje para el chat de Tibia.",
+            "🏠 El Inicio destaca la noticia más reciente de Tibia y, justo debajo, tu última hunt: solo o en party, según el interruptor inferior, sin salir de la pantalla.",
+            "📰 Novedades, 💬 ¿Qué dicen los CMs? y las descripciones del 📅 Calendario ahora aparecen en el idioma elegido en ⚙️ Configuración, con traducción automática del texto original en inglés."
+          ]
+        },
+        "ja": {
+          "title": "ツリー型メニューとあなたの言語のニュース",
+          "changes": [
+            "☰メニューがツリー型になりました。ツールの中で、ソロはHunt Session Stacker、Boss Session Stacker、ソロハントへ、パーティーはLootsplit、ボスのLootsplit、パーティーハントへ進みます。その後にTibiaとアカウントが続きます。",
+            "👑 ボスもソロ／パーティーに連動します。ソロではBoss Session Stacker（あなただけのセッション）、パーティーでは戦闘のParty Hunt Analyserを貼り付けるとすぐにLootsplitができ、誰が誰に送金するかとTibiaチャット用のメッセージも表示されます。",
+            "🏠 ホームでは最新のTibiaニュースを大きく表示し、その下に最新のハントを表示します。下部のスイッチに合わせてソロかパーティーかが切り替わり、画面はそのままです。",
+            "📰 ニュース、💬「CMは何と言っている？」、📅 カレンダーの説明が⚙️ 設定で選んだ言語で表示されるようになりました（英語の原文を自動翻訳）。"
+          ]
+        },
+        "de": {
+          "title": "Menü mit Zweigen und News in deiner Sprache",
+          "changes": [
+            "Das ☰-Menü hat jetzt Zweige: Unter Werkzeuge führt Solo zum Hunt Session Stacker, zum Boss Session Stacker und zu den Solo-Hunts; Party führt zum Lootsplit, zum Boss-Lootsplit und zu den Party-Hunts. Danach folgen Tibia und Konto.",
+            "👑 Bosse folgt Solo/Party: In Solo ist es der Boss Session Stacker (deine Session, nur für dich); in Party fügst du den Party Hunt Analyser des Kampfes ein und erhältst sofort den Lootsplit, mit wer wem überweist und der Nachricht für den Tibia-Chat.",
+            "🏠 Die Startseite hebt die neueste Tibia-News hervor und zeigt direkt darunter deine letzte Hunt: solo oder in der Party, je nach Schalter unten, ohne die Seite zu verlassen.",
+            "📰 Neuigkeiten, 💬 Was sagen die CMs? und die Beschreibungen im 📅 Kalender erscheinen jetzt in der in ⚙️ Einstellungen gewählten Sprache, automatisch aus dem englischen Original übersetzt."
+          ]
+        },
+        "pl": {
+          "title": "Menu w gałęziach i wiadomości w twoim języku",
+          "changes": [
+            "Menu ☰ ma teraz gałęzie: w Narzędziach Solo prowadzi do Hunt Session Stacker, Boss Session Stacker i huntów solo; Party prowadzi do Lootsplit, Lootsplit bossów i huntów w party. Potem są Tibia i Konto.",
+            "👑 Bossowie podążają za Solo/Party: w Solo to Boss Session Stacker (twoja sesja, tylko twoja); w Party wklej Party Hunt Analyser z walki i od razu dostaniesz lootsplit, z tym kto komu przelewa i wiadomością na czat Tibii.",
+            "🏠 Strona główna wyróżnia najnowszą wiadomość z Tibii, a tuż pod nią twój ostatni hunt: solo lub w party, zależnie od przełącznika na dole, bez opuszczania ekranu.",
+            "📰 Nowości, 💬 Co mówią CM-i? i opisy w 📅 Kalendarzu pojawiają się teraz w języku wybranym w ⚙️ Ustawieniach, z automatycznym tłumaczeniem oryginalnego tekstu po angielsku."
+          ]
+        },
+        "fr": {
+          "title": "Menu en branches et actualités dans votre langue",
+          "changes": [
+            "Le menu ☰ est maintenant en branches : dans Outils, Solo mène au Hunt Session Stacker, au Boss Session Stacker et aux hunts solo ; Party mène au Lootsplit, au Lootsplit des boss et aux hunts en party. Ensuite viennent Tibia et Compte.",
+            "👑 Boss suit Solo/Party : en Solo c'est le Boss Session Stacker (votre session, rien qu'à vous) ; en Party, collez le Party Hunt Analyser du combat et le lootsplit sort tout de suite, avec qui transfère à qui et le message pour le chat de Tibia.",
+            "🏠 L'accueil met en avant la dernière actualité de Tibia et, juste en dessous, votre dernière hunt : solo ou en party, selon l'interrupteur du bas, sans quitter l'écran.",
+            "📰 Actualités, 💬 Que disent les CM ? et les descriptions du 📅 Calendrier s'affichent maintenant dans la langue choisie dans ⚙️ Paramètres, avec une traduction automatique du texte original en anglais."
+          ]
+        },
+        "ru": {
+          "title": "Меню-дерево и новости на вашем языке",
+          "changes": [
+            "Меню ☰ теперь в виде веток: в Инструментах Соло ведёт к Hunt Session Stacker, Boss Session Stacker и соло-хантам; Party ведёт к Lootsplit, Lootsplit боссов и хантам в party. Затем идут Tibia и Аккаунт.",
+            "👑 Боссы следуют Соло/Party: в Соло это Boss Session Stacker (ваша сессия, только ваша); в Party вставьте Party Hunt Analyser боя, и сразу получите lootsplit с тем, кто кому переводит, и сообщением для чата Tibia.",
+            "🏠 Главная выделяет самую свежую новость Tibia, а сразу под ней — ваш последний хант: соло или в party, по переключателю внизу, не уходя с экрана.",
+            "📰 Новости, 💬 «Что говорят CM?» и описания в 📅 Календаре теперь показываются на языке, выбранном в ⚙️ Настройках, с машинным переводом английского оригинала."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.22.1",
       "date": "2026-11-17",
       "title": "Calendário de eventos",

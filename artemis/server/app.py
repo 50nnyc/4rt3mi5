@@ -46,6 +46,7 @@ from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
 from artemis.core import tibiacal, tibianews
+from artemis.core import translate as translate_core
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from . import mailer
@@ -483,7 +484,63 @@ def _news_with_content(rows: list[dict]) -> list[dict]:
 def _news_out(r: dict) -> dict:
     return {"id": r["id"], "date": r["date"], "title": r["title"], "category": r["category"], "type": r["type"],
             "url": tibianews.TIBIA_NEWS_URL.format(id=r["id"]), "content_html": r.get("content_html"),
-            "saved": r.get("content_html") is not None if "content_html" in r else bool(r.get("saved"))}
+            "saved": r.get("content_html") is not None if "content_html" in r else bool(r.get("saved")),
+            "translated": bool(r.get("translated"))}
+
+
+# ------------------------------------------------------------------ 🌐 tradução automática (0.22.2)
+# Notícias, News Archive e calendário vêm em inglês; o resto do app tem tradução própria (i18n-*.json).
+TRANSLATE_KEY = os.environ.get("ARTEMIS_DEEPL_KEY", "").strip()
+TRANSLATE_MONTHLY = int(os.environ.get("ARTEMIS_TRANSLATE_MONTHLY", "450000"))  # caracteres/mês (o grátis do DeepL é 500 mil)
+
+
+def _lang(lang: str) -> str | None:
+    """Idioma do app que tem tradução automática; None = mostrar o original (inglês)."""
+    return lang if lang in translate_core.TARGETS else None
+
+
+def _translate(texts: list[str], lang: str | None, html: bool = False) -> tuple[list[str], bool]:
+    """Traduz usando o que já está guardado; o que falta vai ao DeepL (dentro da cota do mês).
+    Retorna (textos, algum foi traduzido?). Sem chave, sem cota ou com o serviço fora: devolve o original."""
+    if not lang or not texts:
+        return texts, False
+    hashes = [store.text_hash(t, html) for t in texts]
+    known = store.translations(sorted(set(hashes)), lang)
+    missing = {h: t for h, t in zip(hashes, texts) if h not in known and t.strip()}
+    if missing and TRANSLATE_KEY:
+        month_key = "translate_chars:" + datetime.now().strftime("%Y-%m")
+        used = int(store.meta(month_key) or 0)
+        chars = sum(len(t) for t in missing.values())
+        if used + chars <= TRANSLATE_MONTHLY:
+            try:
+                got = translate_core.translate(TRANSLATE_KEY, list(missing.values()), lang, html=html)
+            except translate_core.TranslateError as e:
+                print("Tradução indisponível:", e)
+            else:
+                if html:  # o que volta do serviço passa de novo pela lista fechada de tags
+                    got = [tibianews.sanitize(g) for g in got]
+                rows = list(zip(missing.keys(), got))
+                store.save_translations(rows, lang)
+                store.set_meta(month_key, str(used + chars))
+                known.update(rows)
+    out = [known.get(h, t) for h, t in zip(hashes, texts)]
+    return out, any(h in known for h in hashes)
+
+
+def _translate_news(rows: list[dict], lang: str | None, content: bool = True) -> list[dict]:
+    if not lang or not rows:
+        return rows
+    titles, t_ok = _translate([r["title"] for r in rows], lang)
+    for r, t in zip(rows, titles):
+        r["title"] = t
+    with_body = [r for r in rows if content and r.get("content_html")]
+    bodies, b_ok = _translate([r["content_html"] for r in with_body], lang, html=True)
+    for r, b in zip(with_body, bodies):
+        r["content_html"] = b
+    if t_ok or b_ok:
+        for r in rows:
+            r["translated"] = True
+    return rows
 
 
 def _news_status() -> dict:
@@ -492,20 +549,31 @@ def _news_status() -> dict:
 
 
 @app.get("/api/tibia/latest")
-def tibia_latest(_: dict = Depends(require_session)):
-    """📰 Novidades: o que está no Latest News do tibia.com (ticker, artigo em destaque e notícias)."""
+def tibia_latest(lang: str = "", _: dict = Depends(require_session)):
+    """📰 Novidades: o que está no Latest News do tibia.com (ticker, artigo em destaque e notícias), no idioma do app."""
     since = (date.today() - timedelta(days=NEWS_LATEST_DAYS)).isoformat()
     tickers = _news_with_content(store.tibia_news_latest(("ticker",), 8))
     featured = _news_with_content(store.tibia_news_latest(("article",), 1))
     news = _news_with_content(store.tibia_news_latest(("news",), 30, since) or store.tibia_news_latest(("news",), 10))
+    _translate_news(tickers + featured + news, _lang(lang))
     return {**_news_status(), "tickers": [_news_out(r) for r in tickers],
             "featured": _news_out(featured[0]) if featured else None, "news": [_news_out(r) for r in news]}
+
+
+@app.get("/api/tibia/headline")
+def tibia_headline(lang: str = "", _: dict = Depends(require_session)):
+    """Destaque do Início: a notícia (ou artigo) mais nova do tibia.com, no idioma do app."""
+    rows = _news_with_content(store.tibia_news_latest(("news", "article"), 1))
+    if not rows:
+        return None
+    _translate_news(rows, _lang(lang))
+    return _news_out(rows[0])
 
 
 @app.get("/api/tibia/archive")
 def tibia_archive(date_from: str = Query("", alias="from"), date_to: str = Query("", alias="to"),
                   categories: str = ",".join(tibianews.CATEGORIES), types: str = ",".join(tibianews.TYPES),
-                  q: str = Query("", max_length=80), _: dict = Depends(require_session)):
+                  q: str = Query("", max_length=80), lang: str = "", _: dict = Depends(require_session)):
     """💬 O que os CMs estão falando: o filtro do News Archive (padrão: última semana, tudo marcado)."""
     today = date.today()
     try:
@@ -518,28 +586,38 @@ def tibia_archive(date_from: str = Query("", alias="from"), date_to: str = Query
     cats = [c for c in categories.lower().split(",") if c in tibianews.CATEGORIES]
     typs = [t for t in types.lower().split(",") if t in tibianews.TYPES]
     rows, total = store.tibia_news_search(d_from.isoformat(), d_to.isoformat(), cats, typs, q.strip())
+    _translate_news(rows, _lang(lang), content=False)  # na lista só os títulos; o texto traduz ao abrir
     return {**_news_status(), "from": d_from.isoformat(), "to": d_to.isoformat(), "count": total,
             "rows": [_news_out(r) for r in rows]}
 
 
 @app.get("/api/tibia/calendar")
-def tibia_calendar(month: str = "", _: dict = Depends(require_session)):
-    """📅 Calendário de eventos (o que o administrador colou do tibia.com; a colagem mais nova de cada mês)."""
+def tibia_calendar(month: str = "", lang: str = "", _: dict = Depends(require_session)):
+    """📅 Calendário de eventos (o que o administrador colou do tibia.com; a colagem mais nova de cada mês).
+    As descrições dos eventos vêm no idioma do app; o nome do evento fica como no jogo."""
     months = [m["month"] for m in store.calendar_months()]
     if not months:
         return {"months": [], "month": None, "calendar": None}
     current = date.today().strftime("%Y-%m")
     if month not in months:
         month = current if current in months else min((m for m in months if m >= current), default=months[0])
-    return {"months": sorted(months), "month": month, "calendar": store.calendar(month)}
+    cal = store.calendar(month)
+    translated = False
+    if cal and _lang(lang):
+        names = [n for n, ev in cal["events"].items() if ev.get("description")]
+        texts, translated = _translate([cal["events"][n]["description"] for n in names], _lang(lang))
+        for n, t in zip(names, texts):
+            cal["events"][n]["description"] = t
+    return {"months": sorted(months), "month": month, "calendar": cal, "translated": translated}
 
 
 @app.get("/api/tibia/news/{news_id}")
-def tibia_news_item(news_id: int, _: dict = Depends(require_session)):
+def tibia_news_item(news_id: int, lang: str = "", _: dict = Depends(require_session)):
     row = store.tibia_news_item(news_id)
     if row is None:
         raise HTTPException(404, "Notícia não encontrada.")
     _news_with_content([row])
+    _translate_news([row], _lang(lang))
     return {**_news_out(row), "offline": row.get("content_html") is None}
 
 

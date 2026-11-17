@@ -139,6 +139,21 @@
                      letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
   .drawer .section::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(242,201,76,.45), transparent); }
   .drawer .sep { height: 1px; background: var(--line); margin: 12px 8px 6px; }
+  /* 0.22.2: galhos Solo / Party (árvore) */
+  .drawer .branch { margin: 4px 0 2px; }
+  .drawer .branch-head { display: flex; gap: 12px; align-items: center; width: 100%; padding: 8px 12px; background: none; border: 0;
+                         border-radius: 10px; font-size: 15px; font-weight: 800; color: var(--muted); text-align: left; letter-spacing: .02em; }
+  .drawer .branch-head .ic { flex: none; width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; font-size: 17px;
+                             background: var(--card2); border: 1px solid var(--line); }
+  .drawer .branch.on .branch-head { color: var(--gold2); }
+  .drawer .branch.on .branch-head .ic { border-color: rgba(242, 201, 76, .6); box-shadow: 0 0 10px rgba(242, 201, 76, .2); }
+  .drawer .branch-head:hover { background: rgba(255, 255, 255, .03); }
+  .drawer .branch-items { position: relative; margin-left: 27px; padding-left: 12px; border-left: 2px solid var(--line); }
+  .drawer .branch.on .branch-items { border-left-color: rgba(242, 201, 76, .55); }
+  .drawer .branch-items .item::before { content: ""; position: absolute; left: -12px; top: 50%; width: 10px; height: 2px; background: var(--line); }
+  .drawer .branch.on .branch-items .item::before { background: rgba(242, 201, 76, .55); }
+  .drawer .branch-items .item { font-size: 14.5px; padding: 6px 10px; }
+  .drawer .branch-items .item .ic { width: 28px; height: 28px; font-size: 15px; }
   .drawer .group { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
                    padding: 12px 12px 3px; opacity: .75; }
   .drawer button.item { position: relative; display: flex; gap: 12px; align-items: center; width: 100%; text-align: left;
@@ -548,6 +563,10 @@
   .tn-body table { border-collapse: collapse; max-width: 100%; display: block; overflow-x: auto; }
   .tn-body td, .tn-body th { border: 1px solid var(--line); padding: 4px 8px; }
   .tn-img { display: inline-block; font-size: 13px; margin: 2px 0; }
+  /* 0.22.2: notícia do Tibia em destaque no Início (texto cortado com degradê; o resto em 📰 Novidades) */
+  .home-news-body { position: relative; max-height: 10.5em; overflow: hidden; }
+  .home-news-body::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3em;
+                           background: linear-gradient(transparent, var(--card)); pointer-events: none; }
   .tn-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
   .tn-row:last-child { border-bottom: 0; }
   .tn-row .tn-date { flex: none; width: 86px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -771,16 +790,31 @@
     <!-- 0.22.0: primeiro as nossas ferramentas, depois o que vem direto do Tibia -->
     <div class="section">Ferramentas</div>
     <button class="item" data-page="home"><span class="ic">🏠</span>Início</button>
-    <!-- o grupo segue a chave Solo/Party do rodapé -->
-    <div class="group" id="modeGroup">Solo</div>
-    <button class="item" data-page="stack" data-only="solo" data-open="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
-    <button class="item hidden" data-page="loot" data-only="party"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
-    <button class="item" data-page="boss"><span class="ic">👑</span>Bosses</button>
-    <button class="item" data-page="hunts"><span class="ic">🗺️</span>Hunts</button>
+    <!-- 0.22.2: Solo e Party são galhos do menu; cada um leva às telas do seu jeito de caçar -->
+    <div class="branch" data-branch="solo">
+      <button class="branch-head" type="button" data-mode-set="solo"><span class="ic">🧍</span>Solo</button>
+      <div class="branch-items">
+        <button class="item" data-page="stack" data-mode="solo" data-open="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
+        <button class="item" data-page="boss" data-mode="solo"><span class="ic">👑</span>Boss Session Stacker</button>
+        <button class="item" data-page="hunts" data-mode="solo"><span class="ic">🗺️</span>Hunts solo</button>
+      </div>
+    </div>
+    <div class="branch" data-branch="party">
+      <button class="branch-head" type="button" data-mode-set="party"><span class="ic">👥</span>Party</button>
+      <div class="branch-items">
+        <button class="item" data-page="loot" data-mode="party"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
+        <button class="item" data-page="boss" data-mode="party"><span class="ic">👑</span>Lootsplit de bosses</button>
+        <button class="item" data-page="hunts" data-mode="party"><span class="ic">🗺️</span>Hunts em party</button>
+      </div>
+    </div>
     <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Ranking entre amigos</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
-    <div class="group">Conta</div>
+    <div class="section">Tibia</div>
+    <button class="item" data-page="tnews"><span class="ic">📰</span>Novidades</button>
+    <button class="item" data-page="cms"><span class="ic">💬</span>O que os CMs estão falando?</button>
+    <button class="item" data-page="cal"><span class="ic">📅</span>Calendário</button>
+    <div class="section">Conta</div>
     <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
     <button class="item" data-page="news"><span class="ic">🧾</span>Alterações <span class="badge hidden" id="newsDot">novo</span></button>
     <button class="item" data-page="settings"><span class="ic">⚙️</span>Configurações</button>
@@ -788,11 +822,6 @@
     <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
     <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
-    <div class="section">Tibia</div>
-    <button class="item" data-page="tnews"><span class="ic">📰</span>Novidades</button>
-    <button class="item" data-page="cms"><span class="ic">💬</span>O que os CMs estão falando?</button>
-    <button class="item" data-page="cal"><span class="ic">📅</span>Calendário</button>
-    <div class="sep" aria-hidden="true"></div>
     <button class="item quiet" id="logout"><span class="ic">🚪</span>Sair da conta</button>
     <div class="foot muted"><div class="status" id="srvStatus"><i class="dot"></i><span>Conferindo o servidor…</span></div>
       <div id="drawerFoot"></div></div>
@@ -823,8 +852,8 @@
     </div>
 
     <div id="pageBoss" class="hidden">
-      <h1>Rotação de bosses</h1>
-      <p class="muted" style="margin-top:-4px">🔒 Só você vê seus bosses. Os lootsplits de boss aparecem só para quem estava na PT.</p>
+      <h1 id="bossTitle">Boss Session Stacker</h1>
+      <p class="muted" style="margin-top:-4px" id="bossIntro"></p>
       <div class="seg hidden" role="tablist" id="bossTabs">
         <button data-btab="solo" role="tab">Solo</button><button data-btab="party" role="tab">Party</button>
       </div>
@@ -833,7 +862,7 @@
         <label class="muted" for="bossText" id="bossLabel">Cole aqui o Hunt Session Analyser do boss</label>
         <textarea id="bossText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 00:25h&#10;Raw XP Gain: ...&#10;Killed Monsters:&#10;  1x Grand Master Oberon"></textarea>
         <button class="btn2 paste-btn" data-paste-into="bossText" data-paste-err="bossErr" type="button">📋 Colar da área de transferência</button>
-        <button class="btn" id="bossBtn">Enviar sessão de boss</button>
+        <button class="btn" id="bossBtn">Salvar sessão de boss</button>
         <div class="err" id="bossErr"></div>
       </div>
       <div id="bossAsk"></div>
@@ -893,7 +922,7 @@
     <!-- 0.22.0: Latest News do tibia.com -->
     <div id="pageTnews" class="hidden">
       <h1>Novidades do Tibia</h1>
-      <p class="muted" style="margin-top:-4px">O que a CipSoft publicou no Latest News do tibia.com, no idioma original.</p>
+      <p class="muted" style="margin-top:-4px">O que a CipSoft publicou no Latest News do tibia.com, no seu idioma.</p>
       <div id="tnewsBody"></div>
     </div>
 

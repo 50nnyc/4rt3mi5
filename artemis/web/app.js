@@ -770,8 +770,13 @@ function paintMode() {
   const party = S.mode === "party";
   $("#modeSwitch").dataset.mode = party ? "party" : "solo";
   $("#modeSwitch").querySelectorAll("button[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
-  $("#modeGroup").textContent = party ? "Party" : "Solo";
-  document.querySelectorAll("#drawer [data-only]").forEach((b) => b.classList.toggle("hidden", b.dataset.only !== S.mode));
+  document.querySelectorAll("#drawer .branch").forEach((b) => b.classList.toggle("on", b.dataset.branch === S.mode));
+  markActive();
+}
+/** Item do menu aceso: a tela atual (e, nos galhos Solo/Party, o galho do modo atual). */
+function markActive() {
+  document.querySelectorAll("#drawer [data-page]").forEach((b) => b.classList.toggle("active",
+    b.dataset.page === S.page && (!b.dataset.mode || b.dataset.mode === S.mode)));
 }
 async function setMode(m, { nav = true } = {}) {
   m = m === "party" ? "party" : "solo";
@@ -781,8 +786,10 @@ async function setMode(m, { nav = true } = {}) {
   paintMode();
   if (!nav) return;
   closeDrawer();
-  if (S.page === "boss") { if (changed) showBossTab(m); return; }
+  // telas com Solo/Party: trocam ali mesmo; nas outras, a chave leva ao Stacker ou ao Lootsplit
+  if (S.page === "boss") { if (changed) { showBossTab(m); renderBoss(); } return; }
   if (S.page === "hunts") { if (changed) loadHunts(); return; }
+  if (S.page === "home") { if (changed) loadHome(); return; }
   if (S.page !== modePage()) go(modePage());
 }
 $("#modeBar").addEventListener("click", (e) => { const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode); });
@@ -844,12 +851,21 @@ function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classLis
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
-document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => {
+document.querySelectorAll("#drawer [data-page]").forEach((b) => b.addEventListener("click", async () => {
   closeDrawer();
-  if (b.dataset.page === "boss" && S.page === "boss") return;
-  go(b.dataset.page);
+  // 0.22.2: item de um galho (Solo/Party) também escolhe o modo
+  if (b.dataset.mode && b.dataset.mode !== S.mode) {
+    await setMode(b.dataset.mode, { nav: false });
+    if (S.page === b.dataset.page) {  // mesma tela, outro modo: redesenha ali
+      if (S.page === "boss") { showBossTab(S.mode); renderBoss(); }
+      if (S.page === "hunts") loadHunts();
+      return;
+    }
+  }
+  if (S.page !== b.dataset.page) go(b.dataset.page);
   if (b.dataset.open === "stack") openStackFlow();  // 0.20.0: Solo → Stacker já abre a janela para colar
 }));
+document.querySelectorAll("#drawer [data-mode-set]").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.modeSet)));
 $("#changeNick").addEventListener("click", () => { closeDrawer(); $("#nickInput").value = ""; showNick(false); });
 $("#nickBack").addEventListener("click", () => showOnly("app"));
 $("#brandHome").addEventListener("click", () => { closeDrawer(); if (S.page !== "home") go("home"); else window.scrollTo(0, 0); });
@@ -942,6 +958,11 @@ async function savePendingPlayerType() {
 // trocou o idioma: as Novidades na tela são redesenhadas no idioma novo
 I18N.onChange(async () => {
   if (S.page === "news" && $("#newsList").innerHTML) loadNews();
+  // 0.22.2: notícias, CMs e calendário vêm traduzidos do servidor no idioma escolhido
+  if (S.page === "tnews") loadTnews();
+  if (S.page === "cms") loadCms();
+  if (S.page === "cal") loadCal();
+  if (S.page === "home") loadHome();
   const n = $("#newsNotice");
   if (n) { const html = await newsNotice(); if (html) n.outerHTML = html; }
 });
@@ -982,7 +1003,7 @@ function go(page, opts = {}) {
   S.page = page;
   document.body.classList.toggle("no-mode", !MODE_PAGES.has(page));
   updateBack();
-  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
+  markActive();
   $("#pageHome").classList.toggle("hidden", page !== "home");
   $("#pageBoss").classList.toggle("hidden", page !== "boss");
   $("#pageLoot").classList.toggle("hidden", page !== "loot");
@@ -1312,6 +1333,7 @@ async function refreshChangesFab() {
   if (!d || !d.releases.length) return;
   const seen = await kv.get("seen_version");
   paintChangesFab(d.releases[0].version, seen !== d.releases[0].version);
+  $("#newsDot").classList.toggle("hidden", seen === d.releases[0].version);  // "novo" no item 🧾 Alterações do menu
 }
 async function markNewsSeen() {
   const d = await fetchNews();
@@ -1345,7 +1367,8 @@ const TN_TYPE = { news: "News", ticker: "News Ticker", article: "Featured Articl
 const TN_CAT = { cipsoft: "CipSoft", community: "Community", development: "Development", support: "Support", technical: "Technical" };
 const tnDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "";
 const tnTags = (n) => `<span class="tn-tag t-${n.type}">${TN_TYPE[n.type] || esc(n.type)}</span> <span class="tn-tag">${TN_CAT[n.category] || esc(n.category)}</span>`;
-const tnSource = (n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">Ler no tibia.com ↗</a>`;
+const tnSource = (n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">${n.translated ? "Ler o original no tibia.com ↗" : "Ler no tibia.com ↗"}</a>`
+  + (n.translated ? ` <span class="hint" style="margin:0 0 0 6px">🌐 tradução automática</span>` : "");
 function tnStatus(d) {
   const when = d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
   return d.offline
@@ -1365,7 +1388,7 @@ async function loadTnews() {
   const el = $("#tnewsBody");
   el.innerHTML = skeleton("list");
   let d;
-  try { d = await api("GET", "/api/tibia/latest"); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  try { d = await api("GET", "/api/tibia/latest?lang=" + encodeURIComponent(I18N.lang)); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   if (!d.total) { el.innerHTML = `<div class="card muted">As notícias ainda estão sendo buscadas pela primeira vez. Volte em alguns minutos.</div>`; return; }
   el.innerHTML = `${tnStatus(d)}
     ${d.tickers.length ? `<h2>📢 News Ticker</h2><div class="card" style="padding:4px 14px">${d.tickers.map((t) => `<details class="tn-row" style="display:block">
@@ -1385,7 +1408,8 @@ function cmsDefaults() {
 async function loadCms() {
   const el = $("#cmsBody");
   const vals = (name) => [...document.querySelectorAll(`#cmsForm input[name=${name}]:checked`)].map((c) => c.value).join(",");
-  const qs = new URLSearchParams({ from: $("#cmsFrom").value, to: $("#cmsTo").value, categories: vals("cat"), types: vals("type"), q: $("#cmsQ").value.trim() });
+  const qs = new URLSearchParams({ from: $("#cmsFrom").value, to: $("#cmsTo").value, categories: vals("cat"), types: vals("type"),
+                                   q: $("#cmsQ").value.trim(), lang: I18N.lang });
   el.innerHTML = skeleton("list");
   let d;
   try { d = await api("GET", "/api/tibia/archive?" + qs); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
@@ -1430,7 +1454,7 @@ async function loadCal(month = "") {
   const el = $("#calBody");
   el.innerHTML = skeleton("list");
   let d;
-  try { d = await api("GET", "/api/tibia/calendar" + (month ? "?month=" + encodeURIComponent(month) : "")); }
+  try { d = await api("GET", `/api/tibia/calendar?lang=${encodeURIComponent(I18N.lang)}` + (month ? "&month=" + encodeURIComponent(month) : "")); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   if (!d.calendar) { el.innerHTML = `<div class="card muted">O calendário deste mês ainda não foi publicado. Volte em breve.</div>`; return; }
   const c = d.calendar, [y, m] = d.month.split("-").map(Number);
@@ -1451,7 +1475,7 @@ async function loadCal(month = "") {
           return `<button type="button" class="cal-day${out ? " out" : ""}${k === today ? " today" : ""}${k === sel ? " sel" : ""}" data-cal-day="${k}" aria-label="${esc(calLabel(k))}: ${evs.length} eventos">
             <span class="n">${Number(k.slice(8))}</span>${evs.map((e) => `<span class="cal-ev${e.star ? " star" : ""}" style="background:${calColor(e.bg, "#555")}; color:${calColor(e.fg, "#fff")}" data-i18n-skip>${e.star ? "⏱ " : ""}${esc(e.name)}</span>`).join("")}</button>`;
         }).join("")}</div>
-      <div class="hint">⏱ = o evento começa ou termina no server save daquele dia. Calendário do tibia.com © CipSoft GmbH.</div>
+      <div class="hint">⏱ = o evento começa ou termina no server save daquele dia. Calendário do tibia.com © CipSoft GmbH.${d.translated ? " 🌐 Descrições com tradução automática." : ""}</div>
     </div>
     <div id="calDay">${sel ? calDayInfo(c, sel) : ""}</div>
     <h2>Eventos do mês</h2><div class="card">${Object.entries(c.events).map(([n, ev]) => calEventRow(n, ev, ` <span class="muted" style="font-size:13px">· ${esc(calRanges(c.days, n))}</span>`)).join("") || `<p class="muted">Nenhum evento.</p>`}</div>`;
@@ -1472,7 +1496,7 @@ document.addEventListener("toggle", async (e) => {
   if (!det.matches || !det.matches("details[data-tn]") || !det.open || det.dataset.loaded) return;
   det.dataset.loaded = "1";
   const box = det.querySelector("[data-tn-body]");
-  try { const n = await api("GET", `/api/tibia/news/${det.dataset.tn}`); box.innerHTML = tnBody(n) + `<div>${tnSource(n)}</div>`; }
+  try { const n = await api("GET", `/api/tibia/news/${det.dataset.tn}?lang=${encodeURIComponent(I18N.lang)}`); box.innerHTML = tnBody(n) + `<div>${tnSource(n)}</div>`; }
   catch (err) { delete det.dataset.loaded; box.innerHTML = `<span class="err">${esc(err.message)}</span>`; }
 }, true);
 
@@ -1491,12 +1515,25 @@ function expiryNotice(streak) {
     <div class="hint">Renove grátis por mais 7 dias no menu ☰ → <b>🔑 Renove 7 dias grátis da sua chave</b>. Depois que vence, o código e os aparelhos liberados são apagados
       (suas hunts e sessões continuam salvas). Enviar uma hunt por dia também ajuda: a cada 30 dias seguidos o código ganha +7 dias.</div></div>`;
 }
+/** 0.22.2: destaque do Início — a notícia mais nova do Tibia, no idioma escolhido. */
+function headlineCard(n) {
+  if (!n) return "";
+  return `<article class="card news-new home-news">
+    <div class="row" style="align-items:flex-start"><span class="muted" style="font-size:13px">📰 Novidades do Tibia · ${esc(tnDate(n.date))}</span>${tnTags(n)}</div>
+    <b data-i18n-skip style="display:block; font-size:18px; margin-top:4px">${esc(n.title)}</b>
+    <div class="home-news-body">${tnBody(n)}</div>
+    <div class="row" style="margin-top:6px"><button class="link" data-page-link="tnews">Ver todas as novidades →</button>${n.translated ? `<span class="hint" style="margin:0">🌐 tradução automática</span>` : ""}</div></article>`;
+}
 async function loadHome() {
   const el = $("#pageHome");
   el.innerHTML = skeleton("home");
+  const mode = S.mode;
+  const headline = api("GET", `/api/tibia/headline?lang=${encodeURIComponent(I18N.lang)}`).catch(() => null);
+  if (mode !== "party") return loadHomeSolo(el, headline);
   let data;
   try { data = await api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (S.mode !== mode || S.page !== "home") return;
   const hunts = data.hunts;
   S.homeHunts = hunts;
   const total = hunts.reduce((a, h) => a + view(h, S.nick).profit, 0);  // considera as regras de divisão
@@ -1512,12 +1549,15 @@ async function loadHome() {
     ${owe ? `<div class="neg" style="margin-top:4px">Você ainda deve ${fmt(owe)} gp em ${oweN} ${oweN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     ${due ? `<div class="pos" style="margin-top:4px">Falta receber ${fmt(due)} gp de ${dueN} ${dueN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     <div class="hint">Depois de transferir no banco, toque em "✔ Já paguei" na hunt. Quem recebe também pode marcar "✔ Recebi".</div></div>` : "";
-  const [notice, streak] = await Promise.all([newsNotice().catch(() => ""), api("GET", "/api/streak").catch(() => null)]);
+  const [news, streak] = await Promise.all([headline, api("GET", "/api/streak").catch(() => null), refreshChangesFab().catch(() => {})]);
+  if (S.mode !== mode || S.page !== "home") return;
   const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
-  el.innerHTML = `${expiryNotice(streak)}${notice}
+  el.innerHTML = `${expiryNotice(streak)}
+    ${headlineCard(news)}
     ${pendingCard}
-    ${streak ? streakTeaser(streak) : ""}
+    <h2>👥 Última hunt em party</h2>
     ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt") : emptyState("home")}
+    ${streak ? streakTeaser(streak) : ""}
     ${hunts.length ? `<h2>Totais</h2>
     ${statGrid([["Hunts", n(hunts.length)], ["Profit total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
                 ["Tempo de hunt", dur(secs)], ["Média por hora", n(secs ? Math.round(total * 3600 / secs) : 0, " gp")],
@@ -1531,6 +1571,23 @@ async function loadHome() {
     const names = [...new Set(hunts.flatMap((h) => h.players.map((p) => p.name)))];
     ensureVocations(names).then((changed) => { if (changed && S.page === "home") { renderPtRank(); paintVocations(el); } });
   }
+  if (streak) celebrateRewards(streak.granted);
+}
+/** Início no modo Solo: notícia do Tibia e a última sessão do Hunt Session Stacker. */
+async function loadHomeSolo(el, headline) {
+  const [news, d, streak] = await Promise.all([headline, api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=7`).catch(() => null),
+    api("GET", "/api/streak").catch(() => null), refreshChangesFab().catch(() => {})]);
+  if (S.mode !== "solo" || S.page !== "home") return;
+  if (d) S.prices = { ...S.prices, ...(d.prices || {}) };
+  const last = d && d.sessions.length ? d.sessions[0] : null;
+  el.innerHTML = `${expiryNotice(streak)}
+    ${headlineCard(news)}
+    <h2>🧍 Última hunt solo</h2>
+    ${last ? soloItem(last).replace("<details class=\"card\">", "<details class=\"card\" open>") : emptyState("stack")}
+    <button class="btn2" data-page-link="stack" style="width:100%; margin-top:4px">📈 Abrir o Hunt Session Stacker</button>
+    ${d && d.sessions.length ? `<h2>Totais do dia ${d.day ? dayLabel(d.day) : ""}</h2>${soloStats(d.day_totals)}` : ""}
+    ${streak ? streakTeaser(streak) : ""}`;
+  countUp(el);
   if (streak) celebrateRewards(streak.granted);
 }
 
@@ -1889,11 +1946,17 @@ function showBossTab(tab) {
     const on = b.dataset.btab === S.btab;
     b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on));
   });
-  $("#bossModeNote").innerHTML = S.btab === "party"
-    ? "👥 Boss em <b>party</b>. Para boss solo, toque em Solo no rodapé." : "🧍 Boss <b>solo</b>. Para boss em party, toque em Party no rodapé.";
-  $("#bossLabel").textContent = S.btab === "party"
-    ? "Cole aqui o SEU Hunt Session Analyser do boss em party (depois você escolhe se faz o lootsplit)"
-    : "Cole aqui o Hunt Session Analyser do boss (solo)";
+  // 0.22.2: Solo = Boss Session Stacker (a sua sessão, só sua) · Party = Lootsplit de bosses (quem paga quem, para toda a PT)
+  const party = S.btab === "party";
+  $("#bossTitle").textContent = party ? "Lootsplit de bosses" : "Boss Session Stacker";
+  $("#bossIntro").textContent = party
+    ? "👥 Cole o Party Hunt Analyser da luta: o app divide o loot e o lootsplit aparece para todos da PT."
+    : "🧍 Cole o Hunt Session Analyser da luta solo. 🔒 Só você vê as suas sessões de boss.";
+  $("#bossModeNote").innerHTML = "";
+  $("#bossLabel").textContent = party ? "Cole aqui o Party Hunt Analyser do boss" : "Cole aqui o Hunt Session Analyser do boss (solo)";
+  $("#bossText").placeholder = party ? "Session data: From ... to ...\nSession: 00:25h\nLoot Type: Leader\n..."
+    : "Session data: From ... to ...\nSession: 00:25h\nRaw XP Gain: ...\nKilled Monsters:\n  1x Grand Master Oberon";
+  $("#bossBtn").textContent = party ? "Calcular e enviar" : "Salvar sessão de boss";
   $("#bossAsk").innerHTML = "";
 }
 $("#bossTabs").addEventListener("click", (e) => { const b = e.target.closest("[data-btab]"); if (b) showBossTab(b.dataset.btab); });
@@ -1994,39 +2057,53 @@ async function loadBoss(opts = {}) {
   $("#bossForm").classList.remove("hidden");
   S.prices = { ...S.prices, ...(d.prices || {}) };
   S.boss = d;
-  const t = d.totals;
-  if (!t.sessions && !d.hunts.length && !d.from_hunts.length) {
-    el.innerHTML = `<div class="card"><b>👑 Nenhum boss ainda</b>
-      <p class="muted">Depois de matar um boss, abra o Hunt Analyser no Tibia, copie e cole aqui. Em <b>Solo</b> a sessão fica só sua.
-        Em <b>Party</b> o app pergunta se você quer fazer o lootsplit: aí ele aparece para todos da PT, e as sessões que eles
-        enviarem no mesmo horário se juntam sozinhas.</p></div>`;
-    return d;
+  renderBoss();
+  return d;
+}
+/** 0.22.2: a mesma tela, de dois jeitos. Solo: as suas sessões de boss. Party: os lootsplits de boss da PT. */
+function renderBoss() {
+  const d = S.boss, el = $("#bossResult");
+  if (!d || S.page !== "boss") return;
+  const t = d.totals, n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
+  if (S.mode === "party") {
+    const sessions = d.sessions.filter((s) => s.mode === "party");
+    if (!d.hunts.length && !sessions.length) {
+      el.innerHTML = `<div class="card"><b>👑 Nenhum lootsplit de boss ainda</b>
+        <p class="muted">Depois da luta, o líder abre o Party Hunt Analyser no Tibia, copia e cola aqui. O lootsplit aparece para todos da PT,
+          e as sessões que cada um juntar no mesmo horário se ligam sozinhas.</p></div>`;
+      return;
+    }
+    el.innerHTML = `<div class="card">
+        <div class="muted">Sua parte nos lootsplits de boss · ${fmt(t.parties)} ${t.parties === 1 ? "lootsplit" : "lootsplits"}</div>
+        <div class="big ${t.party_profit >= 0 ? "gold" : "neg"}">${n(t.party_profit, " gp")}</div></div>
+      ${d.hunts.length ? `<h2>Lootsplits de bosses (${d.hunts.length})</h2>${d.hunts.map(bossHuntItem).join("")}` : ""}
+      ${sessions.length ? `<h2>Suas sessões de boss em party (${sessions.length})</h2>${sessions.map(bossSessionItem).join("")}` : ""}`;
+    countUp(el);
+    const names = [...new Set(d.hunts.flatMap((h) => h.players.map((p) => p.name)))];
+    if (names.length) ensureVocations(names).then((c) => { if (c && S.page === "boss") paintVocations(el); });
+    return;
   }
-  const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
+  const solo = d.sessions.filter((s) => s.mode !== "party");
+  if (!solo.length && !d.from_hunts.length) {
+    el.innerHTML = `<div class="card"><b>👑 Nenhuma sessão de boss solo ainda</b>
+      <p class="muted">Depois de matar um boss sozinho, abra o Hunt Session Analyser no Tibia, copie e cole aqui. A sessão fica só sua.</p></div>`;
+    return;
+  }
+  const bal = solo.reduce((a, s) => a + s.balance, 0), secs = solo.reduce((a, s) => a + s.duration_seconds, 0);
+  const kills = solo.reduce((a, s) => a + s.bosses.reduce((b, x) => b + x.count, 0), 0);
   el.innerHTML = `
     <div class="card">
-      <div class="muted">Lucro com bosses · ${fmt(t.boss_kills)} bosses mortos · ${dur(t.duration_seconds)} em sessões de boss</div>
-      <div class="big ${t.profit >= 0 ? "gold" : "neg"}">${n(t.profit, " gp")}</div>
-      <div class="muted">${t.profit_per_hour ? fmt(t.profit_per_hour) + " gp/h nas sessões de boss · " : ""}${fmt(t.sessions)} sessões (${t.solo} solo, ${t.party} party) · ${fmt(t.parties)} lootsplits</div>
-      <div style="margin-top:10px">${statGrid([
-        ["Sessões sem lootsplit", fmt(t.sessions_profit) + " gp", t.sessions_profit >= 0 ? "pos" : "neg"],
-        ["Sua parte nos lootsplits", fmt(t.party_profit) + " gp", t.party_profit >= 0 ? "pos" : "neg"],
-        ["Bosses nas hunts (estimado)", fmt(t.hunts_value) + " gp", "gold"],
-        ["Loot das sessões", fmt(t.loot_value) + " gp"], ["Supplies", fmt(t.supplies) + " gp"], ["XP", fmt(t.xp)],
-      ])}</div>
-      <div class="hint">Sessão sem lootsplit conta pelo Balance dela. Com lootsplit conta a sua parte da divisão (sem contar duas vezes).</div>
+      <div class="muted">Balance das sessões de boss solo · ${fmt(kills)} bosses mortos · ${dur(secs)}</div>
+      <div class="big ${bal >= 0 ? "gold" : "neg"}">${n(bal, " gp")}</div>
+      <div class="muted">${secs ? fmt(Math.round(bal * 3600 / secs)) + " gp/h · " : ""}${fmt(solo.length)} ${solo.length === 1 ? "sessão" : "sessões"}${t.hunts_value ? ` · bosses nas suas hunts ≈ ${kk(t.hunts_value)} gp` : ""}</div>
     </div>
     ${noNpcBlock(d)}
     <h2>Bosses</h2>${bossTable(d.bosses)}
     ${rareBlock(d.rare_drops)}
     ${d.items.length ? `<h2>Itens dos bosses</h2><div class="card">${itemList(d.items)}</div>` : ""}
-    ${d.hunts.length ? `<h2>Lootsplits de bosses (${d.hunts.length})</h2>${d.hunts.map(bossHuntItem).join("")}` : ""}
-    ${d.sessions.length ? `<h2>Sessões de boss (${d.sessions.length})</h2>${d.sessions.map(bossSessionItem).join("")}` : ""}
+    ${solo.length ? `<h2>Sessões de boss (${solo.length})</h2>${solo.map(bossSessionItem).join("")}` : ""}
     ${fromHuntsBlock(d.from_hunts)}`;
   countUp(el);
-  const names = [...new Set(d.hunts.flatMap((h) => h.players.map((p) => p.name)))];
-  if (names.length) ensureVocations(names).then((c) => { if (c && S.page === "boss") paintVocations(el); });
-  return d;
 }
 function bossBanner(r) {
   const found = r.bosses.length ? `Bosses: ${r.bosses.map((b) => `<b>${esc(b.name)}</b>${b.count > 1 ? " ×" + b.count : ""}`).join(", ")}.`
@@ -2038,6 +2115,7 @@ $("#bossBtn").addEventListener("click", async () => {
   if (!raw) return;
   const btn = $("#bossBtn"); btn.disabled = true; $("#bossErr").textContent = ""; $("#bossAsk").innerHTML = "";
   const mode = S.btab;
+  if (mode === "party") return bossPartySplit(raw).finally(() => { btn.disabled = false; });
   try {
     const r = await api("POST", "/api/bosses/session", { raw_text: raw, nickname: S.nick, mode });
     $("#bossText").value = "";
@@ -2062,6 +2140,43 @@ $("#bossBtn").addEventListener("click", async () => {
     else if (err.status === 403) $("#bossErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
     else if (err.status !== 401) $("#bossErr").textContent = err.message;
   } finally { btn.disabled = false; }
+});
+/** 0.22.2: Party → o Party Hunt Analyser do boss vira lootsplit na hora, igual ao 💰 Lootsplit. */
+async function bossPartySplit(raw) {
+  try {
+    const r = await api("POST", "/api/bosses/lootsplit", { raw_text: raw, nickname: S.nick, session_id: null });
+    r.hunt.kind = "boss";
+    $("#bossText").value = "";
+    $("#bossAsk").innerHTML = `<div class="banner ok">${r.created ? "Lootsplit de boss salvo ✔ Já aparece para todos da PT." : "Esse lootsplit já estava salvo ✔"}
+        ${r.linked > 1 ? ` ${r.linked} sessões da PT foram juntadas.` : ""}</div>
+      ${quickTransfers(r.hunt)}${partyMessages(r.hunt)}
+      <details class="card"><summary class="link">＋ Juntar o meu Hunt Session Analyser desta luta (opcional) ▾</summary>
+        <p class="muted" style="margin:6px 0 0">Assim os bosses, itens e criaturas da luta entram no seu histórico de bosses.</p>
+        <textarea id="bossMineText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Killed Monsters:&#10;  1x ..."></textarea>
+        <button class="btn2 paste-btn" data-paste-into="bossMineText" data-paste-err="bossMineErr" type="button">📋 Colar da área de transferência</button>
+        <button class="btn" id="bossMineBtn" type="button">Juntar minha sessão</button><div class="err" id="bossMineErr"></div></details>
+      <h2>Detalhes</h2>${huntCard(r.hunt, S.nick, "Lootsplit do boss")}`;
+    countUp($("#bossAsk")); paintVocations($("#bossAsk"));
+    $("#bossAsk").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });
+    celebrateRewards(r.rewards);
+    loadBoss({ quiet: true });
+  } catch (err) {
+    if (err.status === 0) { await queueDraft("/api/bosses/lootsplit", { raw_text: raw, nickname: S.nick }, $("#bossErr")); $("#bossText").value = ""; }
+    else if (err.status === 403) $("#bossErr").innerHTML = `${esc(err.message)}<div class="hint">${esc(err.hint || "")}</div>`;
+    else if (err.status !== 401) $("#bossErr").textContent = err.message;
+  }
+}
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest("#bossMineBtn")) return;
+  const raw = $("#bossMineText").value.trim(), btn = $("#bossMineBtn");
+  if (!raw) { $("#bossMineErr").textContent = "Cole o Hunt Session Analyser primeiro."; return; }
+  btn.disabled = true; $("#bossMineErr").textContent = "";
+  try {
+    const r = await api("POST", "/api/bosses/session", { raw_text: raw, nickname: S.nick, mode: "party" });
+    btn.closest("details").outerHTML = bossBanner(r) + (r.party ? `<div class="banner ok">👥 Ligada ao lootsplit da party ✔</div>` : "");
+    celebrateRare(r.rare);
+    loadBoss({ quiet: true });
+  } catch (err) { btn.disabled = false; if (err.status !== 401) $("#bossMineErr").textContent = err.message; }
 });
 document.addEventListener("click", async (e) => {
   const a = e.target.closest("[data-boss-split]");
