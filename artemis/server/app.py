@@ -23,14 +23,14 @@ import sys
 import threading
 import time
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import re
 from collections import deque
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
@@ -45,6 +45,7 @@ from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
+from artemis.core import tibianews
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from . import mailer
@@ -135,7 +136,17 @@ async def lifespan(_app: FastAPI):
             except Exception as e:  # backup nunca derruba o servidor
                 print("Falha no backup automático:", e)
             await asyncio.sleep(3600)  # confere a cada hora se o backup do dia já foi feito
+    async def news_loop():
+        await asyncio.sleep(5)
+        while True:
+            try:
+                await asyncio.to_thread(sync_tibia_news)
+            except Exception as e:  # notícia nunca derruba o servidor
+                print("Falha ao atualizar as notícias do Tibia:", e)
+            await asyncio.sleep(NEWS_SYNC_EVERY)
     tasks = [asyncio.create_task(purge_loop()), asyncio.create_task(backup_loop())]
+    if NEWS_SYNC_EVERY > 0:
+        tasks.append(asyncio.create_task(news_loop()))
     yield
     for task in tasks:
         task.cancel()
@@ -386,6 +397,138 @@ def changelog():
     except (OSError, ValueError):
         data = {"releases": []}
     return {"version": __version__, "releases": data.get("releases", [])}
+
+
+# ------------------------------------------------------------------ 📰 notícias do Tibia (0.22.0)
+# Latest News e News Archive do tibia.com, pela TibiaData. O índice inteiro fica no banco; o texto de cada
+# notícia é baixado aos poucos (e na hora, quando alguém abre). Fonte fora do ar: tudo sai do que já está guardado.
+NEWS_SYNC_EVERY = int(os.environ.get("ARTEMIS_NEWS_SYNC", "1800"))   # segundos (0 desliga; os testes desligam)
+NEWS_FETCH_PER_SYNC = 40          # textos novos baixados por rodada (não sobrecarrega a fonte)
+NEWS_ON_DEMAND = (60, 60)         # textos baixados na hora (todas as pessoas juntas) por minuto
+NEWS_LATEST_DAYS = 90             # como o Latest News do tibia.com
+_news_fetches: deque = deque()
+_news_lock = threading.Lock()
+
+
+def _news_budget() -> bool:
+    limit, window = NEWS_ON_DEMAND
+    now = time.monotonic()
+    while _news_fetches and now - _news_fetches[0] > window:
+        _news_fetches.popleft()
+    if len(_news_fetches) >= limit:
+        return False
+    _news_fetches.append(now)
+    return True
+
+
+def _news_ok(ok: bool) -> None:
+    store.set_meta("tibia_news_source", "ok" if ok else "offline")
+    if ok:
+        store.set_meta("tibia_news_ok_at", datetime.now().astimezone().isoformat(timespec="seconds"))
+
+
+def sync_tibia_news() -> dict:
+    """Atualiza a lista (tudo na primeira vez; depois só os últimos 30 dias) e baixa alguns textos que faltam."""
+    if not _news_lock.acquire(blocking=False):
+        return {"skipped": True}
+    try:
+        first = store.tibia_news_count() == 0
+        try:
+            new = store.save_tibia_news_list(tibianews.fetch_archive(9999 if first else 30))
+        except tibianews.TibiaNewsError:
+            _news_ok(False)
+            return {"ok": False}
+        fetched = 0
+        for nid in store.tibia_news_missing(NEWS_FETCH_PER_SYNC):
+            try:
+                item = tibianews.fetch_item(nid)
+            except tibianews.TibiaNewsError:
+                break
+            if item:
+                store.save_tibia_news_content(nid, item["title"], item["content_html"], item["content_text"])
+                fetched += 1
+        _news_ok(True)
+        return {"ok": True, "new": new, "fetched": fetched}
+    finally:
+        _news_lock.release()
+
+
+NEWS_PER_REQUEST = 10             # textos que faltam, baixados juntos (em paralelo) numa mesma abertura de tela
+
+
+def _news_with_content(rows: list[dict]) -> list[dict]:
+    """Baixa na hora o texto que ainda falta (em paralelo, dentro do limite). Sem fonte, devolve o que tiver."""
+    from concurrent.futures import ThreadPoolExecutor
+    missing = [r for r in rows if r.get("content_html") is None][:NEWS_PER_REQUEST]
+    missing = [r for r in missing if _news_budget()]
+    if not missing:
+        return rows
+
+    def get(r: dict):
+        try:
+            return r, tibianews.fetch_item(r["id"], timeout=8)
+        except tibianews.TibiaNewsError:
+            return r, False
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        results = list(pool.map(get, missing))
+    if any(item is False for _, item in results):
+        _news_ok(False)
+    for r, item in results:
+        if item:
+            store.save_tibia_news_content(r["id"], item["title"], item["content_html"], item["content_text"])
+            r.update(title=item["title"] or r["title"], content_html=item["content_html"])
+    return rows
+
+
+def _news_out(r: dict) -> dict:
+    return {"id": r["id"], "date": r["date"], "title": r["title"], "category": r["category"], "type": r["type"],
+            "url": tibianews.TIBIA_NEWS_URL.format(id=r["id"]), "content_html": r.get("content_html"),
+            "saved": r.get("content_html") is not None if "content_html" in r else bool(r.get("saved"))}
+
+
+def _news_status() -> dict:
+    return {"updated_at": store.meta("tibia_news_ok_at"), "offline": store.meta("tibia_news_source") == "offline",
+            "total": store.tibia_news_count()}
+
+
+@app.get("/api/tibia/latest")
+def tibia_latest(_: dict = Depends(require_session)):
+    """📰 Novidades: o que está no Latest News do tibia.com (ticker, artigo em destaque e notícias)."""
+    since = (date.today() - timedelta(days=NEWS_LATEST_DAYS)).isoformat()
+    tickers = _news_with_content(store.tibia_news_latest(("ticker",), 8))
+    featured = _news_with_content(store.tibia_news_latest(("article",), 1))
+    news = _news_with_content(store.tibia_news_latest(("news",), 30, since) or store.tibia_news_latest(("news",), 10))
+    return {**_news_status(), "tickers": [_news_out(r) for r in tickers],
+            "featured": _news_out(featured[0]) if featured else None, "news": [_news_out(r) for r in news]}
+
+
+@app.get("/api/tibia/archive")
+def tibia_archive(date_from: str = Query("", alias="from"), date_to: str = Query("", alias="to"),
+                  categories: str = ",".join(tibianews.CATEGORIES), types: str = ",".join(tibianews.TYPES),
+                  q: str = Query("", max_length=80), _: dict = Depends(require_session)):
+    """💬 O que os CMs estão falando: o filtro do News Archive (padrão: última semana, tudo marcado)."""
+    today = date.today()
+    try:
+        d_to = date.fromisoformat(date_to) if date_to else today
+        d_from = date.fromisoformat(date_from) if date_from else d_to - timedelta(days=7)
+    except ValueError:
+        raise HTTPException(422, "Data inválida. Use o calendário do filtro.")
+    if d_from > d_to:
+        d_from, d_to = d_to, d_from
+    cats = [c for c in categories.lower().split(",") if c in tibianews.CATEGORIES]
+    typs = [t for t in types.lower().split(",") if t in tibianews.TYPES]
+    rows, total = store.tibia_news_search(d_from.isoformat(), d_to.isoformat(), cats, typs, q.strip())
+    return {**_news_status(), "from": d_from.isoformat(), "to": d_to.isoformat(), "count": total,
+            "rows": [_news_out(r) for r in rows]}
+
+
+@app.get("/api/tibia/news/{news_id}")
+def tibia_news_item(news_id: int, _: dict = Depends(require_session)):
+    row = store.tibia_news_item(news_id)
+    if row is None:
+        raise HTTPException(404, "Notícia não encontrada.")
+    _news_with_content([row])
+    return {**_news_out(row), "offline": row.get("content_html") is None}
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])  # HEAD: monitores externos (UptimeRobot grátis só usa HEAD)
@@ -1724,39 +1867,64 @@ def solo_input(session_id: int, body: RawIn, access: dict = Depends(require_sess
     return {"input": _input_view(saved)}
 
 
+def _place_stats(mode: str, **kw) -> list[dict]:
+    """0.22.0: hunts solo comparam com hunts solo; hunts em party, com hunts em party."""
+    return store.party_place_stats(**kw) if mode == "party" else store.place_stats(**kw)
+
+
 @app.get("/api/places/ranking")
-def places_ranking(sort: str = "xp", min_level: int | None = None, max_level: int | None = None,
+def places_ranking(sort: str = "xp", min_level: int | None = None, max_level: int | None = None, mode: str = "solo",
                    _: dict = Depends(require_session)):
-    rows = store.place_stats(min_level, max_level)
+    mode = "party" if mode == "party" else "solo"
+    rows = _place_stats(mode, min_level=min_level, max_level=max_level)
     key = "gold_per_hour" if sort == "gold" else "xp_per_hour"
-    return {"sort": sort, "rows": sorted(rows, key=lambda r: -r[key])}
+    return {"sort": sort, "mode": mode, "rows": sorted(rows, key=lambda r: -r[key])}
+
+
+@app.get("/api/places/mine")
+def places_mine(nick: str, mode: str = "solo", access: dict = Depends(require_session)):
+    """Histórico do próprio personagem por hunt (solo ou party), da que mais rende XP/h para a que menos rende."""
+    mode = "party" if mode == "party" else "solo"
+    if not store.is_linked(access["key"], nick):
+        return {"mode": mode, "rows": []}
+    rows = _place_stats(mode, name=nick)
+    return {"mode": mode, "rows": sorted(rows, key=lambda r: (-r["xp_per_hour"], -r["gold_per_hour"]))}
 
 
 @app.get("/api/places/compare")
-def places_compare(ids: str, nick: str = "", access: dict = Depends(require_session)):
+def places_compare(ids: str, nick: str = "", mode: str = "solo", access: dict = Depends(require_session)):
+    """Básico (XP/h, gold/h, level) para todas as hunts. Detalhes (criaturas, itens, dano) só das hunts do próprio
+    player; o dano recebido de todos (Input Analyzers públicos) só para o Player Hardcore."""
+    mode = "party" if mode == "party" else "solo"
     place_ids = [int(i) for i in ids.split(",") if i.strip().isdigit()][:3]
-    general = {r["id"]: r for r in store.place_stats(place_ids=place_ids)}
-    own = bool(nick) and store.is_linked(access["key"], nick)  # "Seu XP/h" só do próprio personagem
-    mine = {r["id"]: r for r in store.place_stats(place_ids=place_ids, name=nick)} if own else {}
+    general = {r["id"]: r for r in _place_stats(mode, place_ids=place_ids)}
+    own = bool(nick) and store.is_linked(access["key"], nick)  # "Seu ..." só do próprio personagem
+    mine = {r["id"]: r for r in _place_stats(mode, place_ids=place_ids, name=nick)} if own else {}
+    hardcore = store.player_type(access["key"]) in ("hardcore", "tipo_extra")
     out = []
     for pid in place_ids:
         p = store.place(pid)
         if not p:
             continue
-        kills, loot = store.place_top(pid)
-        loot_keys = [store.resolve_item(k) for k, _ in loot]
-        prices = store.price_info(loot_keys, access["key"])
-        items = _sum_counts((store.resolve_item(k), n) for k, n in loot)
-        for it in items:
-            it["value"] = it["count"] * prices[it["key"]]["unit_price"]
-            it["name"] = prices[it["key"]]["name"]
-        # 0.20.0: dados de todos os jogadores saem só como lista (sem quantidade de criaturas e de loot)
-        top_items = sorted((it for it in items if it["value"] > 0), key=lambda it: -it["value"])[:5]
-        inputs = store.inputs_for_place(pid)
-        out.append({"place": p, "stats": general.get(pid), "mine": mine.get(pid),
-                    "top_kills": [{"key": k} for k, _ in kills],
-                    "top_items": [{"key": it["key"], "name": it["name"]} for it in top_items],
-                    "damage": damage_core.combine(inputs) if inputs else None})
+        row = {"place": p, "stats": general.get(pid), "mine": mine.get(pid), "top_kills": [], "top_items": [],
+               "my_damage": None, "damage": None}
+        if mine.get(pid):
+            kills, loot = store.party_place_top(pid, nick) if mode == "party" else store.place_top(pid, name=nick)
+            loot_keys = [store.resolve_item(k) for k, _ in loot]
+            prices = store.price_info(loot_keys, access["key"])
+            items = _sum_counts((store.resolve_item(k), n) for k, n in loot)
+            for it in items:
+                it["value"] = it["count"] * prices[it["key"]]["unit_price"]
+                it["name"] = prices[it["key"]]["name"]
+            top_items = sorted((it for it in items if it["value"] > 0), key=lambda it: -it["value"])[:5]
+            row["top_kills"] = [{"key": k, "count": n} for k, n in kills]
+            row["top_items"] = [{"key": it["key"], "name": it["name"], "count": it["count"], "value": it["value"]} for it in top_items]
+            my_inputs = store.inputs_for_place(pid, mode=mode, name=nick)
+            row["my_damage"] = damage_core.combine(my_inputs) if my_inputs else None
+        if hardcore:
+            inputs = store.inputs_for_place(pid, mode=mode)
+            row["damage"] = damage_core.combine(inputs) if inputs else None
+        out.append(row)
     return out
 
 

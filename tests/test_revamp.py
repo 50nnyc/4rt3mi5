@@ -276,8 +276,22 @@ class RevampServerTests(unittest.TestCase):
         outsider = self.client.get("/api/hunts/Rvhilay", headers=self.account("Fora Da Pt")).json()["hunts"][0]
         self.assertEqual((outsider["inputs"], outsider["member_sessions"], outsider["in_party"]), ([], [], False))
         # comparação de hunts mostra o dano recebido ali, sem "(other)" como criatura
-        cmp_ = self.client.get(f"/api/places/compare?ids={pl['Naga Caves']}", headers=h).json()[0]
+        # 0.22.0: party compara só com party; Input Analyzer público só para o Player Hardcore
+        url = f"/api/places/compare?ids={pl['Naga Caves']}&mode=party"
+        cmp_ = self.client.get(url + "&nick=Rvjioe", headers=hj).json()[0]
         self.assertEqual(cmp_["damage"]["mobs"][0]["name"], "the moonsnow magnolia")
+        self.assertEqual(cmp_["my_damage"]["mobs"][0]["name"], "the moonsnow magnolia")  # o dele, com detalhes
+        self.assertTrue(cmp_["top_kills"] and "count" in cmp_["top_kills"][0])
+        basic = self.client.get(url + "&nick=Rvhilay", headers=h).json()[0]
+        self.assertIsNone(basic["damage"])  # Hilay não é hardcore
+        self.assertEqual(basic["top_kills"], [])  # não juntou sessão: só o básico
+        self.assertEqual(basic["mine"]["sessions"], 1)
+        self.assertIsNone(self.client.get(f"/api/places/compare?ids={pl['Naga Caves']}", headers=hj).json()[0]["stats"])  # solo: nada
+        rank = self.client.get("/api/places/ranking?mode=party", headers=h).json()["rows"]
+        self.assertEqual([r["name"] for r in rank], ["Naga Caves"])
+        mine = self.client.get("/api/places/mine?mode=party&nick=Rvhilay", headers=h).json()["rows"]
+        self.assertEqual(mine[0]["sessions"], 1)
+        self.assertEqual(self.client.get("/api/places/mine?mode=party&nick=Rvhilay", headers=hj).json()["rows"], [])
         # novato não junta sessão; quem não estava na PT também não
         hn = self.account("Rvatx")
         self.client.post("/api/prefs/player-type", json={"player_type": "novato"}, headers=hn)

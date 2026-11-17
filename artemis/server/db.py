@@ -389,6 +389,19 @@ CREATE TABLE IF NOT EXISTS visit_seen (
     mark    TEXT NOT NULL,
     PRIMARY KEY (period, mark)
 );
+-- 0.22.0: notícias do Tibia (Latest News / News Archive). Guardadas para ler e pesquisar mesmo com a fonte fora do ar.
+CREATE TABLE IF NOT EXISTS tibia_news (
+    id            INTEGER PRIMARY KEY,           -- mesmo id do tibia.com
+    date          TEXT NOT NULL,
+    title         TEXT NOT NULL,
+    category      TEXT NOT NULL,                 -- cipsoft, community, development, support, technical
+    type          TEXT NOT NULL,                 -- news, ticker, article
+    content_html  TEXT,                          -- já limpo; NULL = ainda não baixado
+    content_text  TEXT,
+    fetched_at    TEXT,
+    listed_at     TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_tibia_news_date ON tibia_news(date);
 """
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
@@ -1328,6 +1341,68 @@ class Store:
             self._conn.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (k, v))
             self._conn.commit()
 
+    # ------------------------------------------------------------------ 📰 notícias do Tibia (0.22.0)
+    _TN_COLS = "id, date, title, category, type"
+
+    def tibia_news_count(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM tibia_news").fetchone()[0]
+
+    def save_tibia_news_list(self, items: list[dict]) -> int:
+        """Guarda/atualiza a lista (sem apagar o texto já baixado). Retorna quantas são novas."""
+        now = _iso(utcnow())
+        with self._lock:
+            before = self._conn.execute("SELECT COUNT(*) FROM tibia_news").fetchone()[0]
+            self._conn.executemany(
+                "INSERT INTO tibia_news (id, date, title, category, type, listed_at) VALUES (?, ?, ?, ?, ?, ?) "
+                "ON CONFLICT(id) DO UPDATE SET date = excluded.date, category = excluded.category, type = excluded.type, "
+                "title = CASE WHEN tibia_news.content_html IS NULL THEN excluded.title ELSE tibia_news.title END",
+                [(n["id"], n["date"], n["title"], n["category"], n["type"], now) for n in items])
+            self._conn.commit()
+            return self._conn.execute("SELECT COUNT(*) FROM tibia_news").fetchone()[0] - before
+
+    def save_tibia_news_content(self, news_id: int, title: str, content_html: str, content_text: str) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE tibia_news SET content_html = ?, content_text = ?, fetched_at = ?, "
+                               "title = CASE WHEN ? <> '' THEN ? ELSE title END WHERE id = ?",
+                               (content_html, content_text, _iso(utcnow()), title, title, news_id))
+            self._conn.commit()
+
+    def tibia_news_missing(self, limit: int, since: str | None = None) -> list[int]:
+        """Ids sem texto, das mais novas para as mais velhas (notícias e artigos antes dos tickers)."""
+        extra, args = ("AND date >= ? ", [since]) if since else ("", [])
+        return [r[0] for r in self._conn.execute(
+            f"SELECT id FROM tibia_news WHERE content_html IS NULL {extra}"
+            "ORDER BY date >= date('now', '-30 day') DESC, type = 'ticker', date DESC, id DESC LIMIT ?", (*args, limit))]
+
+    def tibia_news_item(self, news_id: int) -> dict | None:
+        row = self._conn.execute(f"SELECT {self._TN_COLS}, content_html FROM tibia_news WHERE id = ?", (news_id,)).fetchone()
+        return dict(row) if row else None
+
+    def tibia_news_latest(self, types: tuple[str, ...], limit: int, since: str | None = None) -> list[dict]:
+        marks = ",".join("?" * len(types))
+        extra, args = ("AND date >= ? ", [since]) if since else ("", [])
+        return [dict(r) for r in self._conn.execute(
+            f"SELECT {self._TN_COLS}, content_html FROM tibia_news WHERE type IN ({marks}) {extra}"
+            "ORDER BY date DESC, id DESC LIMIT ?", (*types, *args, limit))]
+
+    def tibia_news_search(self, date_from: str, date_to: str, categories: list[str], types: list[str],
+                          q: str = "", limit: int = 300) -> tuple[list[dict], int]:
+        """Mesmo filtro do News Archive do tibia.com (período, categorias, tipos) + pesquisa no título e no texto."""
+        if not categories or not types:
+            return [], 0
+        where = ["date >= ?", "date <= ?", f"category IN ({','.join('?' * len(categories))})",
+                 f"type IN ({','.join('?' * len(types))})"]
+        args: list = [date_from, date_to, *categories, *types]
+        for word in q.split()[:6]:
+            like = "%" + word.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            where.append("(title LIKE ? ESCAPE '\\' OR content_text LIKE ? ESCAPE '\\')")
+            args += [like, like]
+        cond = " AND ".join(where)
+        total = self._conn.execute(f"SELECT COUNT(*) FROM tibia_news WHERE {cond}", args).fetchone()[0]
+        rows = self._conn.execute(f"SELECT {self._TN_COLS}, content_html IS NOT NULL AS saved FROM tibia_news "
+                                  f"WHERE {cond} ORDER BY date DESC, id DESC LIMIT ?", (*args, limit))
+        return [dict(r) for r in rows], total
+
     # ------------------------------------------------------------------ 🥇 ranking entre amigos (opcional)
     def ranking_join(self, name: str, join: bool) -> None:
         with self._lock:
@@ -1429,14 +1504,100 @@ class Store:
             out.append(d)
         return out
 
-    def place_top(self, place_id: int, limit: int = 5) -> tuple[list, list]:
+    def place_top(self, place_id: int, limit: int = 5, name: str | None = None) -> tuple[list, list]:
+        """Criaturas e loot das sessões solo daquele local (name: só as sessões desse personagem)."""
+        extra, args = ("AND s.name_key = ? ", [name_key(name)]) if name else ("", [])
         kills = self._conn.execute(
             "SELECT k.creature, SUM(k.count) AS n FROM solo_kills k JOIN solo_sessions s ON s.id = k.session_id "
-            "WHERE s.place_id = ? GROUP BY k.creature ORDER BY n DESC LIMIT ?", (place_id, limit)).fetchall()
+            f"WHERE s.place_id = ? {extra}GROUP BY k.creature ORDER BY n DESC LIMIT ?", (place_id, *args, limit)).fetchall()
         loot = self._conn.execute(
             "SELECT l.item_key, SUM(l.count) AS n FROM solo_loot l JOIN solo_sessions s ON s.id = l.session_id "
-            "WHERE s.place_id = ? GROUP BY l.item_key", (place_id,)).fetchall()
+            f"WHERE s.place_id = ? {extra}GROUP BY l.item_key", (place_id, *args)).fetchall()
         return [(r[0], r[1]) for r in kills], [(r[0], r[1]) for r in loot]
+
+    # 0.22.0: hunts em party (lootsplits com local) são comparadas só com outras hunts em party
+    def _party_hunts_at(self, place_ids: list[int] | None = None, name: str | None = None) -> list[sqlite3.Row]:
+        where, args = ["h.place_id IS NOT NULL"], []
+        if place_ids:
+            where.append(f"h.place_id IN ({','.join('?' * len(place_ids))})"); args += place_ids
+        if name:
+            where.append("h.id IN (SELECT hunt_id FROM hunt_players WHERE name_key = ?)"); args.append(name_key(name))
+        return self._conn.execute(f"SELECT h.id, h.place_id, h.report_json FROM hunts h WHERE {' AND '.join(where)}", args).fetchall()
+
+    def party_place_stats(self, min_level: int | None = None, max_level: int | None = None,
+                          place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600) -> list[dict]:
+        """Mesmo formato do place_stats, só com lootsplits. Gold/h = lucro de cada um por hora;
+        XP/h vem dos Hunt Session Analyzers que os membros juntaram ao lootsplit."""
+        hunts = self._party_hunts_at(place_ids, name)
+        if not hunts:
+            return []
+        ids = [h["id"] for h in hunts]
+        marks = ",".join("?" * len(ids))
+        members: dict[int, list[str]] = {}
+        for r in self._conn.execute(f"SELECT hunt_id, name_key FROM hunt_players WHERE hunt_id IN ({marks})", ids):
+            members.setdefault(r[0], []).append(r[1])
+        levels = {r[0]: r[1] for r in self._conn.execute(
+            f"SELECT name_key, level FROM char_info WHERE level IS NOT NULL AND name_key IN "
+            f"(SELECT name_key FROM hunt_players WHERE hunt_id IN ({marks}))", ids)}
+        xp: dict[int, list[int]] = {}  # hunt_id -> [xp, segundos] das sessões juntadas
+        for r in self._conn.execute(f"SELECT hunt_id, name_key, data_json FROM party_sessions WHERE hunt_id IN ({marks})", ids):
+            if name and r[1] != name_key(name):
+                continue
+            d = json.loads(r[2])
+            a = xp.setdefault(r[0], [0, 0])
+            a[0] += int(d.get("xp") or 0); a[1] += int(d.get("duration_seconds") or 0)
+        acc: dict[int, dict] = {}
+        for h in hunts:
+            rep = json.loads(h["report_json"])
+            secs = int(rep.get("duration_seconds") or 0)
+            if secs < min_seconds:
+                continue
+            lv = [levels[k] for k in members.get(h["id"], []) if k in levels]
+            avg_lv = sum(lv) / len(lv) if lv else None
+            if (min_level is not None or max_level is not None) and avg_lv is None:
+                continue
+            if min_level is not None and avg_lv < min_level or max_level is not None and avg_lv > max_level:
+                continue
+            a = acc.setdefault(h["place_id"], {"sessions": 0, "seconds": 0, "profit": 0, "team": 0, "names": set(),
+                                               "levels": [], "xp": 0, "xp_seconds": 0})
+            a["sessions"] += 1
+            a["seconds"] += secs
+            a["profit"] += int(rep.get("profit_each") or 0)
+            a["team"] += int(rep.get("players_count") or 0)
+            a["names"].update(members.get(h["id"], []))
+            a["levels"] += lv
+            if h["id"] in xp:
+                a["xp"] += xp[h["id"]][0]; a["xp_seconds"] += xp[h["id"]][1]
+        out = []
+        for pid, a in acc.items():
+            p = self.place(pid)
+            if not p:
+                continue
+            hours = a["seconds"] / 3600
+            out.append({"id": pid, "name": p["name"], "city": p.get("city"), "wiki_level": p.get("level"),
+                        "sessions": a["sessions"], "players": len(a["names"]), "seconds": a["seconds"],
+                        "avg_team": round(a["team"] / a["sessions"], 1),
+                        "avg_level": round(sum(a["levels"]) / len(a["levels"])) if a["levels"] else None,
+                        "min_level": min(a["levels"]) if a["levels"] else None,
+                        "max_level": max(a["levels"]) if a["levels"] else None,
+                        "gold_per_hour": round(a["profit"] / hours) if hours else 0,
+                        "xp_per_hour": round(a["xp"] * 3600 / a["xp_seconds"]) if a["xp_seconds"] else 0})
+        return out
+
+    def party_place_top(self, place_id: int, name: str, limit: int = 5) -> tuple[list, list]:
+        """Criaturas e loot do personagem nos lootsplits daquele local (das sessões que ele juntou)."""
+        kills: dict[str, int] = {}
+        loot: dict[str, int] = {}
+        for r in self._conn.execute(
+                "SELECT ps.data_json FROM party_sessions ps JOIN hunts h ON h.id = ps.hunt_id "
+                "WHERE h.place_id = ? AND ps.name_key = ?", (place_id, name_key(name))):
+            d = json.loads(r[0])
+            for c, n in d.get("kills", []):
+                kills[c] = kills.get(c, 0) + int(n)
+            for k, n in d.get("loot", []):
+                loot[k] = loot.get(k, 0) + int(n)
+        top = sorted(kills.items(), key=lambda x: -x[1])[:limit]
+        return top, list(loot.items())
 
     # ------------------------------------------------------------------ metas e lista de venda
     def goals(self, name: str) -> list[dict]:
@@ -1594,13 +1755,18 @@ class Store:
                 out[r["ref_id"]].append(self._input(r))
         return out
 
-    def inputs_for_place(self, place_id: int) -> list[dict]:
-        """Todos os Input Analysers de sessões e lootsplits marcados naquele local."""
-        rows = self._conn.execute(
-            "SELECT d.* FROM damage_inputs d JOIN solo_sessions s ON d.kind = 'solo' AND s.id = d.ref_id WHERE s.place_id = ? "
-            "UNION ALL SELECT d.* FROM damage_inputs d JOIN hunts h ON d.kind = 'hunt' AND h.id = d.ref_id WHERE h.place_id = ?",
-            (place_id, place_id))
-        return [self._input(r) for r in rows]
+    def inputs_for_place(self, place_id: int, mode: str | None = None, name: str | None = None) -> list[dict]:
+        """Input Analysers de sessões (solo) e/ou lootsplits (party) marcados naquele local; name: só desse personagem."""
+        solo = "SELECT d.* FROM damage_inputs d JOIN solo_sessions s ON d.kind = 'solo' AND s.id = d.ref_id WHERE s.place_id = ?"
+        party = "SELECT d.* FROM damage_inputs d JOIN hunts h ON d.kind = 'hunt' AND h.id = d.ref_id WHERE h.place_id = ?"
+        if mode == "solo":
+            rows = self._conn.execute(solo, (place_id,))
+        elif mode == "party":
+            rows = self._conn.execute(party, (place_id,))
+        else:
+            rows = self._conn.execute(f"{solo} UNION ALL {party}", (place_id, place_id))
+        out = [self._input(r) for r in rows]
+        return [i for i in out if name_key(i["name"]) == name_key(name)] if name else out
 
     def add_party_session(self, hunt_id: int, name: str, data: dict, uploader_key: str) -> tuple[dict, bool]:
         with self._lock:

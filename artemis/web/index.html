@@ -134,6 +134,11 @@
   .drawer .avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
                     font: 800 17px var(--logo); color: #1a1405; background: linear-gradient(135deg, var(--gold2), var(--gold) 55%, #b8890f);
                     box-shadow: 0 0 0 2px var(--card), 0 0 0 3px rgba(242,201,76,.45), 0 0 18px rgba(242,201,76,.25); }
+  /* 0.22.0: grandes seções do menu (Ferramentas / Tibia) */
+  .drawer .section { display: flex; align-items: center; gap: 10px; margin: 14px 4px 2px; font: 800 12px/1 var(--logo);
+                     letter-spacing: .14em; text-transform: uppercase; color: var(--gold); }
+  .drawer .section::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, rgba(242,201,76,.45), transparent); }
+  .drawer .sep { height: 1px; background: var(--line); margin: 12px 8px 6px; }
   .drawer .group { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
                    padding: 12px 12px 3px; opacity: .75; }
   .drawer button.item { position: relative; display: flex; gap: 12px; align-items: center; width: 100%; text-align: left;
@@ -477,6 +482,78 @@
   .dlAgree input { width: 18px; height: 18px; accent-color: var(--accent); }
   a.btn.dlBtn.disabled { opacity: .45; pointer-events: none; filter: grayscale(.5); }
   code.sha { font-size: 11px; word-break: break-all; }
+  /* ---------- 0.22.0: Solo / Party ---------- */
+  .modepick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+  .modepick button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 12px 8px; border-radius: 12px;
+                     background: var(--card2); border: 1px solid var(--line); color: var(--text); font-size: 15px; }
+  .modepick button .muted { font-size: 12px; }
+  .modepick .mp-ic { font-size: 24px; }
+  .modepick button.on { border-color: var(--gold); color: var(--gold2); box-shadow: inset 0 0 0 1px var(--gold); }
+  body.has-modebar { padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px)); }
+  /* chave Solo/Party: um trilho afundado com um botão "aceso" que desliza para o lado escolhido */
+  .modebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center;
+             padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px)); background: rgba(11, 13, 18, .94);
+             border-top: 1px solid var(--line); backdrop-filter: blur(8px); }
+  .modebar .switch { position: relative; display: grid; grid-template-columns: 1fr 1fr; width: min(420px, 100%); padding: 4px;
+                     border-radius: 999px; background: #07080c; border: 1px solid var(--line);
+                     box-shadow: inset 0 2px 6px rgba(0, 0, 0, .7), inset 0 -1px 0 rgba(255, 255, 255, .03); }
+  .modebar .knob { position: absolute; top: 4px; bottom: 4px; left: 4px; width: calc(50% - 4px); border-radius: 999px;
+                   background: linear-gradient(180deg, #2b2f3d, #1b1e28); border: 1px solid rgba(242, 201, 76, .55);
+                   box-shadow: 0 2px 8px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .09), 0 0 14px rgba(242, 201, 76, .16);
+                   transition: transform .25s cubic-bezier(.3, 1.3, .5, 1); }
+  .modebar .switch[data-mode="party"] .knob { transform: translateX(100%); }
+  .modebar button { position: relative; z-index: 1; padding: 9px 8px; border: 0; border-radius: 999px; background: none;
+                    font-size: 15px; font-weight: 700; color: var(--muted); transition: color .2s; }
+  .modebar button[aria-pressed="true"] { color: var(--gold2); text-shadow: 0 0 10px rgba(242, 201, 76, .35); }
+  .modebar button:not([aria-pressed="true"]):hover { color: var(--text); }
+  .modebar button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .modebar .badge { margin-left: 4px; }
+  @media (prefers-reduced-motion: reduce) { .modebar .knob { transition: none; } }
+  /* telas sem relação com solo/party: sem a chave */
+  body.has-modebar.no-mode { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body.no-mode .modebar { display: none; }
+  body.no-mode .changes-fab { bottom: calc(14px + env(safe-area-inset-bottom, 0px)); }
+  .quick { border-color: rgba(242, 201, 76, .4); }
+  .quick .tx { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .quick .tx:last-child { border-bottom: 0; }
+  .msgbox { white-space: pre-wrap; word-break: break-word; background: var(--card2); border: 1px dashed var(--line); border-radius: 10px;
+            padding: 8px 10px; font-size: 14px; margin: 6px 0; }
+  .nextstep { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .nextstep .btn2 { flex: 1 1 200px; }
+  .goldpulse { border-color: var(--gold) !important; color: var(--gold2) !important; animation: goldpulse 1.2s ease-in-out infinite; }
+  @keyframes goldpulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(242, 201, 76, .55); } 50% { box-shadow: 0 0 0 6px rgba(242, 201, 76, 0); background: rgba(242, 201, 76, .14); } }
+  @media (prefers-reduced-motion: reduce) { .goldpulse { animation: none; box-shadow: inset 0 0 0 2px var(--gold); } }
+  /* ---------- 0.22.0: Alterações (atalho fixo) e notícias do Tibia ---------- */
+  .changes-fab { position: fixed; right: 14px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); z-index: 31;
+                 display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 999px; font-size: 13px;
+                 font-weight: 700; background: var(--card); color: var(--muted); border: 1px solid var(--line);
+                 box-shadow: 0 4px 14px rgba(0, 0, 0, .45); }
+  .changes-fab:hover, .changes-fab.new { color: var(--gold2); border-color: var(--gold); }
+  .changes-fab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+  body:not(.has-modebar) .changes-fab { display: none; }
+  .tn-filter fieldset { border: 0; padding: 0; margin: 10px 0 0; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .tn-filter legend { padding: 0; margin-bottom: 4px; font-size: 13px; width: 100%; }
+  .tn-filter fieldset label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+  .tn-filter input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); }
+  .tn-dates { display: flex; gap: 10px; flex-wrap: wrap; }
+  .tn-dates label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 140px; font-size: 13px; }
+  .tn-dates input { padding: 8px; color-scheme: dark; }
+  #cmsQ { margin-top: 10px; }
+  .tn-tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; border: 1px solid var(--line); color: var(--muted); }
+  .tn-tag.t-article { border-color: rgba(242, 201, 76, .5); color: var(--gold); }
+  .tn-tag.t-ticker { border-color: rgba(124, 140, 255, .5); color: var(--accent); }
+  .tn-body { line-height: 1.55; overflow-wrap: anywhere; }
+  .tn-body p { margin: 8px 0; }
+  .tn-body a { color: var(--accent); }
+  .tn-body table { border-collapse: collapse; max-width: 100%; display: block; overflow-x: auto; }
+  .tn-body td, .tn-body th { border: 1px solid var(--line); padding: 4px 8px; }
+  .tn-img { display: inline-block; font-size: 13px; margin: 2px 0; }
+  .tn-row { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .tn-row:last-child { border-bottom: 0; }
+  .tn-row .tn-date { flex: none; width: 86px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tn-row .tn-title { flex: 1 1 200px; }
+  @media (max-width: 520px) { .changes-fab .fab-txt { display: none; } .changes-fab { padding: 7px 10px; } }
+  .tn-open { margin-top: 6px; padding: 10px 12px; border-radius: 10px; background: var(--card2); }
 </style>
 </head>
 <body>
@@ -645,7 +722,13 @@
       <form id="nickForm">
         <label class="muted" for="nickInput">Nome do personagem</label>
         <input id="nickInput" placeholder="Ex.: Atx Buubo" autocomplete="off" autocapitalize="words" spellcheck="false" style="margin-top:6px">
-        <button class="btn" type="submit">Ver hunts</button>
+        <div class="muted" style="margin-top:14px" id="nickModeLabel">Hoje você vai caçar:</div>
+        <div class="modepick" id="nickMode" role="radiogroup" aria-labelledby="nickModeLabel">
+          <button type="button" data-mode-pick="solo" role="radio" aria-checked="false"><span class="mp-ic" aria-hidden="true">🧍</span><b>Hunt solo</b><span class="muted">Hunt Session Stacker</span></button>
+          <button type="button" data-mode-pick="party" role="radio" aria-checked="false"><span class="mp-ic" aria-hidden="true">👥</span><b>Hunt em party</b><span class="muted">Lootsplit</span></button>
+        </div>
+        <button class="btn" type="submit">Entrar</button>
+        <div class="hint">Dá para trocar a qualquer momento na barra do rodapé.</div>
       </form>
       <div class="err" id="nickErr"></div>
       <button class="link hidden" id="nickBack" style="margin-top:8px">← voltar</button>
@@ -666,25 +749,30 @@
   <nav class="drawer" id="drawer" aria-label="Menu">
     <div class="me"><span class="avatar" id="drawerAvatar" aria-hidden="true"></span>
       <div class="me-txt"><b id="drawerName"></b><span class="muted" id="drawerInfo"></span></div></div>
+    <!-- 0.22.0: primeiro as nossas ferramentas, depois o que vem direto do Tibia -->
+    <div class="section">Ferramentas</div>
     <button class="item" data-page="home"><span class="ic">🏠</span>Início</button>
-    <div class="group">Solo</div>
-    <button class="item" data-page="stack" data-open="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
-    <button class="item" data-page="boss" data-btab="solo"><span class="ic">👑</span>Boss</button>
-    <div class="group">Party</div>
-    <button class="item" data-page="loot"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
-    <button class="item" data-page="boss" data-btab="party"><span class="ic">👑</span>Boss</button>
-    <div class="group">Progresso</div>
+    <!-- o grupo segue a chave Solo/Party do rodapé -->
+    <div class="group" id="modeGroup">Solo</div>
+    <button class="item" data-page="stack" data-only="solo" data-open="stack"><span class="ic">📈</span>Hunt Session Stacker</button>
+    <button class="item hidden" data-page="loot" data-only="party"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
+    <button class="item" data-page="boss"><span class="ic">👑</span>Bosses</button>
     <button class="item" data-page="hunts"><span class="ic">🗺️</span>Hunts</button>
+    <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Ranking entre amigos</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
     <div class="group">Conta</div>
     <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
-    <button class="item" data-page="news"><span class="ic">📰</span>Novidades <span class="badge hidden" id="newsDot">novo</span></button>
+    <button class="item" data-page="news"><span class="ic">🧾</span>Alterações <span class="badge hidden" id="newsDot">novo</span></button>
     <button class="item" data-page="settings"><span class="ic">⚙️</span>Configurações</button>
     <button class="item" data-page="download" id="dlItem"><span class="ic">💻</span>App para Windows</button>
     <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
     <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
+    <div class="section">Tibia</div>
+    <button class="item" data-page="tnews"><span class="ic">📰</span>Novidades</button>
+    <button class="item" data-page="cms"><span class="ic">💬</span>O que os CMs estão falando?</button>
+    <div class="sep" aria-hidden="true"></div>
     <button class="item quiet" id="logout"><span class="ic">🚪</span>Sair da conta</button>
     <div class="foot muted"><div class="status" id="srvStatus"><i class="dot"></i><span>Conferindo o servidor…</span></div>
       <div id="drawerFoot"></div></div>
@@ -717,9 +805,10 @@
     <div id="pageBoss" class="hidden">
       <h1>Rotação de bosses</h1>
       <p class="muted" style="margin-top:-4px">🔒 Só você vê seus bosses. Os lootsplits de boss aparecem só para quem estava na PT.</p>
-      <div class="seg" role="tablist" id="bossTabs">
+      <div class="seg hidden" role="tablist" id="bossTabs">
         <button data-btab="solo" role="tab">Solo</button><button data-btab="party" role="tab">Party</button>
       </div>
+      <div class="muted" id="bossModeNote" style="margin-bottom:8px"></div>
       <div class="card" id="bossForm">
         <label class="muted" for="bossText" id="bossLabel">Cole aqui o Hunt Session Analyser do boss</label>
         <textarea id="bossText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 00:25h&#10;Raw XP Gain: ...&#10;Killed Monsters:&#10;  1x Grand Master Oberon"></textarea>
@@ -732,9 +821,10 @@
     </div>
 
     <div id="pageHunts" class="hidden">
-      <h1>Hunts</h1>
-      <p class="muted">Dados das sessões que os jogadores enviam pelo Hunt Session Stacker (sessões com 10 min ou mais).
-        Gold/h = balance por hora.</p>
+      <h1 id="huntsTitle">Hunts solo</h1>
+      <p class="muted" id="huntsIntro"></p>
+      <div id="huntMine"></div>
+      <h2 id="huntsAllTitle">Todas as hunts</h2>
       <div class="seg" role="tablist" id="huntTabs">
         <button data-htab="xp" class="on">Ranking XP/h</button><button data-htab="gold">Ranking Gold/h</button><button data-htab="cmp">Comparar</button>
       </div>
@@ -775,9 +865,45 @@
     </div>
 
     <div id="pageNews" class="hidden">
-      <h1>Novidades</h1>
+      <h1>Alterações</h1>
       <p class="muted">O que mudou em cada versão do 4rt3mi5.</p>
       <div id="newsList"></div>
+    </div>
+
+    <!-- 0.22.0: Latest News do tibia.com -->
+    <div id="pageTnews" class="hidden">
+      <h1>Novidades do Tibia</h1>
+      <p class="muted" style="margin-top:-4px">O que a CipSoft publicou no Latest News do tibia.com, no idioma original.</p>
+      <div id="tnewsBody"></div>
+    </div>
+
+    <!-- 0.22.0: News Archive do tibia.com, com o mesmo filtro -->
+    <div id="pageCms" class="hidden">
+      <h1>O que os CMs estão falando?</h1>
+      <form class="card tn-filter" id="cmsForm">
+        <div class="tn-dates">
+          <label><span class="muted">De</span><input type="date" id="cmsFrom" required></label>
+          <label><span class="muted">Até</span><input type="date" id="cmsTo" required></label>
+        </div>
+        <fieldset><legend class="muted">Categorias</legend>
+          <label><input type="checkbox" name="cat" value="cipsoft" checked> CipSoft</label>
+          <label><input type="checkbox" name="cat" value="community" checked> Community</label>
+          <label><input type="checkbox" name="cat" value="development" checked> Development</label>
+          <label><input type="checkbox" name="cat" value="support" checked> Support</label>
+          <label><input type="checkbox" name="cat" value="technical" checked> Technical</label>
+        </fieldset>
+        <fieldset><legend class="muted">Tipos</legend>
+          <label><input type="checkbox" name="type" value="news" checked> News</label>
+          <label><input type="checkbox" name="type" value="ticker" checked> News Ticker</label>
+          <label><input type="checkbox" name="type" value="article" checked> Featured Article</label>
+        </fieldset>
+        <input id="cmsQ" type="search" maxlength="80" placeholder="Pesquisar (ex.: double xp, rotten blood)" aria-label="Pesquisar nas notícias">
+        <div class="row" style="gap:8px; justify-content:flex-start; margin-top:8px">
+          <button class="btn" type="submit" style="margin:0; width:auto; padding:10px 22px">Filtrar</button>
+          <button class="btn2" type="button" id="cmsReset">Última semana</button>
+        </div>
+      </form>
+      <div id="cmsBody"></div>
     </div>
 
     <div id="pageSettings" class="hidden">
@@ -810,6 +936,16 @@
       <div class="card" id="linkBox"></div>
     </div>
   </main>
+  <!-- 0.22.0: atalho fixo para as Alterações (canto inferior direito) -->
+  <button class="changes-fab" id="changesFab" type="button" data-page-link="news" title="Ver as alterações do 4rt3mi5" aria-label="Alterações do 4rt3mi5">
+    🧾 <span class="fab-txt">Alterações</span> <span id="fabVer" data-i18n-skip></span><i class="dot hidden" id="fabDot" aria-hidden="true"></i></button>
+  <!-- 0.22.0: Solo ou Party, sempre visível; troca a tela e o menu na hora -->
+  <nav class="modebar" id="modeBar" aria-label="Tipo de hunt">
+    <div class="switch" id="modeSwitch" data-mode="solo"><span class="knob" aria-hidden="true"></span>
+      <button type="button" data-mode="solo" aria-pressed="true"><span aria-hidden="true">🧍</span> Solo</button>
+      <button type="button" data-mode="party" aria-pressed="false"><span aria-hidden="true">👥</span> Party <span class="badge hidden" id="partyBadge" title="Acertos pendentes"></span></button>
+    </div>
+  </nav>
 </section>
 
 <!-- 0.21.0: rodapé em todas as telas — Tibia é da CipSoft (canto esquerdo) e quem criou o 4rt3mi5 (canto direito) -->

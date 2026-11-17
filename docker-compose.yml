@@ -3,8 +3,16 @@
 # Códigos:   docker compose exec server python -m artemis.server keys create --label "Nome"
 #            docker compose exec server python -m artemis.server keys list
 # Logs:      docker compose logs -f
+# Limite dos logs de cada container (evita arquivos grandes demais na VM da Oracle)
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "5m"
+    max-file: "2"
+
 services:
   server:
+    logging: *logs
     build: .
     image: artemis-server
     container_name: artemis-server
@@ -26,6 +34,7 @@ services:
   ngrok:
     image: ngrok/ngrok:3
     container_name: artemis-ngrok
+    logging: *logs
     profiles: ["public"]
     restart: unless-stopped
     depends_on:
@@ -42,6 +51,7 @@ services:
   caddy:
     image: caddy:2
     container_name: artemis-caddy
+    logging: *logs
     profiles: ["dominio"]
     restart: unless-stopped
     depends_on:

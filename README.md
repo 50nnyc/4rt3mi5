@@ -20,8 +20,21 @@ app desktop abre a mesma página numa janela própria.
    (`4RT3MI5-XXXXXX`). A pessoa cola no comentário do personagem no tibia.com; o app confere pelo
    TibiaData (no botão e sozinho a cada 30 s). Depois de verificado, pode apagar do comentário.
 3. Abertura → **nome do personagem** a consultar → tela inicial (última hunt, totais, histórico).
-4. Menu ☰ (0.20.0): **Início**; **Solo** → Hunt Session Stacker e Boss (solo); **Party** → Lootsplit e Boss (party);
-   **Progresso** → Hunts, Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
+4. **Solo ou Party (0.22.0):** a tela do personagem pergunta se a sessão é hunt solo ou em party; uma barra fixa no
+   rodapé troca a qualquer momento (Solo → Hunt Session Stacker, Party → Lootsplit). O menu ☰ segue essa escolha:
+   **Solo** → Hunt Session Stacker, Bosses, Hunts; **Party** → Lootsplit, Bosses, Hunts. Em 🗺️ Hunts, solo só compara
+   com solo e party com party (`/api/places/ranking|compare|mine?mode=solo|party`); detalhes (criaturas, itens, dano)
+   só das hunts do próprio player e Input Analyzer público só para o Player Hardcore. No Lootsplit, primeiro vêm as
+   transferências e a mensagem pronta para o chat do Tibia; depois o próximo passo pelo tipo de player.
+   **Notícias do Tibia (0.22.0):** ☰ → **Tibia** → **📰 Novidades** (Latest News: ticker, Featured Article e
+   notícias dos últimos 90 dias) e **💬 O que os CMs estão falando?** (News Archive com o mesmo filtro do tibia.com:
+   período, categorias, tipos + pesquisa; abre na última semana com tudo marcado). Vêm pelo TibiaData
+   (`/api/tibia/latest|archive|news/{id}`): o servidor guarda o índice inteiro na tabela `tibia_news` e baixa os textos
+   aos poucos a cada 30 min (`ARTEMIS_NEWS_SYNC`, em segundos; `0` desliga) e na hora em que alguém abre. Com a fonte
+   fora do ar, tudo sai do banco. O HTML passa por uma lista fechada de tags (`artemis/core/tibianews.py`); imagens
+   viram link. As notas de versão do app agora são **🧾 Alterações** (menu e atalho fixo no canto inferior direito).
+   Menu ☰: **Início**; o grupo Solo/Party acima;
+   **Progresso** → Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
    **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair. Solo → Stacker já abre a janela para colar.
 7. **Idioma (0.19.0 / 0.20.0):** ⚙️ Configurações → português, inglês, espanhol, japonês, alemão, polonês,
    francês ou russo (também na tela de login). O app é escrito em português; `artemis/web/i18n.js` traduz o que

@@ -1,6 +1,98 @@
 {
   "releases": [
     {
+      "version": "0.22.0",
+      "date": "2026-11-17",
+      "title": "Solo ou Party e notícias do Tibia",
+      "changes": [
+        "Ao entrar, escolha se a hunt de hoje é solo ou em party. A barra no rodapé fica sempre visível para trocar a qualquer momento: Solo abre o 📈 Hunt Session Stacker e Party abre o 💰 Lootsplit. O menu ☰ segue essa escolha e ficou mais enxuto. A chave aparece só nas telas que dependem dela, e o menu agora mostra primeiro as Ferramentas do 4rt3mi5 e, embaixo, o que vem do Tibia.",
+        "No Lootsplit, logo depois de colar o Party Hunt Analyser aparece quem transfere para quem, com os comandos prontos para copiar, e uma mensagem pronta para mandar no chat do Tibia a quem não tem o app. Depois vem o próximo passo pelo seu tipo de player: o Hardcore é guiado por um botão dourado até o Input Analyzer, e o que ficar em branco continua salvo.",
+        "🗺️ Hunts agora separa hunts solo de hunts em party, mostra o seu histórico em cada hunt e só compara solo com solo e party com party. Os detalhes (criaturas, itens e dano) aparecem nas hunts em que você caçou; o Player Hardcore vê também o Input Analyzer público.",
+        "📰 Novidades agora traz o que a CipSoft publica no Latest News do tibia.com (News Ticker, Featured Article e notícias), no idioma original. As notícias ficam guardadas: dá para ler mesmo com o tibia.com fora do ar ou em manutenção.",
+        "💬 O que os CMs estão falando? abre o News Archive do tibia.com já filtrado na última semana, com tudo marcado. Mude o período, as categorias e os tipos, ou pesquise uma palavra em todas as notícias desde 2000.",
+        "As notas de versão do 4rt3mi5 agora se chamam 🧾 Alterações: estão no menu e num atalho fixo no canto inferior direito, que fica dourado quando sai versão nova."
+      ],
+      "tr": {
+        "en": {
+          "title": "Solo or Party and Tibia news",
+          "changes": [
+            "When you log in, choose whether today's hunt is solo or in a party. The bar at the bottom is always visible so you can switch at any time: Solo opens the 📈 Hunt Session Stacker and Party opens the 💰 Lootsplit. The ☰ menu follows this choice and is leaner. The switch only shows on the screens that depend on it, and the menu now lists the 4rt3mi5 Tools first and, below them, what comes from Tibia.",
+            "In the Lootsplit, right after pasting the Party Hunt Analyser you see who transfers to whom, with the commands ready to copy, plus a ready message to send in the Tibia chat to anyone without the app. Then comes the next step for your player type: Hardcore players are guided by a golden button up to the Input Analyzer, and anything left blank stays saved.",
+            "🗺️ Hunts now splits solo hunts from party hunts, shows your history at each hunt and only compares solo with solo and party with party. Details (creatures, items and damage) appear on hunts where you hunted; Hardcore players also see the public Input Analyzer.",
+            "📰 News now brings what CipSoft publishes in the Latest News on tibia.com (News Ticker, Featured Article and news), in the original language. The news is stored, so you can read it even when tibia.com is offline or under maintenance.",
+            "💬 What are the CMs saying? opens the tibia.com News Archive already filtered to the last week, with everything checked. Change the period, categories and types, or search for a word in all news since 2000.",
+            "The 4rt3mi5 release notes are now called 🧾 Changes: they are in the menu and in a fixed shortcut at the bottom right, which turns gold when a new version comes out."
+          ]
+        },
+        "es": {
+          "title": "Solo o Party y noticias de Tibia",
+          "changes": [
+            "Al entrar, elige si la hunt de hoy es solo o en party. La barra inferior siempre está visible para cambiar en cualquier momento: Solo abre el 📈 Hunt Session Stacker y Party abre el 💰 Lootsplit. El menú ☰ sigue esa elección y es más limpio. El interruptor solo aparece en las pantallas que dependen de él, y el menú ahora muestra primero las Herramientas de 4rt3mi5 y, debajo, lo que viene de Tibia.",
+            "En el Lootsplit, justo después de pegar el Party Hunt Analyser aparece quién transfiere a quién, con los comandos listos para copiar, y un mensaje listo para enviar en el chat de Tibia a quien no tiene la app. Después viene el siguiente paso según tu tipo de jugador: el Hardcore es guiado por un botón dorado hasta el Input Analyzer, y lo que quede en blanco se guarda.",
+            "🗺️ Hunts ahora separa las hunts solo de las hunts en party, muestra tu historial en cada hunt y solo compara solo con solo y party con party. Los detalles (criaturas, ítems y daño) aparecen en las hunts donde cazaste; el jugador Hardcore también ve el Input Analyzer público.",
+            "📰 Novedades ahora trae lo que CipSoft publica en Latest News de tibia.com (News Ticker, Featured Article y noticias), en el idioma original. Las noticias quedan guardadas: puedes leerlas aunque tibia.com esté fuera de línea o en mantenimiento.",
+            "💬 ¿Qué dicen los CMs? abre el News Archive de tibia.com ya filtrado en la última semana, con todo marcado. Cambia el período, las categorías y los tipos, o busca una palabra en todas las noticias desde 2000.",
+            "Las notas de versión de 4rt3mi5 ahora se llaman 🧾 Cambios: están en el menú y en un acceso fijo en la esquina inferior derecha, que se vuelve dorado cuando sale una versión nueva."
+          ]
+        },
+        "ja": {
+          "title": "ソロ／パーティーとTibiaニュース",
+          "changes": [
+            "ログイン時に、今日のハントがソロかパーティーかを選びます。下部のバーは常に表示され、いつでも切り替えられます。ソロは📈 Hunt Session Stacker、パーティーは💰 Lootsplitを開きます。☰メニューもこの選択に連動し、すっきりしました。 スイッチはそれに関係する画面にだけ表示され、メニューは4rt3mi5のツールを先に、その下にTibia関連を並べるようになりました。",
+            "Lootsplitでは、Party Hunt Analyserを貼り付けた直後に誰が誰に送金するかがコピー用コマンド付きで表示され、アプリを持っていない人にTibiaのチャットで送れるメッセージも用意されます。続いてプレイヤータイプに合わせた次のステップが表示され、ハードコアは金色のボタンでInput Analyzerまで案内されます。空欄の項目も保存されます。",
+            "🗺️ Huntsはソロとパーティーのハントを分け、各ハントでのあなたの履歴を表示し、ソロはソロ同士、パーティーはパーティー同士でのみ比較します。詳細（クリーチャー、アイテム、ダメージ）は自分が狩ったハントにだけ表示され、ハードコアは公開のInput Analyzerも見られます。",
+            "📰 ニュースでは、CipSoftがtibia.comのLatest Newsで公開した内容（News Ticker、Featured Article、ニュース）を原文のまま表示します。ニュースは保存されるので、tibia.comがオフラインやメンテナンス中でも読めます。",
+            "💬「CMは何と言っている？」は、直近1週間・すべてチェック済みで絞り込んだtibia.comのNews Archiveを開きます。期間、カテゴリー、種類を変えたり、2000年以降の全ニュースから単語で検索したりできます。",
+            "4rt3mi5のリリースノートは🧾 変更履歴という名前になりました。メニューと右下の固定ショートカットから開け、新バージョンが出ると金色になります。"
+          ]
+        },
+        "de": {
+          "title": "Solo oder Party und Tibia-News",
+          "changes": [
+            "Beim Einloggen wählst du, ob die heutige Hunt solo oder in einer Party ist. Die Leiste unten ist immer sichtbar, damit du jederzeit wechseln kannst: Solo öffnet den 📈 Hunt Session Stacker und Party den 💰 Lootsplit. Das ☰-Menü folgt dieser Wahl und ist schlanker. Der Schalter erscheint nur auf den Seiten, die davon abhängen, und das Menü zeigt jetzt zuerst die Werkzeuge von 4rt3mi5 und darunter alles von Tibia.",
+            "Im Lootsplit siehst du direkt nach dem Einfügen des Party Hunt Analysers, wer wem überweist, mit kopierfertigen Befehlen, und eine fertige Nachricht für den Tibia-Chat an alle ohne App. Danach kommt der nächste Schritt passend zu deinem Spielertyp: Hardcore-Spieler werden von einem goldenen Button bis zum Input Analyzer geführt, und leere Felder bleiben gespeichert.",
+            "🗺️ Hunts trennt jetzt Solo- und Party-Hunts, zeigt deinen Verlauf in jeder Hunt und vergleicht nur Solo mit Solo und Party mit Party. Details (Kreaturen, Items und Schaden) erscheinen bei Hunts, in denen du gejagt hast; Hardcore-Spieler sehen auch den öffentlichen Input Analyzer.",
+            "📰 Neuigkeiten zeigt jetzt, was CipSoft in den Latest News auf tibia.com veröffentlicht (News Ticker, Featured Article und News), in der Originalsprache. Die News werden gespeichert, sodass du sie auch lesen kannst, wenn tibia.com offline oder in Wartung ist.",
+            "💬 Was sagen die CMs? öffnet das News Archive von tibia.com, bereits auf die letzte Woche gefiltert und mit allem angehakt. Ändere Zeitraum, Kategorien und Typen oder suche ein Wort in allen News seit 2000.",
+            "Die Versionshinweise von 4rt3mi5 heißen jetzt 🧾 Änderungen: Du findest sie im Menü und über eine feste Verknüpfung unten rechts, die golden wird, wenn eine neue Version erscheint."
+          ]
+        },
+        "pl": {
+          "title": "Solo czy Party i wiadomości z Tibii",
+          "changes": [
+            "Przy logowaniu wybierz, czy dzisiejszy hunt jest solo, czy w party. Pasek na dole jest zawsze widoczny, więc możesz zmienić w każdej chwili: Solo otwiera 📈 Hunt Session Stacker, a Party otwiera 💰 Lootsplit. Menu ☰ podąża za tym wyborem i jest prostsze. Przełącznik pojawia się tylko na ekranach, które od niego zależą, a menu pokazuje teraz najpierw Narzędzia 4rt3mi5, a pod nimi to, co pochodzi z Tibii.",
+            "W Lootsplit zaraz po wklejeniu Party Hunt Analysera widać, kto komu przelewa, z komendami gotowymi do skopiowania, oraz gotową wiadomość do wysłania na czacie Tibii osobom bez aplikacji. Potem pojawia się kolejny krok zależnie od typu gracza: Hardcore jest prowadzony złotym przyciskiem aż do Input Analyzer, a puste pola zostają zapisane.",
+            "🗺️ Hunts oddziela teraz hunty solo od huntów w party, pokazuje twoją historię w każdym huncie i porównuje tylko solo z solo oraz party z party. Szczegóły (stwory, przedmioty i obrażenia) pojawiają się w huntach, w których polowałeś; gracz Hardcore widzi też publiczny Input Analyzer.",
+            "📰 Nowości pokazują teraz to, co CipSoft publikuje w Latest News na tibia.com (News Ticker, Featured Article i wiadomości), w oryginalnym języku. Wiadomości są zapisywane, więc można je czytać nawet gdy tibia.com jest offline lub w trakcie konserwacji.",
+            "💬 Co mówią CM-i? otwiera News Archive z tibia.com już przefiltrowane na ostatni tydzień, ze wszystkim zaznaczonym. Zmień okres, kategorie i typy albo wyszukaj słowo we wszystkich wiadomościach od 2000 roku.",
+            "Informacje o wersjach 4rt3mi5 nazywają się teraz 🧾 Zmiany: są w menu i w stałym skrócie w prawym dolnym rogu, który robi się złoty, gdy wychodzi nowa wersja."
+          ]
+        },
+        "fr": {
+          "title": "Solo ou Party et actualités de Tibia",
+          "changes": [
+            "À la connexion, choisissez si la hunt du jour est en solo ou en party. La barre du bas reste toujours visible pour changer à tout moment : Solo ouvre le 📈 Hunt Session Stacker et Party ouvre le 💰 Lootsplit. Le menu ☰ suit ce choix et est plus épuré. L'interrupteur n'apparaît que sur les écrans qui en dépendent, et le menu affiche d'abord les Outils de 4rt3mi5 puis, en dessous, ce qui vient de Tibia.",
+            "Dans le Lootsplit, juste après avoir collé le Party Hunt Analyser, vous voyez qui transfère à qui, avec les commandes prêtes à copier, et un message prêt à envoyer dans le chat de Tibia à ceux qui n'ont pas l'appli. Vient ensuite l'étape suivante selon votre type de joueur : le Hardcore est guidé par un bouton doré jusqu'à l'Input Analyzer, et ce qui reste vide est enregistré.",
+            "🗺️ Hunts sépare désormais les hunts solo des hunts en party, affiche votre historique dans chaque hunt et ne compare que solo avec solo et party avec party. Les détails (créatures, objets et dégâts) apparaissent sur les hunts où vous avez chassé ; le joueur Hardcore voit aussi l'Input Analyzer public.",
+            "📰 Actualités affiche maintenant ce que CipSoft publie dans les Latest News de tibia.com (News Ticker, Featured Article et actualités), dans la langue d'origine. Les actualités sont enregistrées : vous pouvez les lire même quand tibia.com est hors ligne ou en maintenance.",
+            "💬 Que disent les CM ? ouvre le News Archive de tibia.com déjà filtré sur la dernière semaine, avec tout coché. Changez la période, les catégories et les types, ou recherchez un mot dans toutes les actualités depuis 2000.",
+            "Les notes de version de 4rt3mi5 s'appellent désormais 🧾 Modifications : elles sont dans le menu et dans un raccourci fixe en bas à droite, qui devient doré à la sortie d'une nouvelle version."
+          ]
+        },
+        "ru": {
+          "title": "Соло или Party и новости Tibia",
+          "changes": [
+            "При входе выберите, будет ли сегодняшний хант соло или в party. Панель внизу всегда видна, переключаться можно в любой момент: Соло открывает 📈 Hunt Session Stacker, а Party — 💰 Lootsplit. Меню ☰ следует этому выбору и стало компактнее. Переключатель показывается только на экранах, которые от него зависят, а в меню сначала идут Инструменты 4rt3mi5, а ниже — то, что приходит из Tibia.",
+            "В Lootsplit сразу после вставки Party Hunt Analyser видно, кто кому переводит, с готовыми для копирования командами, и готовое сообщение для чата Tibia тем, у кого нет приложения. Затем идёт следующий шаг по вашему типу игрока: Хардкор-игрока золотая кнопка ведёт до Input Analyzer, а незаполненное сохраняется.",
+            "🗺️ Hunts теперь разделяет соло-ханты и ханты в party, показывает вашу историю на каждом ханте и сравнивает только соло с соло и party с party. Подробности (существа, предметы и урон) видны на хантах, где вы охотились; Хардкор-игрок видит также публичный Input Analyzer.",
+            "📰 Новости теперь показывают то, что CipSoft публикует в Latest News на tibia.com (News Ticker, Featured Article и новости), на языке оригинала. Новости сохраняются, поэтому их можно читать, даже когда tibia.com недоступен или на обслуживании.",
+            "💬 «Что говорят CM?» открывает News Archive с tibia.com, уже отфильтрованный за последнюю неделю, со всеми отмеченными пунктами. Измените период, категории и типы или найдите слово во всех новостях с 2000 года.",
+            "Заметки о версиях 4rt3mi5 теперь называются 🧾 Изменения: они есть в меню и в закреплённой кнопке в правом нижнем углу, которая становится золотой при выходе новой версии."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.21.0",
       "date": "2026-11-16",
       "title": "Endereço novo, contato e créditos",

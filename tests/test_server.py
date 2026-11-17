@@ -262,9 +262,10 @@ class ServerTests(unittest.TestCase):
         cmp_ = self.client.get(f"/api/places/compare?ids={dragon},{places['Mintwallin']}&nick=Knightzao", headers=h).json()
         self.assertEqual(cmp_[0]["mine"]["sessions"], 1)
         self.assertIsNone(cmp_[1]["stats"])
-        self.assertEqual(cmp_[0]["top_kills"][0], {"key": "dragon"})  # 0.20.0: sem quantidade (dado de cada jogador)
+        self.assertEqual(cmp_[0]["top_kills"][0]["key"], "dragon")  # 0.22.0: detalhes só das hunts do próprio player
         other_view = self.client.get(f"/api/places/compare?ids={dragon}&nick=Knightzao", headers=h2).json()
         self.assertIsNone(other_view[0]["mine"])  # "Seu XP/h" só do próprio personagem
+        self.assertEqual(other_view[0]["top_kills"], [])  # quem não é dono vê só o básico
         # nova hunt criada pelo usuário
         self.assertEqual(self.client.post("/api/places", json={"name": "Minha Hunt Secreta"}, headers=h).json()["source"], "user")
         # metas: só o dono altera

@@ -726,6 +726,7 @@ async function showNick(prefill = true) {
   showOnly("nickScreen");
   $("#nickErr").textContent = "";
   $("#nickBack").classList.toggle("hidden", !S.char);
+  paintModePick(S.mode || null);  // a cada entrada a pessoa diz se a sessão é solo ou party
   const last = prefill ? ((await kv.get("nick")) || (S.me && S.me.main_char)) : null;
   if (last && !$("#nickInput").value) $("#nickInput").value = last;
   setTimeout(() => $("#nickInput").focus(), 50);
@@ -734,27 +735,73 @@ $("#nickForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = $("#nickInput").value.trim().replace(/\s+/g, " ");
   if (!name) return;
-  const btn = e.currentTarget.querySelector("button"); btn.disabled = true; $("#nickErr").textContent = "";
+  const picked = $("#nickMode").dataset.mode;
+  if (!picked) { $("#nickErr").textContent = "Escolha se hoje é hunt solo ou em party."; return; }
+  const btn = e.currentTarget.querySelector("button[type=submit]"); btn.disabled = true; $("#nickErr").textContent = "";
   try {
     S.char = await api("GET", `/api/character/${encodeURIComponent(name)}`);
     S.nick = S.char.name;
     await kv.set("nick", S.nick);
-    openApp();
+    await setMode(picked, { nav: false });
+    openApp(modePage());
   } catch (err) {
     if (err.status !== 401) $("#nickErr").textContent = err.message;
   } finally { btn.disabled = false; }
 });
 
+/* ---------- 0.22.0: Solo / Party ---------- */
+// Escolhido na tela do personagem e trocado a qualquer momento na barra do rodapé.
+// Solo → Hunt Session Stacker; Party → Lootsplit. Bosses e Hunts seguem a mesma escolha.
+S.mode = null;
+const modePage = () => (S.mode === "party" ? "loot" : "stack");
+function paintModePick(m) {
+  const box = $("#nickMode");
+  box.dataset.mode = m || "";
+  box.querySelectorAll("[data-mode-pick]").forEach((b) => {
+    const on = b.dataset.modePick === m;
+    b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on));
+  });
+}
+$("#nickMode").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mode-pick]");
+  if (b) { paintModePick(b.dataset.modePick); $("#nickErr").textContent = ""; }
+});
+function paintMode() {
+  const party = S.mode === "party";
+  $("#modeSwitch").dataset.mode = party ? "party" : "solo";
+  $("#modeSwitch").querySelectorAll("button[data-mode]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+  $("#modeGroup").textContent = party ? "Party" : "Solo";
+  document.querySelectorAll("#drawer [data-only]").forEach((b) => b.classList.toggle("hidden", b.dataset.only !== S.mode));
+}
+async function setMode(m, { nav = true } = {}) {
+  m = m === "party" ? "party" : "solo";
+  const changed = m !== S.mode;
+  S.mode = m; S.btab = m;
+  await kv.set("mode", m);
+  paintMode();
+  if (!nav) return;
+  closeDrawer();
+  if (S.page === "boss") { if (changed) showBossTab(m); return; }
+  if (S.page === "hunts") { if (changed) loadHunts(); return; }
+  if (S.page !== modePage()) go(modePage());
+}
+$("#modeBar").addEventListener("click", (e) => { const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode); });
+// 0.22.0: a chave Solo/Party só aparece nas telas que dependem dela
+const MODE_PAGES = new Set(["home", "stack", "loot", "boss", "hunts"]);
+
 /* ---------- app / menu ---------- */
 function showOnly(id) {
   for (const s of ["loginScreen", "expiredScreen", "keyScreen", "ptypeScreen", "verifyScreen", "nickScreen", "app"]) $("#" + s).classList.toggle("hidden", s !== id);
+  document.body.classList.toggle("has-modebar", id === "app");
   // botão de som: no cabeçalho dentro do app; flutuando no canto nas outras telas
   const snd = $("#sound"), inApp = id === "app";
   snd.classList.toggle("floating", !inApp);
   (inApp ? $("#soundSlot") : document.body).appendChild(snd);
   if (!inApp) Music.forPage(null);
 }
-function openApp() {
+function openApp(landing = "home") {
+  if (!S.mode) { S.mode = "solo"; S.btab = "solo"; }
+  paintMode();
   $("#topWho").textContent = S.nick;
   $("#brandHome").dataset.nick = S.nick;
   $("#drawerName").textContent = S.nick;
@@ -765,7 +812,8 @@ function openApp() {
   showOnly("app");
   S.navStack = [];
   S.page = null;
-  go("home", { noPush: true });
+  go(landing, { noPush: true });
+  refreshChangesFab().catch(() => {});
   setTimeout(offerInstall, 2500);
   setTimeout(flushDrafts, 1500);
 }
@@ -790,6 +838,7 @@ function setBadge(id, n) {
   const b = $("#" + id);
   b.textContent = n > 99 ? "99+" : String(n || "");
   b.classList.toggle("hidden", !n);
+  if (id === "lootBadge") setBadge("partyBadge", n);  // 0.22.0: aparece também no botão Party do rodapé
 }
 function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); paintServerStatus(); }
 function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
@@ -797,8 +846,7 @@ $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
 document.querySelectorAll("[data-page]").forEach((b) => b.addEventListener("click", () => {
   closeDrawer();
-  if (b.dataset.btab && b.dataset.btab !== "all") S.btab = b.dataset.btab;
-  if (b.dataset.page === "boss" && S.page === "boss") { showBossTab(S.btab); return; }
+  if (b.dataset.page === "boss" && S.page === "boss") return;
   go(b.dataset.page);
   if (b.dataset.open === "stack") openStackFlow();  // 0.20.0: Solo → Stacker já abre a janela para colar
 }));
@@ -932,9 +980,9 @@ function go(page, opts = {}) {
   if (!opts.noPush && page !== S.page) pushNav();
   Track.view(page);
   S.page = page;
+  document.body.classList.toggle("no-mode", !MODE_PAGES.has(page));
   updateBack();
-  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page
-    && (!b.dataset.btab || b.dataset.btab === "all" || b.dataset.btab === S.btab)));
+  document.querySelectorAll("[data-page]").forEach((b) => b.classList.toggle("active", b.dataset.page === page));
   $("#pageHome").classList.toggle("hidden", page !== "home");
   $("#pageBoss").classList.toggle("hidden", page !== "boss");
   $("#pageLoot").classList.toggle("hidden", page !== "loot");
@@ -942,6 +990,8 @@ function go(page, opts = {}) {
   $("#pageChars").classList.toggle("hidden", page !== "chars");
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
   $("#pageNews").classList.toggle("hidden", page !== "news");
+  $("#pageTnews").classList.toggle("hidden", page !== "tnews");
+  $("#pageCms").classList.toggle("hidden", page !== "cms");
   $("#pageAch").classList.toggle("hidden", page !== "ach");
   $("#pageRank").classList.toggle("hidden", page !== "rank");
   $("#pageSettings").classList.toggle("hidden", page !== "settings");
@@ -951,11 +1001,13 @@ function go(page, opts = {}) {
   Music.forPage(page);
   if (page === "rank") loadRank();
   if (page === "news") loadNews();
+  if (page === "tnews") loadTnews();
+  if (page === "cms") { if (!$("#cmsFrom").value) cmsDefaults(); loadCms(); }
   if (page === "ach") loadAch();
   window.scrollTo(0, 0);
   if (page === "home") loadHome();
   if (page === "stack") loadStack();
-  if (page === "boss") { showBossTab(S.btab); loadBoss(); }
+  if (page === "boss") { showBossTab(S.mode); loadBoss(); }
   if (page === "hunts") loadHunts();
   if (page === "chars") loadChars();
   if (page === "settings") { paintPlayerType(); api("GET", "/api/me").then((m) => { S.me = m; paintPlayerType(); }).catch(() => {}); }
@@ -1076,7 +1128,7 @@ async function afterHuntChange(h) {
   h.kind = h.kind || (S.page === "boss" ? "boss" : undefined);
   if (S.page === "home") return loadHome();
   if (S.page === "boss") return loadBoss({ quiet: true });
-  if (S.page === "loot") { $("#lootResult").innerHTML = huntCard(h, S.nick, "Resultado"); paintVocations($("#lootResult")); }
+  if (S.page === "loot") renderLoot(h);
 }
 document.addEventListener("change", (e) => {
   const sel = e.target.closest("[data-rule-mode]");
@@ -1247,10 +1299,23 @@ async function loadNews() {
   $("#newsList").innerHTML = d.releases.map((r, i) => releaseCard(r, i === 0)).join("");
   await markNewsSeen();
 }
+/** 0.22.0: atalho fixo 🧾 no canto inferior direito; dourado enquanto houver versão não vista. */
+function paintChangesFab(version, unseen) {
+  if (version) $("#fabVer").textContent = `v${version}`;
+  $("#fabDot").classList.toggle("hidden", !unseen);
+  $("#changesFab").classList.toggle("new", !!unseen);
+}
+async function refreshChangesFab() {
+  const d = await fetchNews();
+  if (!d || !d.releases.length) return;
+  const seen = await kv.get("seen_version");
+  paintChangesFab(d.releases[0].version, seen !== d.releases[0].version);
+}
 async function markNewsSeen() {
   const d = await fetchNews();
   if (d && d.releases.length) await kv.set("seen_version", d.releases[0].version);
   $("#newsDot").classList.add("hidden");
+  paintChangesFab(d && d.releases.length ? d.releases[0].version : "", false);
 }
 /** Aviso no Início quando há versão nova que o usuário ainda não viu. */
 async function newsNotice() {
@@ -1258,18 +1323,89 @@ async function newsNotice() {
   if (!d || !d.releases.length) return "";
   const latest = d.releases[0];
   const seen = await kv.get("seen_version");
+  paintChangesFab(latest.version, seen !== latest.version);
   if (seen === latest.version) return "";
   $("#newsDot").classList.remove("hidden");
   return `<div class="card news-new" id="newsNotice">
-    <div class="row"><b>🎉 Novidades da versão ${esc(latest.version)}</b><button class="link" id="newsClose" aria-label="Fechar aviso">✕</button></div>
+    <div class="row"><b>🎉 Alterações da versão ${esc(latest.version)}</b><button class="link" id="newsClose" aria-label="Fechar aviso">✕</button></div>
     ${newsItems(newsText(latest))}
     <button class="link" data-page-link="news">Ver todas as versões →</button></div>`;
 }
 document.addEventListener("click", async (e) => {
   if (e.target.closest("#newsClose")) { $("#newsNotice").remove(); await markNewsSeen(); }
   const link = e.target.closest("[data-page-link]");
-  if (link) go(link.dataset.pageLink);
+  if (link) { closeDrawer(); if (S.page !== link.dataset.pageLink) go(link.dataset.pageLink); else window.scrollTo(0, 0); }
 });
+
+/* ---------- 0.22.0: 📰 Novidades do Tibia e 💬 O que os CMs estão falando? ---------- */
+// O texto das notícias vem do servidor já limpo (lista fechada de tags; imagens viram link) e fica no idioma original.
+const TN_TYPE = { news: "News", ticker: "News Ticker", article: "Featured Article" };
+const TN_CAT = { cipsoft: "CipSoft", community: "Community", development: "Development", support: "Support", technical: "Technical" };
+const tnDate = (d) => d ? new Date(d + "T12:00:00").toLocaleDateString("pt-BR") : "";
+const tnTags = (n) => `<span class="tn-tag t-${n.type}">${TN_TYPE[n.type] || esc(n.type)}</span> <span class="tn-tag">${TN_CAT[n.category] || esc(n.category)}</span>`;
+const tnSource = (n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener noreferrer" style="font-size:13px">Ler no tibia.com ↗</a>`;
+function tnStatus(d) {
+  const when = d.updated_at ? new Date(d.updated_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+  return d.offline
+    ? `<div class="banner bad" style="margin-bottom:10px">📴 A fonte das notícias está fora do ar ou em manutenção. Você está vendo o que já estava guardado${when ? ` (atualizado em ${esc(when)})` : ""}. As novas aparecem sozinhas quando ela voltar.</div>`
+    : when ? `<div class="hint" style="margin:0 0 10px">Atualizado em ${esc(when)} · conteúdo do tibia.com © CipSoft GmbH, trazido pelo TibiaData</div>` : "";
+}
+function tnBody(n) {
+  return n.content_html != null ? `<div class="tn-body" data-i18n-skip>${n.content_html}</div>`
+    : `<p class="muted">O texto desta notícia ainda não foi guardado e a fonte não respondeu agora. ${tnSource(n)}</p>`;
+}
+function tnCard(n, big = false) {
+  return `<article class="card${big ? " news-new" : ""}">
+    <div class="row" style="align-items:flex-start"><b data-i18n-skip style="font-size:${big ? 18 : 16}px">${esc(n.title)}</b><span class="muted" style="font-size:13px; white-space:nowrap">${esc(tnDate(n.date))}</span></div>
+    <div style="margin:4px 0 2px">${tnTags(n)}</div>${tnBody(n)}<div>${tnSource(n)}</div></article>`;
+}
+async function loadTnews() {
+  const el = $("#tnewsBody");
+  el.innerHTML = skeleton("list");
+  let d;
+  try { d = await api("GET", "/api/tibia/latest"); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (!d.total) { el.innerHTML = `<div class="card muted">As notícias ainda estão sendo buscadas pela primeira vez. Volte em alguns minutos.</div>`; return; }
+  el.innerHTML = `${tnStatus(d)}
+    ${d.tickers.length ? `<h2>📢 News Ticker</h2><div class="card" style="padding:4px 14px">${d.tickers.map((t) => `<details class="tn-row" style="display:block">
+      <summary class="row" style="justify-content:flex-start; gap:10px"><span class="tn-date">${esc(tnDate(t.date))}</span><span class="tn-title" data-i18n-skip>${esc(t.title)}</span></summary>
+      <div class="tn-open">${tnBody(t)}</div></details>`).join("")}</div>` : ""}
+    ${d.featured ? `<h2>⭐ Featured Article</h2>${tnCard(d.featured, true)}` : ""}
+    <h2>📰 News</h2>${d.news.map((n) => tnCard(n)).join("") || `<p class="muted">Nenhuma notícia nos últimos 90 dias.</p>`}
+    <p class="hint">Quer ver notícias mais antigas ou pesquisar? Use 💬 <button class="link" data-page-link="cms">O que os CMs estão falando?</button></p>`;
+}
+/* filtro igual ao News Archive do tibia.com; abre com a última semana e tudo marcado */
+const isoDay = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+function cmsDefaults() {
+  const to = new Date(), from = new Date(Date.now() - 7 * 864e5);
+  $("#cmsFrom").value = isoDay(from); $("#cmsTo").value = isoDay(to); $("#cmsQ").value = "";
+  document.querySelectorAll("#cmsForm input[type=checkbox]").forEach((c) => { c.checked = true; });
+}
+async function loadCms() {
+  const el = $("#cmsBody");
+  const vals = (name) => [...document.querySelectorAll(`#cmsForm input[name=${name}]:checked`)].map((c) => c.value).join(",");
+  const qs = new URLSearchParams({ from: $("#cmsFrom").value, to: $("#cmsTo").value, categories: vals("cat"), types: vals("type"), q: $("#cmsQ").value.trim() });
+  el.innerHTML = skeleton("list");
+  let d;
+  try { d = await api("GET", "/api/tibia/archive?" + qs); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  const none = !vals("cat") || !vals("type") ? "Marque pelo menos uma categoria e um tipo." : "Nenhuma notícia com esse filtro.";
+  el.innerHTML = `${tnStatus(d)}<div class="muted" style="margin:4px 0 6px">${d.count} ${d.count === 1 ? "resultado" : "resultados"} de ${esc(tnDate(d.from))} a ${esc(tnDate(d.to))}${d.count > d.rows.length ? ` (mostrando os ${d.rows.length} mais novos)` : ""}</div>
+    ${d.rows.length ? `<div class="card" style="padding:4px 14px">${d.rows.map((n) => `<details class="tn-row" style="display:block" data-tn="${n.id}">
+      <summary class="row" style="justify-content:flex-start; gap:10px; flex-wrap:wrap"><span class="tn-date">${esc(tnDate(n.date))}</span>
+        <span class="tn-title" data-i18n-skip>${esc(n.title)}</span><span>${tnTags(n)}</span></summary>
+      <div class="tn-open" data-tn-body="${n.id}"><span class="muted">Carregando…</span></div></details>`).join("")}</div>`
+      : `<div class="card muted">${none}</div>`}`;
+}
+$("#cmsForm").addEventListener("submit", (e) => { e.preventDefault(); loadCms(); });
+$("#cmsReset").addEventListener("click", () => { cmsDefaults(); loadCms(); });
+// abre o texto da notícia só quando a pessoa expande (vem do banco; se faltar, o servidor tenta buscar na hora)
+document.addEventListener("toggle", async (e) => {
+  const det = e.target;
+  if (!det.matches || !det.matches("details[data-tn]") || !det.open || det.dataset.loaded) return;
+  det.dataset.loaded = "1";
+  const box = det.querySelector("[data-tn-body]");
+  try { const n = await api("GET", `/api/tibia/news/${det.dataset.tn}`); box.innerHTML = tnBody(n) + `<div>${tnSource(n)}</div>`; }
+  catch (err) { delete det.dataset.loaded; box.innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+}, true);
 
 /* ---------- página inicial ---------- */
 const EXPIRY_WARN_DAYS = 3;
@@ -1372,16 +1508,85 @@ async function flushDrafts() {
 window.addEventListener("online", () => setTimeout(flushDrafts, 2000));
 
 /* ---------- lootsplit ---------- */
+// 0.22.0: primeiro o que importa (quem paga quem, pronto para copiar), depois o texto para quem não tem o app,
+// e só então o próximo passo de acordo com o tipo de player.
+function quickTransfers(h) {
+  if (!h.transfers.length) return `<div class="card quick"><b>💸 Transferências</b><p class="muted" style="margin:4px 0 0">Ninguém precisa transferir: todos ficaram com ${fmt(h.profit_each)} gp.</p></div>`;
+  const all = h.transfers.map((t) => `${t.payer}: ${t.command}`).join("\n");
+  return `<div class="card quick"><div class="row"><b>💸 Quem transfere para quem</b><button class="copy" data-copy="${esc(all)}">Copiar todas</button></div>
+    ${h.transfers.map((t) => `<div class="tx"><div class="row"><span><b class="${isMine(t.payer) ? "gold" : ""}">${vdot(t.payer)}${esc(t.payer)}</b> → <b class="${isMine(t.receiver) ? "gold" : ""}">${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)} gp</b></div>
+      <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("")}
+    <div class="hint">Cada um que paga digita o comando no banco do Tibia (NPC banker). Cada um fica com ${fmt(h.profit_each)} gp.</div></div>`;
+}
+/** Texto pronto para mandar no chat do jogo para quem paga e não tem o app. */
+function payerMessage(h, payer) {
+  const mine = h.transfers.filter((t) => t.payer === payer);
+  const lines = mine.map((t) => `${fmt(t.amount)} gp para ${t.receiver} (${t.command})`).join(" e ");
+  return `${payer}, lootsplit da hunt: cada um ficou com ${fmt(h.profit_each)} gp. Você precisa transferir ${lines}.`;
+}
+function partyMessages(h) {
+  const payers = [...new Set(h.transfers.map((t) => t.payer))].filter((p) => !isMine(p));
+  if (!payers.length) return "";
+  const all = payers.map((p) => payerMessage(h, p)).join("\n");
+  return `<div class="card"><div class="row"><b>💬 Mensagem para quem não tem o app</b>${payers.length > 1 ? `<button class="copy" data-copy="${esc(all)}">Copiar todas</button>` : ""}</div>
+    <p class="muted" style="margin:2px 0 0; font-size:14px">Copie e mande no chat do Tibia para a pessoa saber quanto e para quem pagar.</p>
+    ${payers.map((p) => { const m = payerMessage(h, p); return `<div class="msgbox">${esc(m)}</div>
+      <div class="row" style="justify-content:flex-end"><button class="copy" data-copy="${esc(m)}">Copiar mensagem para ${esc(p)}</button></div>`; }).join("")}</div>`;
+}
+/** Depois do essencial: o que completar, conforme o tipo de player. Tudo opcional e salvo como estiver. */
+function lootNextStep(h) {
+  if (!h.id || !h.in_party) return "";
+  const t = ptype();
+  if (t === "novato") return `<div class="card"><b>🌱 Pronto!</b><p class="muted" style="margin:4px 0 0">O lootsplit da sua PT ficou salvo.
+    Pode fechar e seguir a vida: ele fica no 🏠 Início e em 🗺️ Hunts (Party) quando quiser ver de novo.</p></div>`;
+  const own = (list) => (list || []).some((x) => x.name.toLowerCase() === (S.nick || "").toLowerCase());
+  const has = { place: !!h.place, session: own(h.member_sessions), input: own(h.inputs) };
+  const order = ["place", "session", ...(isHardcore(t) ? ["input"] : [])];
+  const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Session Analyzer", input: "🛡️ Input Analyzer" };
+  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Session Analyzer ✔", input: "🛡️ Input Analyzer ✔" };
+  const canPlace = h.can_delete;  // só quem enviou o lootsplit escolhe o local
+  const pending = order.filter((s) => !has[s] && (s !== "place" || canPlace));
+  const next = pending[0];
+  const btn = (s) => {
+    if (has[s]) return `<span class="tagbtn" style="justify-content:center">${done[s]}</span>`;
+    if (s === "place" && !canPlace) return `<span class="muted" style="font-size:13px">📍 Quem enviou o lootsplit escolhe a hunt.</span>`;
+    const gold = isHardcore(t) && s === next ? " goldpulse" : "";
+    return `<button class="btn2${gold}" data-loot-step="${s}" data-hunt="${h.id}" type="button">${label[s]}</button>`;
+  };
+  const intro = isHardcore(t)
+    ? (next ? "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Session Analyzer e por fim o Input Analyzer." : "🔥 Tudo preenchido ✔")
+    : (pending.length ? "⚔️ Quer completar? Diga em qual hunt foi e junte o seu Hunt Session Analyzer." : "⚔️ Tudo preenchido ✔");
+  return `<div class="card"><b>${intro}</b><div class="nextstep">${order.map(btn).join("")}</div>
+    ${pending.length ? `<div class="hint">Não precisa ser agora: o que você não preencher fica salvo e dá para completar depois.</div>` : ""}</div>`;
+}
+function renderLoot(h) {
+  S.lastLoot = h.id;
+  const el = $("#lootResult");
+  el.innerHTML = `${S.lootBanner ? `<div class="banner ok">${esc(S.lootBanner)}</div>` : ""}
+    ${quickTransfers(h)}${partyMessages(h)}${lootNextStep(h)}
+    <h2>Detalhes</h2>${huntCard(h, S.nick, "Resultado")}`;
+  countUp(el);
+  paintVocations(el);
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-loot-step]");
+  if (!b) return;
+  e.preventDefault();
+  // Hardcore: o botão dourado conduz pela sequência inteira (hunt → sessão → input); Comum: só aquele passo.
+  const id = +b.dataset.hunt, first = b.dataset.lootStep;
+  const btns = [...document.querySelectorAll(`[data-loot-step][data-hunt="${id}"]`)].map((x) => x.dataset.lootStep);
+  const steps = isHardcore() ? btns.slice(btns.indexOf(first)) : [first];
+  startFlow("hunt", id, { chain: steps, after: () => refreshAfterFlow("hunt") });
+});
 $("#lootBtn").addEventListener("click", async () => {
   const raw = $("#lootText").value.trim();
   if (!raw) return;
   const btn = $("#lootBtn"); btn.disabled = true; $("#lootErr").textContent = ""; $("#lootResult").innerHTML = "";
   try {
     const r = await api("POST", "/api/lootsplit", { raw_text: raw, nickname: S.nick });
-    $("#lootResult").innerHTML = `<div class="banner ok">${r.created ? "Hunt enviada ✔ Todos da PT já podem ver no app." : "Essa hunt já estava salva ✔"}</div>`
-      + huntCard(r.hunt, S.nick, "Resultado");
-    countUp($("#lootResult"));
-    paintVocations($("#lootResult"));
+    S.lootBanner = r.created ? "Lootsplit salvo ✔ Todos da PT já podem ver no app." : "Esse lootsplit já estava salvo ✔";
+    renderLoot(r.hunt);
+    $("#lootResult").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });  // direto para quem paga quem
     ensureVocations(r.hunt.players.map((p) => p.name)).then((c) => c && paintVocations($("#lootResult")));
     $("#lootText").value = "";
     celebrateRewards(r.rewards);
@@ -1615,8 +1820,8 @@ function showBossTab(tab) {
     const on = b.dataset.btab === S.btab;
     b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on));
   });
-  document.querySelectorAll(".drawer [data-btab]").forEach((b) =>
-    b.classList.toggle("active", S.page === "boss" && (b.dataset.btab === "all" || b.dataset.btab === S.btab)));
+  $("#bossModeNote").innerHTML = S.btab === "party"
+    ? "👥 Boss em <b>party</b>. Para boss solo, toque em Solo no rodapé." : "🧍 Boss <b>solo</b>. Para boss em party, toque em Party no rodapé.";
   $("#bossLabel").textContent = S.btab === "party"
     ? "Cole aqui o SEU Hunt Session Analyser do boss em party (depois você escolhe se faz o lootsplit)"
     : "Cole aqui o Hunt Session Analyser do boss (solo)";
@@ -1986,7 +2191,40 @@ function initPicker(root, { onPick, value, allowCreate = true, onlyWithData = fa
 
 /* ---------- página Hunts: ranking por XP/h e gold/h, level médio, comparação ---------- */
 S.htab = "xp"; S.cmp = [];
+/* 0.22.0: Hunts segue a barra Solo/Party: solo compara com solo, party com party. */
+const huntMode = () => (S.mode === "party" ? "party" : "solo");
+const xpCell = (v) => (huntMode() === "party" && !v ? "—" : kk(v));  // party: XP/h só existe se alguém juntou a sessão
+function paintHuntsHead() {
+  const party = huntMode() === "party";
+  $("#huntsTitle").textContent = party ? "Hunts em party" : "Hunts solo";
+  $("#huntsIntro").textContent = party
+    ? "Lootsplits com a hunt escolhida (10 min ou mais). Gold/h = lucro de cada um por hora; XP/h vem dos Hunt Session Analyzers juntados ao lootsplit. Party só é comparada com party."
+    : "Sessões do Hunt Session Stacker com a hunt escolhida (10 min ou mais). Gold/h = balance por hora. Solo só é comparada com solo.";
+  $("#huntsAllTitle").textContent = party ? "Todas as hunts em party" : "Todas as hunts solo";
+}
+async function loadMyHunts() {
+  const el = $("#huntMine"), party = huntMode() === "party";
+  el.innerHTML = skeleton("list");
+  let d;
+  try { d = await api("GET", `/api/places/mine?mode=${huntMode()}&nick=${encodeURIComponent(S.nick)}`); }
+  catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (d.mode !== huntMode()) return;  // trocou de aba enquanto carregava
+  const title = `<h2>${party ? "👥 Minhas hunts em party" : "🧍 Minhas hunts solo"}</h2>`;
+  if (!d.rows.length) {
+    el.innerHTML = `${title}<div class="card muted">${party
+      ? `Nenhum lootsplit seu com a hunt escolhida ainda. Depois de colar o Party Hunt Analyser em 💰 Lootsplit, toque em "📍 Inserir a hunt".`
+      : `Nenhuma sessão sua com a hunt escolhida ainda. Salve pelo 📈 Hunt Session Stacker e diga em qual hunt foi.`}</div>`;
+    return;
+  }
+  el.innerHTML = `${title}<div class="card" style="padding:6px 10px">${d.rows.map((r) => `<div class="rank" data-cmp-add="${r.id}" title="Toque para comparar">
+      <span class="pos">📍</span>
+      <span><b class="gold">${esc(r.name)}</b><br><span class="muted" style="font-size:13px">${esc(r.city || "")} · ${r.sessions} ${party ? (r.sessions === 1 ? "lootsplit" : "lootsplits") : (r.sessions === 1 ? "sessão" : "sessões")} · ${dur(r.seconds)}${party && r.avg_team ? ` · PT de ${String(r.avg_team).replace(".", ",")} em média` : ""}</span></span>
+      <span style="text-align:right"><b>${xpCell(r.xp_per_hour)} XP/h</b><br><span class="${r.gold_per_hour >= 0 ? "pos" : "neg"}" style="font-size:13px">${kk(r.gold_per_hour)} gp/h</span></span>
+    </div>`).join("")}</div><div class="hint">Toque numa hunt para comparar com outras ${party ? "hunts em party" : "hunts solo"}.</div>`;
+}
 async function loadHunts() {
+  paintHuntsHead();
+  loadMyHunts();
   await ensurePlaces(true);
   const cp = $("#cmpPicker");
   if (!cp.firstElementChild) {
@@ -2009,19 +2247,21 @@ function showHuntTab(tab, opts = {}) {
 }
 async function loadRanking() {
   const el = $("#huntRanking");
-  const qs = new URLSearchParams({ sort: S.htab });
+  const qs = new URLSearchParams({ sort: S.htab, mode: huntMode() });
   if ($("#lvlMin").value) qs.set("min_level", $("#lvlMin").value);
   if ($("#lvlMax").value) qs.set("max_level", $("#lvlMax").value);
   el.innerHTML = skeleton("list");
   let d;
   try { d = await api("GET", "/api/places/ranking?" + qs); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
-  if (!d.rows.length) { el.innerHTML = `<p class="muted">Nenhuma hunt com sessões ${$("#lvlMin").value || $("#lvlMax").value ? "nessa faixa de level" : "ainda"}. Envie sessões pelo Hunt Session Stacker escolhendo a hunt.</p>`; return; }
+  if (d.mode && d.mode !== huntMode()) return;  // trocou de aba enquanto carregava
+  const party = huntMode() === "party";
+  if (!d.rows.length) { el.innerHTML = `<p class="muted">Nenhuma hunt ${party ? "em party" : "solo"} com dados ${$("#lvlMin").value || $("#lvlMax").value ? "nessa faixa de level" : "ainda"}. ${party ? "Cole o lootsplit e escolha a hunt." : "Envie sessões pelo Hunt Session Stacker escolhendo a hunt."}</p>`; return; }
   const gold = S.htab === "gold";
   el.innerHTML = `<div class="card" style="padding:6px 10px">${d.rows.map((r, i) => `<div class="rank" data-cmp-add="${r.id}" title="Toque para comparar">
       <span class="pos">#${i + 1}</span>
-      <span><b>${esc(r.name)}</b><br><span class="muted" style="font-size:13px">${esc(r.city || "")} · level médio ${r.avg_level ?? "—"}${r.min_level != null && r.min_level !== r.max_level ? ` (${r.min_level}–${r.max_level})` : ""} · ${r.players} jogador${r.players === 1 ? "" : "es"} · ${r.sessions} sess${r.sessions === 1 ? "ão" : "ões"}</span></span>
-      <span style="text-align:right"><b class="gold">${kk(gold ? r.gold_per_hour : r.xp_per_hour)}${gold ? " gp/h" : " XP/h"}</b><br>
-        <span class="muted" style="font-size:13px">${gold ? kk(r.xp_per_hour) + " XP/h" : kk(r.gold_per_hour) + " gp/h"}</span></span>
+      <span><b>${esc(r.name)}</b><br><span class="muted" style="font-size:13px">${esc(r.city || "")} · level médio ${r.avg_level ?? "—"}${r.min_level != null && r.min_level !== r.max_level ? ` (${r.min_level}–${r.max_level})` : ""} · ${r.players} jogador${r.players === 1 ? "" : "es"} · ${r.sessions} ${party ? (r.sessions === 1 ? "lootsplit" : "lootsplits") : `sess${r.sessions === 1 ? "ão" : "ões"}`}</span></span>
+      <span style="text-align:right"><b class="gold">${gold ? kk(r.gold_per_hour) : xpCell(r.xp_per_hour)}${gold ? " gp/h" : " XP/h"}</b><br>
+        <span class="muted" style="font-size:13px">${gold ? xpCell(r.xp_per_hour) + " XP/h" : kk(r.gold_per_hour) + " gp/h"}</span></span>
     </div>`).join("")}</div><div class="hint">Toque numa hunt para colocá-la na comparação.</div>`;
 }
 function renderCompare() {
@@ -2030,31 +2270,51 @@ function renderCompare() {
   const el = $("#cmpResult");
   if (!S.cmp.length) { el.innerHTML = ""; return; }
   el.innerHTML = `<p class="muted">Carregando…</p>`;
-  api("GET", `/api/places/compare?ids=${S.cmp.map((p) => p.id).join(",")}&nick=${encodeURIComponent(S.nick)}`).then((rows) => {
+  const mode = huntMode(), party = mode === "party";
+  api("GET", `/api/places/compare?ids=${S.cmp.map((p) => p.id).join(",")}&nick=${encodeURIComponent(S.nick)}&mode=${mode}`).then((rows) => {
+    if (mode !== huntMode()) return;
     const cell = (r, f) => r.stats ? f(r.stats) : "—";
     const mine = (r, f) => r.mine ? f(r.mine) : "—";
     const best = (vals) => Math.max(...vals.filter((v) => typeof v === "number"));
     const xs = rows.map((r) => r.stats ? r.stats.xp_per_hour : null), gs = rows.map((r) => r.stats ? r.stats.gold_per_hour : null);
-    const lines = [
-      ["XP/h (todos)", rows.map((r, i) => cell(r, (s) => `<b class="${xs[i] === best(xs) && rows.length > 1 ? "gold" : ""}">${kk(s.xp_per_hour)}</b>`))],
-      ["Gold/h (todos)", rows.map((r, i) => cell(r, (s) => `<b class="${gs[i] === best(gs) && rows.length > 1 ? "gold" : ""}">${kk(s.gold_per_hour)}</b>`))],
+    const dmgTypes = (d) => d && d.types.length ? d.types.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>") : "—";
+    const dmgMobs = (d) => d && d.mobs.length ? d.mobs.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>")
+      + (d.other_pct ? `<br><span class="muted">(other) ${pctTxt(d.other_pct)}</span>` : "") : "—";
+    const anyMine = rows.some((r) => r.mine), hard = isHardcore();
+    // básico: para qualquer hunt
+    const basic = [
+      ["XP/h (todos)", rows.map((r, i) => cell(r, (s) => `<b class="${xs[i] === best(xs) && rows.length > 1 && s.xp_per_hour ? "gold" : ""}">${xpCell(s.xp_per_hour)}</b>`))],
+      [party ? "Gold/h por pessoa (todos)" : "Gold/h (todos)", rows.map((r, i) => cell(r, (s) => `<b class="${gs[i] === best(gs) && rows.length > 1 ? "gold" : ""}">${kk(s.gold_per_hour)}</b>`))],
       ["Level médio", rows.map((r) => cell(r, (s) => `${s.avg_level ?? "—"}${s.min_level != null && s.min_level !== s.max_level ? `<br><span class="muted">${s.min_level}–${s.max_level}</span>` : ""}`))],
-      ["Jogadores / sessões", rows.map((r) => cell(r, (s) => `${s.players} / ${s.sessions}`))],
+      [party ? "Jogadores / lootsplits" : "Jogadores / sessões", rows.map((r) => cell(r, (s) => `${s.players} / ${s.sessions}`))],
+      ...(party ? [["Tamanho médio da PT", rows.map((r) => cell(r, (s) => String(s.avg_team).replace(".", ",")))]] : []),
       ["Level recomendado (wiki)", rows.map((r) => r.place.level ? r.place.level + "+" : "—")],
-      ["Seu XP/h", rows.map((r) => mine(r, (s) => kk(s.xp_per_hour)))],
-      ["Seu gold/h", rows.map((r) => mine(r, (s) => kk(s.gold_per_hour)))],
-      ["Criaturas mais mortas", rows.map((r) => r.top_kills.map((k) => esc(k.key)).join("<br>") || "—")],
-      ["Itens que mais renderam", rows.map((r) => r.top_items.map((t) => esc(t.name)).join("<br>") || "—")],
-      ["Elemento que mais bate", rows.map((r) => r.damage && r.damage.types.length
-        ? r.damage.types.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>") : "—")],
-      ["Criaturas que mais batem", rows.map((r) => r.damage && r.damage.mobs.length
-        ? r.damage.mobs.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>")
-          + (r.damage.other_pct ? `<br><span class="muted">(other) ${pctTxt(r.damage.other_pct)}</span>` : "") : "—")],
     ];
+    // detalhes: só das hunts em que o próprio player caçou
+    const rich = anyMine ? [
+      [party ? "Seus lootsplits" : "Suas sessões", rows.map((r) => mine(r, (s) => `${s.sessions} · ${dur(s.seconds)}`))],
+      ["Seu XP/h", rows.map((r) => mine(r, (s) => `<b>${xpCell(s.xp_per_hour)}</b>`))],
+      [party ? "Seu gold/h (sua parte)" : "Seu gold/h", rows.map((r) => mine(r, (s) => `<b>${kk(s.gold_per_hour)}</b>`))],
+      ["Criaturas que você mais matou", rows.map((r) => r.top_kills.map((k) => `${esc(k.key)} <span class="muted">${fmt(k.count)}</span>`).join("<br>") || "—")],
+      ["Itens que mais renderam para você", rows.map((r) => r.top_items.map((t) => `${esc(t.name)} <span class="muted">${kk(t.value)}</span>`).join("<br>") || "—")],
+      ["Seu dano recebido: elemento", rows.map((r) => dmgTypes(r.my_damage))],
+      ["Seu dano recebido: criaturas", rows.map((r) => dmgMobs(r.my_damage))],
+    ] : [];
+    // 🔥 Player Hardcore: Input Analyzers públicos daquela hunt
+    const pub = hard ? [
+      ["Elemento que mais bate (todos)", rows.map((r) => dmgTypes(r.damage))],
+      ["Criaturas que mais batem (todos)", rows.map((r) => dmgMobs(r.damage))],
+    ] : [];
+    const tr = ([label, cells]) => `<tr><td class="muted">${label}</td>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
+    const sep = (t) => `<tr><td colspan="${rows.length + 1}" style="text-align:left; padding-top:12px"><b>${t}</b></td></tr>`;
     el.innerHTML = `<div class="card table-wrap"><table class="cmp"><tr><th></th>${rows.map((r) => `<th>${esc(r.place.name)}<br><span class="muted">${esc(r.place.city || "")}</span></th>`).join("")}</tr>
-      ${lines.map(([label, cells]) => `<tr><td class="muted">${label}</td>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</table></div>
-      <div class="hint">"Seu" = sessões de ${esc(S.nick)} nessa hunt. Em dourado, a melhor de cada linha.</div>
-      <div class="hint">Dano recebido = % do total nos Input Analyzers que os Players Hardcore compartilharam ali.</div>`;
+      ${basic.map(tr).join("")}
+      ${rich.length ? sep(`⭐ Suas hunts (${esc(S.nick)})`) + rich.map(tr).join("") : ""}
+      ${pub.length ? sep("🔥 Input Analyzer público") + pub.map(tr).join("") : ""}</table></div>
+      <div class="hint">${party ? "Comparando só hunts em party." : "Comparando só hunts solo."} Em dourado, a melhor de cada linha.</div>
+      <div class="hint">${anyMine ? `Os detalhes (criaturas, itens e dano) aparecem só nas hunts em que ${esc(S.nick)} caçou${party ? " e juntou o Hunt Session Analyzer" : ""}.`
+        : `Os detalhes (criaturas, itens e dano) aparecem nas hunts em que ${esc(S.nick)} já caçou. Aqui você vê o básico.`}</div>
+      ${hard ? `<div class="hint">🔥 Input Analyzer público = % do dano recebido nos Input Analyzers que os jogadores compartilharam ali.</div>` : ""}`;
   }).catch((err) => { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; });
 }
 document.addEventListener("click", (e) => {
@@ -2206,16 +2466,17 @@ async function saveStackSession() {
 }
 
 /** Perguntas depois de salvar, de acordo com o tipo de player. */
-function startFlow(kind, id, { banner = "", hasPlace = false, hasInput = false, hasSession = false, only = null, after = null } = {}) {
+function startFlow(kind, id, { banner = "", hasPlace = false, hasInput = false, hasSession = false, only = null, chain = null, after = null } = {}) {
   const t = ptype();
   let steps = [];
-  if (only) steps = [only];
+  if (chain) { steps = [...chain]; only = chain[0]; }  // 0.22.0: sequência guiada, cada passo já aberto
+  else if (only) steps = [only];
   else if (t !== "novato") {
     if (!hasPlace) steps.push("place");
     if (kind === "hunt" && !hasSession) steps.push("session");
     if (isHardcore(t) && !hasInput) steps.push("input");
   }
-  Object.assign(Flow, { kind, id, steps, banner, after, compare: null, direct: !!only });
+  Object.assign(Flow, { kind, id, steps, banner, after, compare: null, direct: !!only, chained: !!chain });
   nextFlowStep();
 }
 function nextFlowStep() {
@@ -2224,10 +2485,14 @@ function nextFlowStep() {
   Flow.banner = "";
   if (!step) { closeModal(); if (Flow.after) Flow.after(); return; }
   const skip = `<button class="btn2" data-flow="skip" type="button">Não</button>`;
+  // na sequência guiada, "Pular" segue para o próximo passo (o que já foi salvo fica salvo)
+  const cancel = Flow.direct && Flow.steps.length ? `<button class="btn2" data-flow="skip" type="button">Pular</button>`
+    : Flow.chained ? `<button class="btn2" data-flow="end" type="button">Fechar</button>`
+    : `<button class="btn2" data-close-modal type="button">Cancelar</button>`;
   if (step === "place") {
     openModal(`${head}<div class="flow-step"><b>${Flow.direct ? "Em qual hunt foi?" : "Deseja salvar qual a hunt você caçou?"}</b>
       <div id="flowPlaceBox" class="${Flow.direct ? "" : "hidden"}" style="margin-top:8px"></div>
-      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="place-save" type="button">Salvar</button><button class="btn2" data-close-modal type="button">Cancelar</button>`
+      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="place-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="place-yes" type="button">Sim</button>${skip}`}</div>
       <div class="hint">${Flow.direct ? "" : "Se escolher Não, ela fica salva como \"hunt sem local\" e você diz onde foi quando quiser."}</div>
       <div class="err" id="flowErr"></div></div>`);
@@ -2236,7 +2501,7 @@ function nextFlowStep() {
     openModal(`${head}<div class="flow-step"><b>Deseja juntar o seu Hunt Session Analyzer a este lootsplit?</b>
       <p class="muted" style="margin:4px 0 0">Todos da PT veem XP, balance, dano e cura da sua sessão. A quantidade de criaturas e de itens fica só com você.</p>
       ${flowTextBox("Session data: From ... to ...&#10;XP Gain: ...", Flow.direct)}
-      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="session-save" type="button">Salvar</button><button class="btn2" data-close-modal type="button">Cancelar</button>`
+      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="session-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="text-yes" type="button">Sim</button>${skip}`}</div>
       <div class="err" id="flowErr"></div></div>`);
   } else if (step === "input") {
@@ -2244,7 +2509,7 @@ function nextFlowStep() {
       <p class="muted" style="margin:4px 0 0">Fica salvo quanto você apanhou, o elemento e as criaturas que mais bateram.
         <b title="${INPUT_LOCK_TIP}">${INPUT_LOCK_TIP}</b></p>
       ${flowTextBox("Received Damage&#10;Total: ...&#10;Max-DPS: ...&#10;Damage Types&#10;...", Flow.direct)}
-      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="input-save" type="button">Salvar</button><button class="btn2" data-close-modal type="button">Cancelar</button>`
+      <div class="row2">${Flow.direct ? `<button class="btn" data-flow="input-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="text-yes" type="button">Sim</button>${skip}`}</div>
       <div class="err" id="flowErr"></div></div>`);
   }
@@ -2270,6 +2535,7 @@ document.addEventListener("click", async (e) => {
   if (!f) return;
   const act = f.dataset.flow, err = $("#flowErr");
   if (act === "skip") return nextFlowStep();
+  if (act === "end") { Flow.steps = []; return nextFlowStep(); }  // fecha a sequência e mostra o que ficou salvo
   if (act === "place-yes") {
     await showFlowPicker();
     f.closest(".row2").innerHTML = `<button class="btn" data-flow="place-save" type="button">Salvar</button><button class="btn2" data-flow="skip" type="button">Não</button>`;
@@ -2316,7 +2582,7 @@ function refreshAfterFlow(kind) {
   if (S.page === "loot" && S.lastLoot) {
     return api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`).then((d) => {
       const h = d.hunts.find((x) => x.id === S.lastLoot);
-      if (h) { $("#lootResult").innerHTML = huntCard(h, S.nick, "Resultado"); paintVocations($("#lootResult")); }
+      if (h) { S.lootBanner = ""; renderLoot(h); }
     }).catch(() => {});
   }
 }
@@ -3225,8 +3491,9 @@ document.addEventListener("click", async (e) => {
   if (g) {
     $("#sheet").classList.add("hidden");
     const t = S.pasteText;
-    if (g.dataset.pasteGo === "party") { go("loot"); $("#lootText").value = t; $("#lootBtn").click(); return; }
+    if (g.dataset.pasteGo === "party") { await setMode("party", { nav: false }); go("loot"); $("#lootText").value = t; $("#lootBtn").click(); return; }
     if (g.dataset.pasteGo === "boss") { go("boss"); $("#bossText").value = t; $("#bossText").focus(); return; }
+    await setMode("solo", { nav: false });
     go("stack");
     openStackFlow(t, true);
     return;
