@@ -35,8 +35,10 @@ class TranslateTests(unittest.TestCase):
         CALLS.clear()
         self.p1 = mock.patch.object(server, "TRANSLATE_KEY", "chave-teste:fx")
         self.p2 = mock.patch.object(tr, "translate", fake_translate)
-        self.p1.start(); self.p2.start()
-        self.addCleanup(self.p1.stop); self.addCleanup(self.p2.stop)
+        self.p3 = mock.patch.object(tr, "usage", lambda key, timeout=10: (0, 1_000_000))
+        for p in (self.p1, self.p2, self.p3):
+            p.start(); self.addCleanup(p.stop)
+        server._tr_usage.update(at=-1e9, used=0, limit=0)
 
     def test_news_translated_once_and_cleaned(self):
         d = self.client.get("/api/tibia/latest?lang=pl", headers=self.h).json()
@@ -73,6 +75,14 @@ class TranslateTests(unittest.TestCase):
             n = self.client.get("/api/tibia/latest?lang=ja", headers=self.h).json()["news"][0]
         self.assertFalse(n["translated"])
         self.assertEqual(CALLS, [])
+
+    def test_stops_near_the_limit_deepl_reports(self):
+        # o limite vem do próprio DeepL (1 milhão no grátis); com ele quase no fim, não traduz
+        with mock.patch.object(tr, "usage", lambda key, timeout=10: (996_000, 1_000_000)):
+            n = self.client.get("/api/tibia/latest?lang=es", headers=self.h).json()["news"][0]
+        self.assertFalse(n["translated"])
+        self.assertEqual(CALLS, [])
+        self.assertEqual(server.TRANSLATE_MONTHLY, 995_000)
 
     def test_free_key_uses_free_endpoint(self):
         self.assertIn("api-free", tr.endpoint("abc:fx"))

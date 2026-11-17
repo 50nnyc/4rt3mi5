@@ -42,8 +42,8 @@ app desktop abre a mesma página numa janela própria.
    **Party**: Lootsplit, Lootsplit de bosses, Hunts em party; depois **Tibia** e **Conta**). 👑 Bosses em Party recebe o
    Party Hunt Analyser e faz o lootsplit direto. O Início mostra a notícia mais nova do Tibia (`/api/tibia/headline`) e a
    última hunt do modo. **Tradução automática** (só notícias, News Archive e descrições do calendário): DeepL com a
-   chave `ARTEMIS_DEEPL_KEY` no `.env` (plano grátis: 500 mil caracteres/mês; limite em `ARTEMIS_TRANSLATE_MONTHLY`,
-   padrão 450 mil). Cada texto é traduzido uma vez por idioma e guardado na tabela `translations`; sem chave, fica em inglês.
+   chave `ARTEMIS_DEEPL_KEY` no `.env` (plano grátis: 1 milhão de caracteres/mês; limite em `ARTEMIS_TRANSLATE_MONTHLY`,
+   padrão 995 mil; o servidor também consulta o uso real no DeepL a cada hora e para 5 mil antes do limite dele). Cada texto é traduzido uma vez por idioma e guardado na tabela `translations`; sem chave, fica em inglês.
    Menu ☰: **Início**; o grupo Solo/Party acima;
    **Progresso** → Ranking entre amigos, Conquistas; **Conta** → Meus personagens, Novidades,
    **Configurações** (também no ⚙️ do cabeçalho), trocar personagem, sair. Solo → Stacker já abre a janela para colar.

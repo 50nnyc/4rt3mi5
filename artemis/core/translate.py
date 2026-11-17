@@ -25,6 +25,18 @@ def endpoint(key: str) -> str:
     return "https://api-free.deepl.com/v2/translate" if key.endswith(":fx") else "https://api.deepl.com/v2/translate"
 
 
+def usage(key: str, timeout: float = 10) -> tuple[int, int]:
+    """(caracteres usados no mês, limite do plano), direto do DeepL. Não gasta cota."""
+    url = endpoint(key).rsplit("/", 1)[0] + "/usage"
+    req = urllib.request.Request(url, headers={"Authorization": f"DeepL-Auth-Key {key}", "User-Agent": "4rt3mi5"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.load(r)
+        return int(data.get("character_count") or 0), int(data.get("character_limit") or 0)
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as e:
+        raise TranslateError(f"Não consegui consultar o uso da tradução: {e}") from e
+
+
 def _call(key: str, texts: list[str], target: str, html: bool, timeout: float) -> list[str]:
     body = {"text": texts, "target_lang": target, "source_lang": "EN"}
     if html:

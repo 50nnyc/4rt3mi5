@@ -491,7 +491,25 @@ def _news_out(r: dict) -> dict:
 # ------------------------------------------------------------------ 🌐 tradução automática (0.22.2)
 # Notícias, News Archive e calendário vêm em inglês; o resto do app tem tradução própria (i18n-*.json).
 TRANSLATE_KEY = os.environ.get("ARTEMIS_DEEPL_KEY", "").strip()
-TRANSLATE_MONTHLY = int(os.environ.get("ARTEMIS_TRANSLATE_MONTHLY", "450000"))  # caracteres/mês (o grátis do DeepL é 500 mil)
+TRANSLATE_MONTHLY = int(os.environ.get("ARTEMIS_TRANSLATE_MONTHLY", "995000"))  # caracteres/mês (o grátis do DeepL é 1 milhão)
+TRANSLATE_MARGIN = 5000            # folga em relação ao limite que o próprio DeepL informa
+TRANSLATE_USAGE_EVERY = 3600       # segundos entre consultas do uso real no DeepL
+_tr_usage: dict = {"at": -1e9, "used": 0, "limit": 0}
+
+
+def _deepl_room(chars: int) -> bool:
+    """Confere no DeepL (no máximo 1x por hora, somando o que foi gasto desde então) se ainda cabe."""
+    now = time.monotonic()
+    if now - _tr_usage["at"] > TRANSLATE_USAGE_EVERY:
+        try:
+            used, limit = translate_core.usage(TRANSLATE_KEY)
+            _tr_usage.update(at=now, used=used, limit=limit)
+        except translate_core.TranslateError as e:
+            print(e)
+            _tr_usage["at"] = now  # tenta de novo daqui a 1 h; enquanto isso vale o contador nosso
+    if not _tr_usage["limit"]:
+        return True
+    return _tr_usage["used"] + chars <= _tr_usage["limit"] - TRANSLATE_MARGIN
 
 
 def _lang(lang: str) -> str | None:
@@ -511,7 +529,7 @@ def _translate(texts: list[str], lang: str | None, html: bool = False) -> tuple[
         month_key = "translate_chars:" + datetime.now().strftime("%Y-%m")
         used = int(store.meta(month_key) or 0)
         chars = sum(len(t) for t in missing.values())
-        if used + chars <= TRANSLATE_MONTHLY:
+        if used + chars <= TRANSLATE_MONTHLY and _deepl_room(chars):
             try:
                 got = translate_core.translate(TRANSLATE_KEY, list(missing.values()), lang, html=html)
             except translate_core.TranslateError as e:
@@ -522,6 +540,7 @@ def _translate(texts: list[str], lang: str | None, html: bool = False) -> tuple[
                 rows = list(zip(missing.keys(), got))
                 store.save_translations(rows, lang)
                 store.set_meta(month_key, str(used + chars))
+                _tr_usage["used"] += chars
                 known.update(rows)
     out = [known.get(h, t) for h, t in zip(hashes, texts)]
     return out, any(h in known for h in hashes)
