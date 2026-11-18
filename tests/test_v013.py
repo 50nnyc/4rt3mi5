@@ -42,13 +42,15 @@ class V013Tests(unittest.TestCase):
         self.client.post("/api/auth", headers=self.h())  # sem aparelho liberado não conta
         self.assertEqual(server.store.logins(self.key), [])
         token = self.verify("Hilay")[1].json()["token"]  # verificar já conta como entrada
-        self.client.post("/api/auth", headers={**self.h(token), "Origin": "http://127.0.0.1:5123"})  # em seguida: mesma entrada
+        self.client.post("/api/auth", headers=self.h(token))  # em seguida: mesma entrada
         logins = self.client.get(f"/api/admin/keys/{self.key}/logins", headers=self.admin).json()
         self.assertEqual([x["client"] for x in logins], ["site"])
         server.store._conn.execute("UPDATE key_logins SET at = ?", (_iso(utcnow() - timedelta(hours=1)),))
-        self.client.post("/api/auth", headers={**self.h(token), "Origin": "http://127.0.0.1:5123"})
+        self.client.post("/api/auth", headers=self.h(token))
+        # 0.23.0: o app de Windows foi descontinuado e não entra mais
+        self.assertEqual(self.client.post("/api/auth", headers={**self.h(token), "Origin": "http://127.0.0.1:5123"}).status_code, 410)
         logins = self.client.get(f"/api/admin/keys/{self.key}/logins", headers=self.admin).json()
-        self.assertEqual([x["client"] for x in logins], ["app", "site"])
+        self.assertEqual([x["client"] for x in logins], ["site", "site"])
         overview = {k["key"]: k for k in self.client.get("/api/admin/keys", headers=self.admin).json()}[self.key]
         self.assertEqual(overview["logins_7d"], 2)
         self.assertEqual(self.client.get(f"/api/admin/keys/{self.key}/logins").status_code, 401)

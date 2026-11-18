@@ -82,7 +82,7 @@ class V012ServerTests(unittest.TestCase):
         # quem vê a hunt depois recebe a divisão nova
         seen = self.client.get("/api/hunts/Jioe", headers=jioe).json()["hunts"]
         self.assertEqual(next(x for x in seen if x["id"] == hid)["rules"]["excluded"], ["Jioe"])
-        bad = self.client.post(f"/api/hunt/{hid}/rules", json={"excluded": ["Hilay", "Jioe", "Vcte", "Atx Buubo"]}, headers=hilay)
+        bad = self.client.post(f"/api/hunt/{hid}/rules", json={"excluded": ["Hilay", "Jioe", "Vcte", "Bobeek"]}, headers=hilay)
         self.assertEqual(bad.status_code, 422)
         bad = self.client.post(f"/api/hunt/{hid}/rules", json={"excluded": ["Ninguem"]}, headers=hilay)
         self.assertEqual(bad.status_code, 422)

@@ -2,7 +2,7 @@
 
 - Usa um banco próprio em `demo-data/` (NUNCA o data/artemis.db) e apaga esse banco a cada início.
 - Não consulta o TibiaData: personagens e vocações são fictícios.
-- Mostra no terminal o código de acesso de teste; entre com ele e o nick "Atx Buubo" (sem verificação).
+- Mostra no terminal o código de acesso de teste; entre com ele e o nick "Bobeek" (sem verificação).
 
 Uso: .venv\\Scripts\\python tools/demo_server.py   ->  http://localhost:8765
 """
@@ -28,9 +28,9 @@ from artemis.server import app as server  # noqa: E402
 from artemis.server.db import _iso  # noqa: E402
 
 random.seed(7)
-ME = "Atx Buubo"
+ME = "Bobeek"
 DEMO_USER, DEMO_PASSWORD = "demo", "demo-artemis-2026"  # só no banco de demonstração (apagado a cada início)
-PARTY = {"Atx Buubo": "Elite Knight", "Hilay": "Royal Paladin", "Jioe": "Elder Druid",
+PARTY = {"Bobeek": "Elite Knight", "Hilay": "Royal Paladin", "Jioe": "Elder Druid",
          "Vcte": "Master Sorcerer", "Kael Monge": "Exalted Monk"}
 
 
@@ -101,11 +101,19 @@ def seed() -> str:
         start = (now - timedelta(days=2 + i * 4)).replace(hour=20, minute=10)
         who = list(PARTY)[:4] if i % 3 else list(PARTY)
         players = [(n, random.randint(1, 7) * 1_000_000, random.randint(150, 600) * 1000,
-                    random.randint(9, 18) * 1_000_000 * (2 if n == "Atx Buubo" else 1),
+                    random.randint(9, 18) * 1_000_000 * (2 if n == "Bobeek" else 1),
                     random.randint(1, 9) * 1_000_000 * (3 if n == "Jioe" else 1)) for n in who]
         report = report_from_text(party_text(start, random.choice([75, 90, 120]), players, "Vcte"))
         hunt, _ = store.add_hunt(report, "", ME, key)
         set_created("hunts", hunt["id"], start + timedelta(hours=2))
+
+    # 🤝 0.23.0: a PT de sempre (4) com um substituto no lugar de Jioe + um link de envio valendo
+    start = (now - timedelta(days=1)).replace(hour=21, minute=40)
+    players = [(n, random.randint(1, 7) * 1_000_000, random.randint(150, 600) * 1000, random.randint(9, 18) * 1_000_000,
+                random.randint(1, 9) * 1_000_000) for n in ("Bobeek", "Hilay", "Reserva Vip", "Vcte")]
+    hunt, _ = store.add_hunt(report_from_text(party_text(start, 90, players, "Vcte")), "", ME, key)
+    set_created("hunts", hunt["id"], start + timedelta(hours=2))
+    store.create_link(key, ME, "Kael Monge", ["solo", "party", "boss"], 24, 10)
 
     # sessões solo em 26 dias seguidos (inclui hoje) + algumas antigas -> 12 semanas de gráfico
     kills_pool = ["dragon", "dragon lord", "asura", "frost dragon", "dawnfire asura"]
@@ -136,6 +144,11 @@ def seed() -> str:
                        for n in list(PARTY)[:4]]
             hunt, _ = store.add_boss_hunt(report_from_text(party_text(start, 25, players, "Vcte")), ME, key)
             store.link_boss_session(row["id"], hunt["id"])
+            # 🗃️ 0.23.0: drops guardados no cofre da rotação (3 das 5 Crypt Runes)
+            for item, who, ago in (("Icy Crypt Rune", "Hilay", 3), ("Icy Crypt Rune", "Jioe", 1), ("Fiery Crypt Rune", ME, 2),
+                                   ("Deathly Crypt Rune", "Jioe", 1)):
+                store.add_vault_drop("hunt", hunt["id"], item, 1, who, 8_000_000, key,
+                                     (now - timedelta(days=ago)).date().isoformat())
     start = (now - timedelta(days=4)).replace(hour=15, minute=0)
     s = parse_solo_session(solo_text(start, 60, 2_000_000, 150_000, {"dragon": 90, "demodras": 1},
                                      {"dragon scale mail": 1, "golden mug": 1, "dragon ham": 7, "platinum coin": 80}))

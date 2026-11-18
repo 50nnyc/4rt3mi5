@@ -1,7 +1,7 @@
 """Servidor e administração do 4rt3mi5.
 
     python -m artemis.server                         inicia o servidor
-    python -m artemis.server keys create --days 30 --label "Atx Buubo"
+    python -m artemis.server keys create --days 30 --label "Bobeek"
     python -m artemis.server keys list
     python -m artemis.server keys revoke ART-XXXX-XXXX
     python -m artemis.server guest CONTA SENHA --char "Nome"   conta de visitante (só visualização)

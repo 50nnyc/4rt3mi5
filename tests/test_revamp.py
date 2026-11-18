@@ -11,7 +11,7 @@ from tests.test_core import EXAMPLE as _EXAMPLE
 from tests.test_session import SOLO as _SOLO
 
 # Nomes e datas só destes testes: o banco temporário é o mesmo dos testes do servidor.
-NAMES = {"Hilay": "Rvhilay", "Jioe": "Rvjioe", "Atx Buubo": "Rvatx", "Vcte": "Rvvcte"}
+NAMES = {"Hilay": "Rvhilay", "Jioe": "Rvjioe", "Bobeek": "Rvatx", "Vcte": "Rvvcte"}
 
 
 def _iso(text: str) -> str:

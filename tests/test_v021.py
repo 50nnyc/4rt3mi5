@@ -167,12 +167,12 @@ class PageTests(unittest.TestCase):
         self.assertIn('placeholder="exemplo@exemplo.com"', self.html)
         self.assertIn('id="contactLang"', self.html)
 
-    def test_download_only_inside_the_menu(self):
+    def test_no_download_anywhere(self):
+        # 0.23.0: o app para Windows foi descontinuado: nenhum botão de download no site
         self.assertNotIn('id="dlLogin"', self.html)
         self.assertNotIn("dlHome", self.js)
-        self.assertIn('data-page="download"', self.html)
-        self.assertIn("A CipSoft recomenda não baixar arquivos ou programas de fansites.", self.js)
-        self.assertIn("download", server.TRACK_PAGES)
+        self.assertNotIn('data-page="download"', self.html)
+        self.assertNotIn("paintDownload", self.js)
 
     def test_credits_where_content_is_used(self):
         self.assertIn("Mapa fornecido por", self.js)

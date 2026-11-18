@@ -141,7 +141,8 @@ class ManifestTests(unittest.TestCase):
         self.assertIn("artemis.desktop.uipack", build)
         # o launcher congelado lê o primeiro "url"/"sha256" do latest.json: os do instalador vêm antes do "web"
         self.assertLess(build.index("    sha256          = $sha"), build.index("    web             ="))
-        self.assertIn("4rt3mi5-web-*.zip", (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
+        # 0.23.0: app descontinuado — a Release não compila nem publica mais o instalador
+        self.assertNotIn("build.ps1", (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
 
 
 class BridgeFlowTests(unittest.TestCase):

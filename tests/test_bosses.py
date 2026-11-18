@@ -168,8 +168,8 @@ class BossServerTests(unittest.TestCase):
         r = self.client.post("/api/bosses/lootsplit", json={"raw_text": EXAMPLE, "nickname": "Vcte Fora"}, headers=outsider)
         self.assertEqual(r.status_code, 403)
         # sessão enviada depois do lootsplit também se vincula sozinha
-        atx = self.login("Atx Buubo")
-        r = self.client.post("/api/bosses/session", json={"raw_text": session_for("18:51:00"), "nickname": "Atx Buubo",
+        atx = self.login("Bobeek")
+        r = self.client.post("/api/bosses/session", json={"raw_text": session_for("18:51:00"), "nickname": "Bobeek",
                                                           "mode": "solo"}, headers=atx)
         self.assertEqual(r.json()["party"]["profit_each"], 2_319_540)
         # nada disso vaza para o Lootsplit comum

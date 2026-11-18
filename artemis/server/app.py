@@ -40,6 +40,7 @@ from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
 from artemis.core import bosses as boss_core
 from artemis.core import captcha
+from artemis.core import rotations as rot
 from artemis.core import damage as damage_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
@@ -50,7 +51,7 @@ from artemis.core import translate as translate_core
 from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
 
 from . import mailer
-from .db import BASE_PLAYER_TYPES, Store, extra_player_types, name_key, normalize_key
+from .db import BASE_PLAYER_TYPES, Store, extra_player_types, name_key, normalize_key, session_content_hash
 
 INVALID_KEY = "Chave de acesso inválida, envie mensagem ao criador."
 DEVICE_NOT_VERIFIED = "Este aparelho ainda não foi verificado. Informe o seu main character."
@@ -171,7 +172,8 @@ RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (m�
               "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
 UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview", "/api/public/lootsplit",
                 "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free",
-                "/api/account/register", "/api/recovery", "/api/recovery/login", "/api/contact"}
+                "/api/account/register", "/api/recovery", "/api/recovery/login", "/api/contact",
+                "/api/link/info", "/api/link/send", "/api/links"}  # 0.23.0: link de envio
 SLOW_DOWN = "Muitas requisições em pouco tempo. Aguarde um pouco e tente de novo."
 _hits: dict[tuple[str, str], deque] = {}
 
@@ -257,6 +259,26 @@ async def guest_readonly(request: Request, call_next):
         if path == "/api/track":  # nem os contadores de uso das telas
             return JSONResponse({"ok": True})
         return JSONResponse(status_code=403, content={"detail": {"message": GUEST_READONLY, "reason": "readonly"}})
+    return await call_next(request)
+
+
+# ------------------------------------------------------------------ 0.23.0: app para Windows descontinuado
+# O app de Windows abre a tela num endereço local (127.0.0.1/localhost) e chama a API do servidor de outro endereço.
+# Essas chamadas agora recebem 410 com a mensagem (o app mostra no login). O site no próprio PC (mesma origem) continua.
+# Fica ANTES do CORS no arquivo: assim o CORS embrulha a resposta e o app consegue ler a mensagem.
+_DESKTOP_ORIGIN = re.compile(r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$")
+
+
+def _from_desktop_app(request: Request) -> bool:
+    origin = request.headers.get("origin", "")
+    return bool(_DESKTOP_ORIGIN.match(origin)) and origin.split("://", 1)[1] != request.headers.get("host", "")
+
+
+@app.middleware("http")
+async def desktop_discontinued(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/api/") and path != "/api/health" and request.method != "OPTIONS" and _from_desktop_app(request):
+        return JSONResponse(status_code=410, content={"detail": {"message": DESKTOP_GONE, "reason": "desktop"}})
     return await call_next(request)
 
 
@@ -393,7 +415,12 @@ def me_payload(access: dict) -> dict:
             "chars": store.key_chars(access["key"]), "player_type": store.player_type(access["key"]),
             "player_type_chosen": store.player_type_chosen(access["key"]),
             "player_types": list(_open_player_types()), "player_type_info": _extra_type_info(),
-            "hardcore_types": list(_hardcore_types()), "readonly": bool(current.get("readonly"))}
+            "hardcore_types": list(_hardcore_types()), "readonly": bool(current.get("readonly")),
+            # 0.23.0: o que chegou pelo link de envio nas últimas 24 h e tentativas de vincular os seus personagens
+            # em outra conta (últimos 30 dias)
+            "link_sends": store.sends_by_others(access["key"], datetime.now(timezone.utc) - timedelta(days=1)),
+            "char_claims": store.char_claims_since([c["name"] for c in store.key_chars(access["key"])],
+                                                   datetime.now(timezone.utc) - timedelta(days=30))}
 
 
 NAME_MAX = 40          # nomes do Tibia têm até 29 caracteres
@@ -413,6 +440,7 @@ class UploadIn(BaseModel):
     raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
     nickname: Name
     place_id: int | None = Field(default=None, ge=1)  # Stacker: em qual hunt foi a sessão
+    for_char: Name | None = None  # 0.23.0: jogador autorizado enviando pelo dono deste personagem
 
 
 CHANGELOG_FILE = Path(__file__).resolve().parent.parent / "data" / "changelog.json"
@@ -673,73 +701,22 @@ def health():
     return {"ok": True, "app": APP_NAME, "version": __version__}
 
 
-# ------------------------------------------------------------------ download do instalador (botão do site)
-# O instalador fica nas Releases públicas do GitHub. O latest.json da última versão diz o endereço exato e o
-# SHA-256 do arquivo; com o SHA-256 o site mostra o link do relatório do VirusTotal daquela versão.
-RELEASES_REPO = "https://github.com/50nnyc/4rt3mi5"
-RELEASE_MANIFEST_URL = f"{RELEASES_REPO}/releases/latest/download/latest.json"
-RELEASES_PAGE = f"{RELEASES_REPO}/releases/latest"
-DL_CACHE_OK, DL_CACHE_FAIL = 600, 60   # segundos: guarda a resposta do GitHub (e um erro por pouco tempo)
-_dl_cache: dict = {"at": -1e9, "ttl": 0, "info": None}
-_VERSION_RX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}")
-_SHA_RX = re.compile(r"[0-9a-f]{64}")
-
-
-def _parse_manifest(raw: bytes) -> dict | None:
-    """Valida o latest.json: só aceita instalador do próprio repositório, com versão e SHA-256 no formato certo."""
-    try:
-        m = json.loads(raw.decode("utf-8-sig"))  # o build.ps1 grava com BOM
-    except (UnicodeDecodeError, ValueError):
-        return None
-    if not isinstance(m, dict):
-        return None
-    version, url, sha = str(m.get("version", "")), str(m.get("url", "")), str(m.get("sha256", "")).lower()
-    expected = f"{RELEASES_REPO}/releases/download/v{version}/4rt3mi5-Setup-{version}.exe"
-    if not _VERSION_RX.fullmatch(version) or url != expected or not _SHA_RX.fullmatch(sha):
-        return None
-    # 0.17.1: a Release também traz o launcher congelado (sempre os mesmos bytes, então o SmartScreen não reclama).
-    # Quando o manifesto diz o SHA-256 dele, o botão do site entrega o launcher no lugar do instalador da versão.
-    lsha = str(m.get("launcher_sha256", "")).lower()
-    if _SHA_RX.fullmatch(lsha):
-        url, sha = f"{RELEASES_REPO}/releases/download/v{version}/4rt3mi5-Launcher.exe", lsha
-    return {"version": version, "url": url, "sha256": sha, "virustotal": f"https://www.virustotal.com/gui/file/{sha}"}
-
-
-def _fetch_manifest() -> dict | None:
-    import urllib.request
-    try:
-        req = urllib.request.Request(RELEASE_MANIFEST_URL, headers={"User-Agent": "4rt3mi5-server"})
-        with urllib.request.urlopen(req, timeout=8) as r:
-            return _parse_manifest(r.read(20_000))
-    except OSError:
-        return None
-
-
-def download_info() -> dict | None:
-    now = time.monotonic()
-    if now - _dl_cache["at"] > _dl_cache["ttl"]:
-        info = _fetch_manifest()
-        _dl_cache.update(at=now, ttl=DL_CACHE_OK if info else DL_CACHE_FAIL, info=info)
-    return _dl_cache["info"]
+# ------------------------------------------------------------------ 0.23.0: app para Windows descontinuado
+# O 4rt3mi5 agora é só o site. O botão de download saiu do ar e o app instalado não conversa mais com o servidor.
+SITE_URL = "https://artemishunt.com.br"
+DESKTOP_GONE = f"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {SITE_URL}"
 
 
 @app.get("/api/download")
 def download_meta():
-    """Versão, link e VirusTotal do instalador para Windows (público; o botão do site usa)."""
-    info = download_info()
-    if not info:
-        return {"available": False, "page": RELEASES_PAGE}
-    return {"available": True, "version": info["version"], "url": "/download", "sha256": info["sha256"],
-            "virustotal": info["virustotal"], "page": RELEASES_PAGE}
+    """0.23.0: não há mais instalador para baixar."""
+    return {"available": False, "discontinued": True, "message": DESKTOP_GONE, "site": SITE_URL}
 
 
 @app.get("/download", include_in_schema=False)
 def download_redirect():
-    """Endereço curto e fixo do instalador: manda para o arquivo da última versão no GitHub."""
-    info = download_info()
-    return RedirectResponse(info["url"] if info else RELEASES_PAGE, status_code=302,
-                            headers={"Cache-Control": "no-store"})
-
+    """Endereço antigo do instalador: volta para o site."""
+    return RedirectResponse("/", status_code=302, headers={"Cache-Control": "no-store"})
 
 # ------------------------------------------------------------------ imagens da TibiaWiki guardadas no banco
 # O site pede /img/wiki/<Nome>.gif; na primeira vez o servidor busca na TibiaWiki BR e guarda no banco.
@@ -1037,7 +1014,7 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
 TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings",
-               "download"}  # 0.21.0
+               "download", "subs"}  # 0.21.0; 0.23.0: 🤝 Substituições
 
 
 class TrackIn(BaseModel):
@@ -1178,6 +1155,9 @@ def _check_char_free(key: str, name: str) -> None:
 def verify_start(body: CharIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
     ch = char_or_404(body.character)
+    owner = store.char_owner(ch.name)
+    if owner and owner != access["key"]:  # 0.23.0: o dono fica sabendo que alguém tentou vincular o personagem dele
+        store.note_char_claim(ch.name)
     _check_char_free(access["key"], ch.name)
     # Contato de confiança (main forçado pelo criador): entra direto, sem código de verificação.
     if access.get("trusted") and store.is_linked(access["key"], ch.name):
@@ -1301,6 +1281,92 @@ def require_uploader(nickname: str, access: dict) -> str:
     return next(c["name"] for c in store.key_chars(access["key"]) if name_key(c["name"]) == name_key(nickname))
 
 
+# ------------------------------------------------------------------ 0.23.0: 🤝 personagem certo e substituições
+NOT_IN_PARTY_UPLOAD = "Nenhum personagem seu está nesse Party Hunt Analyser."
+NOT_IN_PARTY_HINT = "Jogou no personagem de outra pessoa? Peça a ela um link de envio (☰ → 🤝 Substituições)."
+NO_GRANT = "Você não está autorizado a enviar por esse personagem (ou a autorização acabou)."
+LINK_NOT_FOUND = "Link de envio não encontrado. Confira com quem te enviou."
+LINK_CLOSED = "Esse link de envio não vale mais (venceu, foi cancelado ou chegou ao limite de envios). Peça um novo."
+LINK_OUT_OF_TIME = "Essa hunt não é do período do link de envio."
+LINK_HOURS = (6, 24, 72, 168)
+LINK_WINDOW = timedelta(hours=14)  # o horário do analyser é o do PC de quem jogou (outro fuso)
+
+
+def _party_char(players: list[dict], nickname: str, access: dict) -> tuple[str, str | None] | None:
+    """Personagem do código que está na PT: (nome, de qual personagem trocou) ou None.
+    Se o personagem escolhido não está na PT mas outro do mesmo código está, troca sozinho."""
+    in_party = {name_key(p["name"]) for p in players}
+    mine = store.key_chars(access["key"])
+    if name_key(nickname) in in_party and any(name_key(c["name"]) == name_key(nickname) for c in mine):
+        return next(c["name"] for c in mine if name_key(c["name"]) == name_key(nickname)), None
+    for c in sorted(mine, key=lambda c: not c["is_main"]):
+        if name_key(c["name"]) in in_party:
+            return c["name"], nickname
+    return None
+
+
+def _grant_for(char_names, access: dict, scope: str) -> tuple[dict, str] | None:
+    """Jogador autorizado: link ativo que deixa um personagem deste código enviar por um destes personagens."""
+    mine = [c["name"] for c in store.key_chars(access["key"])]
+    wanted = {name_key(n) for n in char_names}
+    for g in store.grants_for(mine):
+        if g["name_key"] in wanted and scope in g["scopes"] and g["owner_key"] != access["key"]:
+            return g, next(n for n in mine if name_key(n) == g["operator_key"])
+    return None
+
+
+def _who(via: str, played_by: str | None) -> dict:
+    return {"via": via, "other_player": 1, "played_by": played_by}
+
+
+def _in_link_window(link: dict, started_at: str) -> None:
+    """A hunt precisa ser do período do link (com folga de fuso): nada de mandar hunt antiga por ele."""
+    try:
+        t = datetime.fromisoformat(started_at).replace(tzinfo=None)
+        lo = datetime.fromisoformat(link["created_at"]).replace(tzinfo=None) - LINK_WINDOW
+        hi = datetime.fromisoformat(link["expires_at"]).replace(tzinfo=None) + LINK_WINDOW
+    except (TypeError, ValueError):
+        return
+    if not lo <= t <= hi:
+        raise HTTPException(422, LINK_OUT_OF_TIME)
+
+
+def _spend_link(link: dict) -> None:
+    if not store.use_link(link["id"]):
+        raise HTTPException(410, {"message": LINK_CLOSED, "reason": "link"})
+
+
+def _check_duplicate(table: str, data: dict, name: str, owner_key: str) -> None:
+    """A mesma sessão (mesmos horários e números) não fica salva em dois personagens."""
+    dup = store.session_by_content(table, session_content_hash(data))
+    if not dup or dup["name_key"] == name_key(name):
+        return
+    if dup["uploader_key"] == owner_key or store.is_linked(owner_key, dup["name"]):
+        raise HTTPException(409, {"message": f"Essa sessão já está salva em {dup['name']}.",
+                                  "hint": "A mesma sessão não fica em dois personagens. Escolheu o personagem errado? "
+                                          "Apague a sessão de lá e envie de novo.", "reason": "duplicate"})
+    raise HTTPException(409, {"message": "Essa sessão já foi enviada por outra conta.",
+                              "hint": "Se o personagem é seu, fale com o administrador.", "reason": "duplicate"})
+
+
+def _hunts_at(names: list[str], started_at: str, ended_at: str, boss: bool = False) -> list[tuple[str, dict]]:
+    """Lootsplits (comuns ou de bosses) destes personagens que cruzam o horário da sessão: [(name_key, report)]."""
+    try:
+        lo = (datetime.fromisoformat(started_at) - timedelta(hours=12)).isoformat()
+        hi = (datetime.fromisoformat(ended_at) + boss_core.LINK_TOLERANCE).isoformat()
+    except (TypeError, ValueError):
+        return []
+    return [(k, rep) for k, rep in store.party_hunts_between(names, lo, hi, boss)
+            if rep.get("ended_at") and boss_core.overlaps(started_at, ended_at, rep["started_at"], rep["ended_at"])]
+
+
+def _overlapping_char(started_at: str, ended_at: str, access: dict, boss: bool = False) -> str | None:
+    """Stacker: se só um personagem do código tem um lootsplit no mesmo horário, a sessão é dele."""
+    chars = {name_key(c["name"]): c["name"] for c in store.key_chars(access["key"])}
+    found = {chars[k] for k, _ in _hunts_at(list(chars.values()), started_at, ended_at, boss) if k in chars}
+    return found.pop() if len(found) == 1 else None
+
+
 # ------------------------------------------------------------------ lootsplit
 def _parse_party(raw: str) -> dict:
     try:
@@ -1312,7 +1378,7 @@ def _parse_party(raw: str) -> dict:
 def _public(row: dict, access: dict) -> dict:
     """Esconde dados internos e diz se quem está vendo pode apagar (só quem enviou)."""
     owner = row.pop("uploader_key", None)
-    for k in ("submitted_by", "fingerprint", "name_key"):
+    for k in ("submitted_by", "fingerprint", "name_key", "content_hash"):
         row.pop(k, None)
     row["can_delete"] = bool(owner) and owner == access["key"]
     return row
@@ -1358,7 +1424,8 @@ def _discrepancy(s: dict, h: dict) -> list[str]:
 
 def _member_view(s: dict, access: dict, h: dict | None = None) -> dict:
     own = s.get("uploader_key") == access["key"]
-    out = {"name": s["name"], "own": own, **{k: s.get(k, 0) for k in _MEMBER_PUBLIC}}
+    out = {"name": s["name"], "own": own, **{k: s.get(k, 0) for k in _MEMBER_PUBLIC},
+           "other_player": bool(s.get("other_player")), "played_by": s.get("played_by")}
     out["discrepancy"] = _discrepancy(s, h) if h else []
     out["xp_h"] = _per_hour(out["xp"], out["duration_seconds"])
     out["balance_h"] = _per_hour(out["balance"], out["duration_seconds"])
@@ -1377,22 +1444,92 @@ def _place_ref(place_id: int | None, cache: dict) -> dict | None:
     return cache[place_id]
 
 
-def _hunts_out(hunts: list[dict], access: dict) -> list[dict]:
-    """Lootsplits para a tela: local da hunt e, só para quem estava na PT, o que os membros compartilharam."""
+def _auto_subs(players: list[str], hunt_id: int, rosters: dict[int, dict[str, str]]) -> dict[str, str | None]:
+    """0.23.0: 🔁 Substituto automático. A formação de costume são os lootsplits do mesmo tamanho com quase a mesma
+    PT (no máximo 1 diferente). Quem aparece em 60% deles é "fixo". Se falta exatamente 1 fixo e entrou exatamente
+    1 que não é fixo, esse é o substituto (no lugar de quem faltou). Precisa de pelo menos 2 lootsplits parecidos."""
+    keys = {name_key(p): p for p in players}
+    n = len(keys)
+    if n < 2:
+        return {}
+    similar = [r for hid, r in rosters.items() if hid != hunt_id and len(r) == n and len(keys.keys() & r.keys()) >= n - 1]
+    if len(similar) < 2:
+        return {}
+    counts: dict[str, int] = {}
+    for r in similar:
+        for k in r:
+            counts[k] = counts.get(k, 0) + 1
+    core = {k for k, c in counts.items() if c * 10 >= len(similar) * 6}
+    extras = [k for k in keys if k not in core]
+    missing = [k for k in core if k not in keys]
+    if len(extras) != 1 or len(missing) != 1:
+        return {}
+    in_place = next(r[missing[0]] for r in similar if missing[0] in r)
+    return {keys[extras[0]]: in_place}
+
+
+def _tags_view(players: list[dict], tags: list[dict], auto: dict[str, str | None]) -> dict[str, dict]:
+    """Marcações de cada jogador: {nome: {"other": bool, "played_by": str|None, "sub": {"auto": bool, "for": nome}}}."""
+    by_key = {name_key(p["name"]): p["name"] for p in players}
+    out: dict[str, dict] = {}
+    manual = {}
+    for t in tags:
+        name = by_key.get(t["name_key"])
+        if not name:
+            continue
+        if t["tag"] == "other":
+            out.setdefault(name, {}).update(other=True, played_by=t["played_by"])
+        else:
+            manual[name] = t["tag"]
+    for name in by_key.values():
+        if manual.get(name) == "sub":
+            out.setdefault(name, {})["sub"] = {"auto": False, "for": None}
+        elif manual.get(name) != "nosub" and name in auto:
+            out.setdefault(name, {})["sub"] = {"auto": True, "for": auto[name]}
+        if name in out or manual.get(name):  # "não é substituto" sozinho também precisa chegar na tela
+            out.setdefault(name, {})["sub_manual"] = manual.get(name)
+    return out
+
+
+def _is_orphan(h: dict, cache: dict) -> bool:
+    """Lootsplit enviado por quem não estava na PT (antes da 0.23.0 isso era possível)."""
+    up = h.get("uploader_key")
+    if not up:
+        return True
+    if up not in cache:
+        cache[up] = {name_key(c["name"]) for c in store.key_chars(up)}
+    return not any(name_key(p["name"]) in cache[up] for p in h["players"])
+
+
+def _hunts_out(hunts: list[dict], access: dict, kind: str = "hunt") -> list[dict]:
+    """Lootsplits para a tela: local da hunt e, só para quem estava na PT, o que os membros compartilharam,
+    as marcações (🤝 jogado por outra pessoa / 🔁 substituto) e se dá para assumir o lootsplit."""
     mine = {name_key(c["name"]) for c in store.key_chars(access["key"])}
     ids = [h["id"] for h in hunts if h.get("id")]
     inputs, members = store.inputs_for("hunt", ids), store.party_sessions_for(ids)
+    tags = store.tags_for(kind, ids)
+    party_ids = [h["id"] for h in hunts if h.get("id") and any(name_key(p["name"]) in mine for p in h["players"])]
+    rosters = {}
+    if kind == "hunt" and party_ids:
+        names = {name_key(p["name"]) for h in hunts if h.get("id") in party_ids for p in h["players"]}
+        rosters = store.rosters_with(sorted(names))
     places: dict = {}
+    owners: dict = {}
     out = []
     for h in hunts:
         in_party = any(name_key(p["name"]) in mine for p in h["players"])
         hid = h.get("id")
         raw = dict(h)
+        orphan = in_party and hid and _is_orphan(raw, owners)
         h = _public(h, access)
         h["place"] = _place_ref(h.get("place_id"), places)
         h["in_party"] = in_party
         h["inputs"] = [_input_view(i) for i in inputs.get(hid, [])] if in_party else []
         h["member_sessions"] = [_member_view(s, access, raw) for s in members.get(hid, [])] if in_party else []
+        auto = _auto_subs([p["name"] for p in raw["players"]], hid, rosters) if in_party and kind == "hunt" else {}
+        h["tags"] = _tags_view(raw["players"], tags.get(hid, []), auto) if in_party else {}
+        h["can_claim"] = bool(orphan) and not h["can_delete"]
+        h["orphan"] = bool(orphan)
         out.append(h)
     return out
 
@@ -1428,7 +1565,18 @@ def _load_hunt(kind: str, hunt_id: int) -> dict:
 
 def _hunt_payload(kind: str, hunt_id: int, access: dict) -> dict:
     h = _load_hunt(kind, hunt_id)
-    return _hunts_out([h], access)[0] if kind == "hunt" else _public(h, access)
+    return _hunts_out([h], access)[0] if kind == "hunt" else _boss_hunt_view(h, access)
+
+
+def _boss_hunt_view(h: dict, access: dict, owners: dict | None = None) -> dict:
+    """Lootsplit de bosses para a tela (0.23.0: com as marcações e o "assumir")."""
+    raw = dict(h)
+    orphan = _is_orphan(raw, owners if owners is not None else {})
+    out = _public(h, access)
+    out["tags"] = _tags_view(raw["players"], store.tags_for("boss", [raw["id"]])[raw["id"]], {})
+    out["orphan"] = orphan
+    out["can_claim"] = orphan and not out["can_delete"]
+    return out
 
 
 def _set_rules(kind: str, hunt_id: int, body: RulesIn, access: dict) -> dict:
@@ -1436,6 +1584,8 @@ def _set_rules(kind: str, hunt_id: int, body: RulesIn, access: dict) -> dict:
     h = _load_hunt(kind, hunt_id)
     if h.get("uploader_key") != access["key"]:
         raise HTTPException(403, "Só quem enviou o lootsplit pode mudar as regras de divisão.")
+    if not any(store.is_linked(access["key"], p["name"]) for p in h["players"]):  # 0.23.0: quem não estava na PT, não
+        raise HTTPException(403, "Só quem estava na PT pode mudar as regras de divisão.")
     names = {p["name"].lower(): p["name"] for p in h["players"]}
     unknown = [n for n in [*body.excluded, *body.fixed] if n.lower() not in names]
     if unknown:
@@ -1466,6 +1616,65 @@ def _set_paid(kind: str, hunt_id: int, body: PaidIn, access: dict) -> dict:
 @app.post("/api/hunt/{hunt_id}/rules")
 def hunt_rules(hunt_id: int, body: RulesIn, access: dict = Depends(require_session)):
     return _set_rules("hunt", hunt_id, body, access)
+
+
+# ------------------------------------------------------------------ 0.23.0: marcações e "assumir lootsplit"
+class TagIn(BaseModel):
+    name: Name
+    other: bool | None = None                           # 🤝 jogado por outra pessoa (só o dono do personagem)
+    played_by: Name | None = None                       # quem jogou (opcional)
+    sub: Literal["auto", "yes", "no"] | None = None     # 🔁 substituto (qualquer um da PT)
+
+
+def _clean_name(name: str | None) -> str | None:
+    if not name:
+        return None
+    n = " ".join(name.split())
+    if not _VALID_NAME.fullmatch(n):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    return n
+
+
+def _set_tags(kind: str, hunt_id: int, body: TagIn, access: dict) -> dict:
+    h = _load_hunt(kind, hunt_id)
+    names = {name_key(p["name"]): p["name"] for p in h["players"]}
+    target = names.get(name_key(body.name))
+    if target is None:
+        raise HTTPException(422, f"{body.name} não está nesse lootsplit.")
+    if not any(store.is_linked(access["key"], n) for n in names.values()):
+        raise HTTPException(403, {"message": "Só quem estava na PT pode marcar.", "hint": FORBIDDEN_HINT})
+    if body.other is not None:
+        if not store.is_linked(access["key"], target):
+            raise HTTPException(403, "Só o dono do personagem marca que outra pessoa jogou.")
+        store.set_tag(kind, hunt_id, target, "other", body.other, _clean_name(body.played_by), access["key"])
+    if body.sub is not None:
+        if body.sub == "auto":
+            store.set_tag(kind, hunt_id, target, "sub", False)
+            store.set_tag(kind, hunt_id, target, "nosub", False)
+        else:
+            store.set_tag(kind, hunt_id, target, "sub" if body.sub == "yes" else "nosub", True, None, access["key"])
+    return {"hunt": _hunt_payload(kind, hunt_id, access)}
+
+
+def _claim(kind: str, hunt_id: int, access: dict) -> dict:
+    h = _load_hunt(kind, hunt_id)
+    mine = [p["name"] for p in h["players"] if store.is_linked(access["key"], p["name"])]
+    if not mine:
+        raise HTTPException(403, {"message": "Só quem estava na PT pode assumir o lootsplit.", "hint": FORBIDDEN_HINT})
+    if not _is_orphan(h, {}):
+        raise HTTPException(409, "Esse lootsplit já foi enviado por alguém da PT.")
+    store.claim_hunt(kind, hunt_id, access["key"], mine[0])
+    return {"hunt": _hunt_payload(kind, hunt_id, access)}
+
+
+@app.post("/api/hunt/{hunt_id}/tags")
+def hunt_tags(hunt_id: int, body: TagIn, access: dict = Depends(require_session)):
+    return _set_tags("hunt", hunt_id, body, access)
+
+
+@app.post("/api/hunt/{hunt_id}/claim")
+def hunt_claim(hunt_id: int, access: dict = Depends(require_session)):
+    return _claim("hunt", hunt_id, access)
 
 
 @app.post("/api/hunt/{hunt_id}/paid")
@@ -1503,10 +1712,28 @@ def public_news(lang: str = ""):
 
 @app.post("/api/lootsplit")
 def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
+    """0.23.0: só salva se um personagem do código está na PT (troca sozinho para ele) ou se o dono de um
+    personagem da PT autorizou este jogador (fica salvo para o dono, marcado como jogado por outra pessoa)."""
     report = _parse_party(body.raw_text)
-    uploader = require_uploader(body.nickname, access)
-    hunt, created = store.add_hunt(report, body.raw_text, uploader, access["key"])
-    return {"created": created, "hunt": _hunts_out([hunt], access)[0], "rewards": grant_rewards(access["key"])}
+    require_uploader(body.nickname, access)
+    got = _party_char(report["players"], body.nickname, access)
+    if got:
+        name, switched = got
+        hunt, created = store.add_hunt(report, body.raw_text, name, access["key"])
+        return {"created": created, "hunt": _hunts_out([hunt], access)[0], "rewards": grant_rewards(access["key"]),
+                "saved_as": name, "switched_from": switched}
+    grant = _grant_for([p["name"] for p in report["players"]], access, "party")
+    if grant is None:
+        raise HTTPException(403, {"message": NOT_IN_PARTY_UPLOAD, "hint": NOT_IN_PARTY_HINT})
+    link, me = grant
+    _in_link_window(link, report["started_at"])
+    _spend_link(link)
+    hunt, created = store.add_hunt(report, body.raw_text, link["name"], link["owner_key"], via="operator")
+    tagged = store.set_tag("hunt", hunt["id"], link["name"], "other", True, me, access["key"])
+    if not (created or tagged):
+        store.refund_link(link["id"])
+    return {"created": created, "hunt": _hunts_out([store.hunt(hunt["id"])], access)[0], "rewards": [],
+            "saved_as": link["name"], "for_owner": True}
 
 
 # ------------------------------------------------------------------ 0.20.0: local da hunt, Input Analyser e sessões da PT
@@ -1527,6 +1754,7 @@ class RawIn(BaseModel):
 
 class MemberRawIn(RawIn):
     nickname: Name
+    for_char: Name | None = None  # 0.23.0: jogador autorizado juntando a sessão pelo dono
 
 
 def _change_place(table: str, row_id: int, place_id: int, access: dict) -> dict:
@@ -1562,12 +1790,13 @@ def _require_type(access: dict, allowed: tuple, message: str) -> None:
 
 
 def _party_member(hunt_id: int, nickname: str, access: dict) -> tuple[dict, str]:
-    """Personagem do código que estava nesse lootsplit."""
+    """Personagem do código que estava nesse lootsplit (0.23.0: troca sozinho para o personagem certo)."""
     h = _load_hunt("hunt", hunt_id)
-    name = require_uploader(nickname, access)
-    if name_key(name) not in {name_key(p["name"]) for p in h["players"]}:
+    require_uploader(nickname, access)
+    got = _party_char(h["players"], nickname, access)
+    if got is None:
         raise HTTPException(403, {"message": NOT_IN_PARTY_HUNT, "hint": "Use o personagem que estava na PT."})
-    return h, name
+    return h, got[0]
 
 
 NOT_IN_PARTY_HUNT = "Seu personagem não está nesse lootsplit."
@@ -1592,19 +1821,38 @@ def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_s
 
 @app.post("/api/hunt/{hunt_id}/session")
 def hunt_member_session(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
-    """Hunt Session Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore)."""
-    _require_type(access, _sharing_types(), SESSION_NOT_NOVATO)
-    h, name = _party_member(hunt_id, body.nickname, access)
+    """Hunt Session Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore).
+    0.23.0: o jogador autorizado (for_char) junta pelo dono; vale o tipo de player do dono."""
     try:
         session = parse_solo_session(body.raw_text)
     except ParseError as e:
         raise HTTPException(422, str(e))
+    link = None
+    if body.for_char:
+        h = _load_hunt("hunt", hunt_id)
+        require_uploader(body.nickname, access)
+        grant = _grant_for([body.for_char], access, "party")
+        if grant is None or grant[0]["name_key"] not in {name_key(p["name"]) for p in h["players"]}:
+            raise HTTPException(403, NO_GRANT)
+        link, me = grant
+        if store.player_type(link["owner_key"]) not in _sharing_types():
+            raise HTTPException(403, SESSION_NOT_NOVATO)
+        name, owner_key, who = link["name"], link["owner_key"], _who("operator", me)
+    else:
+        _require_type(access, _sharing_types(), SESSION_NOT_NOVATO)
+        h, name = _party_member(hunt_id, body.nickname, access)
+        owner_key, who = access["key"], None
     ended = h.get("ended_at")
     if ended and not boss_core.overlaps(session.started_at, session.ended_at, h["started_at"], ended):
         raise HTTPException(422, "Essa sessão não é do mesmo horário do lootsplit.")
-    _, created = store.add_party_session(hunt_id, name, session.to_dict(), access["key"])
+    if link:
+        _spend_link(link)
+    _, created = store.add_party_session(hunt_id, name, session.to_dict(), owner_key, who)
     if not created:
-        raise HTTPException(409, "Você já juntou a sua sessão a esse lootsplit.")
+        if link:
+            store.refund_link(link["id"])
+        raise HTTPException(409, "Você já juntou a sua sessão a esse lootsplit." if not link
+                            else f"A sessão de {name} já está junto a esse lootsplit.")
     return {"hunt": _hunt_payload("hunt", hunt_id, access)}
 
 
@@ -1698,6 +1946,7 @@ def _per_hour(value: int, seconds: int) -> int:
 
 
 def _records(sessions: list[dict]) -> list[dict]:
+    sessions = [s for s in sessions if not s.get("other_player")]  # 0.23.0: recorde é de quem jogou no próprio
     longs = [s for s in sessions if s["duration_seconds"] >= MIN_RECORD_SECONDS]
     defs = [
         ("Maior XP/h", longs, lambda s: _per_hour(s["xp"], s["duration_seconds"]), "XP/h"),
@@ -1854,7 +2103,8 @@ def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
 
 
 # 0.20.0: quantidade de criaturas mortas e de itens coletados é do dono do personagem; os outros veem só o geral
-_OWNER_ONLY_SESSION = ("kills", "loot", "loot_value", "net_profit", "input", "place_edits", "place_locked")
+_OWNER_ONLY_SESSION = ("kills", "loot", "loot_value", "net_profit", "input", "place_edits", "place_locked",
+                       "played_by", "via", "content_hash", "other_player")  # 0.23.0: quem jogou fica só com o dono
 
 
 def _generic_only(data: dict) -> dict:
@@ -1872,7 +2122,7 @@ def _by_place(sessions: list[dict]) -> dict | None:
     """📊 Comparar as suas hunts: XP/h e balance/h de cada local (sessões de 10 min ou mais)."""
     acc: dict[int, dict] = {}
     for s in sessions:
-        if not s.get("place") or s["duration_seconds"] < COMPARE_MIN_SECONDS:
+        if not s.get("place") or s["duration_seconds"] < COMPARE_MIN_SECONDS or s.get("other_player"):
             continue
         a = acc.setdefault(s["place"]["id"], {"place": s["place"]["name"], "sessions": 0, "seconds": 0, "xp": 0,
                                               "balance": 0, "best_xp_h": 0, "best_gold_h": None})
@@ -2103,19 +2353,21 @@ class RankingJoinIn(BaseModel):
 
 
 @app.get("/api/ranking")
-def ranking(period: int = 7, metric: str = "xp", nick: str = "", _: dict = Depends(require_session)):
-    """Ranking das sessões do Stacker de quem entrou no ranking. Quem não entrou nunca aparece."""
+def ranking(period: int = 7, metric: str = "xp", nick: str = "", others: int = 0, _: dict = Depends(require_session)):
+    """Ranking das sessões do Stacker de quem entrou no ranking. Quem não entrou nunca aparece.
+    0.23.0: sessões jogadas por outra pessoa só entram com others=1."""
     period = period if period in (7, 30) else 7
     metric = metric if metric in RANKING_METRICS else "xp"
     since = (datetime.now() - timedelta(days=period)).isoformat(timespec="seconds")
     rows = []
-    for r in store.ranking_rows(since):
+    for r in store.ranking_rows(since, include_others=bool(others)):
         secs = r["seconds"]
         rows.append({"name": r["name"], "vocation": r["vocation"], "level": r["level"], "sessions": r["sessions"],
                      "xp": r["xp"], "profit": r["balance"], "hours": round(secs / 3600, 1),
                      "xp_h": _per_hour(r["xp"], secs), "profit_h": _per_hour(r["balance"], secs)})
     rows.sort(key=lambda r: (-r[metric], r["name"]))
-    return {"period": period, "metric": metric, "rows": rows, "joined": bool(nick) and store.ranking_member(nick)}
+    return {"period": period, "metric": metric, "rows": rows, "joined": bool(nick) and store.ranking_member(nick),
+            "others": bool(others)}
 
 
 @app.post("/api/ranking/{name}")
@@ -2151,6 +2403,19 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     except ParseError as e:
         raise HTTPException(422, str(e))
     name = require_uploader(body.nickname, access)
+    switched, link, who, owner_key = None, None, None, access["key"]
+    if body.for_char:  # 0.23.0: jogador autorizado enviando pelo dono
+        grant = _grant_for([body.for_char], access, "solo")
+        if grant is None:
+            raise HTTPException(403, NO_GRANT)
+        link, me = grant
+        _in_link_window(link, session.started_at)
+        name, owner_key, who = link["name"], link["owner_key"], _who("operator", me)
+    else:  # 0.23.0: a sessão é do mesmo horário de um lootsplit de outro personagem seu? Salva nele.
+        other = _overlapping_char(session.started_at, session.ended_at, access)
+        if other and name_key(other) != name_key(name):
+            switched, name = name, other
+    _check_duplicate("solo_sessions", session.to_dict(), name, owner_key)
     if body.place_id is not None and store.place(body.place_id) is None:
         raise HTTPException(404, "Hunt não encontrada.")
     try:  # level do personagem no momento do envio (para o level médio das hunts)
@@ -2158,12 +2423,19 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
         level = ch.level if ch else None
     except HTTPException:
         level = None
-    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), access["key"], body.raw_text,
-                                  body.place_id, level)
+    if link:
+        _spend_link(link)
+    row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), owner_key, body.raw_text,
+                                  body.place_id, level, who)
     row.pop("raw_text", None)
+    if link:
+        if not created:
+            store.refund_link(link["id"])
+        return {"created": created, "session": _public(row, access), "rewards": [], "rare": [], "compare": None,
+                "saved_as": name, "for_owner": True}
     return {"created": created, "session": _public(row, access), "rewards": grant_rewards(access["key"]),
             "rare": _session_rare(session, False, access) if created else [],
-            "compare": _compare_with_average(name, row)}
+            "compare": _compare_with_average(name, row), "saved_as": name, "switched_from": switched}
 
 
 COMPARE_MIN_SECONDS = 600  # sessões curtas distorcem a média (mesmo corte do ranking de Hunts)
@@ -2172,10 +2444,11 @@ COMPARE_MIN_SECONDS = 600  # sessões curtas distorcem a média (mesmo corte do 
 def _compare_with_average(name: str, row: dict) -> dict | None:
     """Sessão x média do próprio personagem na mesma hunt (XP/h e balance/h)."""
     place = store.place(row["place_id"]) if row.get("place_id") else None
-    if place is None or row["duration_seconds"] < COMPARE_MIN_SECONDS:
+    if place is None or row["duration_seconds"] < COMPARE_MIN_SECONDS or row.get("other_player"):
         return None
-    others = [s for s in store.solo_for_player(name)
-              if s["place_id"] == place["id"] and s["id"] != row["id"] and s["duration_seconds"] >= COMPARE_MIN_SECONDS]
+    others = [s for s in store.solo_for_player(name)  # 0.23.0: sem as sessões jogadas por outra pessoa
+              if s["place_id"] == place["id"] and s["id"] != row["id"] and s["duration_seconds"] >= COMPARE_MIN_SECONDS
+              and not s.get("other_player")]
     out = {"place": place["name"], "sessions": len(others),
            "xp_h": _per_hour(row["xp"], row["duration_seconds"]),
            "gold_h": _per_hour(row["balance"], row["duration_seconds"])}
@@ -2206,6 +2479,7 @@ class BossSessionIn(BaseModel):
     raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
     nickname: Name
     mode: Literal["solo", "party"]
+    for_char: Name | None = None  # 0.23.0: jogador autorizado enviando pelo dono
 
 
 class BossSplitIn(BaseModel):
@@ -2241,40 +2515,80 @@ def boss_session_upload(body: BossSessionIn, access: dict = Depends(require_sess
     except ParseError as e:
         raise HTTPException(422, str(e))
     name = require_uploader(body.nickname, access)
+    switched, link, who, owner_key = None, None, None, access["key"]
+    if body.for_char:  # 0.23.0: jogador autorizado enviando pelo dono
+        grant = _grant_for([body.for_char], access, "boss")
+        if grant is None:
+            raise HTTPException(403, NO_GRANT)
+        link, me = grant
+        _in_link_window(link, session.started_at)
+        name, owner_key, who = link["name"], link["owner_key"], _who("operator", me)
+    else:
+        other = _overlapping_char(session.started_at, session.ended_at, access, boss=True)
+        if other and name_key(other) != name_key(name):
+            switched, name = name, other
+    _check_duplicate("boss_sessions", session.to_dict(), name, owner_key)
+    if link:
+        _spend_link(link)
     row, created = store.add_boss_session(name, "boss|" + session.fingerprint(name), session.to_dict(), body.mode,
-                                          access["key"])
+                                          owner_key, who)
+    if link and not created:
+        store.refund_link(link["id"])
     hunt = store.boss_hunt(row["boss_hunt_id"]) if row["boss_hunt_id"] else _link_session_to_party(row)
+    mine = link is None
     return {"created": created, "session_id": row["id"], "mode": row["mode"],
             "bosses": boss_core.bosses_in(session.kills),
-            "rare": _session_rare(session, True, access) if created else [],
-            "party": _hunt_brief(hunt) if hunt else None, "rewards": grant_rewards(access["key"])}
+            "rare": _session_rare(session, True, access) if created and mine else [],
+            "party": _hunt_brief(hunt) if hunt else None, "rewards": grant_rewards(access["key"]) if mine else [],
+            "saved_as": name, "switched_from": switched, "for_owner": not mine}
 
 
 @app.post("/api/bosses/lootsplit")
 def boss_lootsplit(body: BossSplitIn, access: dict = Depends(require_session)):
     """Lootsplit de bosses: aparece na aba de bosses de todos da PT e puxa as sessões deles do mesmo horário."""
     report = _parse_party(body.raw_text)
-    uploader = require_uploader(body.nickname, access)
-    players = {name_key(p["name"]) for p in report["players"]}
-    if name_key(uploader) not in players:
-        raise HTTPException(403, {"message": NOT_IN_PARTY, "hint": "Envie o lootsplit com o personagem que estava na PT."})
+    require_uploader(body.nickname, access)
+    got = _party_char(report["players"], body.nickname, access)  # 0.23.0: troca sozinho para o personagem da PT
+    if got is None:
+        grant = _grant_for([p["name"] for p in report["players"]], access, "boss")
+        if grant is None:
+            raise HTTPException(403, {"message": NOT_IN_PARTY, "hint": NOT_IN_PARTY_HINT})
+        link, me = grant
+        _in_link_window(link, report["started_at"])
+        _spend_link(link)
+        hunt, created = store.add_boss_hunt(report, link["name"], link["owner_key"], via="operator")
+        tagged = store.set_tag("boss", hunt["id"], link["name"], "other", True, me, access["key"])
+        if not (created or tagged):
+            store.refund_link(link["id"])
+        linked = _link_party_sessions(report, hunt)
+        return {"created": created, "hunt": _public(store.boss_hunt(hunt["id"]), access), "linked": linked, "rewards": [],
+                "saved_as": link["name"], "for_owner": True}
+    uploader, switched = got
     own = None
     if body.session_id is not None:
         own = store.boss_session(body.session_id)
         if own is None:
             raise HTTPException(404, "Sessão de boss não encontrada.")
-        if own["uploader_key"] != access["key"] or own["name_key"] != name_key(uploader):
+        if own["uploader_key"] != access["key"] or own["name_key"] not in {name_key(p["name"]) for p in report["players"]}:
             raise HTTPException(403, "Essa sessão não é sua.")
     hunt, created = store.add_boss_hunt(report, uploader, access["key"])
     linked = 0
     if own is not None:
         store.link_boss_session(own["id"], hunt["id"])
         linked += 1
+    linked += _link_party_sessions(report, hunt)
+    return {"created": created, "hunt": _public(hunt, access), "linked": linked, "rewards": grant_rewards(access["key"]),
+            "saved_as": uploader, "switched_from": switched}
+
+
+def _link_party_sessions(report: dict, hunt: dict) -> int:
+    """Sessões de boss dos membros, do mesmo horário, ainda sem lootsplit: ficam ligadas a esta party."""
+    linked = 0
     for s in store.unlinked_boss_sessions([p["name"] for p in report["players"]]):
         if boss_core.overlaps(s["started_at"], s["ended_at"], hunt["started_at"], hunt["ended_at"]):
             store.link_boss_session(s["id"], hunt["id"])
             linked += 1
-    return {"created": created, "hunt": _public(hunt, access), "linked": linked, "rewards": grant_rewards(access["key"])}
+    return linked
 
 
 def _rare(kills, resolved, whole_session: bool, prices: dict) -> list[dict]:
@@ -2314,7 +2628,8 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
     s_kills, s_loot = store.solo_details([s["id"] for s in solo])
     keys = {store.resolve_item(k) for rows in (*loot.values(), *s_loot.values()) for k, _ in rows}
     prices = store.price_info(list(keys), access["key"])
-    hunts = {h["id"]: _public(h, access) for h in store.boss_hunts_for(name)}
+    owners: dict = {}
+    hunts = {h["id"]: _boss_hunt_view(h, access, owners) for h in store.boss_hunts_for(name)}
     per_boss: dict[str, dict] = {}
     rare: list[dict] = []  # 💎 histórico de drops raros
 
@@ -2362,8 +2677,32 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
         for d in _rare(s_kills[s["id"]], resolved, False, prices):
             rare.append({**d, "started_at": s["started_at"], "source": "hunt", "session_id": s["id"]})
 
+    # 0.23.0: nome da rotação (pelos bosses mortos) e 🗃️ cofre de cada lootsplit / sessão sem lootsplit
+    vault_h = store.vault("hunt", list(hunts))
     for h in hunts.values():
-        h["members"] = [m["name"] for m in store.boss_sessions_of_hunt(h["id"])]
+        linked = store.boss_sessions_of_hunt(h["id"])
+        h["members"] = [m["name"] for m in linked]
+        h_kills, _ = store.boss_details([m["id"] for m in linked])
+        h["rotation"] = rot.identify([k for ks in h_kills.values() for k in ks])
+        subs = [n for n, t in (h.get("tags") or {}).items() if t.get("sub")]
+        h["vault"] = _vault_view({"kind": "hunt", "id": h["id"], "members": [p["name"] for p in h["players"]], "subs": subs,
+                                  "day": h["started_at"]}, vault_h[h["id"]], access)
+    solo_ids = [s["id"] for s in sessions if not s.get("boss_hunt_id") or s["boss_hunt_id"] not in hunts]
+    vault_s = store.vault("session", solo_ids)
+    for s in sessions:
+        s["rotation"] = rot.identify(kills[s["id"]])
+        if s["id"] in vault_s:
+            s["vault"] = _vault_view({"kind": "session", "id": s["id"], "members": [s["name"]], "subs": [],
+                                      "day": s["started_at"]}, vault_s[s["id"]], access)
+    by_day: dict[tuple, list] = {}
+    for s in sessions:
+        by_day.setdefault((s["started_at"][:10], s["mode"]), []).append(s)
+    rotations_by_day = []
+    for (day, mode), ss in sorted(by_day.items(), reverse=True):
+        r = rot.identify([k for s in ss for k in kills[s["id"]]])
+        if r:
+            rotations_by_day.append({"day": day, "mode": mode, "name": r["name"], "groups": r["groups"],
+                                     "sessions": len(ss), "balance": sum(s["balance"] for s in ss)})
     linked_hunts = {s["boss_hunt_id"] for s in sessions if s.get("boss_hunt_id")}
     sessions_profit = sum(s["balance"] for s in sessions if s.get("boss_hunt_id") not in hunts)
     party_profit = sum(profit_of(h, name) for h in hunts.values())  # considera as regras de divisão
@@ -2389,7 +2728,8 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
             "sessions": sessions, "hunts": sorted(hunts.values(), key=lambda h: h["started_at"], reverse=True),
             "linked_hunts": len(linked_hunts), "from_hunts": from_hunts, "items": all_items, "prices": prices,
             "rare_drops": sorted(rare, key=lambda d: d["started_at"], reverse=True),
-            "no_npc": no_npc, "unpriced": sum(1 for k in no_npc if not prices[k]["unit_price"])}
+            "no_npc": no_npc, "unpriced": sum(1 for k in no_npc if not prices[k]["unit_price"]),
+            "rotations": rotations_by_day, "fee": rot.fee_rule()}
 
 
 def _delete_own_boss(table: str, row_id: int, access: dict) -> None:
@@ -2430,6 +2770,483 @@ def boss_hunt_paid(hunt_id: int, body: PaidIn, access: dict = Depends(require_se
 def delete_boss_hunt(hunt_id: int, access: dict = Depends(require_session)):
     _delete_own_boss("boss_hunts", hunt_id, access)
     return {"deleted": hunt_id}
+
+
+@app.post("/api/bosses/hunt/{hunt_id}/tags")
+def boss_hunt_tags(hunt_id: int, body: TagIn, access: dict = Depends(require_session)):
+    _require_boss_member(hunt_id, access)
+    return _set_tags("boss", hunt_id, body, access)
+
+
+@app.post("/api/bosses/hunt/{hunt_id}/claim")
+def boss_hunt_claim(hunt_id: int, access: dict = Depends(require_session)):
+    _require_boss_member(hunt_id, access)
+    return _claim("boss", hunt_id, access)
+
+
+# ------------------------------------------------------------------ 0.23.0: 🗃️ cofre da rotação de bosses
+VAULT_ITEM_MAX = 60
+VAULT_GP_MAX = 100_000_000_000
+NOT_VAULT_OWNER = "Só quem registrou esse drop pode alterar."
+
+
+def _vault_ref(kind: str, ref_id: int, access: dict) -> dict:
+    """Quem estava na rotação (os membros da divisão) e o dia do drop. Só quem estava lá mexe no cofre."""
+    if kind == "hunt":
+        h = store.boss_hunt(ref_id)
+        if h is None:
+            raise HTTPException(404, "Lootsplit não encontrado (talvez tenha sido apagado).")
+        members = [p["name"] for p in h["players"]]
+        tags = _tags_view(h["players"], store.tags_for("boss", [ref_id])[ref_id], {})
+        subs = [n for n, t in tags.items() if t.get("sub")]
+        day = h["started_at"]
+    elif kind == "session":
+        s = store.boss_session(ref_id)
+        if s is None:
+            raise HTTPException(404, "Sessão de boss não encontrada.")
+        members, subs, day = [s["name"]], [], s["started_at"]
+    else:
+        raise HTTPException(404, "Não encontrado.")
+    if not any(store.is_linked(access["key"], m) for m in members):
+        raise HTTPException(403, {"message": BOSS_PRIVATE, "hint": FORBIDDEN_HINT})
+    return {"kind": kind, "id": ref_id, "members": members, "subs": subs, "day": day}
+
+
+def _transfers_with_paid(transfers: list[dict], paid: dict) -> list[dict]:
+    for t in transfers:
+        p = paid.get((name_key(t["payer"]), name_key(t["receiver"])))
+        t["paid_at"] = p["paid_at"] if p and p["amount"] == t["amount"] else None
+    return transfers
+
+
+def _vault_view(ref: dict, data: dict, access: dict) -> dict:
+    """Cofre de uma rotação: drops (estoque/vendido/usado), conjuntos usados e quem paga quem."""
+    members, n = ref["members"], len(ref["members"])
+    paid_d = store.payments_of("drop", [d["id"] for d in data["drops"]])
+    paid_c = store.payments_of("craft", [c["id"] for c in data["crafts"]])
+    drops = []
+    for d in data["drops"]:
+        fee = rot.market_fee(d["sold_total"] or 0, d["sold_at"]) if d["status"] == "sold" and d["market_fee"] else 0
+        net = (d["sold_total"] or 0) - fee if d["status"] == "sold" else 0
+        # chave do item: #número + dia do drop (vários itens iguais ficam distinguíveis)
+        drops.append({"id": d["id"], "code": f"#{d['id']}", "dropped_on": d.get("dropped_on") or ref["day"][:10],
+                      "item": d["item"], "qty": d["qty"], "dropped_by": d["dropped_by"], "price_each": d["price_each"],
+                      "estimate": (d["price_each"] or 0) * d["qty"], "status": d["status"], "sold_total": d["sold_total"],
+                      "market_fee": bool(d["market_fee"]), "fee": fee, "net": net, "each": net // n if n else 0,
+                      "sold_at": d["sold_at"], "craft_id": d["craft_id"], "set": rot.set_of(d["item"]),
+                      "can_edit": d["owner_key"] == access["key"], "created_at": d["created_at"],
+                      "transfers": _transfers_with_paid(rot.shares(net, members, d["dropped_by"]), paid_d[d["id"]])})
+    crafts = []
+    for c in data["crafts"]:
+        s = rot.SETS[c["set_key"]]
+        cost = sum(int(b["cost"]) for b in c["bought"])
+        fee = rot.market_fee(c["sold_total"] or 0, c["sold_at"]) if c["sold_total"] and c["market_fee"] else 0
+        net = (c["sold_total"] or 0) - fee - cost if c["sold_total"] else 0
+        crafts.append({"id": c["id"], "set": c["set_key"], "label": s["label"], "result": c["result"], "seller": c["seller"],
+                       "bought": c["bought"], "cost": cost, "sold_total": c["sold_total"], "market_fee": bool(c["market_fee"]),
+                       "fee": fee, "net": net, "each": net // n if n and net > 0 else 0,
+                       "per_item": net // len(s["items"]) if net > 0 else 0, "sold_at": c["sold_at"],
+                       "used": [{"id": d["id"], "code": f"#{d['id']}", "item": d["item"], "dropped_by": d["dropped_by"],
+                                 "dropped_on": d.get("dropped_on") or ref["day"][:10]}
+                                for d in data["drops"] if d["craft_id"] == c["id"]],
+                       "can_edit": c["owner_key"] == access["key"],
+                       "transfers": _transfers_with_paid(rot.shares(net, members, c["seller"]), paid_c[c["id"]])})
+    sets = {}
+    for key, s in rot.SETS.items():
+        have = {i: sum(d["qty"] for d in data["drops"] if d["status"] == "stock" and d["item"] == i) for i in s["items"]}
+        if any(have.values()):
+            sets[key] = {"label": s["label"], "have": have, "missing": [i for i in s["items"] if not have[i]],
+                         "results": s["results"], "npc": s["npc"]}
+    return {"ref": {"kind": ref["kind"], "id": ref["id"]}, "members": members, "subs": ref["subs"], "day": ref["day"],
+            "drops": drops, "crafts": crafts, "sets": sets}
+
+
+def _vault_payload(kind: str, ref_id: int, access: dict) -> dict:
+    ref = _vault_ref(kind, ref_id, access)
+    return _vault_view(ref, store.vault(kind, [ref_id])[ref_id], access)
+
+
+class VaultDropIn(BaseModel):
+    item: Annotated[str, Field(min_length=2, max_length=VAULT_ITEM_MAX)]
+    qty: int = Field(default=1, ge=1, le=1000)
+    dropped_by: Name
+    price_each: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+    dropped_on: date | None = None  # dia do drop (padrão: o dia da rotação)
+
+
+class VaultDropEdit(BaseModel):
+    action: Literal["price", "sell", "stock"]
+    price_each: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+    sold_total: int | None = Field(default=None, ge=1, le=VAULT_GP_MAX)
+    market_fee: bool = False
+
+
+class BoughtIn(BaseModel):
+    item: Annotated[str, Field(min_length=2, max_length=VAULT_ITEM_MAX)]
+    cost: int = Field(ge=0, le=VAULT_GP_MAX)
+
+
+class VaultCraftIn(BaseModel):
+    set: Literal["crypt"]
+    drop_ids: Annotated[list[int], Field(max_length=10)] = []
+    bought: Annotated[list[BoughtIn], Field(max_length=10)] = []
+    result: Annotated[str, Field(max_length=VAULT_ITEM_MAX)] | None = None
+    seller: Name
+    sold_total: int | None = Field(default=None, ge=1, le=VAULT_GP_MAX)
+    market_fee: bool = False
+
+
+class VaultCraftEdit(BaseModel):
+    result: Annotated[str, Field(max_length=VAULT_ITEM_MAX)] | None = None
+    sold_total: int | None = Field(default=None, ge=1, le=VAULT_GP_MAX)
+    market_fee: bool = False
+
+
+class VaultPaidIn(PaidIn):
+    kind: Literal["drop", "craft"]
+    id: int = Field(ge=1)
+
+
+def _member(ref: dict, name: str, what: str) -> str:
+    real = next((m for m in ref["members"] if name_key(m) == name_key(name)), None)
+    if real is None:
+        raise HTTPException(422, f"{name} não estava nessa rotação.")
+    return real
+
+
+def _clean_item(item: str) -> str:
+    item = rot.canonical_item(item)
+    if not _PLACE_NAME.fullmatch(item):
+        raise HTTPException(422, "Use só letras, números e pontuação simples no nome do item.")
+    return item
+
+
+def _now() -> str:
+    return datetime.now().isoformat(timespec="seconds")
+
+
+@app.get("/api/vault/{kind}/{ref_id}")
+def vault_get(kind: str, ref_id: int, access: dict = Depends(require_session)):
+    return _vault_payload(kind, ref_id, access)
+
+
+@app.post("/api/vault/{kind}/{ref_id}/drops")
+def vault_add_drop(kind: str, ref_id: int, body: VaultDropIn, access: dict = Depends(require_session)):
+    """Registrar um drop da rotação (pode ter caído para outro membro)."""
+    ref = _vault_ref(kind, ref_id, access)
+    who = _member(ref, body.dropped_by, "dropped_by")
+    if len(store.vault(kind, [ref_id])[ref_id]["drops"]) >= 200:
+        raise HTTPException(429, "Esse cofre já tem drops demais.")
+    day = body.dropped_on.isoformat() if body.dropped_on else ref["day"][:10]
+    if day > (date.today() + timedelta(days=1)).isoformat() or day < "2000-01-01":
+        raise HTTPException(422, "Data do drop inválida.")
+    store.add_vault_drop(kind, ref_id, _clean_item(body.item), body.qty, who, body.price_each, access["key"], day)
+    return _vault_payload(kind, ref_id, access)
+
+
+def _own_drop(drop_id: int, access: dict) -> dict:
+    d = store.vault_drop(drop_id)
+    if d is None:
+        raise HTTPException(404, "Drop não encontrado (talvez tenha sido apagado).")
+    _vault_ref(d["ref_kind"], d["ref_id"], access)
+    if d["owner_key"] != access["key"]:
+        raise HTTPException(403, NOT_VAULT_OWNER)
+    return d
+
+
+@app.post("/api/vault/drops/{drop_id}")
+def vault_edit_drop(drop_id: int, body: VaultDropEdit, access: dict = Depends(require_session)):
+    """Preço (só quem registrou), vendido (com ou sem a taxa do Market) ou de volta ao estoque."""
+    d = _own_drop(drop_id, access)
+    if d["status"] == "used":
+        raise HTTPException(409, "Esse drop já foi usado num conjunto. Desfaça o uso para mexer nele.")
+    if body.action == "price":
+        store.update_vault_drop(drop_id, price_each=body.price_each)
+    elif body.action == "sell":
+        if not body.sold_total:
+            raise HTTPException(422, "Informe por quanto foi vendido (valor total).")
+        store.update_vault_drop(drop_id, status="sold", sold_total=body.sold_total, market_fee=1 if body.market_fee else 0,
+                                sold_at=_now())
+    else:
+        store.update_vault_drop(drop_id, status="stock", sold_total=None, market_fee=0, sold_at=None)
+    return _vault_payload(d["ref_kind"], d["ref_id"], access)
+
+
+@app.delete("/api/vault/drops/{drop_id}")
+def vault_delete_drop(drop_id: int, access: dict = Depends(require_session)):
+    d = _own_drop(drop_id, access)
+    if d["status"] == "used":
+        raise HTTPException(409, "Esse drop já foi usado num conjunto. Desfaça o uso para mexer nele.")
+    store.delete_vault_drop(drop_id)
+    return _vault_payload(d["ref_kind"], d["ref_id"], access)
+
+
+@app.post("/api/vault/{kind}/{ref_id}/crafts")
+def vault_add_craft(kind: str, ref_id: int, body: VaultCraftIn, access: dict = Depends(require_session)):
+    """Usar um conjunto (ex.: uma Crypt Rune de cada): as do estoque + as que faltaram e foram compradas."""
+    ref = _vault_ref(kind, ref_id, access)
+    s = rot.SETS[body.set]
+    stock = {d["id"]: d for d in store.vault(kind, [ref_id])[ref_id]["drops"] if d["status"] == "stock"}
+    used = {}
+    for did in body.drop_ids:
+        d = stock.get(did)
+        if d is None or d["item"] not in s["items"] or d["item"] in used:
+            raise HTTPException(422, "Escolha um item de cada tipo que está no estoque desta rotação.")
+        used[d["item"]] = did
+    bought = []
+    for b in body.bought:
+        item = rot.canonical_item(b.item)
+        if item not in s["items"] or item in used or any(x["item"] == item for x in bought):
+            raise HTTPException(422, "Os itens comprados precisam ser os que faltaram no conjunto.")
+        bought.append({"item": item, "cost": b.cost})
+    if len(used) + len(bought) != len(s["items"]):
+        raise HTTPException(422, f"O conjunto precisa de um de cada: {', '.join(s['items'])}.")
+    seller = _member(ref, body.seller, "seller")
+    result = _clean_item(body.result) if body.result else None
+    ids = [store.take_one_vault_drop(did) for did in used.values()]  # tudo conferido: separa 1 de cada do estoque
+    cid = store.add_vault_craft(kind, ref_id, body.set, ids, bought, result, seller, access["key"])
+    if body.sold_total:
+        store.update_vault_craft(cid, sold_total=body.sold_total, market_fee=1 if body.market_fee else 0, sold_at=_now())
+    return _vault_payload(kind, ref_id, access)
+
+
+def _own_craft(craft_id: int, access: dict) -> dict:
+    c = store.vault_craft(craft_id)
+    if c is None:
+        raise HTTPException(404, "Não encontrado (talvez já tenha sido apagado).")
+    _vault_ref(c["ref_kind"], c["ref_id"], access)
+    if c["owner_key"] != access["key"]:
+        raise HTTPException(403, NOT_VAULT_OWNER)
+    return c
+
+
+@app.post("/api/vault/crafts/{craft_id}")
+def vault_edit_craft(craft_id: int, body: VaultCraftEdit, access: dict = Depends(require_session)):
+    c = _own_craft(craft_id, access)
+    store.update_vault_craft(craft_id, result=_clean_item(body.result) if body.result else c["result"],
+                             sold_total=body.sold_total, market_fee=1 if body.market_fee else 0,
+                             sold_at=_now() if body.sold_total else None)
+    return _vault_payload(c["ref_kind"], c["ref_id"], access)
+
+
+@app.delete("/api/vault/crafts/{craft_id}")
+def vault_delete_craft(craft_id: int, access: dict = Depends(require_session)):
+    c = _own_craft(craft_id, access)
+    store.delete_vault_craft(craft_id)
+    return _vault_payload(c["ref_kind"], c["ref_id"], access)
+
+
+@app.post("/api/vault/paid")
+def vault_paid(body: VaultPaidIn, access: dict = Depends(require_session)):
+    """'Já paguei' / 'recebi' da parte de cada um na venda de um drop ou de um conjunto."""
+    row = store.vault_drop(body.id) if body.kind == "drop" else store.vault_craft(body.id)
+    if row is None:
+        raise HTTPException(404, "Não encontrado (talvez já tenha sido apagado).")
+    payload = _vault_payload(row["ref_kind"], row["ref_id"], access)
+    items = payload["drops"] if body.kind == "drop" else payload["crafts"]
+    x = next(i for i in items if i["id"] == body.id)
+    t = next((t for t in x["transfers"] if name_key(t["payer"]) == name_key(body.payer)
+              and name_key(t["receiver"]) == name_key(body.receiver)), None)
+    if t is None:
+        raise HTTPException(404, "Essa transferência não existe.")
+    if not (store.is_linked(access["key"], t["payer"]) or store.is_linked(access["key"], t["receiver"])):
+        raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.", "hint": FORBIDDEN_HINT})
+    store.set_paid(body.kind, body.id, t["payer"], t["receiver"], t["amount"], access["key"], body.paid)
+    return _vault_payload(row["ref_kind"], row["ref_id"], access)
+
+
+@app.get("/api/rotations")
+def rotations_catalog(_: dict = Depends(require_session)):
+    """Grupos de bosses conhecidos e a regra da taxa do Market."""
+    return {"groups": rot.catalog(), "fee": rot.fee_rule(), "fee_rules": [{"since": s[:10], "pct": p, "cap": c}
+                                                                          for s, p, c in rot.FEE_RULES], "fee_min": rot.FEE_MIN}
+
+
+# ------------------------------------------------------------------ 0.23.0: 🤝 quem jogou a sessão (dono marca)
+class PlayerIn(BaseModel):
+    other: bool
+    played_by: Name | None = None
+
+
+def _mark_session(table: str, session_id: int, body: PlayerIn, access: dict) -> dict:
+    row = store.solo_session(session_id) if table == "solo_sessions" else store.boss_session(session_id)
+    if row is None:
+        raise HTTPException(404, "Sessão não encontrada.")
+    if not store.is_linked(access["key"], row["name"]):
+        raise HTTPException(403, "Só o dono do personagem pode alterar isso.")
+    played_by = _clean_name(body.played_by) if body.other else None
+    store.set_session_player(table, session_id, body.other, played_by)
+    return {"other_player": body.other, "played_by": played_by}
+
+
+@app.post("/api/stacker/session/{session_id}/player")
+def solo_player(session_id: int, body: PlayerIn, access: dict = Depends(require_session)):
+    return _mark_session("solo_sessions", session_id, body, access)
+
+
+@app.post("/api/bosses/session/{session_id}/player")
+def boss_player(session_id: int, body: PlayerIn, access: dict = Depends(require_session)):
+    return _mark_session("boss_sessions", session_id, body, access)
+
+
+# ------------------------------------------------------------------ 0.23.0: 🤝 links de envio (dono)
+class LinkIn(BaseModel):
+    character: Name
+    operator: Name | None = None
+    scopes: Annotated[list[Literal["solo", "party", "boss"]], Field(min_length=1, max_length=3)]
+    hours: int = 24
+    max_uses: int = Field(default=10, ge=1, le=50)
+
+
+def _link_out(link: dict) -> dict:
+    state = ("revoked" if link["revoked_at"] else "used" if link["uses"] >= link["max_uses"]
+             else "active" if link["active"] else "expired")
+    return {"id": link["id"], "character": link["name"], "operator": link["operator"], "scopes": link["scopes"],
+            "created_at": link["created_at"], "expires_at": link["expires_at"], "max_uses": link["max_uses"],
+            "uses": link["uses"], "state": state}
+
+
+@app.post("/api/links")
+def create_link(body: LinkIn, access: dict = Depends(require_session)):
+    """Link de envio: quem receber envia os analyzers deste personagem (o link só envia; não lê nada)."""
+    name = require_uploader(body.character, access)
+    if body.hours not in LINK_HOURS:
+        raise HTTPException(422, "Validade inválida.")
+    operator = _clean_name(body.operator)
+    if operator and store.is_linked(access["key"], operator):
+        raise HTTPException(422, "Esse personagem já é seu. Informe o personagem de quem vai jogar por você.")
+    if store.active_links_count(access["key"]) >= store.MAX_ACTIVE_LINKS:
+        raise HTTPException(429, f"Você já tem {store.MAX_ACTIVE_LINKS} links de envio valendo. Cancele um para criar outro.")
+    link, token = store.create_link(access["key"], name, operator, sorted(set(body.scopes)), body.hours, body.max_uses)
+    return {"link": _link_out(link), "token": token}
+
+
+@app.delete("/api/links/{link_id}")
+def revoke_link(link_id: int, access: dict = Depends(require_session)):
+    if not store.revoke_link(link_id, access["key"]):
+        raise HTTPException(404, "Link não encontrado (ou já cancelado).")
+    return {"links": [_link_out(x) for x in store.links_of(access["key"])]}
+
+
+@app.get("/api/subs")
+def subs_overview(access: dict = Depends(require_session)):
+    """🤝 Substituições: meus links, por quem eu posso enviar (jogador autorizado) e o que joguei por outra pessoa."""
+    chars = [c["name"] for c in store.key_chars(access["key"])]
+    grants = [{"id": g["id"], "character": g["name"], "as": g["operator"], "scopes": g["scopes"],
+               "expires_at": g["expires_at"], "uses_left": g["max_uses"] - g["uses"]}
+              for g in store.grants_for(chars) if g["owner_key"] != access["key"]]
+    return {"links": [_link_out(x) for x in store.links_of(access["key"])], "grants": grants,
+            "played": store.played_for(chars), "hours": list(LINK_HOURS), "max_active": store.MAX_ACTIVE_LINKS}
+
+
+# ------------------------------------------------------------------ 0.23.0: 🤝 página do link de envio (sem conta)
+class LinkTokenIn(BaseModel):
+    token: Annotated[str, Field(min_length=10, max_length=100)]
+
+
+class LinkSendIn(LinkTokenIn):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+    kind: Literal["hunt", "boss"] = "hunt"
+    captcha: dict = Field(default_factory=dict)
+
+
+def _open_link(token: str, request: Request) -> dict:
+    ip = client_ip(request)
+    _check_blocked(ip)
+    link = store.link_by_token(token)
+    if link is None:
+        _record_fail(ip)  # adivinhar link conta como tentativa errada (bloqueia o IP)
+        raise HTTPException(404, {"message": LINK_NOT_FOUND, "reason": "link"})
+    if not link["active"]:
+        raise HTTPException(410, {"message": LINK_CLOSED, "reason": "link"})
+    return link
+
+
+def _link_info(link: dict) -> dict:
+    return {"character": link["name"], "operator": link["operator"], "scopes": link["scopes"],
+            "expires_at": link["expires_at"], "uses_left": link["max_uses"] - link["uses"]}
+
+
+@app.post("/api/link/info")
+def link_info(body: LinkTokenIn, request: Request):
+    return _link_info(_open_link(body.token, request))
+
+
+@app.post("/api/link/send")
+def link_send(body: LinkSendIn, request: Request):
+    """Quem recebeu o link cola o analyser: fica salvo para o dono, marcado como jogado por outra pessoa."""
+    link = _open_link(body.token, request)
+    try:
+        captcha.verify(CAPTCHA_SECRET, body.captcha, _captcha_used)
+    except captcha.CaptchaError:
+        raise HTTPException(400, {"message": CAPTCHA_FAILED, "reason": "captcha"})
+    char, owner, text = link["name"], link["owner_key"], body.raw_text
+    who = _who("link", link["operator"])
+    scope_err = "Esse link não aceita esse tipo de envio. Peça um link que aceite"
+
+    def need(scope: str, label: str) -> None:
+        if scope not in link["scopes"]:
+            raise HTTPException(403, f"{scope_err} {label}.")
+
+    if "loot type" in text.lower():  # Party Hunt Analyser
+        report = _parse_party(text)
+        if name_key(char) not in {name_key(p["name"]) for p in report["players"]}:
+            raise HTTPException(422, f"{char} não está nesse Party Hunt Analyser.")
+        _in_link_window(link, report["started_at"])
+        if body.kind == "boss":
+            need("boss", "o lootsplit de bosses")
+            _spend_link(link)
+            hunt, created = store.add_boss_hunt(report, char, owner, via="link")
+            _link_party_sessions(report, hunt)
+            saved = "boss_lootsplit"
+        else:
+            need("party", "o lootsplit da PT")
+            _spend_link(link)
+            hunt, created = store.add_hunt(report, text, char, owner, via="link")
+            saved = "lootsplit"
+        tagged = store.set_tag("boss" if body.kind == "boss" else "hunt", hunt["id"], char, "other", True,
+                               link["operator"], None)
+        created = created or tagged
+        summary = {"players": len(report["players"]), "profit_each": report["profit_each"],
+                   "duration_seconds": report.get("duration_seconds")}
+    else:  # Hunt Session Analyser
+        try:
+            session = parse_solo_session(text)
+        except ParseError as e:
+            raise HTTPException(422, str(e))
+        _in_link_window(link, session.started_at)
+        data = session.to_dict()
+        if body.kind == "boss":
+            need("boss", "as sessões de boss")
+            _check_duplicate("boss_sessions", data, char, owner)
+            party = _hunts_at([char], session.started_at, session.ended_at, boss=True)
+            _spend_link(link)
+            row, created = store.add_boss_session(char, "boss|" + session.fingerprint(char), data,
+                                                  "party" if party else "solo", owner, who)
+            if not row["boss_hunt_id"]:
+                _link_session_to_party(row)
+            saved = "boss_session"
+        else:
+            hunt = None
+            if "party" in link["scopes"] and store.player_type(owner) in _sharing_types():
+                found = _hunts_at([char], session.started_at, session.ended_at)
+                hunt = found[0][1] if found else None
+            if hunt:
+                _spend_link(link)
+                _, created = store.add_party_session(hunt["id"], char, data, owner, who)
+                saved = "party_session"
+            else:
+                need("solo", "as sessões do Hunt Session Stacker")
+                _check_duplicate("solo_sessions", data, char, owner)
+                _spend_link(link)
+                _, created = store.add_solo(char, session.fingerprint(char), data, owner, text, None, None, who)
+                saved = "stacker"
+        summary = {"xp": session.xp, "balance": session.balance, "duration_seconds": session.duration_seconds}
+    if not created:
+        store.refund_link(link["id"])
+    fresh = store.link(link["id"])
+    return {"ok": True, "created": created, "saved": saved, "character": char, "summary": summary,
+            "uses_left": fresh["max_uses"] - fresh["uses"]}
 
 
 # ------------------------------------------------------------------ administração (só o criador)
@@ -2757,6 +3574,17 @@ def app_script():
 @app.get("/", include_in_schema=False)
 def index():
     return FileResponse(WEB_DIR / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/envio", include_in_schema=False)
+def link_page():
+    """0.23.0: página do link de envio (o código do link fica depois do #, que nunca chega ao servidor)."""
+    return FileResponse(WEB_DIR / "envio.html", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/envio.js", include_in_schema=False)
+def link_script():
+    return FileResponse(WEB_DIR / "envio.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 @app.get("/sw.js", include_in_schema=False)

@@ -39,6 +39,8 @@ class ServerTests(unittest.TestCase):
         self.hs.start()
         # 0.15.0: cada personagem só pode estar em uma chave; testes anteriores usam os mesmos nicks
         server.store._conn.execute("DELETE FROM key_chars")
+        # 0.23.0: a mesma sessão não fica em dois personagens; cada teste começa sem as sessões dos anteriores
+        server.store._conn.execute("DELETE FROM solo_sessions")
         self.key = server.store.create_key(30, "teste")["key"]
 
     def tearDown(self):
@@ -118,7 +120,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(r.json()["hunt"]["profit_each"], 2_319_540)
         # qualquer aparelho liberado vê as hunts de qualquer jogador
-        hunts = self.client.get("/api/hunts/atx buubo", headers=self.h(token)).json()["hunts"]
+        hunts = self.client.get("/api/hunts/bobeek", headers=self.h(token)).json()["hunts"]
         self.assertTrue(any(h["profit_each"] == 2_319_540 for h in hunts))
 
     def test_stacker(self):

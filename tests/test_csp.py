@@ -19,7 +19,7 @@ class CspTests(unittest.TestCase):
         return re.search(r'http-equiv="Content-Security-Policy" content="([^"]+)"', html).group(1)
 
     def test_no_inline_script_allowed(self):
-        for page in ("index.html", "admin.html"):
+        for page in ("index.html", "admin.html", "envio.html"):  # 0.23.0: + página do link de envio
             html = (WEB / page).read_text(encoding="utf-8")
             script_src = re.search(r"script-src ([^;]+);", self.csp(html)).group(1)
             self.assertNotIn("unsafe-inline", script_src, page)
@@ -29,7 +29,7 @@ class CspTests(unittest.TestCase):
             self.assertEqual(re.findall(r"\son[a-z]+\s*=", html), [], page)
 
     def test_scripts_have_no_inline_handlers(self):
-        for js in ("app.js", "admin.js"):
+        for js in ("app.js", "admin.js", "envio.js"):
             self.assertEqual(re.findall(r"\son(error|load|click|mouseover)\s*=\s*[\"']", (WEB / js).read_text(encoding="utf-8")), [], js)
 
     def test_connect_src_is_limited(self):

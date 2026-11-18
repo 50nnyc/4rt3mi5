@@ -431,7 +431,104 @@ CREATE TABLE IF NOT EXISTS translations (
     created_at  TEXT NOT NULL,
     PRIMARY KEY (src_hash, lang)
 );
+-- 0.23.0: 🤝 Substituições. Link de envio: alguém (sem conta ou com conta) envia os analyzers pelo dono do
+-- personagem. O link só ENVIA; não lê nada. O token fica só como hash. "operator" = personagem de quem vai
+-- jogar (opcional): com ele, quem joga também envia logado na própria conta (jogador autorizado).
+CREATE TABLE IF NOT EXISTS upload_links (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_hash    TEXT UNIQUE NOT NULL,
+    owner_key     TEXT NOT NULL REFERENCES access_keys(key) ON DELETE CASCADE,
+    name_key      TEXT NOT NULL,
+    name          TEXT NOT NULL,
+    operator      TEXT,
+    operator_key  TEXT,                -- name_key do operator
+    scopes        TEXT NOT NULL,       -- "solo,party,boss"
+    created_at    TEXT NOT NULL,
+    expires_at    TEXT NOT NULL,
+    max_uses      INTEGER NOT NULL,
+    uses          INTEGER NOT NULL DEFAULT 0,
+    revoked_at    TEXT
+);
+CREATE INDEX IF NOT EXISTS ix_upload_links_owner ON upload_links(owner_key);
+CREATE INDEX IF NOT EXISTS ix_upload_links_operator ON upload_links(operator_key);
+-- 0.23.0: marcações por jogador num lootsplit (kind = 'hunt' ou 'boss').
+-- tag 'other' = jogado por outra pessoa (played_by opcional); 'sub' = substituto; 'nosub' = não é substituto.
+CREATE TABLE IF NOT EXISTS hunt_tags (
+    kind        TEXT NOT NULL,
+    hunt_id     INTEGER NOT NULL,
+    name_key    TEXT NOT NULL,
+    tag         TEXT NOT NULL,
+    played_by   TEXT,
+    set_by      TEXT,
+    created_at  TEXT NOT NULL,
+    PRIMARY KEY (kind, hunt_id, name_key, tag)
+);
+-- 0.23.0: alguém tentou vincular um personagem que já está em outra conta (aviso ao dono)
+CREATE TABLE IF NOT EXISTS char_claims (
+    name_key  TEXT NOT NULL,
+    at        TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_char_claims ON char_claims(name_key, at);
+-- 0.23.0: 🗃️ Cofre da rotação de bosses. Drops que ficam para vender/usar depois (inclusive os que caíram para outro
+-- membro: o analyser de quem envia não anota). ref = 'hunt' (lootsplit de bosses) ou 'session' (sessão de boss solo).
+-- A divisão é sempre entre quem estava no dia do drop, mesmo que a venda seja meses depois.
+CREATE TABLE IF NOT EXISTS vault_drops (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref_kind     TEXT NOT NULL,
+    ref_id       INTEGER NOT NULL,
+    item         TEXT NOT NULL,
+    qty          INTEGER NOT NULL DEFAULT 1,
+    dropped_by   TEXT NOT NULL,              -- quem dropou / guarda o item (personagem da rotação)
+    price_each   INTEGER,                    -- preço estimado (só quem registrou muda)
+    status       TEXT NOT NULL DEFAULT 'stock',   -- stock | sold | used
+    sold_total   INTEGER,
+    market_fee   INTEGER NOT NULL DEFAULT 0, -- 1 = vendeu no Market (desconta a taxa)
+    sold_at      TEXT,
+    craft_id     INTEGER,
+    owner_key    TEXT NOT NULL,              -- quem registrou (só ele altera)
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_vault_drops ON vault_drops(ref_kind, ref_id);
+-- conjunto usado (ex.: 5 Crypt Runes -> 1 arma Crypt). Runas que faltaram e foram compradas entram como custo.
+CREATE TABLE IF NOT EXISTS vault_crafts (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref_kind     TEXT NOT NULL,
+    ref_id       INTEGER NOT NULL,
+    set_key      TEXT NOT NULL,
+    bought_json  TEXT NOT NULL,              -- [{"item", "cost"}]
+    result       TEXT,
+    seller       TEXT NOT NULL,              -- quem ficou com o item e vende
+    sold_total   INTEGER,
+    market_fee   INTEGER NOT NULL DEFAULT 0,
+    sold_at      TEXT,
+    owner_key    TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_vault_crafts ON vault_crafts(ref_kind, ref_id);
 """
+
+# 0.23.0: colunas de "quem jogou" nas sessões e lootsplits
+#   via          NULL = o próprio dono enviou; 'link' = link de envio; 'operator' = jogador autorizado
+#   other_player 1 = jogado por outra pessoa (não entra nos rankings e comparações de desempenho)
+#   played_by    personagem de quem jogou (opcional)
+#   content_hash a sessão sem o nome do personagem (a mesma sessão não fica salva em dois personagens)
+SUB_COLUMNS = {
+    "solo_sessions": (("via", "TEXT"), ("other_player", "INTEGER NOT NULL DEFAULT 0"), ("played_by", "TEXT"),
+                      ("content_hash", "TEXT")),
+    "boss_sessions": (("via", "TEXT"), ("other_player", "INTEGER NOT NULL DEFAULT 0"), ("played_by", "TEXT"),
+                      ("content_hash", "TEXT")),
+    "party_sessions": (("via", "TEXT"), ("other_player", "INTEGER NOT NULL DEFAULT 0"), ("played_by", "TEXT")),
+    "hunts": (("via", "TEXT"),),
+    "boss_hunts": (("via", "TEXT"),),
+}
+
+
+def session_content_hash(data: dict) -> str | None:
+    """Impressão digital da sessão SEM o nome do personagem. Sessões vazias/curtas não contam (podem coincidir)."""
+    if int(data.get("duration_seconds") or 0) < 60 or not any(data.get(k) for k in ("raw_xp", "xp", "balance", "damage")):
+        return None
+    parts = [str(data.get(k)) for k in ("started_at", "ended_at", "raw_xp", "xp", "supplies", "balance", "damage", "healing")]
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()
 
 SOLO_COLUMNS = ("started_at", "ended_at", "duration_seconds", "session_label", "raw_xp", "xp",
                 "supplies", "balance", "damage", "damage_h", "healing", "healing_h")
@@ -536,6 +633,19 @@ class Store:
             self._conn.execute("ALTER TABLE hunts ADD COLUMN place_id INTEGER REFERENCES hunt_places(id)")
         if "place_edits" not in hunt_cols:
             self._conn.execute("ALTER TABLE hunts ADD COLUMN place_edits INTEGER NOT NULL DEFAULT 0")
+        for table, new_cols in SUB_COLUMNS.items():  # 0.23.0: quem jogou / sessão sem o nome do personagem
+            have = {r["name"] for r in self._conn.execute(f"PRAGMA table_info({table})")}
+            for col, decl in new_cols:
+                if col not in have:
+                    self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+        if "dropped_on" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(vault_drops)")}:
+            self._conn.execute("ALTER TABLE vault_drops ADD COLUMN dropped_on TEXT")  # dia do drop (identifica o item)
+        for table in ("solo_sessions", "boss_sessions"):
+            self._conn.execute(f"CREATE INDEX IF NOT EXISTS ix_{table}_content ON {table}(content_hash)")
+            todo = self._conn.execute(f"SELECT * FROM {table} WHERE content_hash IS NULL").fetchall()
+            for r in todo:  # sessões antigas ganham a impressão digital (uma vez só)
+                h = session_content_hash(dict(r))
+                self._conn.execute(f"UPDATE {table} SET content_hash = ? WHERE id = ?", (h or "", r["id"]))
         # 0.20.0: a chave de acesso não vence mais (todas passam a ser vitalícias)
         self._conn.execute("UPDATE access_keys SET lifetime = 1 WHERE lifetime = 0")
         # 0.8.0: tokens de aparelho ficam só como hash (quem copiar o banco não consegue usá-los)
@@ -1175,7 +1285,7 @@ class Store:
     def _hunt(self, row: sqlite3.Row, kind: str = "hunt") -> dict:
         report = apply_rules(json.loads(row["report_json"]), self.split_rules(kind, row["id"]))
         report.update(id=row["id"], submitted_by=row["submitted_by"], created_at=row["created_at"],
-                      uploader_key=row["uploader_key"])
+                      uploader_key=row["uploader_key"], via=row["via"])
         if kind == "hunt":  # 0.20.0: local do lootsplit e quantas vezes já foi trocado
             report.update(place_id=row["place_id"], place_edits=row["place_edits"])
         paid = {(r["payer_key"], r["receiver_key"]): r for r in self._conn.execute(
@@ -1213,24 +1323,26 @@ class Store:
             self._conn.commit()
 
     def _forget_split(self, kind: str, hunt_id: int) -> None:
-        """Hunt apagada: some com as regras e os pagamentos dela (chamar dentro do _lock)."""
+        """Hunt apagada: some com as regras, os pagamentos e as marcações dela (chamar dentro do _lock)."""
         self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+        self._conn.execute("DELETE FROM hunt_tags WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
 
     def hunt(self, hunt_id: int) -> dict | None:
         row = self._conn.execute("SELECT * FROM hunts WHERE id = ?", (hunt_id,)).fetchone()
         return self._hunt(row) if row else None
 
-    def add_hunt(self, report: dict, raw_text: str, submitted_by: str, uploader_key: str | None = None) -> tuple[dict, bool]:
+    def add_hunt(self, report: dict, raw_text: str, submitted_by: str, uploader_key: str | None = None,
+                 via: str | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM hunts WHERE fingerprint = ?", (report["fingerprint"],)).fetchone()
             if existing:
                 return self._hunt(existing), False
             cur = self._conn.execute(
-                "INSERT INTO hunts (fingerprint, started_at, submitted_by, created_at, raw_text, report_json, uploader_key) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO hunts (fingerprint, started_at, submitted_by, created_at, raw_text, report_json, uploader_key, via) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (report["fingerprint"], report["started_at"], submitted_by, _iso(utcnow()), raw_text, json.dumps(report),
-                 uploader_key),
+                 uploader_key, via),
             )
             hunt_id = cur.lastrowid
             self._conn.executemany(
@@ -1264,7 +1376,10 @@ class Store:
         return (row is not None, row[0] if row else None)
 
     def add_solo(self, name: str, fingerprint: str, data: dict, uploader_key: str | None = None,
-                 raw_text: str | None = None, place_id: int | None = None, level: int | None = None) -> tuple[dict, bool]:
+                 raw_text: str | None = None, place_id: int | None = None, level: int | None = None,
+                 who: dict | None = None) -> tuple[dict, bool]:
+        """who (0.23.0): {"via", "other_player", "played_by"} quando outra pessoa jogou/enviou."""
+        who = who or {}
         with self._lock:
             existing = self._conn.execute("SELECT * FROM solo_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
             if existing:
@@ -1272,10 +1387,12 @@ class Store:
             cols = ", ".join(SOLO_COLUMNS)
             marks = ", ".join("?" for _ in SOLO_COLUMNS)
             cur = self._conn.execute(
-                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, raw_text, place_id, level, {cols}) "
-                f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, {marks})",
+                f"INSERT INTO solo_sessions (fingerprint, name_key, name, created_at, uploader_key, raw_text, place_id, level, "
+                f"via, other_player, played_by, content_hash, {cols}) "
+                f"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, {marks})",
                 (fingerprint, name_key(name), name, _iso(utcnow()), uploader_key, raw_text, place_id, level,
-                 *(data[c] for c in SOLO_COLUMNS)),
+                 who.get("via"), 1 if who.get("other_player") else 0, who.get("played_by"),
+                 session_content_hash(data) or "", *(data[c] for c in SOLO_COLUMNS)),
             )
             sid = cur.lastrowid
             self._conn.executemany("INSERT INTO solo_kills VALUES (?, ?, ?)", [(sid, c, n) for c, n in data.get("kills", [])])
@@ -1535,13 +1652,14 @@ class Store:
     def ranking_member(self, name: str) -> bool:
         return self._conn.execute("SELECT 1 FROM ranking_optin WHERE name_key = ?", (name_key(name),)).fetchone() is not None
 
-    def ranking_rows(self, since: str) -> list[dict]:
+    def ranking_rows(self, since: str, include_others: bool = False) -> list[dict]:
         """Totais do Stacker desde `since` de quem aceitou entrar no ranking (inclui quem não caçou: zeros)."""
         rows = self._conn.execute(
             "SELECT r.name, c.vocation, c.level, COUNT(s.id) AS sessions, COALESCE(SUM(s.xp), 0) AS xp, "
             "COALESCE(SUM(s.balance), 0) AS balance, COALESCE(SUM(s.duration_seconds), 0) AS seconds "
             "FROM ranking_optin r LEFT JOIN solo_sessions s ON s.name_key = r.name_key AND s.started_at >= ? "
-            "LEFT JOIN char_info c ON c.name_key = r.name_key GROUP BY r.name_key", (since,))
+            "AND (s.other_player = 0 OR ?) "  # 0.23.0: jogadas por outra pessoa só entram se pedir
+            "LEFT JOIN char_info c ON c.name_key = r.name_key GROUP BY r.name_key", (since, 1 if include_others else 0))
         return [dict(r) for r in rows]
 
     # ------------------------------------------------------------------ imagens da TibiaWiki (cache)
@@ -1600,7 +1718,7 @@ class Store:
     def place_stats(self, min_level: int | None = None, max_level: int | None = None,
                     place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600) -> list[dict]:
         """XP/h, gold/h (balance), level médio e nº de jogadores por hunt. Ignora sessões com menos de 10 min."""
-        where, args = ["s.duration_seconds >= ?"], [min_seconds]
+        where, args = ["s.duration_seconds >= ?", "s.other_player = 0"], [min_seconds]  # 0.23.0: só quem jogou no próprio
         if min_level is not None:
             where.append("s.level >= ?"); args.append(min_level)
         if max_level is not None:
@@ -1642,6 +1760,9 @@ class Store:
             where.append(f"h.place_id IN ({','.join('?' * len(place_ids))})"); args += place_ids
         if name:
             where.append("h.id IN (SELECT hunt_id FROM hunt_players WHERE name_key = ?)"); args.append(name_key(name))
+            # 0.23.0: o lootsplit em que outra pessoa jogou no personagem não entra no "seu" desempenho
+            where.append("h.id NOT IN (SELECT hunt_id FROM hunt_tags WHERE kind = 'hunt' AND tag = 'other' AND name_key = ?)")
+            args.append(name_key(name))
         return self._conn.execute(f"SELECT h.id, h.place_id, h.report_json FROM hunts h WHERE {' AND '.join(where)}", args).fetchall()
 
     def party_place_stats(self, min_level: int | None = None, max_level: int | None = None,
@@ -1660,7 +1781,8 @@ class Store:
             f"SELECT name_key, level FROM char_info WHERE level IS NOT NULL AND name_key IN "
             f"(SELECT name_key FROM hunt_players WHERE hunt_id IN ({marks}))", ids)}
         xp: dict[int, list[int]] = {}  # hunt_id -> [xp, segundos] das sessões juntadas
-        for r in self._conn.execute(f"SELECT hunt_id, name_key, data_json FROM party_sessions WHERE hunt_id IN ({marks})", ids):
+        for r in self._conn.execute(f"SELECT hunt_id, name_key, data_json FROM party_sessions WHERE hunt_id IN ({marks}) "
+                                    "AND other_player = 0", ids):
             if name and r[1] != name_key(name):
                 continue
             d = json.loads(r[2])
@@ -1891,30 +2013,41 @@ class Store:
         out = [self._input(r) for r in rows]
         return [i for i in out if name_key(i["name"]) == name_key(name)] if name else out
 
-    def add_party_session(self, hunt_id: int, name: str, data: dict, uploader_key: str) -> tuple[dict, bool]:
+    def add_party_session(self, hunt_id: int, name: str, data: dict, uploader_key: str,
+                          who: dict | None = None) -> tuple[dict, bool]:
+        who = who or {}
         with self._lock:
             row = self._conn.execute("SELECT * FROM party_sessions WHERE hunt_id = ? AND name_key = ?",
                                      (hunt_id, name_key(name))).fetchone()
             created = row is None
             if created:
                 self._conn.execute(
-                    "INSERT INTO party_sessions (hunt_id, name_key, name, data_json, uploader_key, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-                    (hunt_id, name_key(name), name, json.dumps(data), uploader_key, _iso(utcnow())))
+                    "INSERT INTO party_sessions (hunt_id, name_key, name, data_json, uploader_key, created_at, via, "
+                    "other_player, played_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (hunt_id, name_key(name), name, json.dumps(data), uploader_key, _iso(utcnow()), who.get("via"),
+                     1 if who.get("other_player") else 0, who.get("played_by")))
                 self._conn.commit()
                 row = self._conn.execute("SELECT * FROM party_sessions WHERE hunt_id = ? AND name_key = ?",
                                          (hunt_id, name_key(name))).fetchone()
-        return {"name": row["name"], "uploader_key": row["uploader_key"], **json.loads(row["data_json"])}, created
+        return self._party_session(row), created
+
+    @staticmethod
+    def _party_session(r: sqlite3.Row) -> dict:
+        return {"name": r["name"], "uploader_key": r["uploader_key"], **json.loads(r["data_json"]),
+                "other_player": bool(r["other_player"]), "played_by": r["played_by"]}
 
     def party_sessions_for(self, hunt_ids: list[int]) -> dict[int, list[dict]]:
         out: dict[int, list[dict]] = {i: [] for i in hunt_ids}
         if hunt_ids:
             marks = ",".join("?" * len(hunt_ids))
             for r in self._conn.execute(f"SELECT * FROM party_sessions WHERE hunt_id IN ({marks}) ORDER BY id", hunt_ids):
-                out[r["hunt_id"]].append({"name": r["name"], "uploader_key": r["uploader_key"], **json.loads(r["data_json"])})
+                out[r["hunt_id"]].append(self._party_session(r))
         return out
 
     # ------------------------------------------------------------------ 👑 rotação de bosses
-    def add_boss_session(self, name: str, fingerprint: str, data: dict, mode: str, uploader_key: str) -> tuple[dict, bool]:
+    def add_boss_session(self, name: str, fingerprint: str, data: dict, mode: str, uploader_key: str,
+                         who: dict | None = None) -> tuple[dict, bool]:
+        who = who or {}
         with self._lock:
             existing = self._conn.execute("SELECT * FROM boss_sessions WHERE fingerprint = ?", (fingerprint,)).fetchone()
             if existing:
@@ -1922,9 +2055,11 @@ class Store:
             cols = ", ".join(SOLO_COLUMNS)
             marks = ", ".join("?" for _ in SOLO_COLUMNS)
             cur = self._conn.execute(
-                f"INSERT INTO boss_sessions (fingerprint, name_key, name, mode, uploader_key, created_at, {cols}) "
-                f"VALUES (?, ?, ?, ?, ?, ?, {marks})",
-                (fingerprint, name_key(name), name, mode, uploader_key, _iso(utcnow()), *(data[c] for c in SOLO_COLUMNS)))
+                f"INSERT INTO boss_sessions (fingerprint, name_key, name, mode, uploader_key, created_at, via, other_player, "
+                f"played_by, content_hash, {cols}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, {marks})",
+                (fingerprint, name_key(name), name, mode, uploader_key, _iso(utcnow()), who.get("via"),
+                 1 if who.get("other_player") else 0, who.get("played_by"), session_content_hash(data) or "",
+                 *(data[c] for c in SOLO_COLUMNS)))
             sid = cur.lastrowid
             self._conn.executemany("INSERT INTO boss_kills VALUES (?, ?, ?)", [(sid, c, n) for c, n in data.get("kills", [])])
             self._conn.executemany("INSERT INTO boss_loot VALUES (?, ?, ?)", [(sid, i, n) for i, n in data.get("loot", [])])
@@ -1964,16 +2099,16 @@ class Store:
     def _boss_hunt(self, row: sqlite3.Row) -> dict:
         return self._hunt(row, "boss")
 
-    def add_boss_hunt(self, report: dict, submitted_by: str, uploader_key: str) -> tuple[dict, bool]:
+    def add_boss_hunt(self, report: dict, submitted_by: str, uploader_key: str, via: str | None = None) -> tuple[dict, bool]:
         with self._lock:
             existing = self._conn.execute("SELECT * FROM boss_hunts WHERE fingerprint = ?", (report["fingerprint"],)).fetchone()
             if existing:
                 return self._boss_hunt(existing), False
             cur = self._conn.execute(
-                "INSERT INTO boss_hunts (fingerprint, started_at, ended_at, submitted_by, uploader_key, created_at, report_json) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO boss_hunts (fingerprint, started_at, ended_at, submitted_by, uploader_key, created_at, report_json, via) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (report["fingerprint"], report["started_at"], report["ended_at"], submitted_by, uploader_key,
-                 _iso(utcnow()), json.dumps(report)))
+                 _iso(utcnow()), json.dumps(report), via))
             hid = cur.lastrowid
             self._conn.executemany("INSERT INTO boss_hunt_players VALUES (?, ?, ?)",
                                    [(hid, name_key(p["name"]), p["name"]) for p in report["players"]])
@@ -2010,6 +2145,328 @@ class Store:
             if table == "boss_hunts":  # as sessões continuam, só perdem o vínculo com a party
                 self._conn.execute("UPDATE boss_sessions SET boss_hunt_id = NULL WHERE boss_hunt_id = ?", (row_id,))
                 self._forget_split("boss", row_id)
+            ref = "hunt" if table == "boss_hunts" else "session"  # 0.23.0: o cofre da rotação vai junto
+            for (did,) in self._conn.execute("SELECT id FROM vault_drops WHERE ref_kind = ? AND ref_id = ?", (ref, row_id)).fetchall():
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'drop' AND hunt_id = ?", (did,))
+            for (cid,) in self._conn.execute("SELECT id FROM vault_crafts WHERE ref_kind = ? AND ref_id = ?", (ref, row_id)).fetchall():
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'craft' AND hunt_id = ?", (cid,))
+            self._conn.execute("DELETE FROM vault_drops WHERE ref_kind = ? AND ref_id = ?", (ref, row_id))
+            self._conn.execute("DELETE FROM vault_crafts WHERE ref_kind = ? AND ref_id = ?", (ref, row_id))
             cur = self._conn.execute(f"DELETE FROM {table} WHERE id = ?", (row_id,))
             self._conn.commit()
             return cur.rowcount > 0
+
+    # ------------------------------------------------------------------ 0.23.0: 🤝 substituições
+    MAX_ACTIVE_LINKS = 5
+
+    def session_by_content(self, table: str, content_hash: str | None) -> dict | None:
+        """Sessão igual (mesmos horários e números) já salva, em qualquer personagem."""
+        assert table in ("solo_sessions", "boss_sessions")
+        if not content_hash:
+            return None
+        row = self._conn.execute(f"SELECT id, name, name_key, uploader_key FROM {table} WHERE content_hash = ? LIMIT 1",
+                                 (content_hash,)).fetchone()
+        return dict(row) if row else None
+
+    def create_link(self, owner_key: str, name: str, operator: str | None, scopes: list[str], hours: int,
+                    max_uses: int) -> tuple[dict, str]:
+        token = secrets.token_urlsafe(24)
+        now = utcnow()
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO upload_links (token_hash, owner_key, name_key, name, operator, operator_key, scopes, created_at, "
+                "expires_at, max_uses) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (hash_token(token), owner_key, name_key(name), name, operator, name_key(operator) if operator else None,
+                 ",".join(scopes), _iso(now), _iso(now + timedelta(hours=hours)), max_uses))
+            self._conn.commit()
+        return self.link(cur.lastrowid), token
+
+    @staticmethod
+    def _link_row(r: sqlite3.Row) -> dict:
+        d = dict(r)
+        d["scopes"] = [s for s in d["scopes"].split(",") if s]
+        d["active"] = (d["revoked_at"] is None and d["uses"] < d["max_uses"]
+                       and datetime.fromisoformat(d["expires_at"]) > utcnow())
+        return d
+
+    def link(self, link_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM upload_links WHERE id = ?", (link_id,)).fetchone()
+        return self._link_row(row) if row else None
+
+    def link_by_token(self, token: str) -> dict | None:
+        if not token or len(token) > 100:
+            return None
+        row = self._conn.execute("SELECT * FROM upload_links WHERE token_hash = ?", (hash_token(token),)).fetchone()
+        return self._link_row(row) if row else None
+
+    def links_of(self, owner_key: str, limit: int = 30) -> list[dict]:
+        rows = self._conn.execute("SELECT * FROM upload_links WHERE owner_key = ? ORDER BY id DESC LIMIT ?", (owner_key, limit))
+        return [self._link_row(r) for r in rows]
+
+    def active_links_count(self, owner_key: str) -> int:
+        return sum(1 for link in self.links_of(owner_key, 100) if link["active"])
+
+    def grants_for(self, names: list[str]) -> list[dict]:
+        """Links ativos que autorizam algum destes personagens a enviar pelo dono (jogador autorizado)."""
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        rows = self._conn.execute(f"SELECT * FROM upload_links WHERE operator_key IN ({marks}) ORDER BY id DESC", keys)
+        return [link for link in (self._link_row(r) for r in rows) if link["active"]]
+
+    def revoke_link(self, link_id: int, owner_key: str) -> bool:
+        with self._lock:
+            cur = self._conn.execute("UPDATE upload_links SET revoked_at = ? WHERE id = ? AND owner_key = ? AND revoked_at IS NULL",
+                                     (_iso(utcnow()), link_id, owner_key))
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    def use_link(self, link_id: int) -> bool:
+        """Gasta um envio do link (só se ainda estiver valendo). Feito de uma vez: dois envios juntos não passam do limite."""
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE upload_links SET uses = uses + 1 WHERE id = ? AND revoked_at IS NULL AND uses < max_uses AND expires_at > ?",
+                (link_id, _iso(utcnow())))
+            self._conn.commit()
+        return cur.rowcount > 0
+
+    def refund_link(self, link_id: int) -> None:
+        """O envio não gravou nada novo (já estava salvo): devolve o envio gasto."""
+        with self._lock:
+            self._conn.execute("UPDATE upload_links SET uses = uses - 1 WHERE id = ? AND uses > 0", (link_id,))
+            self._conn.commit()
+
+    def sends_by_others(self, owner_key: str, since: datetime) -> int:
+        """Quantas coisas chegaram pelo link de envio / jogador autorizado para este código desde `since`."""
+        s = _iso(since)
+        return self._conn.execute(
+            "SELECT (SELECT COUNT(*) FROM solo_sessions WHERE uploader_key = ? AND via IS NOT NULL AND created_at >= ?)"
+            " + (SELECT COUNT(*) FROM boss_sessions WHERE uploader_key = ? AND via IS NOT NULL AND created_at >= ?)"
+            " + (SELECT COUNT(*) FROM party_sessions WHERE uploader_key = ? AND via IS NOT NULL AND created_at >= ?)"
+            " + (SELECT COUNT(*) FROM hunts WHERE uploader_key = ? AND via IS NOT NULL AND created_at >= ?)"
+            " + (SELECT COUNT(*) FROM boss_hunts WHERE uploader_key = ? AND via IS NOT NULL AND created_at >= ?)",
+            (owner_key, s) * 5).fetchone()[0]
+
+    # marcações por jogador num lootsplit
+    def tags_for(self, kind: str, hunt_ids: list[int]) -> dict[int, list[dict]]:
+        out: dict[int, list[dict]] = {i: [] for i in hunt_ids}
+        if hunt_ids:
+            marks = ",".join("?" * len(hunt_ids))
+            for r in self._conn.execute(f"SELECT * FROM hunt_tags WHERE kind = ? AND hunt_id IN ({marks})", (kind, *hunt_ids)):
+                out[r["hunt_id"]].append(dict(r))
+        return out
+
+    def set_tag(self, kind: str, hunt_id: int, name: str, tag: str, on: bool, played_by: str | None = None,
+                by_key: str | None = None) -> bool:
+        """Liga/desliga uma marcação. 'sub' e 'nosub' se excluem. Devolve True se mudou algo."""
+        assert tag in ("other", "sub", "nosub")
+        with self._lock:
+            k = name_key(name)
+            if on and tag in ("sub", "nosub"):
+                self._conn.execute("DELETE FROM hunt_tags WHERE kind = ? AND hunt_id = ? AND name_key = ? AND tag = ?",
+                                   (kind, hunt_id, k, "nosub" if tag == "sub" else "sub"))
+            if on:
+                before = self._conn.execute("SELECT played_by FROM hunt_tags WHERE kind = ? AND hunt_id = ? AND name_key = ? "
+                                            "AND tag = ?", (kind, hunt_id, k, tag)).fetchone()
+                self._conn.execute("INSERT OR REPLACE INTO hunt_tags VALUES (?, ?, ?, ?, ?, ?, ?)",
+                                   (kind, hunt_id, k, tag, played_by, by_key, _iso(utcnow())))
+                changed = before is None or before[0] != played_by
+            else:
+                changed = self._conn.execute("DELETE FROM hunt_tags WHERE kind = ? AND hunt_id = ? AND name_key = ? AND tag = ?",
+                                             (kind, hunt_id, k, tag)).rowcount > 0
+            self._conn.commit()
+        return changed
+
+    def party_hunts_between(self, names: list[str], lo: str, hi: str, boss: bool = False) -> list[tuple[str, dict]]:
+        """Lootsplits destes personagens que começaram entre lo e hi: [(name_key, report)] (para achar o da sessão)."""
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return []
+        table, players = ("boss_hunts", "boss_hunt_players") if boss else ("hunts", "hunt_players")
+        marks = ",".join("?" * len(keys))
+        rows = self._conn.execute(
+            f"SELECT p.name_key, h.id, h.report_json FROM {table} h JOIN {players} p ON p.hunt_id = h.id "
+            f"WHERE p.name_key IN ({marks}) AND h.started_at BETWEEN ? AND ? LIMIT 200", (*keys, lo, hi))
+        return [(r[0], {**json.loads(r[2]), "id": r[1]}) for r in rows]
+
+    def rosters_with(self, keys: list[str], limit: int = 300) -> dict[int, dict[str, str]]:
+        """Formação (name_key -> nome) dos lootsplits mais recentes em que algum destes personagens estava."""
+        if not keys:
+            return {}
+        marks = ",".join("?" * len(keys))
+        ids = [r[0] for r in self._conn.execute(
+            f"SELECT DISTINCT hunt_id FROM hunt_players WHERE name_key IN ({marks}) ORDER BY hunt_id DESC LIMIT ?", (*keys, limit))]
+        out: dict[int, dict[str, str]] = {i: {} for i in ids}
+        if ids:
+            m2 = ",".join("?" * len(ids))
+            for r in self._conn.execute(f"SELECT hunt_id, name_key, name FROM hunt_players WHERE hunt_id IN ({m2})", ids):
+                out[r[0]][r[1]] = r[2]
+        return out
+
+    def claim_hunt(self, kind: str, hunt_id: int, key: str, name: str) -> None:
+        """Lootsplit enviado por quem não estava na PT: um membro assume (passa a ser quem enviou)."""
+        table = "hunts" if kind == "hunt" else "boss_hunts"
+        with self._lock:
+            self._conn.execute(f"UPDATE {table} SET uploader_key = ?, submitted_by = ? WHERE id = ?", (key, name, hunt_id))
+            self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
+            self._conn.commit()
+
+    def set_session_player(self, table: str, session_id: int, other: bool, played_by: str | None) -> None:
+        assert table in ("solo_sessions", "boss_sessions")
+        with self._lock:
+            self._conn.execute(f"UPDATE {table} SET other_player = ?, played_by = ? WHERE id = ?",
+                               (1 if other else 0, played_by if other else None, session_id))
+            self._conn.commit()
+
+    def played_for(self, names: list[str], limit: int = 50) -> list[dict]:
+        """🤝 Joguei por outra pessoa: o que os donos marcaram como jogado por um destes personagens."""
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        out = []
+        for kind, table in (("solo", "solo_sessions"), ("boss", "boss_sessions")):
+            for r in self._conn.execute(
+                    f"SELECT id, name, started_at, duration_seconds, xp, balance FROM {table} "
+                    f"WHERE other_player = 1 AND lower(played_by) IN ({marks}) ORDER BY started_at DESC LIMIT ?", (*keys, limit)):
+                out.append({"kind": kind, **dict(r)})
+        for r in self._conn.execute(
+                f"SELECT t.kind, t.hunt_id, t.name_key, h.started_at, h.report_json FROM hunt_tags t "
+                f"JOIN hunts h ON t.kind = 'hunt' AND h.id = t.hunt_id "
+                f"WHERE t.tag = 'other' AND lower(t.played_by) IN ({marks}) ORDER BY h.started_at DESC LIMIT ?", (*keys, limit)):
+            rep = json.loads(r["report_json"])
+            p = next((p for p in rep.get("players", []) if name_key(p["name"]) == r["name_key"]), None)
+            out.append({"kind": "hunt", "id": r["hunt_id"], "name": p["name"] if p else r["name_key"],
+                        "started_at": r["started_at"], "duration_seconds": rep.get("duration_seconds", 0), "xp": None,
+                        "balance": rep.get("profit_each")})
+        return sorted(out, key=lambda x: x["started_at"], reverse=True)[:limit]
+
+    # ------------------------------------------------------------------ 0.23.0: 🗃️ cofre da rotação
+    def vault(self, ref_kind: str, ref_ids: list[int]) -> dict[int, dict]:
+        """{ref_id: {"drops": [...], "crafts": [...]}}"""
+        out: dict[int, dict] = {i: {"drops": [], "crafts": []} for i in ref_ids}
+        if ref_ids:
+            marks = ",".join("?" * len(ref_ids))
+            for r in self._conn.execute(f"SELECT * FROM vault_drops WHERE ref_kind = ? AND ref_id IN ({marks}) "
+                                        "ORDER BY COALESCE(dropped_on, ''), id",
+                                        (ref_kind, *ref_ids)):
+                out[r["ref_id"]]["drops"].append(dict(r))
+            for r in self._conn.execute(f"SELECT * FROM vault_crafts WHERE ref_kind = ? AND ref_id IN ({marks}) ORDER BY id",
+                                        (ref_kind, *ref_ids)):
+                c = dict(r)
+                c["bought"] = json.loads(c.pop("bought_json"))
+                out[r["ref_id"]]["crafts"].append(c)
+        return out
+
+    def vault_drop(self, drop_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM vault_drops WHERE id = ?", (drop_id,)).fetchone()
+        return dict(r) if r else None
+
+    def vault_craft(self, craft_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM vault_crafts WHERE id = ?", (craft_id,)).fetchone()
+        if not r:
+            return None
+        c = dict(r)
+        c["bought"] = json.loads(c.pop("bought_json"))
+        return c
+
+    def add_vault_drop(self, ref_kind: str, ref_id: int, item: str, qty: int, dropped_by: str, price_each: int | None,
+                       owner_key: str, dropped_on: str | None = None) -> int:
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO vault_drops (ref_kind, ref_id, item, qty, dropped_by, price_each, owner_key, created_at, dropped_on) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (ref_kind, ref_id, item, qty, dropped_by, price_each, owner_key,
+                                                       _iso(utcnow()), dropped_on))
+            self._conn.commit()
+        return cur.lastrowid
+
+    def update_vault_drop(self, drop_id: int, **fields) -> None:
+        allowed = {"price_each", "status", "sold_total", "market_fee", "sold_at", "craft_id"}
+        sets = [k for k in fields if k in allowed]
+        if not sets:
+            return
+        with self._lock:
+            self._conn.execute(f"UPDATE vault_drops SET {', '.join(k + ' = ?' for k in sets)} WHERE id = ?",
+                               (*(fields[k] for k in sets), drop_id))
+            if fields.get("status") in ("stock", "used"):  # deixou de ser venda: as marcações de "já paguei" caem
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'drop' AND hunt_id = ?", (drop_id,))
+            self._conn.commit()
+
+    def delete_vault_drop(self, drop_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM vault_drops WHERE id = ?", (drop_id,))
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'drop' AND hunt_id = ?", (drop_id,))
+            self._conn.commit()
+
+    def take_one_vault_drop(self, drop_id: int) -> int:
+        """Separa 1 unidade do drop (se tem 2 ou mais, vira duas linhas) e devolve o id da linha com 1 unidade."""
+        with self._lock:
+            d = self._conn.execute("SELECT * FROM vault_drops WHERE id = ?", (drop_id,)).fetchone()
+            if d["qty"] <= 1:
+                return drop_id
+            self._conn.execute("UPDATE vault_drops SET qty = qty - 1 WHERE id = ?", (drop_id,))
+            cur = self._conn.execute(
+                "INSERT INTO vault_drops (ref_kind, ref_id, item, qty, dropped_by, price_each, owner_key, created_at, dropped_on) "
+                "VALUES (?, ?, ?, 1, ?, ?, ?, ?, ?)", (d["ref_kind"], d["ref_id"], d["item"], d["dropped_by"], d["price_each"],
+                                                       d["owner_key"], d["created_at"], d["dropped_on"]))
+            self._conn.commit()
+            return cur.lastrowid
+
+    def add_vault_craft(self, ref_kind: str, ref_id: int, set_key: str, drop_ids: list[int], bought: list[dict],
+                        result: str | None, seller: str, owner_key: str) -> int:
+        with self._lock:
+            cur = self._conn.execute(
+                "INSERT INTO vault_crafts (ref_kind, ref_id, set_key, bought_json, result, seller, owner_key, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (ref_kind, ref_id, set_key, json.dumps(bought), result, seller, owner_key,
+                                                    _iso(utcnow())))
+            cid = cur.lastrowid
+            for d in drop_ids:
+                self._conn.execute("UPDATE vault_drops SET status = 'used', craft_id = ?, sold_total = NULL, sold_at = NULL "
+                                   "WHERE id = ?", (cid, d))
+            self._conn.commit()
+        return cid
+
+    def update_vault_craft(self, craft_id: int, **fields) -> None:
+        allowed = {"result", "sold_total", "market_fee", "sold_at"}
+        sets = [k for k in fields if k in allowed]
+        if not sets:
+            return
+        with self._lock:
+            self._conn.execute(f"UPDATE vault_crafts SET {', '.join(k + ' = ?' for k in sets)} WHERE id = ?",
+                               (*(fields[k] for k in sets), craft_id))
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'craft' AND hunt_id = ?", (craft_id,))
+            self._conn.commit()
+
+    def delete_vault_craft(self, craft_id: int) -> None:
+        """Desfaz o uso: as runas voltam para o estoque."""
+        with self._lock:
+            self._conn.execute("UPDATE vault_drops SET status = 'stock', craft_id = NULL WHERE craft_id = ?", (craft_id,))
+            self._conn.execute("DELETE FROM vault_crafts WHERE id = ?", (craft_id,))
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'craft' AND hunt_id = ?", (craft_id,))
+            self._conn.commit()
+
+    def payments_of(self, kind: str, ids: list[int]) -> dict[int, dict]:
+        """{id: {(payer_key, receiver_key): {amount, paid_at}}} das marcações de "já paguei"."""
+        out: dict[int, dict] = {i: {} for i in ids}
+        if ids:
+            marks = ",".join("?" * len(ids))
+            for r in self._conn.execute(f"SELECT * FROM hunt_payments WHERE kind = ? AND hunt_id IN ({marks})", (kind, *ids)):
+                out[r["hunt_id"]][(r["payer_key"], r["receiver_key"])] = {"amount": r["amount"], "paid_at": r["paid_at"]}
+        return out
+
+    def note_char_claim(self, name: str) -> None:
+        with self._lock:
+            self._conn.execute("INSERT INTO char_claims VALUES (?, ?)", (name_key(name), _iso(utcnow())))
+            self._conn.execute("DELETE FROM char_claims WHERE at < ?", (_iso(utcnow() - timedelta(days=60)),))
+            self._conn.commit()
+
+    def char_claims_since(self, names: list[str], since: datetime) -> list[dict]:
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        rows = self._conn.execute(f"SELECT name_key, MAX(at) AS at, COUNT(*) AS n FROM char_claims WHERE name_key IN ({marks}) "
+                                  "AND at >= ? GROUP BY name_key", (*keys, _iso(since)))
+        return [dict(r) for r in rows]

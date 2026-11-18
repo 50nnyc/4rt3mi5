@@ -4,14 +4,13 @@ Companheiro de hunt: divide o loot da PT (Lootsplit), acumula as sessões indivi
 (Hunt Session Stacker) e mostra tudo no celular e no PC.
 
 ```
- App desktop (Windows)  ─┐                                ┌─ TibiaData (valida personagens e
-   janela WebView2       │  X-Access-Key + X-Device-Token  │   lê o comentário na verificação)
-   + atualização auto    ├──────────────────▶  Servidor (Docker na sua máquina) ──┘
- Site no celular        ─┘                    FastAPI + SQLite (data/artemis.db)
+ Site (navegador no     X-Access-Key + X-Device-Token     ┌─ TibiaData (valida personagens e
+ celular ou no PC)  ──────────────────▶  Servidor (Docker) ──┘   lê o comentário na verificação)
+                                         FastAPI + SQLite (data/artemis.db)
 ```
 
-A interface é **uma só** (`artemis/web/index.html`): o servidor entrega para o celular e o
-app desktop abre a mesma página numa janela própria.
+A interface é **uma só** (`artemis/web/index.html`), entregue pelo servidor. O app para Windows foi descontinuado
+na 0.23.0: agora o 4rt3mi5 é só o site.
 
 ## Fluxo do usuário
 
@@ -226,6 +225,50 @@ não veem o item.
 
   O comando recusa nome de conta que já é de um jogador. Rodar de novo troca a senha e encerra as sessões abertas.
 
+## 🤝 Substituições e personagem certo (0.23.0)
+
+- **Personagem certo:** o Lootsplit (comum e de bosses) só é salvo se um personagem da conta está no Party Hunt
+  Analyser. Se o personagem ativo não está na PT mas outro da mesma conta está, o servidor salva nele e o app troca o
+  personagem ativo (`saved_as` / `switched_from` na resposta). No Stacker e no Boss Stacker, se só um personagem da
+  conta tem lootsplit no mesmo horário da sessão, ela vai para ele.
+- **Sessão duplicada:** a mesma sessão (mesmos horários e números, sem o nome — `content_hash`) não fica em dois
+  personagens. Na mesma conta o erro diz onde ela está; em outra conta não diz de quem é.
+- **Link de envio** (☰ → 🤝 Substituições, `POST /api/links`): o dono escolhe personagem, o que pode ser enviado
+  (Stacker, Lootsplit/sessão da PT, bosses), validade (6 h a 7 dias) e limite de envios (até 50; no máximo 5 links
+  valendo). A página `/envio#CÓDIGO` não precisa de conta, tem o "não sou um robô" do contato e **só envia**: não lê
+  nada do dono. O código fica depois do `#` (não vai no endereço para o servidor) e no banco só como hash. A hunt
+  precisa ser do período do link (±14 h de folga pelo fuso de quem jogou). Tudo fica salvo para o dono, marcado
+  `other_player`, com `via = 'link'`.
+- **Jogador autorizado:** com o personagem de quem vai jogar no link, essa pessoa também envia logada na conta dela
+  (Lootsplit reconhecido sozinho; Stacker/boss pela tela de Substituições, `for_char`). Nada vai para o personagem dela.
+- **Marcações:** 🤝 "Não fui eu que joguei" (só o dono do personagem; com "quem jogou" opcional) e 🔁 Substituto
+  (qualquer um da PT). O substituto também é descoberto sozinho: lootsplits do mesmo tamanho com no máximo 1 diferente;
+  quem aparece em 60% deles é fixo; faltou 1 fixo e entrou 1 de fora → "no lugar de". Tabela `hunt_tags`.
+- **Fora do desempenho:** o que foi jogado por outra pessoa entra nos totais e metas, mas sai de rankings (o 🥇 Ranking
+  entre amigos tem a opção de incluir), recordes, "comparar minhas hunts" e da média das hunts.
+- **Lootsplit órfão:** lootsplit enviado por quem não estava na PT (era possível antes da 0.23.0) pode ser assumido
+  por um membro (`POST /api/hunt/{id}/claim`); quem não estava na PT não muda mais as regras de divisão.
+- **Aviso de vínculo:** quando alguém tenta vincular um personagem que já é de outra conta, o dono vê o aviso no Início.
+- **Sugestão de nick:** os campos de personagem mostram "Ex.: <nick>" sorteado entre nicks conhecidos (`NICK_IDEAS` em `app.js`).
+
+## 👑 Rotações e 🗃️ Cofre da rotação (0.23.0)
+
+- **Nome da rotação** (`artemis/core/rotations.py`, `GROUPS`): cada boss pertence a um grupo (quest/lore). Só mini-bosses →
+  "GT"; só a última sala → "Last room GT"; vários grupos → "Rotação GT + GD". Bastions tem partes: Scarlett Etzel = Cobra,
+  Grand Master Oberon = Falcon, Drume = Lion, Court Warlock = Stag (Order of the Stag), Megasylvan Yselda → "Bastions: Cobra +
+  Falcon Bastion". Werelion = os 4 do Lion Sanctum (An Ancient Feud); Were = os were em geral. Para mudar um grupo, edite `GROUPS`.
+- **Cofre** (tabelas `vault_drops`, `vault_crafts`; rotas `/api/vault/...`): em cada lootsplit de bosses (membros = quem está no
+  Party Hunt Analyser) e em cada sessão de boss sem lootsplit (membro = o dono). Qualquer membro registra um drop (quem dropou é
+  quem guarda o item); só quem registrou muda preço, venda e apaga. Venda: valor total + caixinha **Taxa do Market**; o líquido
+  é dividido igual entre os membros do dia do drop (a venda pode ser meses depois), com "transfer X to Y" e "✔ Já paguei".
+  Substituto aparece marcado.
+- **Taxa do Market** (`FEE_RULES`): 2,5% com teto de 2.500.000 gp a partir do server save de 06/10/2026 (notícia
+  "Adjustment of Market Fee and Exercise Weapons", 01/10/2026); antes, 2% com teto de 1.000.000 gp; mínimo de 20 gp. Vale a
+  regra da data da venda.
+- **Conjuntos** (`SETS`): 1 de cada Crypt Rune (Ancient, Deathly, Fiery, Icy, Necromantic) vira uma arma Crypt no Dragon
+  Ancestor Spirit. As que faltaram no estoque entram como "compradas" (custo). Líquido = venda − taxa − custo; mostra por runa e
+  por pessoa. "Desfazer o uso" devolve as runas ao estoque.
+
 ## Música
 
 As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o
@@ -273,7 +316,7 @@ Pela linha de comando, com Docker:
 
 ```powershell
 docker compose up -d --build                                               # liga (reinicia sozinho)
-docker compose exec server python -m artemis.server keys create --label "Atx Buubo"
+docker compose exec server python -m artemis.server keys create --label "Bobeek"
 docker compose exec server python -m artemis.server keys list
 docker compose exec server python -m artemis.server keys renew ART-XXXX-XXXX   # +30 dias, mantém personagens
 docker compose exec server python -m artemis.server keys reset ART-XXXX-XXXX   # desvincula o dono
@@ -301,7 +344,7 @@ python -m venv .venv
 ```
 
 O servidor de demonstração usa um banco próprio (`demo-data/`, fora do Git), não consulta o TibiaData e
-entra com o código `ART-DEMO-TEST` + nick `Atx Buubo`. Serve para conferir telas e gravar vídeos.
+entra com o código `ART-DEMO-TEST` + nick `Bobeek`. Serve para conferir telas e gravar vídeos.
 
 ## Segurança dos dados sensíveis
 
@@ -362,9 +405,10 @@ Free"), com o **mesmo domínio do ngrok**. Assim nada muda para os apps instalad
 **Endereço do site:** https://artemishunt.com.br (Caddy com Let's Encrypt). O endereço antigo
 artemis-hunt.duckdns.org continua respondendo a API para os apps já instalados, e a página leva ao domínio novo.
 
-**Download do app:** o site mostra o botão "Baixar o app" (só no navegador, nunca dentro do app) e
-`/download` sempre leva ao instalador da última Release do GitHub. O link do VirusTotal usa o SHA-256 do
-`latest.json`: depois de cada versão, envie o `.exe` em virustotal.com uma vez para o relatório existir.
+**App para Windows (descontinuado na 0.23.0):** o site não tem mais download (`/download` volta para o site e
+`/api/download` responde `available: false`). Chamadas do app instalado (tela local em 127.0.0.1/localhost chamando o
+servidor) recebem 410 com a mensagem `DESKTOP_GONE`, que o app mostra no login. O código de `artemis/desktop/` ficou
+no repositório, mas não é mais compilado nem publicado.
 
 Na migração, a pasta `data\` vai inteira: o `server.json` tem o "pepper" das senhas, e sem ele nenhuma conta entra.
 
@@ -372,8 +416,6 @@ Na migração, a pasta `data\` vai inteira: o `server.json` tem o "pepper" das s
 
 1. Altere `__version__` em `artemis/__init__.py` e faça commit.
 2. Crie a tag `vX.Y.Z` e envie (`git tag v0.3.0` + `git push --tags`).
-3. O GitHub Actions gera o instalador e publica a Release com `latest.json`.
-4. O app instalado mostra "Nova versão disponível — Atualizar".
-
-O endereço de atualização fica em `artemis/desktop/config.py` (`DEFAULT_UPDATE_URL`). O download
-automático das Releases só funciona com o repositório **público**.
+3. O GitHub Actions confere (segredos, testes, versão x tag) e publica a Release só com as notas. Desde a 0.23.0
+   nenhum instalador é compilado: o app para Windows foi descontinuado.
+4. No servidor, atualize o site (`git pull` + `docker compose up -d --build`).

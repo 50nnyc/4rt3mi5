@@ -1,7 +1,8 @@
 # Lançar uma versão nova:
-#   1. mude __version__ em artemis/__init__.py (ex.: 0.2.0) e faça commit
-#   2. git tag v0.2.0 && git push --tags
-# O GitHub compila o instalador e publica a Release; os apps instalados se atualizam sozinhos.
+#   1. mude __version__ em artemis/__init__.py (ex.: 0.23.0) e faça commit
+#   2. git tag v0.23.0 && git push --tags
+# 0.23.0: o app para Windows foi descontinuado. A tag só confere a versão (segredos, testes, versão x tag) e publica a
+# Release com as notas; nenhum instalador é compilado. O site é atualizado no servidor (docker compose).
 name: release
 
 on:
@@ -12,8 +13,8 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest
+  check:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,23 +26,10 @@ jobs:
       - name: Testes
         run: python -m unittest discover -s tests -t .
       - name: Conferir versão x tag
-        shell: pwsh
         run: |
-          $v = (python -c "import artemis; print(artemis.__version__)").Trim()
-          if ("v$v" -ne "${{ github.ref_name }}") { throw "Tag ${{ github.ref_name }} difere da versão $v" }
-      - name: Instalar Inno Setup
-        shell: pwsh
-        run: |
-          if (-not (Get-Command iscc.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) {
-            choco install innosetup -y --no-progress
-          }
-      - name: Build
-        shell: pwsh
-        run: ./build.ps1 -DownloadBaseUrl "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}"
-      - name: Publicar Release
+          v=$(python -c "import artemis; print(artemis.__version__)")
+          if [ "v$v" != "${{ github.ref_name }}" ]; then echo "Tag ${{ github.ref_name }} difere da versão $v"; exit 1; fi
+      - name: Publicar Release (só as notas)
         env:
           GH_TOKEN: ${{ github.token }}
-        shell: pwsh
-        run: |
-          gh release create "${{ github.ref_name }}" (Get-ChildItem dist\4rt3mi5-Setup-*.exe).FullName (Get-ChildItem dist\4rt3mi5-web-*.zip).FullName dist\4rt3mi5-Launcher.exe dist\latest.json `
-            --title "${{ github.ref_name }}" --generate-notes
+        run: gh release create "${{ github.ref_name }}" --title "${{ github.ref_name }}" --generate-notes

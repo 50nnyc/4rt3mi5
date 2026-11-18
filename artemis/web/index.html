@@ -603,6 +603,46 @@
   .cal-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .cal-item:last-child { border-bottom: 0; }
   .cal-sw { flex: none; width: 14px; height: 14px; border-radius: 4px; margin-top: 4px; }
+
+  /* ---------- 0.23.0: 🤝 substituições ---------- */
+  .check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); cursor: pointer; }
+  .check-row input { width: auto; margin: 0; accent-color: var(--accent); }
+  .who { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; margin-left: 4px;
+         vertical-align: 1px; white-space: nowrap; }
+  .who.other { background: rgba(124, 140, 255, .12); color: var(--accent); border: 1px solid rgba(124, 140, 255, .4); }
+  .who.sub { background: rgba(242, 201, 76, .1); color: var(--gold); border: 1px solid rgba(242, 201, 76, .4); }
+  .subs-form { display: grid; gap: 10px; }
+  .subs-form label > span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .subs-form select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
+  .subs-scopes { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .subs-link { font: 13px/1.4 Consolas, ui-monospace, monospace; word-break: break-all; background: var(--card2); border: 1px dashed var(--gold);
+               color: var(--gold2); border-radius: 10px; padding: 10px; margin: 8px 0; }
+  .tags-grid { display: grid; gap: 8px; margin-top: 8px; }
+  .tags-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .tags-row:last-child { border-bottom: 0; }
+  .tags-row b { flex: 1 1 120px; }
+  .rot-name { font-size: 13px; font-weight: 700; color: var(--gold2); margin-top: 4px; }
+  .vault-row { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .vault-row:last-of-type { border-bottom: 0; }
+  .vault-actions, .vault-sell, .vault-add { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; margin-top: 6px; }
+  .vault-actions input:not([type=checkbox]), .vault-sell input:not([type=checkbox]), .vault-add input, .vault-add select,
+  .vault-set input:not([type=checkbox]), .vault-set select {
+    width: auto; flex: 1 1 140px; padding: 7px 9px; border-radius: 8px; background: var(--card2); color: var(--text);
+    border: 1px solid var(--line); font-size: 14px; }
+  .vault-set { margin: 10px 0; padding: 10px; border: 1px dashed var(--gold); border-radius: 10px; }
+  .vault-key { display: inline-block; font: 12px/1.3 Consolas, ui-monospace, monospace; color: var(--gold2); background: var(--card2);
+               border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; margin: 2px 0; }
+  .cm-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .cm-row b { flex: 1 1 160px; font-size: 14px; }
+  .cm-row select, .cm-row input { width: auto; flex: 1 1 180px; padding: 7px 9px; border-radius: 8px; background: var(--card2);
+                                  color: var(--text); border: 1px solid var(--line); font-size: 14px; }
+  #cmStep1 select[data-vresult], #cmStep1 select[data-vseller] { padding: 8px 10px; border-radius: 8px; background: var(--card2);
+                                                                  color: var(--text); border: 1px solid var(--line); }
+  .vault-row .check-row, .vault-set .check-row { flex: 0 0 auto; white-space: nowrap; }
+  .vault-label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .vault-set [data-vset] > input, .vault-set [data-vset] > .check-row { margin-top: 6px; }
+  .tags-row select, .tags-row input[type=text] { padding: 6px 8px; border-radius: 8px; background: var(--card2); color: var(--text);
+                                                border: 1px solid var(--line); font-size: 14px; width: auto; }
 </style>
 </head>
 <body>
@@ -795,7 +835,7 @@
     <div class="card">
       <form id="nickForm">
         <label class="muted" for="nickInput">Nome do personagem</label>
-        <input id="nickInput" placeholder="Ex.: Atx Buubo" autocomplete="off" autocapitalize="words" spellcheck="false" style="margin-top:6px">
+        <input id="nickInput" data-nick-ph autocomplete="off" autocapitalize="words" spellcheck="false" style="margin-top:6px">
         <div class="muted" style="margin-top:14px" id="nickModeLabel">Hoje você vai caçar:</div>
         <div class="modepick" id="nickMode" role="radiogroup" aria-labelledby="nickModeLabel">
           <button type="button" data-mode-pick="solo" role="radio" aria-checked="false"><span class="mp-ic" aria-hidden="true">🧍</span><b>Hunt solo</b><span class="muted">Hunt Session Stacker</span></button>
@@ -844,6 +884,8 @@
         <button class="item" data-page="hunts" data-mode="party"><span class="ic">🗺️</span>Hunts em party</button>
       </div>
     </div>
+    <!-- 0.23.0: alguém jogou no seu personagem (link de envio / jogador autorizado) -->
+    <button class="item" data-page="subs"><span class="ic">🤝</span>Substituições <span class="badge hidden" id="subsBadge" title="Envios novos pelo seu link"></span></button>
     <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Ranking entre amigos</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
@@ -855,7 +897,6 @@
     <button class="item" data-page="chars"><span class="ic">👤</span>Meus personagens</button>
     <button class="item" data-page="news"><span class="ic">🧾</span>Alterações <span class="badge hidden" id="newsDot">novo</span></button>
     <button class="item" data-page="settings"><span class="ic">⚙️</span>Configurações</button>
-    <button class="item" data-page="download" id="dlItem"><span class="ic">💻</span>App para Windows</button>
     <button class="item hidden" id="renewItem"><span class="ic">🔑</span>Renove 7 dias grátis da sua chave</button>
     <button class="item hidden" id="installItem"><span class="ic">📲</span>Adicionar à tela inicial</button>
     <button class="item" id="changeNick"><span class="ic">🔁</span>Trocar personagem</button>
@@ -943,7 +984,30 @@
       <div class="seg" role="tablist" id="rankPeriod" style="margin-left:6px">
         <button data-rperiod="7" class="on">Semana</button><button data-rperiod="30">Mês</button>
       </div>
+      <label class="check-row" style="margin-top:8px"><input type="checkbox" id="rankOthers"> Incluir sessões jogadas por outra pessoa</label>
       <div id="rankBody" style="margin-top:12px"></div>
+    </div>
+
+    <!-- 0.23.0: 🤝 Substituições -->
+    <div id="pageSubs" class="hidden">
+      <h1>Substituições</h1>
+      <p class="muted" style="margin-top:-4px">Quando outra pessoa joga no seu personagem, os dados continuam chegando certos:
+        tudo fica salvo no seu personagem, marcado como "jogado por outra pessoa".</p>
+      <details class="card" id="subsAbout"><summary class="row"><b>ℹ️ Antes de usar</b><span class="muted">▾</span></summary>
+        <p class="muted" style="margin:8px 0 0">A CipSoft não recomenda compartilhar a conta do Tibia e não dá suporte a quem tem
+          problemas por isso. O 4rt3mi5 não incentiva nem organiza isso: só registra quem jogou para os números ficarem certos.
+          Nunca passamos, pedimos ou guardamos login e senha do Tibia.</p>
+        <p class="muted" style="margin:8px 0 0">O que jogaram por você entra nos seus totais e metas, mas fica fora dos rankings,
+          recordes e comparações de desempenho.</p></details>
+      <h2>📤 Alguém vai jogar por mim</h2>
+      <div class="card" id="subsCreate"></div>
+      <div id="subsNew"></div>
+      <h2>🔗 Meus links de envio</h2>
+      <div id="subsLinks"></div>
+      <h2>🎮 Posso enviar por</h2>
+      <div id="subsGrants"></div>
+      <h2>📜 Joguei por outra pessoa</h2>
+      <div id="subsPlayed"></div>
     </div>
 
     <div id="pageAch" class="hidden">
@@ -1016,10 +1080,6 @@
       </div>
     </div>
 
-    <div id="pageDownload" class="hidden">
-      <h1>App para Windows</h1>
-      <div id="dlPage"></div>
-    </div>
 
     <div id="pageChars" class="hidden">
       <h1>Meus personagens</h1>

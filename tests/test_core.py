@@ -9,7 +9,7 @@ Loot Type: Leader
 Loot: 10,423,400
 Supplies: 1,145,238
 Balance: 9,278,162
-Atx Buubo
+Bobeek
 \tLoot: 351,206
 \tSupplies: 79,655
 \tBalance: 271,551
@@ -65,8 +65,8 @@ class SplitTests(unittest.TestCase):
         got = {(t["payer"], t["receiver"], t["amount"]) for t in r["transfers"]}
         self.assertEqual(got, {
             ("Hilay", "Jioe", 2_524_379),
-            ("Hilay", "Atx Buubo", 1_882_956),
-            ("Vcte", "Atx Buubo", 165_033),
+            ("Hilay", "Bobeek", 1_882_956),
+            ("Vcte", "Bobeek", 165_033),
         })
         # depois das transferências todos ficam com o profit (± resto do arredondamento)
         final = {p["name"]: p["balance"] for p in r["players"]}

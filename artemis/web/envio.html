@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0d12">
+<meta name="robots" content="noindex">
+<!-- 0.23.0: página do link de envio. Só conversa com o próprio servidor; nenhum script embutido. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<title>4rt3mi5 · Link de envio</title>
+<link rel="icon" type="image/png" href="/icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@800&display=swap">
+<style>
+  :root {
+    --bg: #0b0d12; --card: #151821; --card2: #1d212d; --line: #2a2f3d;
+    --text: #e9ecf2; --muted: #98a1b3; --gold: #f2c94c; --gold2: #fff1c1;
+    --green: #4cd18a; --red: #ff7a6b; --accent: #7c8cff;
+    --logo: "Cinzel", "Trajan Pro", Georgia, serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; min-height: 100vh; }
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+  .logo { font: 800 26px var(--logo); letter-spacing: .08em; text-align: center; margin: 12px 0 2px;
+          background: linear-gradient(180deg, var(--gold2), var(--gold) 55%, #b8890f); -webkit-background-clip: text;
+          background-clip: text; color: transparent; }
+  .sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+  h1 { font-size: 21px; margin: 6px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .gold { color: var(--gold); } .pos { color: var(--green); } .neg { color: var(--red); }
+  .err { color: var(--red); margin-top: 10px; min-height: 1.3em; font-size: 15px; }
+  button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; color: inherit; }
+  .btn { width: 100%; padding: 14px; margin-top: 12px; background: var(--accent); color: #fff; font-weight: 700; font-size: 16px; }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .btn2 { background: var(--card2); border: 1px solid var(--line); padding: 8px 12px; font-size: 14px; }
+  textarea { width: 100%; min-height: 190px; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line);
+             background: var(--card2); color: var(--text); outline: none; resize: vertical;
+             font: 12.5px/1.4 Consolas, ui-monospace, monospace; margin-top: 6px; }
+  textarea:focus { border-color: var(--accent); }
+  .banner { border-radius: 12px; padding: 12px 14px; margin: 12px 0; }
+  .banner.ok { background: rgba(76, 209, 138, .1); border: 1px solid rgba(76, 209, 138, .4); }
+  .banner.bad { background: rgba(255, 122, 107, .1); border: 1px solid rgba(255, 122, 107, .4); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  .seg { display: inline-flex; background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 3px; margin-top: 8px; }
+  .seg button { background: none; padding: 7px 14px; font-size: 14px; color: var(--muted); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .bar { height: 6px; background: var(--card2); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .langs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px; }
+  .langs button { background: var(--card2); border: 1px solid var(--line); padding: 4px 8px; font-size: 12px; display: inline-flex; gap: 6px; }
+  .langs button.on { border-color: var(--accent); }
+  .langs .tag { font-weight: 700; color: var(--gold); }
+  .hidden { display: none !important; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin: 24px 0 8px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="logo" translate="no">4rt3mi5</div>
+  <div class="sub">Link de envio</div>
+  <div class="langs" id="lang" aria-label="Idioma"></div>
+
+  <div id="loading" class="card muted">Conferindo o link…</div>
+  <div id="closed" class="card hidden"><b id="closedMsg"></b>
+    <p class="muted" style="margin:6px 0 0">Peça um link novo para o dono do personagem.</p></div>
+
+  <div id="form" class="hidden">
+    <h1>Enviar para <span class="gold" id="charName" translate="no"></span></h1>
+    <div class="card">
+      <div class="muted" id="linkInfo"></div>
+      <div class="chips" id="linkScopes"></div>
+      <div class="seg hidden" id="kindSeg" role="tablist" aria-label="Tipo de hunt">
+        <button type="button" data-kind="hunt" class="on" role="tab">Hunt</button><button type="button" data-kind="boss" role="tab">Bosses</button>
+      </div>
+      <label class="muted" for="raw" style="display:block; margin-top:12px">Cole aqui o Hunt Session Analyser ou o Party Hunt Analyser</label>
+      <textarea id="raw" spellcheck="false" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;..."></textarea>
+      <button class="btn2" id="pasteBtn" type="button" style="margin-top:8px">📋 Colar da área de transferência</button>
+      <button class="btn" id="sendBtn" type="button">Enviar</button>
+      <div class="bar hidden" id="capBar"><i id="capFill"></i></div>
+      <div class="hint hidden" id="capMsg">Confirmando que você não é um robô (leva alguns segundos)…</div>
+      <div class="err" id="err"></div>
+    </div>
+    <div id="result"></div>
+    <div class="card">
+      <b>Como funciona</b>
+      <p class="muted" style="margin:6px 0 0">O que você enviar fica salvo para o dono do personagem, marcado como
+        "jogado por outra pessoa". Este link só envia: ele não mostra nenhum dado do dono.
+        Ele vale por pouco tempo e por poucos envios.</p>
+      <p class="hint">A CipSoft não recomenda compartilhar a conta do Tibia. O 4rt3mi5 só registra quem jogou para os
+        números ficarem certos. Nunca digite aqui login ou senha de nada.</p>
+    </div>
+  </div>
+  <footer translate="no">4rt3mi5 · <a href="/" style="color:var(--accent)">artemishunt.com.br</a></footer>
+</main>
+<script src="/i18n.js"></script>
+<script src="/envio.js"></script>
+</body>
+</html>
