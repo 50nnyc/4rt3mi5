@@ -1033,6 +1033,7 @@ function restoreNav() {
   const st = S.navStack.pop();
   if (!st) { if (S.page !== "home") go("home", { noPush: true }); return; }
   if (st.page === "hunts" && S.page === "hunts") { showHuntTab(st.htab); return; }
+  if (st.page === "parties" && S.page === "parties" && PT.vault) { PT.vault = null; loadParties(); return; }  // 0.24.0: cofre → lista
   if (st.htab) S.htab = st.htab;
   go(st.page, { noPush: true });
 }
@@ -1068,8 +1069,10 @@ function go(page, opts = {}) {
   $("#pageRank").classList.toggle("hidden", page !== "rank");
   $("#pageSettings").classList.toggle("hidden", page !== "settings");
   $("#pageSubs").classList.toggle("hidden", page !== "subs");
+  $("#pageParties").classList.toggle("hidden", page !== "parties");
   $("#gearBtn").classList.toggle("on", page === "settings");
   if (page === "subs") loadSubs();
+  if (page === "parties") { if (!opts.noPush) PT.vault = null; loadParties(); }
   Music.forPage(page);
   if (page === "rank") loadRank();
   if (page === "news") loadNews();
@@ -2624,6 +2627,372 @@ document.addEventListener("click", async (e) => {
     if (ex.status !== 401) $("#cmErr2").innerHTML = `${esc(ex.message)}${ex.hint ? `<div class="hint">${esc(ex.hint)}</div>` : ""}`;
   }
 });
+
+/* ---------- 0.24.0: 🛡️ Minhas parties (titulares + substitutos) e 🗃️ cofre da party ---------- */
+const PT = { list: [], rotations: [], vault: null, editing: null };
+const PT_KIND = { hunt: "Hunt", boss: "Bosses", both: "Hunt e bosses" };
+const ORIGIN_TXT = { drop: "Drop", service: "Service", buy: "Compra" };
+/** Sacolinha da origem: 🟡 drop (limpa), 🟢 service ($), 🔴 compra ($). */
+function bag(origin) {
+  const c = { drop: "#f2c94c", service: "#4cd18a", buy: "#ff7a6b" }[origin] || "#98a1b3";
+  const sign = origin === "drop" ? "" : `<text x="12" y="19" text-anchor="middle" font-size="10" font-weight="800" fill="#0b0d12" font-family="system-ui">$</text>`;
+  return `<svg class="bag" viewBox="0 0 24 26" role="img" aria-label="${esc(ORIGIN_TXT[origin] || "")}"><title>${esc(ORIGIN_TXT[origin] || "")}</title>
+    <path d="M8 3h8l-2 4h-4z" fill="${c}" opacity=".85"/><path d="M9 7h6c5 3 7 8 7 12 0 4-3 6-10 6S2 23 2 19c0-4 2-9 7-12z" fill="${c}"/>
+    <path d="M9 7h6" stroke="#0b0d12" stroke-width="1.2" opacity=".5"/>${sign}</svg>`;
+}
+const bagLegend = () => `<div class="bag-legend"><span>${bag("drop")} Drop (vale entre 0 e o preço médio)</span>
+  <span>${bag("service")} Service (runa garantida: metade do valor para o serviçado, dividida entre os titulares)</span><span>${bag("buy")} Compra (volta para quem pagou na venda)</span></div>`;
+const ptErr = (ex) => `${esc(ex.message)}${ex.hint ? `<div class="hint">${esc(ex.hint)}</div>` : ""}`;
+const gp = (n) => `${fmt(n)} gp`;
+const range = (lo, hi) => lo === hi ? gp(lo) : `entre ${kk(lo)} e ${kk(hi)}`;
+
+async function loadParties() {
+  $("#ptList").classList.toggle("hidden", !!PT.vault);
+  $("#ptVault").classList.toggle("hidden", !PT.vault);
+  if (PT.vault) return openPartyVault(PT.vault.party.id);
+  $("#ptCards").innerHTML = `<p class="muted">Carregando…</p>`;
+  try {
+    const r = await api("GET", "/api/parties");
+    PT.list = r.parties; PT.rotations = r.rotations;
+  } catch (ex) { if (ex.status !== 401) $("#ptCards").innerHTML = `<div class="err">${ptErr(ex)}</div>`; return; }
+  renderParties();
+}
+function renderParties() {
+  $("#ptCards").innerHTML = PT.list.map((p) => {
+    const rot = PT.rotations.find((r) => r.key === p.rotation);
+    const chips = p.members.map((m) => `<span class="pt-chip${isMine(m.name) ? " me" : ""}${m.role === "sub" ? " sub" : ""}">${esc(m.name)}${m.role === "sub" ? " 🔁" : ""}</span>`).join("");
+    return `<div class="card"><div class="row"><b>${esc(p.name)}</b><span><span class="pill">${esc(PT_KIND[p.kind])}</span>${rot ? `<span class="pill">${esc(`👑 ${rot.label}`)}</span>` : ""}</span></div>
+      <div class="pt-chips">${chips}</div>
+      <div class="hint">${esc(`${p.members.filter((m) => m.role === "main").length} titulares · ${p.members.filter((m) => m.role === "sub").length} substitutos (🔁)`)}</div>
+      <div class="pv-buttons"><button class="btn2" data-pt-vault="${p.id}">🗃️ Abrir cofre</button>
+        ${p.can_edit ? `<button class="btn2" data-pt-edit="${p.id}">✏️ Editar formação</button>` : ""}</div>
+      ${p.can_edit ? `<button class="danger-link" data-pt-del="${p.id}">Apagar party</button>` : ""}</div>`;
+  }).join("") || `<p class="muted">Você ainda não está em nenhuma party registrada.</p>`;
+}
+function memberRow(m = { name: "", role: "main" }) {
+  return `<div class="pt-mem"><input maxlength="30" placeholder="Nome do personagem" value="${esc(m.name)}" list="ptMyChars" data-pt-name aria-label="Nome do personagem">
+    <select data-pt-role aria-label="Função"><option value="main"${m.role === "main" ? " selected" : ""}>Titular</option><option value="sub"${m.role === "sub" ? " selected" : ""}>🔁 Substituto</option></select>
+    <button class="danger-link" type="button" data-pt-mem-del aria-label="Tirar da party">✕</button></div>`;
+}
+function partyForm(p) {
+  PT.editing = p ? p.id : null;
+  const my = ((S.me && S.me.chars) || []).map((c) => `<option value="${esc(c.name)}">`).join("");
+  const members = p ? p.members : [{ name: S.nick || "", role: "main" }];
+  const box = $("#ptFormBox");
+  box.classList.remove("hidden");
+  box.innerHTML = `<h3 style="margin-top:0">${p ? "✏️ Editar party" : "＋ Registrar party"}</h3>
+    <datalist id="ptMyChars">${my}</datalist>
+    <form class="pt-form" id="ptForm">
+      <label><span>Nome da party</span><input name="name" maxlength="40" required value="${esc(p ? p.name : "")}" placeholder="Ex.: PT de quinta, Graveborn da guild"></label>
+      <label><span>Para que é</span><select name="kind">${Object.entries(PT_KIND).map(([k, t]) => `<option value="${k}"${(p ? p.kind : "both") === k ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></label>
+      <label><span>Rotação de bosses (liga o craft)</span><select name="rotation"><option value="">Nenhuma</option>
+        ${PT.rotations.map((r) => `<option value="${esc(r.key)}"${p && p.rotation === r.key ? " selected" : ""}>${esc(`👑 ${r.label} (craft das ${r.set_label})`)}</option>`).join("")}</select></label>
+      <div><span class="muted" style="font-size:13px">Formação (titulares dividem as vendas do cofre; substitutos entram quando falta alguém)</span>
+        <div id="ptMembers" style="margin-top:6px">${members.map(memberRow).join("")}</div>
+        <button class="btn2" type="button" id="ptAddMem">＋ Adicionar personagem</button></div>
+      <div class="actions"><button class="btn" type="submit">${p ? "Salvar formação" : "Registrar party"}</button><button class="btn2" type="button" id="ptCancel">Cancelar</button></div>
+      <div class="err" id="ptFormErr"></div></form>`;
+  box.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+$("#ptNew").addEventListener("click", () => partyForm(null));
+$("#ptFormBox").addEventListener("click", (e) => {
+  if (e.target.id === "ptAddMem") { if ($("#ptMembers").children.length < 15) $("#ptMembers").insertAdjacentHTML("beforeend", memberRow()); return; }
+  if (e.target.closest("[data-pt-mem-del]")) { e.target.closest(".pt-mem").remove(); return; }
+  if (e.target.id === "ptCancel") { $("#ptFormBox").classList.add("hidden"); PT.editing = null; }
+});
+$("#ptFormBox").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const f = e.target;
+  const members = [...f.querySelectorAll(".pt-mem")].map((r) => ({ name: r.querySelector("[data-pt-name]").value.trim(), role: r.querySelector("[data-pt-role]").value }))
+    .filter((m) => m.name);
+  const body = { name: f.name.value.trim(), kind: f.kind.value, rotation: f.rotation.value || null, members };
+  try {
+    await api("POST", PT.editing ? `/api/parties/${PT.editing}` : "/api/parties", body);
+    $("#ptFormBox").classList.add("hidden"); PT.editing = null;
+    loadParties();
+  } catch (ex) { if (ex.status !== 401) $("#ptFormErr").innerHTML = ptErr(ex); }
+});
+$("#ptCards").addEventListener("click", async (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.ptVault) return openPartyVault(+b.dataset.ptVault, true);
+  if (b.dataset.ptEdit) return partyForm(PT.list.find((p) => p.id === +b.dataset.ptEdit));
+  if (b.dataset.ptDel) {
+    const p = PT.list.find((x) => x.id === +b.dataset.ptDel);
+    if (!confirm(`Apagar a party ${p.name}? O cofre dela (itens, preços e crafts) também é apagado.`)) return;
+    try { await api("DELETE", `/api/parties/${p.id}`); loadParties(); } catch (ex) { if (ex.status !== 401) alert(ex.message); }
+  }
+});
+
+/* --- cofre --- */
+async function openPartyVault(id, push = false) {
+  try {
+    const v = await api("GET", `/api/parties/${id}/vault`);
+    if (push) pushNav();
+    PT.vault = v;
+    $("#ptList").classList.add("hidden");
+    $("#ptVault").classList.remove("hidden");
+    renderPartyVault();
+    window.scrollTo(0, 0);
+  } catch (ex) { if (ex.status !== 401) alert(ex.message); PT.vault = null; }
+}
+function closePartyVault() { PT.vault = null; $("#ptVault").classList.add("hidden"); $("#ptList").classList.remove("hidden"); loadParties(); }
+const holderOpts = (v, sel) => v.party.members.map((m) => `<option value="${esc(m.name)}"${m.name === sel ? " selected" : ""}>${esc(m.name)}${m.role === "sub" ? " (🔁)" : ""}</option>`).join("");
+function myDefault(v) {
+  const names = v.party.members.map((m) => m.name);
+  return names.find((n) => n.toLowerCase() === (S.nick || "").toLowerCase()) || names.find(isMine) || names[0];
+}
+function ptTransfers(kind, id, list) {
+  if (!list || !list.length) return "";
+  return `<div style="margin-top:6px">${list.map((t) => {
+    const mine = isMine(t.payer) || isMine(t.receiver);
+    const mark = t.paid_at ? `<span class="pos" style="font-size:13px">${esc(`✔ pago ${new Date(t.paid_at).toLocaleDateString("pt-BR")}`)}</span>`
+      : mine ? `<button class="btn2" style="padding:3px 9px; font-size:13px" data-pv-paid="${kind}:${id}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}">${isMine(t.payer) ? "✔ Já paguei" : "✔ Recebi"}</button>`
+      : `<span class="muted" style="font-size:13px">⏳ falta pagar</span>`;
+    return `<div class="tx"><div class="row"><span><b>${esc(t.payer)}</b> → <b>${esc(t.receiver)}</b></span><b class="gold">${gp(t.amount)}</b></div>
+      <div class="row"><code>${esc(t.command)}</code><span>${mark}</span></div></div>`;
+  }).join("")}</div>`;
+}
+function ptFee(total) {
+  const r = (PT.vault && PT.vault.fee) || { pct: 2.5, cap: 2500000, min: 20 };
+  return total > 0 ? Math.min(r.cap, Math.max(r.min, Math.floor(total * r.pct / 100))) : 0;
+}
+/** Prévia da venda: taxa, reembolso das compras, líquido e quanto fica para cada titular. */
+function ptSalePreview(box) {
+  const pv = box.querySelector("[data-pv-preview]");
+  if (!pv) return;
+  const total = +box.querySelector("[data-pv-total]").value || 0, fee = box.querySelector("[data-pv-fee]").checked ? ptFee(total) : 0;
+  const refund = +pv.dataset.refund || 0, n = Math.max(1, PT.vault.mains.length), net = total - fee - refund;
+  pv.innerHTML = total > 0 ? `<span>${esc(`Taxa: ${gp(fee)}`)}</span>${refund ? ` · <span>${esc(`reembolso das compras: ${gp(refund)}`)}</span>` : ""}`
+    + ` · <span>${esc(`lucro: ${gp(net)}`)}</span> · <b class="gold">${esc(`${gp(Math.max(0, Math.floor(net / n)))} para cada titular`)}</b>` : "";
+}
+function sellBox(attr, id, refund, sellerSel) {
+  const v = PT.vault;
+  return `<div class="vault-sell hidden" ${attr}="${id}">
+    <input type="number" min="1" step="1" inputmode="numeric" placeholder="Vendido por quanto (total, gp)" data-pv-total aria-label="Vendido por quanto (total, gp)">
+    <select data-pv-seller aria-label="Quem vendeu">${holderOpts(v, sellerSel)}</select>
+    <label class="check-row"><input type="checkbox" data-pv-fee checked> Taxa do Market</label>
+    <div class="hint" data-pv-preview data-refund="${refund}"></div>
+    <button class="btn2" data-pv-sell-ok="${id}">Confirmar venda</button></div>`;
+}
+function renderPartyVault() {
+  const v = PT.vault, p = v.party, t = v.totals;
+  const stockRows = v.stock.map((s) => `<tr><td>${esc(s.item)}<div class="muted" style="font-size:12px">${["drop", "service", "buy"].filter((o) => s.origins[o])
+      .map((o) => `${bag(o)} ${s.origins[o]}`).join(" ")}</div></td>
+    <td class="num">${fmt(s.qty)}</td>
+    <td class="num"><input type="number" min="0" step="1" inputmode="numeric" value="${s.price ?? ""}" placeholder="sem preço" data-pv-price="${esc(s.item)}" aria-label="${esc(`Preço de ${s.item}`)}"></td>
+    <td class="num">${s.qty ? `${kk(s.value)}${s.min !== s.value || s.max !== s.value ? `<div class="pv-range" style="font-size:12px">${esc(range(s.min, s.max))}</div>` : ""}` : "—"}</td></tr>`).join("");
+  const items = v.items.filter((i) => i.status !== "used").map((i) => {
+    const refund = i.origin === "buy" ? (i.cost_each || 0) * i.qty : 0;
+    return `<div class="vault-row">
+      <div class="row"><span>${bag(i.origin)} <b>${esc(`${fmt(i.qty)}x ${i.item}`)}</b></span><span class="muted" style="font-size:13px">${VAULT_STATUS[i.status]}</span></div>
+      <div class="vault-key">${esc(`${i.code} · ${dayLabel(i.obtained_on)}`)}</div>
+      <div class="muted" style="font-size:13px"><span>${esc(`${ORIGIN_TXT[i.origin]} · guarda: ${i.holder}`)}</span>${i.origin === "buy" && i.cost_each != null ? ` · <span>${esc(`pago ${gp(i.cost_each)} cada`)}</span>` : ""}
+        ${i.status === "stock" ? ` · <span class="pv-range">${esc(range(i.min, i.max))}</span>` : ""}${i.note ? ` · <span>${esc(i.note)}</span>` : ""}</div>
+      ${i.service ? `<div class="pv-craft-sum" style="margin-top:6px">${esc(`🟢 Service de ${i.service.client}: runa de ${kk(i.service.rune_value)} → metade ${kk(i.service.half)} ÷ ${PT.vault.mains.length} titulares = `)}<b class="gold">${esc(`${gp(i.service.each)} de cada um`)}</b>
+        ${ptTransfers("service", i.id, i.service.transfers)}</div>` : ""}
+      ${i.status === "sold" ? `<div style="font-size:14px; margin-top:4px"><span>${esc(`Vendido por ${gp(i.sold_total)} (${i.seller})`)}</span>${i.fee ? ` · <span>${esc(`taxa ${gp(i.fee)}`)}</span>` : ""}
+        ${i.refund ? ` · <span>${esc(`reembolso ${gp(i.refund)}`)}</span>` : ""} · <span>${esc(`lucro ${gp(i.net)}`)}</span> · <b class="gold">${esc(`${gp(i.each)} para cada titular`)}</b></div>
+        ${ptTransfers("item", i.id, i.transfers)}<button class="link" style="font-size:13px" data-pv-stock="${i.id}">desfazer venda</button>` : ""}
+      ${i.status === "stock" ? `<div class="vault-actions"><button class="btn2" data-pv-sell="${i.id}">💰 Vendi</button>
+          <select data-pv-origin="${i.id}" aria-label="Origem">${["drop", "service", "buy"].map((o) => `<option value="${o}"${o === i.origin ? " selected" : ""}>${esc(`Origem: ${ORIGIN_TXT[o]}`)}</option>`).join("")}</select>
+          ${i.can_delete ? `<button class="danger-link" data-pv-del="${i.id}">Apagar</button>` : ""}</div>
+        ${sellBox("data-pv-sellbox", i.id, refund, i.holder)}` : ""}</div>`;
+  }).join("");
+  const crafts = v.crafts.map((c) => `<div class="vault-row">
+      <div class="row"><b>${esc(`🔨 ${c.label} → ${c.result || "?"}`)}</b><span class="muted" style="font-size:13px">${esc(`fica com ${c.holder}`)}</span></div>
+      <div class="pv-craft-sum">Preço aproximado: <b class="pv-range">${esc(range(c.min, c.max))}</b>
+        <div class="muted" style="font-size:13px">${c.used.map((u) => `${bag(u.origin)} ${esc(`${u.item.replace(" Crypt Rune", "")}: ${u.origin === "drop" || u.cost_each == null ? `0 a ${kk(u.ref_price || 0)}` : kk(u.cost_each)}`)}`).join(" · ")}</div>
+        ${c.cost ? `<div class="muted" style="font-size:13px">${esc(`Compras a reembolsar na venda: ${gp(c.cost)}`)}</div>` : ""}</div>
+      ${c.sold_total ? `<div style="font-size:14px; margin-top:6px"><span>${esc(`Vendido por ${gp(c.sold_total)}`)}</span>${c.fee ? ` · <span>${esc(`taxa ${gp(c.fee)}`)}</span>` : ""}
+        ${c.refund ? ` · <span>${esc(`reembolso ${gp(c.refund)}`)}</span>` : ""} · <span>${esc(`lucro ${gp(c.net)}`)}</span> · <b class="gold">${esc(`${gp(c.each)} para cada titular`)}</b>
+        <div class="hint">${esc(c.sold_total - c.fee >= c.max ? "Vendeu acima do máximo estimado 🎉" : c.sold_total - c.fee <= c.min ? "Vendeu abaixo do mínimo: as compras não se pagaram." : "Venda dentro da faixa estimada.")}</div></div>
+        ${ptTransfers("craft", c.id, c.transfers)}` : `<div class="hint">Ainda não vendido — o valor é pedido quando vender.</div>`}
+      <div class="vault-actions">${c.sold_total ? `<button class="link" style="font-size:13px" data-pv-craft-unsell="${c.id}">desfazer venda</button>`
+        : `<button class="btn2" data-pv-craft-sell="${c.id}">💰 Vendi o item craftado</button>`}
+        ${c.can_delete ? `<button class="danger-link" data-pv-craft-del="${c.id}">Desfazer o craft</button>` : ""}</div>
+      ${c.sold_total ? "" : sellBox("data-pv-craftbox", c.id, c.cost, c.holder)}</div>`).join("");
+  const cs = v.craft_set;
+  const setBox = cs ? `<div class="vault-set"><b>${esc(`🧩 ${cs.label}: ${cs.items.filter((x) => cs.have[x]).length} de ${cs.items.length} no estoque`)}</b>
+      <div style="margin-top:4px">${cs.items.map((x) => `<div class="row" style="font-size:13px; padding:2px 0"><span>${cs.have[x] ? "✔" : "—"} ${esc(x)}</span>
+        <span>${v.items.filter((i) => i.status === "stock" && i.item === x).map((i) => `${bag(i.origin)}${i.qty > 1 ? esc(`×${i.qty}`) : ""}`).join(" ")}</span></div>`).join("")}</div>
+      <div class="pv-buttons"><button class="btn2" data-pv-buy>🛒 Alguém comprou um item para o craft</button>
+        <button class="btn2" data-pv-craft${cs.missing.length ? " disabled" : ""}>🔨 Craftar</button></div>
+      ${cs.missing.length ? `<div class="muted" style="font-size:13px">${esc(`Para craftar faltam: ${cs.missing.join(", ")}`)}</div>` : ""}</div>` : "";
+  $("#ptVault").innerHTML = `<button class="link" id="ptBack" type="button">← Minhas parties</button>
+    <h1 style="margin-top:6px">${esc(`🗃️ Cofre · ${p.name}`)}</h1>
+    <div class="pt-chips">${p.members.map((m) => `<span class="pt-chip${isMine(m.name) ? " me" : ""}${m.role === "sub" ? " sub" : ""}">${esc(m.name)}${m.role === "sub" ? " 🔁" : ""}</span>`).join("")}</div>
+    <div class="stats" style="margin-top:12px">
+      <div class="stat"><span class="muted">Itens no estoque</span><b>${fmt(t.units)}</b></div>
+      <div class="stat"><span class="muted">Valor (preço do cofre)</span><b>${kk(t.value)}</b></div>
+      <div class="stat"><span class="muted">Faixa (drops 0 → preço)</span><b class="pv-range">${esc(range(t.min, t.max))}</b></div>
+      <div class="stat"><span class="muted">Investido em compras</span><b>${kk(t.invested)}</b></div></div>
+    ${t.unpriced.length ? `<div class="banner bad" style="margin-top:8px">${esc(`Sem preço: ${t.unpriced.join(", ")}. Coloque quanto está valendo na tabela abaixo.`)}</div>` : ""}
+    <h2>📦 Estoque total</h2>
+    <div class="table-wrap pv-stock"><table><tr><th>Item</th><th class="num">Qtd</th><th class="num">Valendo (cada)</th><th class="num">Total</th></tr>
+      ${stockRows || `<tr><td colspan="4" class="muted">Nada no cofre ainda.</td></tr>`}</table></div>
+    <div class="hint">O preço de cada item pode ser mudado a qualquer momento por qualquer membro (vale para o cofre todo). Ele é a "média praticada".</div>
+    ${bagLegend()}
+    ${setBox}
+    <h2>＋ Guardar item</h2>
+    <form class="card vault-add" id="pvAdd">
+      <input name="item" maxlength="60" placeholder="Item (ex.: Icy Crypt Rune)" list="vaultItems" required aria-label="Item">
+      <input name="qty" type="number" min="1" max="1000" value="1" inputmode="numeric" aria-label="Quantidade" style="max-width:80px">
+      <select name="origin" aria-label="Origem"><option value="drop">🟡 Drop</option><option value="service">🟢 Service</option><option value="buy">🔴 Compra</option></select>
+      <input name="cost_each" type="number" min="0" step="1" inputmode="numeric" placeholder="Quanto pagou (cada, gp)" class="hidden" aria-label="Quanto pagou (cada, gp)">
+      <input name="client" maxlength="30" placeholder="Serviçado (personagem)" class="hidden" aria-label="Serviçado (personagem)">
+      <input name="rune_value" type="number" min="0" step="1" inputmode="numeric" placeholder="Valor da runa (gp; vazio = preço do cofre)" class="hidden" aria-label="Valor da runa (gp)">
+      <div class="hint hidden" id="pvSvcHint" style="flex-basis:100%"></div>
+      <select name="holder" aria-label="Quem guarda">${holderOpts(v, myDefault(v))}</select>
+      <input name="obtained_on" type="date" value="${new Date().toISOString().slice(0, 10)}" aria-label="Dia" title="Dia">
+      <input name="note" maxlength="80" placeholder="Observação (opcional)" aria-label="Observação">
+      <button class="btn2" type="submit">＋ Guardar</button></form>
+    <div class="err" id="pvErr"></div>
+    <h2>Itens</h2>
+    <div class="card">${items || `<p class="muted">Nenhum item guardado.</p>`}</div>
+    ${crafts ? `<h2>🔨 Crafts</h2><div class="card">${crafts}</div>` : ""}
+    <p class="hint">Vendas são divididas igualmente entre os titulares (${esc(v.mains.join(", "))}). Compras voltam para quem pagou antes da divisão.</p>`;
+}
+async function pvCall(method, path, body) {
+  $("#pvErr") && ($("#pvErr").innerHTML = "");
+  try { PT.vault = await api(method, `/api/parties/${PT.vault.party.id}/vault${path}`, body); renderPartyVault(); return true; }
+  catch (ex) { if (ex.status !== 401) { if ($("#pvErr")) { $("#pvErr").innerHTML = ptErr(ex); $("#pvErr").scrollIntoView({ block: "center" }); } else alert(ex.message); } return false; }
+}
+$("#ptVault").addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.matches("#pvAdd [name=origin]")) {
+    const f = t.form, svc = t.value === "service";
+    f.cost_each.classList.toggle("hidden", t.value !== "buy");
+    f.cost_each.required = t.value === "buy";
+    f.client.classList.toggle("hidden", !svc); f.client.required = svc;
+    f.rune_value.classList.toggle("hidden", !svc);
+    $("#pvSvcHint").classList.toggle("hidden", !svc);
+    if (svc) pvSvcHint(f);
+  }
+  if (t.dataset.pvPrice !== undefined) {
+    pvCall("POST", "/prices", { item: t.dataset.pvPrice, price: t.value === "" ? null : +t.value });
+  }
+  if (t.dataset.pvOrigin) {
+    const i = PT.vault.items.find((x) => x.id === +t.dataset.pvOrigin);
+    const body = { action: "origin", origin: t.value };
+    if (t.value === "buy") {
+      const ans = prompt(`Quanto foi pago por cada ${i.item}? (gp)`, i.cost_each ?? "");
+      if (ans === null || !ans.trim()) { t.value = i.origin; return; }
+      body.cost_each = Math.max(0, Math.floor(+ans.replace(/\D/g, "")));
+    }
+    if (t.value === "service") {
+      const who = prompt(`Quem é o serviçado (recebe a metade da ${i.item})?`, i.client || "");
+      if (!who || !who.trim()) { t.value = i.origin; return; }
+      const val = prompt(`Quanto vale a ${i.item}? (gp; vazio = preço do cofre)`, i.price ?? "");
+      if (val === null) { t.value = i.origin; return; }
+      body.client = who.trim();
+      if (val.trim()) body.rune_value = Math.max(0, Math.floor(+val.replace(/\D/g, "")));
+    }
+    pvCall("POST", `/items/${i.id}`, body);
+  }
+  const box = t.closest(".vault-sell");
+  if (box) ptSalePreview(box);
+});
+$("#ptVault").addEventListener("input", (e) => { const sf = e.target.closest("#pvAdd"); if (sf && sf.origin.value === "service") pvSvcHint(sf); const box = e.target.closest(".vault-sell"); if (box) ptSalePreview(box); });
+$("#ptVault").addEventListener("submit", (e) => {
+  if (e.target.id !== "pvAdd") return;
+  e.preventDefault();
+  const f = e.target, body = { item: f.item.value.trim(), qty: +f.qty.value || 1, origin: f.origin.value, holder: f.holder.value };
+  if (f.origin.value === "buy" && f.cost_each.value !== "") body.cost_each = +f.cost_each.value;
+  if (f.origin.value === "service") { body.client = f.client.value.trim(); if (f.rune_value.value !== "") body.rune_value = +f.rune_value.value; }
+  if (f.obtained_on.value) body.obtained_on = f.obtained_on.value;
+  if (f.note.value.trim()) body.note = f.note.value.trim();
+  pvCall("POST", "/items", body);
+});
+$("#ptVault").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const ds = b.dataset;
+  if (b.id === "ptBack") { e.preventDefault(); return goBack(); }
+  if (ds.pvSell || ds.pvCraftSell) {
+    const box = $(`[${ds.pvSell ? "data-pv-sellbox" : "data-pv-craftbox"}="${ds.pvSell || ds.pvCraftSell}"]`);
+    box.classList.toggle("hidden"); box.querySelector("[data-pv-total]").focus(); return;
+  }
+  if (ds.pvSellOk) {
+    const box = b.closest(".vault-sell"), total = +box.querySelector("[data-pv-total]").value;
+    if (!(total > 0)) { box.querySelector("[data-pv-total]").focus(); return; }
+    const fee = box.querySelector("[data-pv-fee]").checked, seller = box.querySelector("[data-pv-seller]").value;
+    if (box.hasAttribute("data-pv-sellbox")) return pvCall("POST", `/items/${ds.pvSellOk}`, { action: "sell", sold_total: total, market_fee: fee, seller });
+    return pvCall("POST", `/crafts/${ds.pvSellOk}`, { sold_total: total, market_fee: fee, seller });
+  }
+  if (ds.pvStock) return pvCall("POST", `/items/${ds.pvStock}`, { action: "stock" });
+  if (ds.pvDel) { if (confirm("Apagar este item do cofre?")) pvCall("DELETE", `/items/${ds.pvDel}`); return; }
+  if (ds.pvCraftUnsell) { const c = PT.vault.crafts.find((x) => x.id === +ds.pvCraftUnsell); return pvCall("POST", `/crafts/${c.id}`, { result: c.result }); }
+  if (ds.pvCraftDel) { if (confirm("Desfazer o craft? Os itens usados voltam para o estoque.")) pvCall("DELETE", `/crafts/${ds.pvCraftDel}`); return; }
+  if (ds.pvPaid) {
+    const [kind, id] = ds.pvPaid.split(":");
+    return pvCall("POST", "/paid", { kind, id: +id, payer: ds.payer, receiver: ds.receiver, paid: true });
+  }
+  if (ds.pvBuy !== undefined) {
+    const f = $("#pvAdd");
+    f.origin.value = "buy"; f.origin.dispatchEvent(new Event("change", { bubbles: true }));
+    f.item.value = (PT.vault.craft_set.missing[0]) || ""; f.item.focus();
+    f.scrollIntoView({ behavior: "smooth", block: "center" });
+    $("#pvErr").innerHTML = `<span class="muted">${esc("Escolha a runa, quanto foi pago e quem comprou. Ela entra no estoque com a sacolinha vermelha.")}</span>`;
+    return;
+  }
+  if (ds.pvCraft !== undefined) return openPartyCraft();
+});
+/** Dica do service enquanto digita: metade do valor da runa ÷ titulares. */
+function pvSvcHint(f) {
+  const v = PT.vault, item = f.item.value.trim().toLowerCase();
+  const price = +f.rune_value.value || (v.stock.find((s) => s.item.toLowerCase() === item) || {}).price || 0, n = Math.max(1, v.mains.length);
+  $("#pvSvcHint").innerHTML = price ? esc(`Runa de ${kk(price)} → metade ${kk(Math.floor(price / 2))} ÷ ${n} titulares = ${gp(Math.floor(Math.floor(price / 2) / n))} de cada um para o serviçado.`)
+    : esc("Informe o valor da runa (ou coloque o preço dela no cofre). A party paga a metade ao serviçado, dividida entre os titulares.");
+}
+/** 🔨 Craftar: escolher uma unidade de cada item (com a sacolinha), o item que saiu e quem ficou com ele.
+    Mostra a faixa de preço na hora; o valor de venda só é pedido quando vender. */
+function partyCraftRange() {
+  const v = PT.vault, cs = v.craft_set;
+  let lo = 0, hi = 0;
+  const parts = cs.items.map((x) => {
+    const id = +($(`[data-pc-pick="${CSS.escape(x)}"]`) || {}).value;
+    const i = v.items.find((u) => u.id === id);
+    if (!i) return null;
+    const price = (v.stock.find((s) => s.item === x) || {}).price || 0;
+    const fixed = i.origin === "buy" || (i.origin === "service" && i.cost_each != null);
+    const a = fixed ? i.cost_each || 0 : 0, b = fixed ? i.cost_each || 0 : price;
+    lo += a; hi += b;
+    return `${bag(i.origin)} ${esc(`${x.replace(" Crypt Rune", "")}: ${fixed ? kk(a) : `0 a ${kk(b)}`}`)}`;
+  });
+  $("#pcSum").innerHTML = `Preço aproximado do item craftado: <b class="pv-range">${esc(range(lo, hi))}</b>
+    <div class="muted" style="font-size:13px">${parts.filter(Boolean).join(" · ")}</div>
+    <div class="hint">Drop vale entre 0 e o preço médio do cofre; compra vale o que foi pago e service vale a metade paga ao serviçado.</div>`;
+}
+function openPartyCraft() {
+  const v = PT.vault, cs = v.craft_set;
+  const rows = cs.items.map((x) => {
+    const units = v.items.filter((i) => i.status === "stock" && i.item === x);
+    return `<div class="cm-row"><b>${esc(x)}</b><select data-pc-pick="${esc(x)}" aria-label="${esc(x)}">${units.map((i, n) => `<option value="${i.id}"${n === 0 ? " selected" : ""}>${esc(`${i.origin === "drop" ? "🟡" : i.origin === "service" ? "🟢" : "🔴"} ${ORIGIN_TXT[i.origin]}${i.cost_each != null ? ` ${kk(i.cost_each)}` : ""}${i.client ? ` (${i.client})` : ""} · ${i.code} · ${dayLabel(i.obtained_on)} · ${i.holder}${i.qty > 1 ? ` (${i.qty}x)` : ""}`)}</option>`).join("")}</select></div>`;
+  }).join("");
+  openModal(`<h3>${esc(`🔨 Craftar: ${cs.label}`)}</h3>
+    <p class="hint" style="margin-top:0">${esc(`Uma de cada vira 1 arma no ${cs.npc}. Escolha quais itens do cofre vão ser usados.`)}</p>
+    <div id="pcRows">${rows}</div>
+    <label class="vault-label">Qual item saiu?<select id="pcResult"><option value="">— ainda não sei —</option>${cs.results.map((r) => `<option>${esc(r)}</option>`).join("")}</select></label>
+    <label class="vault-label">Quem ficou com o item?<select id="pcHolder">${holderOpts(v, myDefault(v))}</select></label>
+    <div class="pv-craft-sum" id="pcSum"></div>
+    <div class="actions"><button class="btn" type="button" id="pcOk">Confirmar craft</button><button class="btn2" data-close-modal type="button">Cancelar</button></div>
+    <div class="err" id="pcErr"></div>`);
+  partyCraftRange();
+}
+$("#modal").addEventListener("change", (e) => { if (e.target.closest("[data-pc-pick]")) partyCraftRange(); });
+$("#modal").addEventListener("click", async (e) => {
+  const ok = e.target.closest("#pcOk");
+  if (!ok) return;
+  ok.disabled = true;
+  const ids = [...document.querySelectorAll("[data-pc-pick]")].map((s) => +s.value);
+  try {
+    PT.vault = await api("POST", `/api/parties/${PT.vault.party.id}/vault/crafts`, {
+      set: PT.vault.craft_set.key, item_ids: ids, result: $("#pcResult").value || null, holder: $("#pcHolder").value });
+    closeModal(); renderPartyVault();
+  } catch (ex) { ok.disabled = false; if (ex.status !== 401) $("#pcErr").innerHTML = ptErr(ex); }
+});
+
 function fromHuntsBlock(list) {
   if (!list.length) return "";
   return `<h2>Bosses nas suas hunts (${list.length})</h2>

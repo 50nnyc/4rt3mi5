@@ -51,8 +51,9 @@ linha1="0 2,8,14,20 * * * $PROJ/deploy/relatorio.sh >/dev/null 2>&1"
 linha2="*/15 * * * * $PROJ/deploy/relatorio.sh --alertas >/dev/null 2>&1"
 { crontab -l 2>/dev/null | grep -v 'deploy/relatorio.sh' || true; echo "$linha1"; echo "$linha2"; } | crontab -
 
-# Mantém a VM "não ociosa" para a Oracle não recolher (1 min de CPU a cada 10, prioridade mínima)
-linha="*/10 * * * * $PROJ/deploy/manter-ativa.sh >/dev/null 2>&1"
+# Mantém a VM "não ociosa" para a Oracle não recolher (~1 min de CPU a cada 10, prioridade mínima).
+# 0.24.0: --aleatorio sorteia o atraso (0 a 4 min) e a duração (45 a 90 s) de cada rodada.
+linha="*/10 * * * * $PROJ/deploy/manter-ativa.sh --aleatorio >/dev/null 2>&1"
 { crontab -l 2>/dev/null | grep -v 'deploy/manter-ativa.sh' || true; echo "$linha"; } | crontab -
 
 echo

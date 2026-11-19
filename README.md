@@ -269,6 +269,31 @@ não veem o item.
   Ancestor Spirit. As que faltaram no estoque entram como "compradas" (custo). Líquido = venda − taxa − custo; mostra por runa e
   por pessoa. "Desfazer o uso" devolve as runas ao estoque.
 
+## 🛡️ Parties registradas e 🗃️ Cofre da party (0.24.0)
+
+- **Party** (☰ → Party → 🛡️ Minhas parties e cofre; tabelas `parties`, `party_members`; rotas `/api/parties`): nome, tipo
+  (hunt, bosses ou os dois), rotação opcional (Graveborn liga o craft das Crypt Runes) e formação com **titulares** e
+  **substitutos**. Quem cria precisa estar na party e é o único que muda a formação ou apaga; quem guarda item do cofre não
+  pode sair (pode virar substituto). Qualquer personagem da party (titular ou substituto) vê e mexe no cofre.
+- **🔁 Substituto automático pela party** (`artemis/core/party.py`, `subs_from_parties`): a party "bate" com um lootsplit quando
+  pelo menos metade dos titulares está nele. Quem é substituto (ou nem é da party) vira 🔁 substituto; se faltou exatamente um
+  titular, aparece "no lugar de". Vale para Lootsplit e Lootsplit de bosses e tem prioridade sobre o palpite pelos lootsplits
+  parecidos. A marcação manual continua mandando.
+- **Cofre da party** (tabelas `party_items`, `party_prices`, `party_crafts`): estoque total por item e quanto cada item vale
+  (`party_prices`, qualquer membro muda a qualquer momento). Cada item tem a origem (sacolinha): 🟡 Drop (amarela, limpa),
+  🟢 Service (verde com $) e 🔴 Compra (vermelha com $, preço pago obrigatório; quem guarda = quem pagou).
+- **Service** (`service_half`, `service_shares`): no service há sempre uma runa garantida do serviçado. A party fica com ela
+  pela **metade do valor da runa** (informado, ou o preço do cofre), e a metade é dividida entre os **titulares**: runa de 75kk
+  → 37,5kk ÷ 5 = 7,5kk de cada um para o serviçado ("transfer" + "✔ Já paguei", pagamentos `psvc`). Pede o serviçado
+  (coluna `client`) e é sempre 1 unidade.
+  Faixa de valor por unidade: Drop = 0 até o preço do cofre; Compra = o pago; Service = a metade paga ao serviçado.
+- **Venda** (item ou craft): total + Taxa do Market; primeiro volta o que foi pago nas Compras para quem comprou, o resto é
+  dividido igual entre os **titulares** ("transfer X to Y" + "✔ Já paguei", pagamentos `pitem`/`pcraft` em `hunt_payments`).
+- **Craft (Graveborn)**: botão "🛒 Alguém comprou um item para o craft" (guarda como Compra) e "🔨 Craftar" (escolhe uma unidade
+  de cada runa do estoque). Guarda a faixa do item craftado na hora do craft (ex.: drops 12/14/75kk + compras 12/40kk → entre 52kk
+  e 153kk) e o preço do cofre de cada runa usada (`ref_price`); o valor de venda só é pedido quando vender. "Desfazer o craft"
+  devolve as runas ao estoque.
+
 ## Música
 
 As trilhas tocam direto do site oficial (`static.tibia.com/music/`, © CipSoft) — nada é copiado para o

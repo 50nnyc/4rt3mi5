@@ -1252,5 +1252,9 @@
 "{0} · {1} · dropou {2}": "{0} · {1} · drop de {2}",
 "{0} · {1} · dropou {2} ({3}x)": "{0} · {1} · drop de {2} ({3}x)",
 "Data do drop inválida.": "Date du drop invalide.",
-"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "L'app Windows de 4rt3mi5 a été arrêtée. Utilise 4rt3mi5 dans ton navigateur : {0}"
+"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "L'app Windows de 4rt3mi5 a été arrêtée. Utilise 4rt3mi5 dans ton navigateur : {0}",
+"Minhas parties": "Mes parties",
+"Minhas parties e cofre": "Mes parties et coffre",
+"Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "Enregistrez la composition de la party (titulaires et remplaçants) pour la chasse et les boss. Avec elle, 4rt3mi5 marque tout seul qui est venu en 🔁 remplaçant dans les lootsplits, et le coffre partage les ventes entre les titulaires.",
+"＋ Registrar party": "＋ Enregistrer la party"
 }

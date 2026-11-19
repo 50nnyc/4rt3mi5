@@ -42,6 +42,7 @@ from artemis.core import bosses as boss_core
 from artemis.core import captcha
 from artemis.core import rotations as rot
 from artemis.core import damage as damage_core
+from artemis.core import party as party_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
@@ -1014,7 +1015,7 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
 TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings",
-               "download", "subs"}  # 0.21.0; 0.23.0: 🤝 Substituições
+               "download", "subs", "parties"}  # 0.21.0; 0.23.0: 🤝 Substituições; 0.24.0: 🛡️ parties
 
 
 class TrackIn(BaseModel):
@@ -1526,7 +1527,10 @@ def _hunts_out(hunts: list[dict], access: dict, kind: str = "hunt") -> list[dict
         h["in_party"] = in_party
         h["inputs"] = [_input_view(i) for i in inputs.get(hid, [])] if in_party else []
         h["member_sessions"] = [_member_view(s, access, raw) for s in members.get(hid, [])] if in_party else []
-        auto = _auto_subs([p["name"] for p in raw["players"]], hid, rosters) if in_party and kind == "hunt" else {}
+        auto = {}
+        if in_party:  # 0.24.0: a party registrada manda; sem ela, o palpite pelos lootsplits parecidos
+            names = [p["name"] for p in raw["players"]]
+            auto = _registered_subs(names, kind) or (_auto_subs(names, hid, rosters) if kind == "hunt" else {})
         h["tags"] = _tags_view(raw["players"], tags.get(hid, []), auto) if in_party else {}
         h["can_claim"] = bool(orphan) and not h["can_delete"]
         h["orphan"] = bool(orphan)
@@ -1573,7 +1577,8 @@ def _boss_hunt_view(h: dict, access: dict, owners: dict | None = None) -> dict:
     raw = dict(h)
     orphan = _is_orphan(raw, owners if owners is not None else {})
     out = _public(h, access)
-    out["tags"] = _tags_view(raw["players"], store.tags_for("boss", [raw["id"]])[raw["id"]], {})
+    out["tags"] = _tags_view(raw["players"], store.tags_for("boss", [raw["id"]])[raw["id"]],
+                             _registered_subs([p["name"] for p in raw["players"]], "boss"))
     out["orphan"] = orphan
     out["can_claim"] = orphan and not out["can_delete"]
     return out
@@ -2797,7 +2802,7 @@ def _vault_ref(kind: str, ref_id: int, access: dict) -> dict:
         if h is None:
             raise HTTPException(404, "Lootsplit não encontrado (talvez tenha sido apagado).")
         members = [p["name"] for p in h["players"]]
-        tags = _tags_view(h["players"], store.tags_for("boss", [ref_id])[ref_id], {})
+        tags = _tags_view(h["players"], store.tags_for("boss", [ref_id])[ref_id], _registered_subs(members, "boss"))
         subs = [n for n, t in tags.items() if t.get("sub")]
         day = h["started_at"]
     elif kind == "session":
@@ -3053,6 +3058,442 @@ def vault_paid(body: VaultPaidIn, access: dict = Depends(require_session)):
         raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.", "hint": FORBIDDEN_HINT})
     store.set_paid(body.kind, body.id, t["payer"], t["receiver"], t["amount"], access["key"], body.paid)
     return _vault_payload(row["ref_kind"], row["ref_id"], access)
+
+
+# ------------------------------------------------------------------ 0.24.0: 👥 parties registradas e 🗃️ cofre da party
+PARTY_MAX_OWNED = 20
+PARTY_MAX_MEMBERS = 15
+PARTY_ITEMS_MAX = 500
+PARTY_PRIVATE = "Só quem é da party (titular ou substituto) vê e mexe nela."
+NOT_PARTY_OWNER = "Só quem criou a party muda a formação."
+ORIGIN_LABEL = {"drop": "Drop", "service": "Service", "buy": "Compra"}
+
+
+class PartyMemberIn(BaseModel):
+    name: Name
+    role: Literal["main", "sub"] = "main"
+
+
+class PartyIn(BaseModel):
+    name: Annotated[str, Field(min_length=2, max_length=40)]
+    kind: Literal["hunt", "boss", "both"] = "both"
+    rotation: Literal["graveborn"] | None = None
+    members: Annotated[list[PartyMemberIn], Field(min_length=1, max_length=PARTY_MAX_MEMBERS)]
+
+
+class PartyItemIn(BaseModel):
+    item: Annotated[str, Field(min_length=2, max_length=VAULT_ITEM_MAX)]
+    qty: int = Field(default=1, ge=1, le=1000)
+    origin: Literal["drop", "service", "buy"] = "drop"
+    cost_each: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+    holder: Name
+    obtained_on: date | None = None
+    note: Annotated[str, Field(max_length=80)] | None = None
+    client: Name | None = None                  # service: o serviçado
+    rune_value: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)  # service: valor da runa (padrão: preço do cofre)
+
+
+class PartyItemEdit(BaseModel):
+    action: Literal["sell", "stock", "origin", "holder"]
+    sold_total: int | None = Field(default=None, ge=1, le=VAULT_GP_MAX)
+    market_fee: bool = False
+    seller: Name | None = None
+    origin: Literal["drop", "service", "buy"] | None = None
+    cost_each: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+    holder: Name | None = None
+    client: Name | None = None
+    rune_value: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+
+
+class PartyPriceIn(BaseModel):
+    item: Annotated[str, Field(min_length=2, max_length=VAULT_ITEM_MAX)]
+    price: int | None = Field(default=None, ge=0, le=VAULT_GP_MAX)
+
+
+class PartyCraftIn(BaseModel):
+    set: Literal["crypt"]
+    item_ids: Annotated[list[int], Field(min_length=1, max_length=10)]
+    result: Annotated[str, Field(max_length=VAULT_ITEM_MAX)] | None = None
+    holder: Name
+
+
+class PartyCraftEdit(BaseModel):
+    result: Annotated[str, Field(max_length=VAULT_ITEM_MAX)] | None = None
+    sold_total: int | None = Field(default=None, ge=1, le=VAULT_GP_MAX)
+    market_fee: bool = False
+    seller: Name | None = None
+
+
+class PartyPaidIn(PaidIn):
+    kind: Literal["item", "craft", "service"]
+    id: int = Field(ge=1)
+
+
+def _party_access(party_id: int, access: dict) -> dict:
+    p = store.party(party_id)
+    if p is None:
+        raise HTTPException(404, "Party não encontrada (talvez tenha sido apagada).")
+    if p["owner_key"] != access["key"] and not any(store.is_linked(access["key"], m["name"]) for m in p["members"]):
+        raise HTTPException(403, {"message": PARTY_PRIVATE, "hint": FORBIDDEN_HINT})
+    return p
+
+
+def _party_who(p: dict, name: str | None) -> str:
+    real = next((m["name"] for m in p["members"] if name and name_key(m["name"]) == name_key(name)), None)
+    if real is None:
+        raise HTTPException(422, f"{name} não é da party {p['name']}.")
+    return real
+
+
+def _mains(p: dict) -> list[str]:
+    return [m["name"] for m in p["members"] if m["role"] == "main"]
+
+
+def _party_brief(p: dict, access: dict) -> dict:
+    return {"id": p["id"], "name": p["name"], "kind": p["kind"], "rotation": p["rotation"],
+            "set": party_core.ROTATION_SETS.get(p["rotation"] or ""),
+            "members": p["members"], "can_edit": p["owner_key"] == access["key"], "created_at": p["created_at"]}
+
+
+def _party_vault_view(p: dict, access: dict) -> dict:
+    """Estoque total do cofre da party, quanto cada item vale, vendas (com quem paga quem) e crafts."""
+    data = store.party_vault(p["id"])
+    mains = _mains(p)
+    prices = data["prices"]
+
+    def price_of(item: str) -> int | None:
+        r = prices.get(name_key(item))
+        return r["price"] if r else None
+
+    paid_i = store.payments_of("pitem", [i["id"] for i in data["items"]])
+    paid_s = store.payments_of("psvc", [i["id"] for i in data["items"] if i["origin"] == "service"])
+    paid_c = store.payments_of("pcraft", [c["id"] for c in data["crafts"]])
+    items = []
+    for i in data["items"]:
+        price = price_of(i["item"])
+        lo, hi = party_core.unit_range(i["origin"], i["cost_each"], price)
+        out = {"id": i["id"], "code": f"#{i['id']}", "item": i["item"], "qty": i["qty"], "origin": i["origin"],
+               "origin_label": ORIGIN_LABEL[i["origin"]], "cost_each": i["cost_each"], "holder": i["holder"],
+               "obtained_on": i["obtained_on"], "note": i["note"], "status": i["status"], "price": price,
+               "min": lo * i["qty"], "max": hi * i["qty"], "value": (price or 0) * i["qty"],
+               "set": rot.set_of(i["item"]), "craft_id": i["craft_id"], "ref_price": i["ref_price"],
+               "can_delete": i["owner_key"] == access["key"] or p["owner_key"] == access["key"], "created_at": i["created_at"],
+               "client": i.get("client")}
+        if i["origin"] == "service" and i.get("client"):
+            sv = party_core.service_shares(i["cost_each"], i["qty"], mains, i["client"])
+            out["service"] = {"client": i["client"], "rune_value": (i["cost_each"] or 0) * 2, "half": sv["total"],
+                              "each": sv["each"], "transfers": _transfers_with_paid(sv["transfers"], paid_s[i["id"]])}
+        if i["status"] == "sold":
+            refunds = [(i["holder"], (i["cost_each"] or 0) * i["qty"])] if i["origin"] == "buy" else []
+            s = party_core.sale(i["sold_total"], bool(i["market_fee"]), i["sold_at"], mains, i["seller"] or i["holder"], refunds)
+            out.update(sold_total=i["sold_total"], market_fee=bool(i["market_fee"]), sold_at=i["sold_at"],
+                       seller=i["seller"] or i["holder"], fee=s["fee"], refund=s["refund"], net=s["net"], each=s["each"],
+                       transfers=_transfers_with_paid(s["transfers"], paid_i[i["id"]]))
+        items.append(out)
+    crafts = []
+    for c in data["crafts"]:
+        used = [x for x in items if x["craft_id"] == c["id"]]
+        out = {"id": c["id"], "set": c["set_key"], "label": rot.SETS[c["set_key"]]["label"], "result": c["result"],
+               "holder": c["holder"], "min": c["min_value"], "max": c["max_value"], "cost": c["cost"],
+               "sold_total": c["sold_total"], "market_fee": bool(c["market_fee"]), "sold_at": c["sold_at"],
+               "used": [{"id": u["id"], "code": u["code"], "item": u["item"], "origin": u["origin"], "cost_each": u["cost_each"],
+                         "ref_price": u["ref_price"], "holder": u["holder"]} for u in used],
+               "can_delete": c["owner_key"] == access["key"] or p["owner_key"] == access["key"], "created_at": c["created_at"]}
+        if c["sold_total"]:
+            refunds = [(u["holder"], u["cost_each"] or 0) for u in used if u["origin"] == "buy"]
+            s = party_core.sale(c["sold_total"], bool(c["market_fee"]), c["sold_at"], mains, c["holder"], refunds)
+            out.update(fee=s["fee"], refund=s["refund"], net=s["net"], each=s["each"],
+                       transfers=_transfers_with_paid(s["transfers"], paid_c[c["id"]]))
+        crafts.append(out)
+    # estoque total por item (todas as unidades no estoque, de qualquer origem)
+    stock: dict[str, dict] = {}
+    for x in items:
+        if x["status"] != "stock":
+            continue
+        s = stock.setdefault(name_key(x["item"]), {"item": x["item"], "qty": 0, "price": x["price"], "value": 0,
+                                                   "min": 0, "max": 0, "origins": {"drop": 0, "service": 0, "buy": 0}})
+        s["qty"] += x["qty"]
+        s["value"] += x["value"]
+        s["min"] += x["min"]
+        s["max"] += x["max"]
+        s["origins"][x["origin"]] += x["qty"]
+    for k, r in prices.items():  # preço salvo de item que não está no estoque agora também aparece (para editar)
+        stock.setdefault(k, {"item": r["item"], "qty": 0, "price": r["price"], "value": 0, "min": 0, "max": 0,
+                             "origins": {"drop": 0, "service": 0, "buy": 0}})
+    set_key = party_core.ROTATION_SETS.get(p["rotation"] or "")
+    craft_set = None
+    if set_key:
+        s = rot.SETS[set_key]
+        have = {it: sum(x["qty"] for x in items if x["status"] == "stock" and x["item"] == it) for it in s["items"]}
+        craft_set = {"key": set_key, "label": s["label"], "items": s["items"], "results": s["results"], "npc": s["npc"],
+                     "have": have, "missing": [it for it in s["items"] if not have[it]]}
+    st = [x for x in items if x["status"] == "stock"]
+    totals = {"units": sum(x["qty"] for x in st), "value": sum(x["value"] for x in st),
+              "min": sum(x["min"] for x in st), "max": sum(x["max"] for x in st),
+              "invested": sum((x["cost_each"] or 0) * x["qty"] for x in st if x["origin"] == "buy"),
+              "unpriced": sorted({x["item"] for x in st if x["price"] is None})}
+    return {"party": _party_brief(p, access), "mains": mains, "stock": sorted(stock.values(), key=lambda s: (-s["qty"], s["item"])),
+            "items": items, "crafts": crafts, "craft_set": craft_set, "totals": totals, "fee": rot.fee_rule()}
+
+
+def _clean_members(body: PartyIn, access: dict) -> list[dict]:
+    seen, members = set(), []
+    for m in body.members:
+        n = _clean_name(m.name)
+        if name_key(n) in seen:
+            raise HTTPException(422, f"{n} está repetido na party.")
+        seen.add(name_key(n))
+        members.append({"name": n, "role": m.role})
+    if not any(m["role"] == "main" for m in members):
+        raise HTTPException(422, "A party precisa de pelo menos um titular.")
+    if not any(store.is_linked(access["key"], m["name"]) for m in members):
+        raise HTTPException(403, {"message": "Coloque pelo menos um personagem seu na party.", "hint": FORBIDDEN_HINT})
+    return members
+
+
+def _party_name(name: str) -> str:
+    name = " ".join(name.split())
+    if not _PLACE_NAME.fullmatch(name):
+        raise HTTPException(422, "Use só letras, números e pontuação simples no nome da party.")
+    return name
+
+
+@app.get("/api/parties")
+def parties_mine(access: dict = Depends(require_session)):
+    """Parties em que algum personagem da conta está (ou que a conta criou)."""
+    chars = [c["name"] for c in store.key_chars(access["key"])]
+    return {"parties": [_party_brief(p, access) for p in store.parties_with(chars)],
+            "rotations": [{"key": k, "label": next(g["label"] for g in rot.GROUPS if g["key"] == k),
+                           "set": s, "set_label": rot.SETS[s]["label"]} for k, s in party_core.ROTATION_SETS.items()]}
+
+
+@app.post("/api/parties")
+def party_create(body: PartyIn, access: dict = Depends(require_session)):
+    if store.parties_owned(access["key"]) >= PARTY_MAX_OWNED:
+        raise HTTPException(429, f"Você já criou {PARTY_MAX_OWNED} parties. Apague uma que não usa mais.")
+    pid = store.save_party(None, _party_name(body.name), body.kind, body.rotation, _clean_members(body, access), access["key"])
+    return {"party": _party_brief(store.party(pid), access)}
+
+
+@app.post("/api/parties/{party_id}")
+def party_update(party_id: int, body: PartyIn, access: dict = Depends(require_session)):
+    p = _party_access(party_id, access)
+    if p["owner_key"] != access["key"]:
+        raise HTTPException(403, NOT_PARTY_OWNER)
+    members = _clean_members(body, access)
+    # quem tem item guardado ou craft em mãos não sai da party (senão o cofre fica sem dono)
+    vault = store.party_vault(party_id)
+    keep = {name_key(i["holder"]) for i in vault["items"] if i["status"] == "stock"}
+    keep |= {name_key(c["holder"]) for c in vault["crafts"] if not c["sold_total"]}
+    gone = keep - {name_key(m["name"]) for m in members}
+    if gone:
+        raise HTTPException(409, "Quem ainda guarda itens do cofre precisa continuar na party (pode virar substituto).")
+    store.save_party(party_id, _party_name(body.name), body.kind, body.rotation, members, access["key"])
+    return {"party": _party_brief(store.party(party_id), access)}
+
+
+@app.delete("/api/parties/{party_id}")
+def party_delete(party_id: int, access: dict = Depends(require_session)):
+    p = _party_access(party_id, access)
+    if p["owner_key"] != access["key"]:
+        raise HTTPException(403, NOT_PARTY_OWNER)
+    store.delete_party(party_id)
+    return {"deleted": party_id}
+
+
+@app.get("/api/parties/{party_id}/vault")
+def party_vault_get(party_id: int, access: dict = Depends(require_session)):
+    return _party_vault_view(_party_access(party_id, access), access)
+
+
+def _check_day(d: date | None) -> str:
+    day = (d or date.today()).isoformat()
+    if day > (date.today() + timedelta(days=1)).isoformat() or day < "2000-01-01":
+        raise HTTPException(422, "Data inválida.")
+    return day
+
+
+def _service_terms(p: dict, item: str, client: str | None, rune_value: int | None) -> tuple[int, str]:
+    """🟢 Service: a runa garantida do serviçado. A party paga a ele a metade do valor da runa (informado ou o preço do
+    cofre), dividida entre os titulares. Devolve (metade, serviçado)."""
+    client = _clean_name(client)
+    if not client:
+        raise HTTPException(422, "Informe quem é o serviçado (o personagem que recebe a metade da runa).")
+    if rune_value is None:
+        rune_value = next((r["price"] for k, r in store.party_vault(p["id"])["prices"].items() if k == name_key(item)), None)
+    if not rune_value:
+        raise HTTPException(422, f"Informe quanto vale a {item} (ou coloque o preço dela no cofre).")
+    return party_core.service_half(rune_value), client
+
+
+@app.post("/api/parties/{party_id}/vault/items")
+def party_item_add(party_id: int, body: PartyItemIn, access: dict = Depends(require_session)):
+    """Guardar um item no cofre: drop, service (runa garantida do serviçado) ou compra (preço pago obrigatório)."""
+    p = _party_access(party_id, access)
+    if body.origin == "buy" and body.cost_each is None:
+        raise HTTPException(422, "Informe quanto foi pago (cada).")
+    if len(store.party_vault(party_id)["items"]) >= PARTY_ITEMS_MAX:
+        raise HTTPException(429, "Esse cofre já tem itens demais.")
+    note = " ".join(body.note.split()) if body.note else None
+    if note and not _PLACE_NAME.fullmatch(note):
+        raise HTTPException(422, "Use só letras, números e pontuação simples na observação.")
+    item, qty, cost, client = _clean_item(body.item), body.qty, body.cost_each if body.origin == "buy" else None, None
+    if body.origin == "service":
+        qty = 1  # uma runa garantida por service
+        cost, client = _service_terms(p, item, body.client, body.rune_value)
+    store.add_party_item(party_id, item, qty, body.origin, cost, _party_who(p, body.holder),
+                         _check_day(body.obtained_on), note, access["key"], client)
+    return _party_vault_view(p, access)
+
+
+def _party_item_of(party_id: int, item_id: int, access: dict) -> tuple[dict, dict]:
+    p = _party_access(party_id, access)
+    i = store.party_item(item_id)
+    if i is None or i["party_id"] != party_id:
+        raise HTTPException(404, "Item não encontrado (talvez tenha sido apagado).")
+    return p, i
+
+
+@app.post("/api/parties/{party_id}/vault/items/{item_id}")
+def party_item_edit(party_id: int, item_id: int, body: PartyItemEdit, access: dict = Depends(require_session)):
+    """Vendido (pede o valor), de volta ao estoque, trocar a origem (sacolinha) ou quem guarda."""
+    p, i = _party_item_of(party_id, item_id, access)
+    if i["status"] == "used":
+        raise HTTPException(409, "Esse item já foi usado num craft. Desfaça o craft para mexer nele.")
+    if body.action == "sell":
+        if not body.sold_total:
+            raise HTTPException(422, "Informe por quanto foi vendido (valor total).")
+        seller = _party_who(p, body.seller or i["holder"])
+        store.update_party_item(item_id, status="sold", sold_total=body.sold_total, market_fee=1 if body.market_fee else 0,
+                                sold_at=_now(), seller=seller)
+    elif body.action == "stock":
+        store.update_party_item(item_id, status="stock", sold_total=None, market_fee=0, sold_at=None, seller=None)
+        store.forget_payments("pitem", item_id)
+    elif body.action == "origin":
+        if not body.origin:
+            raise HTTPException(422, "Escolha a origem: Drop, Service ou Compra.")
+        if body.origin == "buy" and body.cost_each is None:
+            raise HTTPException(422, "Informe quanto foi pago (cada).")
+        cost, client = (body.cost_each if body.origin == "buy" else None), None
+        if body.origin == "service":
+            if i["qty"] > 1:
+                raise HTTPException(422, "Service é uma runa só. Separe a unidade antes (apague e guarde de novo).")
+            cost, client = _service_terms(p, i["item"], body.client, body.rune_value)
+        store.forget_payments("psvc", item_id)
+        store.update_party_item(item_id, origin=body.origin, cost_each=cost, client=client)
+    else:
+        store.update_party_item(item_id, holder=_party_who(p, body.holder))
+    return _party_vault_view(p, access)
+
+
+@app.delete("/api/parties/{party_id}/vault/items/{item_id}")
+def party_item_delete(party_id: int, item_id: int, access: dict = Depends(require_session)):
+    p, i = _party_item_of(party_id, item_id, access)
+    if i["owner_key"] != access["key"] and p["owner_key"] != access["key"]:
+        raise HTTPException(403, "Só quem guardou o item (ou quem criou a party) pode apagar.")
+    if i["status"] == "used":
+        raise HTTPException(409, "Esse item já foi usado num craft. Desfaça o craft para mexer nele.")
+    store.delete_party_item(item_id)
+    return _party_vault_view(p, access)
+
+
+@app.post("/api/parties/{party_id}/vault/prices")
+def party_price_set(party_id: int, body: PartyPriceIn, access: dict = Depends(require_session)):
+    """Quanto o item está valendo (média praticada). Qualquer membro muda a qualquer momento; vazio = sem preço."""
+    p = _party_access(party_id, access)
+    store.set_party_price(party_id, _clean_item(body.item), body.price, access["key"])
+    return _party_vault_view(p, access)
+
+
+@app.post("/api/parties/{party_id}/vault/crafts")
+def party_craft_add(party_id: int, body: PartyCraftIn, access: dict = Depends(require_session)):
+    """🔨 Craftar: uma unidade de cada item do conjunto, escolhida do estoque (qualquer sacolinha).
+    Guarda a faixa de preço do item craftado; o valor de venda só é pedido quando vender."""
+    p = _party_access(party_id, access)
+    if party_core.ROTATION_SETS.get(p["rotation"] or "") != body.set:
+        raise HTTPException(422, "Essa party não crafta esse conjunto.")
+    s = rot.SETS[body.set]
+    data = store.party_vault(party_id)
+    stock = {i["id"]: i for i in data["items"] if i["status"] == "stock"}
+    picked: dict[str, dict] = {}
+    for iid in body.item_ids:
+        i = stock.get(iid)
+        if i is None or i["item"] not in s["items"] or i["item"] in picked:
+            raise HTTPException(422, "Escolha um item de cada tipo que está no estoque do cofre.")
+        picked[i["item"]] = i
+    if len(picked) != len(s["items"]):
+        raise HTTPException(422, f"O craft precisa de um de cada: {', '.join(s['items'])}. "
+                                 "Se alguém comprou o que faltava, guarde antes como 🔴 Compra.")
+    holder = _party_who(p, body.holder)
+    result = _clean_item(body.result) if body.result else None
+    if result and result not in s["results"]:
+        raise HTTPException(422, f"Escolha um dos itens: {', '.join(s['results'])}.")
+    prices = {k: r["price"] for k, r in data["prices"].items()}
+    used, parts = [], []
+    for i in picked.values():
+        price = prices.get(name_key(i["item"]))
+        parts.append({"origin": i["origin"], "cost_each": i["cost_each"], "price": price})
+        used.append((store.split_party_item(i["id"]), price))  # tudo conferido: separa 1 unidade de cada
+    cid = store.add_party_craft(party_id, body.set, used, result, holder, party_core.craft_range(parts), access["key"])
+    return {**_party_vault_view(p, access), "craft_id": cid}
+
+
+def _party_craft_of(party_id: int, craft_id: int, access: dict) -> tuple[dict, dict]:
+    p = _party_access(party_id, access)
+    c = store.party_craft(craft_id)
+    if c is None or c["party_id"] != party_id:
+        raise HTTPException(404, "Craft não encontrado (talvez tenha sido desfeito).")
+    return p, c
+
+
+@app.post("/api/parties/{party_id}/vault/crafts/{craft_id}")
+def party_craft_edit(party_id: int, craft_id: int, body: PartyCraftEdit, access: dict = Depends(require_session)):
+    """Item que saiu e venda (o valor só é pedido aqui, quando vender). Sem sold_total = ainda não vendido."""
+    p, c = _party_craft_of(party_id, craft_id, access)
+    s = rot.SETS[c["set_key"]]
+    result = _clean_item(body.result) if body.result else c["result"]
+    if result and result not in s["results"]:
+        raise HTTPException(422, f"Escolha um dos itens: {', '.join(s['results'])}.")
+    holder = _party_who(p, body.seller) if body.seller else c["holder"]
+    if not body.sold_total:
+        store.forget_payments("pcraft", craft_id)
+    store.update_party_craft(craft_id, result=result, holder=holder, sold_total=body.sold_total,
+                             market_fee=1 if body.sold_total and body.market_fee else 0,
+                             sold_at=_now() if body.sold_total else None)
+    return _party_vault_view(p, access)
+
+
+@app.delete("/api/parties/{party_id}/vault/crafts/{craft_id}")
+def party_craft_delete(party_id: int, craft_id: int, access: dict = Depends(require_session)):
+    p, c = _party_craft_of(party_id, craft_id, access)
+    if c["owner_key"] != access["key"] and p["owner_key"] != access["key"]:
+        raise HTTPException(403, "Só quem registrou o craft (ou quem criou a party) pode desfazer.")
+    store.delete_party_craft(craft_id)
+    return _party_vault_view(p, access)
+
+
+@app.post("/api/parties/{party_id}/vault/paid")
+def party_paid(party_id: int, body: PartyPaidIn, access: dict = Depends(require_session)):
+    """'Já paguei' / 'Recebi' de uma venda do cofre da party."""
+    p = _party_access(party_id, access)
+    view = _party_vault_view(p, access)
+    rows = view["crafts"] if body.kind == "craft" else view["items"]
+    x = next((r for r in rows if r["id"] == body.id), None) or {}
+    pay_list = (x.get("service") or {}).get("transfers", []) if body.kind == "service" else x.get("transfers", [])
+    t = next((t for t in pay_list if name_key(t["payer"]) == name_key(body.payer)
+              and name_key(t["receiver"]) == name_key(body.receiver)), None)
+    if t is None:
+        raise HTTPException(404, "Essa transferência não existe.")
+    if not (store.is_linked(access["key"], t["payer"]) or store.is_linked(access["key"], t["receiver"])):
+        raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.", "hint": FORBIDDEN_HINT})
+    store.set_paid({"item": "pitem", "craft": "pcraft", "service": "psvc"}[body.kind], body.id, t["payer"], t["receiver"], t["amount"],
+                   access["key"], body.paid)
+    return _party_vault_view(p, access)
+
+
+def _registered_subs(players: list[str], kind: str) -> dict[str, str | None]:
+    """🔁 Substitutos pelas parties registradas (kind = 'hunt' ou 'boss')."""
+    return party_core.subs_from_parties(players, store.parties_with(players), kind)
 
 
 @app.get("/api/rotations")

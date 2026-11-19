@@ -1252,5 +1252,9 @@
 "{0} · {1} · dropou {2}": "{0} · {1} · {2}がドロップ",
 "{0} · {1} · dropou {2} ({3}x)": "{0} · {1} · {2}がドロップ（{3}x）",
 "Data do drop inválida.": "ドロップの日付が正しくありません。",
-"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "4rt3mi5のWindowsアプリは終了しました。ブラウザで4rt3mi5を使ってください: {0}"
+"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "4rt3mi5のWindowsアプリは終了しました。ブラウザで4rt3mi5を使ってください: {0}",
+"Minhas parties": "マイパーティ",
+"Minhas parties e cofre": "マイパーティと金庫",
+"Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "狩りとボス用のパーティ編成（レギュラーと控え）を登録します。登録すると、4rt3mi5 がルート分配で 🔁 控えとして入った人を自動でマークし、金庫は売上をレギュラーで分けます。",
+"＋ Registrar party": "＋ パーティを登録"
 }

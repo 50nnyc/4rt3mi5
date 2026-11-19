@@ -1,6 +1,62 @@
 {
   "releases": [
     {
+      "version": "0.24.0",
+      "date": "2026-11-19",
+      "title": "Parties registradas e cofre",
+      "changes": [
+        "🛡️ Minhas parties e cofre (menu ☰ → Party): registre a formação da party para hunt, para bosses ou para os dois, com titulares e substitutos. A partir daí os lootsplits já marcam sozinhos quem entrou como 🔁 substituto (e no lugar de quem), sem ninguém precisar informar toda vez.",
+        "🗃️ Cofre da party: o estoque total de itens da party num lugar só, com quanto cada item está valendo. Qualquer membro muda o preço a qualquer momento, e o cofre mostra o valor total e a faixa do estoque.",
+        "Cada item do cofre tem a sua sacolinha de origem: 🟡 amarela e limpa para Drop, 🟢 verde com $ para Service e 🔴 vermelha com $ para Compra. No Service, a runa garantida do serviçado fica com a party pela metade do valor, dividida entre os titulares (runa de 75kk → 37,5kk ÷ 5 = 7,5kk de cada um), com o \"transfer\" e o \"✔ Já paguei\" de cada um. Quando vende, o lucro é dividido entre os titulares e quem comprou um item recebe de volta o que pagou.",
+        "👑 Graveborn: botão para quando alguém compra uma Crypt Rune para o craft (pede o preço pago) e botão 🔨 Craftar, que pergunta quais itens do cofre vão ser usados. O item craftado mostra o preço aproximado: drops valem entre 0 e o preço médio, compras valem o que foi pago. O valor de venda só é pedido quando vender, e as duas informações ficam guardadas para comparar.",
+        "🛠️ Manutenção do servidor: atualizações do sistema e do Docker instaladas, e as rotinas automáticas do servidor ficaram mais estáveis."
+      ],
+      "tr": {
+        "en": { "title": "Registered parties and vault", "changes": [
+          "🛡️ My parties and vault (menu ☰ → Party): register your party lineup for hunts, bosses or both, with main players and substitutes. From then on, loot splits mark who joined as a 🔁 substitute (and in whose place) automatically, with no need to tell it every time.",
+          "🗃️ Party vault: the party's whole item stock in one place, with what each item is worth. Any member can change the price at any time, and the vault shows the total value and the stock's range.",
+          "Each vault item has an origin bag: 🟡 plain yellow for Drop, 🟢 green with $ for Service and 🔴 red with $ for Purchase. In a Service, the client's guaranteed rune stays with the party for half its value, split among the main players (75kk rune → 37.5kk ÷ 5 = 7.5kk each), with each one's \"transfer\" and \"✔ I've paid\". When it sells, the profit is split among the main players and whoever bought an item gets back what they paid.",
+          "👑 Graveborn: a button for when someone buys a Crypt Rune for the craft (asks the price paid) and a 🔨 Craft button that asks which vault items are used. The crafted item shows an approximate price: drops are worth between 0 and the average price, purchases are worth what was paid. The sale price is only asked when you sell, and both are kept for comparison.",
+          "🛠️ Server maintenance: system and Docker updates installed, and the server's automatic routines are more stable."] },
+        "es": { "title": "Parties registradas y cofre", "changes": [
+          "🛡️ Mis parties y cofre (menú ☰ → Party): registra la formación de la party para hunt, para bosses o para ambos, con titulares y suplentes. Desde entonces los lootsplits marcan solos quién entró como 🔁 suplente (y en lugar de quién), sin tener que avisar cada vez.",
+          "🗃️ Cofre de la party: todo el stock de ítems de la party en un solo lugar, con cuánto vale cada ítem. Cualquier miembro cambia el precio cuando quiera, y el cofre muestra el valor total y el rango del stock.",
+          "Cada ítem del cofre tiene su bolsita de origen: 🟡 amarilla y limpia para Drop, 🟢 verde con $ para Service y 🔴 roja con $ para Compra. En el Service, la runa garantizada del cliente se queda con la party por la mitad de su valor, repartida entre los titulares (runa de 75kk → 37,5kk ÷ 5 = 7,5kk cada uno), con el \"transfer\" y el \"✔ Ya pagué\" de cada uno. Al vender, la ganancia se reparte entre los titulares y quien compró un ítem recupera lo que pagó.",
+          "👑 Graveborn: botón para cuando alguien compra una Crypt Rune para el craft (pide el precio pagado) y botón 🔨 Craftear, que pregunta qué ítems del cofre se usan. El ítem crafteado muestra un precio aproximado: los drops valen entre 0 y el precio medio, las compras valen lo pagado. El valor de venta solo se pide al vender, y ambos datos quedan guardados para comparar.",
+          "🛠️ Mantenimiento del servidor: actualizaciones del sistema y de Docker instaladas, y las rutinas automáticas del servidor quedaron más estables."] },
+        "ja": { "title": "パーティ登録と金庫", "changes": [
+          "🛡️ マイパーティと金庫（メニュー ☰ → Party）：狩り・ボス・両方用のパーティ編成をレギュラーと控えで登録できます。以後、ルート分配で 🔁 控えとして入った人（と誰の代わりか）が自動でマークされ、毎回伝える必要はありません。",
+          "🗃️ パーティ金庫：パーティのアイテム在庫を一か所にまとめ、各アイテムの価値も表示。価格はメンバーがいつでも変更でき、在庫の合計額と幅が表示されます。",
+          "金庫の各アイテムには入手元の袋が付きます：🟡 黄色の無地は Drop、🟢 $付きの緑は Service、🔴 $付きの赤は購入。Service では依頼者の確定ルーンを価値の半額でパーティが引き取り、レギュラーで割ります（75kk のルーン → 37.5kk ÷ 5 = 1人 7.5kk）。各自の「transfer」と「✔ 支払い済み」付き。売れたら利益はレギュラーで分け、アイテムを購入した人には支払った分が戻ります。",
+          "👑 Graveborn：誰かがクラフト用に Crypt Rune を買ったときのボタン（支払額を入力）と、金庫のどのアイテムを使うか選ぶ 🔨 クラフトボタン。クラフト品は概算価格を表示：ドロップは 0〜平均価格、購入品は支払額。売値は売ったときだけ入力し、両方とも比較用に残ります。",
+          "🛠️ サーバーのメンテナンス：システムと Docker の更新を適用し、サーバーの自動処理がより安定しました。"] },
+        "de": { "title": "Registrierte Partys und Tresor", "changes": [
+          "🛡️ Meine Partys und Tresor (Menü ☰ → Party): Registriere die Party-Aufstellung für Hunts, Bosse oder beides, mit Stammspielern und Ersatz. Ab dann markieren die Lootsplits automatisch, wer als 🔁 Ersatz dabei war (und für wen), ohne dass man es jedes Mal angeben muss.",
+          "🗃️ Party-Tresor: der gesamte Itembestand der Party an einem Ort, mit dem Wert jedes Items. Jedes Mitglied kann den Preis jederzeit ändern, und der Tresor zeigt den Gesamtwert und die Spanne des Bestands.",
+          "Jedes Item im Tresor hat seinen Herkunftsbeutel: 🟡 gelb und schlicht für Drop, 🟢 grün mit $ für Service und 🔴 rot mit $ für Kauf. Beim Service bleibt die garantierte Rune des Kunden für den halben Wert bei der Party, geteilt unter den Stammspielern (Rune für 75kk → 37,5kk ÷ 5 = 7,5kk pro Person), mit dem „transfer“ und „✔ Schon bezahlt“ für jeden. Beim Verkauf wird der Gewinn unter den Stammspielern geteilt, und wer ein Item gekauft hat, bekommt den Preis zurück.",
+          "👑 Graveborn: ein Knopf, wenn jemand eine Crypt Rune für das Craft kauft (fragt den bezahlten Preis), und ein 🔨 Craften-Knopf, der fragt, welche Tresor-Items verwendet werden. Das gecraftete Item zeigt einen ungefähren Preis: Drops zählen zwischen 0 und dem Durchschnittspreis, Käufe zählen den bezahlten Preis. Der Verkaufspreis wird erst beim Verkauf gefragt, und beides bleibt zum Vergleich gespeichert.",
+          "🛠️ Serverwartung: System- und Docker-Updates installiert, und die automatischen Abläufe des Servers laufen stabiler."] },
+        "pl": { "title": "Zarejestrowane party i skarbiec", "changes": [
+          "🛡️ Moje party i skarbiec (menu ☰ → Party): zarejestruj skład party na hunty, bossy lub oba, z graczami podstawowymi i rezerwowymi. Od tej chwili lootsplity same oznaczają, kto wszedł jako 🔁 rezerwowy (i za kogo), bez podawania tego za każdym razem.",
+          "🗃️ Skarbiec party: cały zapas przedmiotów party w jednym miejscu, z wartością każdego przedmiotu. Każdy członek może zmienić cenę w dowolnej chwili, a skarbiec pokazuje łączną wartość i zakres zapasu.",
+          "Każdy przedmiot w skarbcu ma woreczek pochodzenia: 🟡 żółty i czysty dla Drop, 🟢 zielony z $ dla Service i 🔴 czerwony z $ dla Zakupu. W Service gwarantowana runa klienta zostaje w party za połowę wartości, podzieloną między graczy podstawowych (runa za 75kk → 37,5kk ÷ 5 = 7,5kk na osobę), z \"transfer\" i \"✔ Już zapłaciłem\" dla każdego. Przy sprzedaży zysk dzieli się między graczy podstawowych, a kto kupił przedmiot, odzyskuje to, co zapłacił.",
+          "👑 Graveborn: przycisk, gdy ktoś kupi Crypt Rune do craftu (pyta o zapłaconą cenę), i przycisk 🔨 Craftuj, który pyta, których przedmiotów ze skarbca użyć. Scraftowany przedmiot pokazuje przybliżoną cenę: dropy są warte od 0 do średniej ceny, zakupy tyle, ile zapłacono. Cena sprzedaży jest pytana dopiero przy sprzedaży, a obie informacje zostają do porównania.",
+          "🛠️ Konserwacja serwera: zainstalowano aktualizacje systemu i Dockera, a automatyczne zadania serwera działają stabilniej."] },
+        "fr": { "title": "Parties enregistrées et coffre", "changes": [
+          "🛡️ Mes parties et coffre (menu ☰ → Party) : enregistrez la composition de la party pour la chasse, les boss ou les deux, avec titulaires et remplaçants. Ensuite, les lootsplits marquent tout seuls qui est venu en 🔁 remplaçant (et à la place de qui), sans avoir à le dire à chaque fois.",
+          "🗃️ Coffre de la party : tout le stock d'objets de la party au même endroit, avec la valeur de chaque objet. N'importe quel membre change le prix à tout moment, et le coffre affiche la valeur totale et la fourchette du stock.",
+          "Chaque objet du coffre a son petit sac d'origine : 🟡 jaune et uni pour Drop, 🟢 vert avec $ pour Service et 🔴 rouge avec $ pour Achat. Dans un Service, la rune garantie du client reste à la party pour la moitié de sa valeur, partagée entre les titulaires (rune à 75kk → 37,5kk ÷ 5 = 7,5kk chacun), avec le « transfer » et le « ✔ Déjà payé » de chacun. À la vente, le profit est partagé entre les titulaires et celui qui a acheté un objet récupère ce qu'il a payé.",
+          "👑 Graveborn : un bouton quand quelqu'un achète une Crypt Rune pour le craft (demande le prix payé) et un bouton 🔨 Crafter qui demande quels objets du coffre sont utilisés. L'objet crafté affiche un prix approximatif : les drops valent entre 0 et le prix moyen, les achats valent ce qui a été payé. Le prix de vente n'est demandé qu'à la vente, et les deux restent enregistrés pour comparer.",
+          "🛠️ Maintenance du serveur : mises à jour du système et de Docker installées, et les routines automatiques du serveur sont plus stables."] },
+        "ru": { "title": "Зарегистрированные пати и сейф", "changes": [
+          "🛡️ Мои пати и сейф (меню ☰ → Party): зарегистрируйте состав пати для охоты, боссов или того и другого, с основными и запасными. После этого лутсплиты сами отмечают, кто зашёл как 🔁 замена (и вместо кого), без напоминаний каждый раз.",
+          "🗃️ Сейф пати: весь запас предметов пати в одном месте и сколько стоит каждый предмет. Любой участник меняет цену в любой момент, а сейф показывает общую стоимость и диапазон запаса.",
+          "У каждого предмета в сейфе есть мешочек происхождения: 🟡 жёлтый без знака — Drop, 🟢 зелёный с $ — Service, 🔴 красный с $ — Покупка. В Service гарантированная руна клиента остаётся у пати за половину стоимости, разделённую между основными (руна за 75kk → 37,5kk ÷ 5 = 7,5kk с каждого), с «transfer» и «✔ Уже оплатил» для каждого. При продаже прибыль делится между основными, а купивший предмет получает назад то, что заплатил.",
+          "👑 Graveborn: кнопка на случай, если кто-то купил Crypt Rune для крафта (спрашивает уплаченную цену), и кнопка 🔨 Скрафтить, которая спрашивает, какие предметы из сейфа использовать. Скрафченный предмет показывает примерную цену: дропы стоят от 0 до средней цены, покупки — сколько заплатили. Цена продажи спрашивается только при продаже, и обе цифры сохраняются для сравнения.",
+          "🛠️ Обслуживание сервера: установлены обновления системы и Docker, автоматические задачи сервера работают стабильнее."] }
+      }
+    },
+    {
       "version": "0.23.0",
       "date": "2026-11-18",
       "title": "Substituições, rotações e cofre",

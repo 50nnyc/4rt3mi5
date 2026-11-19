@@ -505,6 +505,71 @@ CREATE TABLE IF NOT EXISTS vault_crafts (
     created_at   TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_vault_crafts ON vault_crafts(ref_kind, ref_id);
+-- 0.24.0: 👥 parties registradas (titulares + substitutos) para hunt, bosses ou os dois
+CREATE TABLE IF NOT EXISTS parties (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    name        TEXT NOT NULL,
+    kind        TEXT NOT NULL,                 -- hunt | boss | both
+    rotation    TEXT,                          -- ex.: 'graveborn' (liga o craft das armas Crypt)
+    owner_key   TEXT NOT NULL,                 -- quem criou (só ele muda a formação)
+    created_at  TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS party_members (
+    party_id  INTEGER NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    name_key  TEXT NOT NULL,
+    name      TEXT NOT NULL,
+    role      TEXT NOT NULL,                   -- main | sub
+    PRIMARY KEY (party_id, name_key)
+);
+CREATE INDEX IF NOT EXISTS ix_party_members_name ON party_members(name_key);
+-- 🗃️ cofre da party: quanto cada item está valendo (editável a qualquer momento por qualquer membro)
+CREATE TABLE IF NOT EXISTS party_prices (
+    party_id    INTEGER NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    item_key    TEXT NOT NULL,
+    item        TEXT NOT NULL,
+    price       INTEGER NOT NULL,
+    updated_at  TEXT NOT NULL,
+    updated_by  TEXT,
+    PRIMARY KEY (party_id, item_key)
+);
+CREATE TABLE IF NOT EXISTS party_items (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    party_id     INTEGER NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    item         TEXT NOT NULL,
+    qty          INTEGER NOT NULL DEFAULT 1,
+    origin       TEXT NOT NULL,                -- drop | service | buy (a "sacolinha")
+    cost_each    INTEGER,                      -- compra: quanto pagou; service: metade do valor da runa (pago ao serviçado)
+    client       TEXT,                         -- service: o serviçado (recebe a metade, dividida entre os titulares)
+    holder       TEXT NOT NULL,                -- quem guarda (na compra: quem pagou)
+    obtained_on  TEXT NOT NULL,
+    note         TEXT,
+    status       TEXT NOT NULL DEFAULT 'stock', -- stock | sold | used
+    sold_total   INTEGER,
+    market_fee   INTEGER NOT NULL DEFAULT 0,
+    sold_at      TEXT,
+    seller       TEXT,
+    craft_id     INTEGER,
+    ref_price    INTEGER,                      -- preço do cofre no momento do craft (referência)
+    owner_key    TEXT NOT NULL,
+    created_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_party_items ON party_items(party_id);
+CREATE TABLE IF NOT EXISTS party_crafts (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    party_id    INTEGER NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
+    set_key     TEXT NOT NULL,
+    result      TEXT,
+    holder      TEXT NOT NULL,                 -- quem ficou com o item craftado
+    min_value   INTEGER NOT NULL,              -- faixa de preço no momento do craft
+    max_value   INTEGER NOT NULL,
+    cost        INTEGER NOT NULL DEFAULT 0,    -- compras usadas (reembolsadas na venda)
+    sold_total  INTEGER,
+    market_fee  INTEGER NOT NULL DEFAULT 0,
+    sold_at     TEXT,
+    owner_key   TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_party_crafts ON party_crafts(party_id);
 """
 
 # 0.23.0: colunas de "quem jogou" nas sessões e lootsplits
@@ -638,6 +703,8 @@ class Store:
             for col, decl in new_cols:
                 if col not in have:
                     self._conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
+        if "client" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(party_items)")}:  # 0.24.0
+            self._conn.execute("ALTER TABLE party_items ADD COLUMN client TEXT")
         if "dropped_on" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(vault_drops)")}:
             self._conn.execute("ALTER TABLE vault_drops ADD COLUMN dropped_on TEXT")  # dia do drop (identifica o item)
         for table in ("solo_sessions", "boss_sessions"):
@@ -2455,6 +2522,170 @@ class Store:
             for r in self._conn.execute(f"SELECT * FROM hunt_payments WHERE kind = ? AND hunt_id IN ({marks})", (kind, *ids)):
                 out[r["hunt_id"]][(r["payer_key"], r["receiver_key"])] = {"amount": r["amount"], "paid_at": r["paid_at"]}
         return out
+
+    # ------------------------------------------------------------------ 0.24.0: 👥 parties e 🗃️ cofre da party
+    def _party_members(self, party_ids: list[int]) -> dict[int, list[dict]]:
+        out: dict[int, list[dict]] = {i: [] for i in party_ids}
+        if party_ids:
+            marks = ",".join("?" * len(party_ids))
+            for r in self._conn.execute(f"SELECT * FROM party_members WHERE party_id IN ({marks}) "
+                                        "ORDER BY role, name COLLATE NOCASE", tuple(party_ids)):
+                out[r["party_id"]].append({"name": r["name"], "role": r["role"]})
+        return out
+
+    def party(self, party_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM parties WHERE id = ?", (party_id,)).fetchone()
+        if r is None:
+            return None
+        return {**dict(r), "members": self._party_members([party_id])[party_id]}
+
+    def parties_with(self, names: list[str]) -> list[dict]:
+        """Parties em que algum destes personagens está (como titular ou substituto)."""
+        keys = sorted({name_key(n) for n in names})
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        ids = [r[0] for r in self._conn.execute(
+            f"SELECT DISTINCT party_id FROM party_members WHERE name_key IN ({marks})", tuple(keys))]
+        if not ids:
+            return []
+        marks = ",".join("?" * len(ids))
+        rows = self._conn.execute(f"SELECT * FROM parties WHERE id IN ({marks}) ORDER BY name COLLATE NOCASE", tuple(ids))
+        members = self._party_members(ids)
+        return [{**dict(r), "members": members[r["id"]]} for r in rows]
+
+    def parties_owned(self, key: str) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM parties WHERE owner_key = ?", (key,)).fetchone()[0]
+
+    def save_party(self, party_id: int | None, name: str, kind: str, rotation: str | None, members: list[dict],
+                   owner_key: str) -> int:
+        """Cria (party_id=None) ou troca nome/tipo/formação. members = [{"name", "role"}]."""
+        with self._lock:
+            if party_id is None:
+                party_id = self._conn.execute(
+                    "INSERT INTO parties (name, kind, rotation, owner_key, created_at) VALUES (?, ?, ?, ?, ?)",
+                    (name, kind, rotation, owner_key, _iso(utcnow()))).lastrowid
+            else:
+                self._conn.execute("UPDATE parties SET name = ?, kind = ?, rotation = ? WHERE id = ?",
+                                   (name, kind, rotation, party_id))
+                self._conn.execute("DELETE FROM party_members WHERE party_id = ?", (party_id,))
+            self._conn.executemany("INSERT INTO party_members VALUES (?, ?, ?, ?)",
+                                   [(party_id, name_key(m["name"]), m["name"], m["role"]) for m in members])
+            self._conn.commit()
+        return party_id
+
+    def delete_party(self, party_id: int) -> None:
+        with self._lock:
+            for (iid,) in self._conn.execute("SELECT id FROM party_items WHERE party_id = ?", (party_id,)).fetchall():
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind IN ('pitem', 'psvc') AND hunt_id = ?", (iid,))
+            for (cid,) in self._conn.execute("SELECT id FROM party_crafts WHERE party_id = ?", (party_id,)).fetchall():
+                self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'pcraft' AND hunt_id = ?", (cid,))
+            for t in ("party_items", "party_crafts", "party_prices", "party_members"):
+                self._conn.execute(f"DELETE FROM {t} WHERE party_id = ?", (party_id,))
+            self._conn.execute("DELETE FROM parties WHERE id = ?", (party_id,))
+            self._conn.commit()
+
+    def party_vault(self, party_id: int) -> dict:
+        items = [dict(r) for r in self._conn.execute("SELECT * FROM party_items WHERE party_id = ? ORDER BY id", (party_id,))]
+        crafts = [dict(r) for r in self._conn.execute("SELECT * FROM party_crafts WHERE party_id = ? ORDER BY id", (party_id,))]
+        prices = {r["item_key"]: dict(r) for r in self._conn.execute("SELECT * FROM party_prices WHERE party_id = ?", (party_id,))}
+        return {"items": items, "crafts": crafts, "prices": prices}
+
+    def set_party_price(self, party_id: int, item: str, price: int | None, by_key: str) -> None:
+        with self._lock:
+            if price is None:
+                self._conn.execute("DELETE FROM party_prices WHERE party_id = ? AND item_key = ?", (party_id, name_key(item)))
+            else:
+                self._conn.execute("INSERT OR REPLACE INTO party_prices VALUES (?, ?, ?, ?, ?, ?)",
+                                   (party_id, name_key(item), item, price, _iso(utcnow()), by_key))
+            self._conn.commit()
+
+    def party_item(self, item_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM party_items WHERE id = ?", (item_id,)).fetchone()
+        return dict(r) if r else None
+
+    def party_craft(self, craft_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM party_crafts WHERE id = ?", (craft_id,)).fetchone()
+        return dict(r) if r else None
+
+    def add_party_item(self, party_id: int, item: str, qty: int, origin: str, cost_each: int | None, holder: str,
+                       obtained_on: str, note: str | None, owner_key: str, client: str | None = None) -> int:
+        with self._lock:
+            iid = self._conn.execute(
+                "INSERT INTO party_items (party_id, item, qty, origin, cost_each, holder, obtained_on, note, owner_key, "
+                "created_at, client) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (party_id, item, qty, origin, cost_each, holder, obtained_on, note, owner_key, _iso(utcnow()), client)).lastrowid
+            self._conn.commit()
+        return iid
+
+    _PARTY_ITEM_FIELDS = {"origin", "cost_each", "holder", "status", "sold_total", "market_fee", "sold_at", "seller",
+                          "craft_id", "ref_price", "qty", "note", "client"}
+    _PARTY_CRAFT_FIELDS = {"result", "holder", "sold_total", "market_fee", "sold_at"}
+
+    def update_party_item(self, item_id: int, **fields) -> None:
+        sets = [k for k in fields if k in self._PARTY_ITEM_FIELDS]
+        if sets:
+            with self._lock:
+                self._conn.execute(f"UPDATE party_items SET {', '.join(k + ' = ?' for k in sets)} WHERE id = ?",
+                                   (*[fields[k] for k in sets], item_id))
+                self._conn.commit()
+
+    def forget_payments(self, kind: str, ref_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, ref_id))
+            self._conn.commit()
+
+    def delete_party_item(self, item_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind IN ('pitem', 'psvc') AND hunt_id = ?", (item_id,))
+            self._conn.execute("DELETE FROM party_items WHERE id = ?", (item_id,))
+            self._conn.commit()
+
+    def split_party_item(self, item_id: int) -> int:
+        """Separa 1 unidade de um item com várias (para usar num craft) e devolve o id da unidade separada."""
+        with self._lock:
+            d = self._conn.execute("SELECT * FROM party_items WHERE id = ?", (item_id,)).fetchone()
+            if d["qty"] <= 1:
+                return item_id
+            self._conn.execute("UPDATE party_items SET qty = qty - 1 WHERE id = ?", (item_id,))
+            new_id = self._conn.execute(
+                "INSERT INTO party_items (party_id, item, qty, origin, cost_each, holder, obtained_on, note, owner_key, "
+                "created_at, client) VALUES (?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (d["party_id"], d["item"], d["origin"], d["cost_each"], d["holder"], d["obtained_on"], d["note"],
+                 d["owner_key"], d["created_at"], d["client"])).lastrowid
+            self._conn.commit()
+        return new_id
+
+    def add_party_craft(self, party_id: int, set_key: str, used: list[tuple[int, int | None]], result: str | None,
+                        holder: str, rng: dict, owner_key: str) -> int:
+        """used = [(id do item, preço do cofre naquele momento)]."""
+        with self._lock:
+            cid = self._conn.execute(
+                "INSERT INTO party_crafts (party_id, set_key, result, holder, min_value, max_value, cost, owner_key, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (party_id, set_key, result, holder, rng["min"], rng["max"], rng["cost"], owner_key, _iso(utcnow()))).lastrowid
+            for iid, ref_price in used:
+                self._conn.execute("UPDATE party_items SET status = 'used', craft_id = ?, ref_price = ? WHERE id = ?",
+                                   (cid, ref_price, iid))
+            self._conn.commit()
+        return cid
+
+    def update_party_craft(self, craft_id: int, **fields) -> None:
+        sets = [k for k in fields if k in self._PARTY_CRAFT_FIELDS]
+        if sets:
+            with self._lock:
+                self._conn.execute(f"UPDATE party_crafts SET {', '.join(k + ' = ?' for k in sets)} WHERE id = ?",
+                                   (*[fields[k] for k in sets], craft_id))
+                self._conn.commit()
+
+    def delete_party_craft(self, craft_id: int) -> None:
+        """Desfaz o craft: os itens usados voltam para o estoque."""
+        with self._lock:
+            self._conn.execute("UPDATE party_items SET status = 'stock', craft_id = NULL, ref_price = NULL WHERE craft_id = ?",
+                               (craft_id,))
+            self._conn.execute("DELETE FROM hunt_payments WHERE kind = 'pcraft' AND hunt_id = ?", (craft_id,))
+            self._conn.execute("DELETE FROM party_crafts WHERE id = ?", (craft_id,))
+            self._conn.commit()
 
     def note_char_claim(self, name: str) -> None:
         with self._lock:

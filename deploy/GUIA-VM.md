@@ -114,10 +114,16 @@ Se o PC estiver desligado no horário, a cópia roda quando ele ligar.
 ## 9. Evitar que a Oracle recolha a VM
 A Oracle pode recolher VMs grátis que ficam "ociosas" por 7 dias, e o 4rt3mi5 usa pouca CPU.
 
-**Sem gastar nada (já vem instalado):** o `deploy/manter-ativa.sh` roda pelo cron a cada 10 minutos e ocupa a CPU por
-1 minuto, com a prioridade mais baixa (o site sempre passa na frente). Isso deixa o percentil 95 da CPU acima dos 20%
-que a Oracle usa para decidir. Para conferir, abra a VM no console → **Monitoring** → gráfico **CPU utilization**: ele
-deve mostrar picos a cada 10 minutos.
+**Sem gastar nada (já vem instalado):** o `deploy/manter-ativa.sh --aleatorio` roda pelo cron a cada 10 minutos e ocupa a
+CPU por 45 a 90 s (sorteado), começando de 0 a 4 min depois do horário (também sorteado), com a prioridade mais baixa (o site
+sempre passa na frente). Isso deixa o percentil 95 da CPU acima dos 20% que a Oracle usa para decidir. Uma trava impede duas
+rodadas ao mesmo tempo, e o histórico fica em `data/manter-ativa.log` na VM. Para conferir, abra a VM no console →
+**Monitoring** → gráfico **CPU utilization**: ele deve mostrar picos em horários irregulares.
+
+**Rodadas extras pelo PC (opcional, deixa ainda menos previsível):** rode uma vez `deploy\manter-ativa-vm.bat`. Ele agenda
+no Windows uma tarefa de hora em hora que sorteia se roda (3 em cada 4) e quanto espera (0 a 40 min), e então pede à VM uma
+rodada curta (`manter-ativa.sh --extra`, 30 a 75 s). Histórico em `data\manter-ativa-vm.log` neste PC. Com o PC desligado,
+o cron da VM continua sozinho. Para remover: `schtasks /Delete /TN "4rt3mi5 manter VM ativa" /F`.
 
 **Se tiver US$ 100 de limite no cartão** (a Oracle faz uma pré-autorização desse valor e devolve depois):
 - Menu ☰ → **Billing → Upgrade and Manage Payment** → **Pay As You Go**. Os recursos *Always Free* continuam

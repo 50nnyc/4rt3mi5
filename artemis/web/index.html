@@ -643,6 +643,32 @@
   .vault-set [data-vset] > input, .vault-set [data-vset] > .check-row { margin-top: 6px; }
   .tags-row select, .tags-row input[type=text] { padding: 6px 8px; border-radius: 8px; background: var(--card2); color: var(--text);
                                                 border: 1px solid var(--line); font-size: 14px; width: auto; }
+
+  /* ---------- 0.24.0: 👥 parties e 🗃️ cofre da party ---------- */
+  .pt-form { display: grid; gap: 10px; }
+  .pt-form label > span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .pt-form select, .pt-mem select, .pt-mem input { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card2); color: var(--text); font: inherit; font-size: 15px; }
+  .pt-mem { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .pt-mem input { flex: 1 1 auto; min-width: 0; width: auto; }
+  .pt-mem select { flex: 0 0 auto; width: auto; }
+  .pt-chips { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 6px; font-size: 14px; }
+  .pt-chip { background: var(--card2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+  .pt-chip.me { color: var(--gold); border-color: rgba(242, 201, 76, .5); }
+  .pt-chip.sub { border-style: dashed; color: var(--muted); }
+  .bag { display: inline-block; width: 18px; height: 20px; vertical-align: -4px; flex: none; }
+  .bag-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+  .pv-stock td.num input { width: 120px; padding: 5px 7px; border-radius: 8px; background: var(--card2); color: var(--text);
+    border: 1px solid var(--line); font-size: 14px; text-align: right; }
+  @media (max-width: 520px) { .pv-stock td.num input { width: 92px; } .pv-stock th, .pv-stock td { padding-left: 4px; padding-right: 4px; } }
+  .pv-range { font-variant-numeric: tabular-nums; color: var(--gold2); }
+  .pv-craft-sum { margin-top: 10px; padding: 10px; border-radius: 10px; background: rgba(242, 201, 76, .08);
+    border: 1px solid rgba(242, 201, 76, .35); font-size: 14px; }
+  #ptVault .vault-actions select, #ptVault .vault-sell select { width: auto; flex: 1 1 140px; padding: 7px 9px; border-radius: 8px;
+    background: var(--card2); color: var(--text); border: 1px solid var(--line); font-size: 14px; }
+  #pcResult, #pcHolder { padding: 8px 10px; border-radius: 8px; background: var(--card2); color: var(--text); border: 1px solid var(--line); }
+  .pv-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+  .pv-buttons .btn2 { flex: 1 1 180px; }
 </style>
 </head>
 <body>
@@ -882,6 +908,8 @@
         <button class="item" data-page="loot" data-mode="party"><span class="ic">💰</span>Lootsplit <span class="badge hidden" id="lootBadge" title="Acertos pendentes"></span></button>
         <button class="item" data-page="boss" data-mode="party"><span class="ic">👑</span>Lootsplit de bosses</button>
         <button class="item" data-page="hunts" data-mode="party"><span class="ic">🗺️</span>Hunts em party</button>
+        <!-- 0.24.0: party registrada (titulares + substitutos) e o cofre dela -->
+        <button class="item" data-page="parties" data-mode="party"><span class="ic">🛡️</span>Minhas parties e cofre</button>
       </div>
     </div>
     <!-- 0.23.0: alguém jogou no seu personagem (link de envio / jogador autorizado) -->
@@ -986,6 +1014,19 @@
       </div>
       <label class="check-row" style="margin-top:8px"><input type="checkbox" id="rankOthers"> Incluir sessões jogadas por outra pessoa</label>
       <div id="rankBody" style="margin-top:12px"></div>
+    </div>
+
+    <!-- 0.24.0: 🛡️ Minhas parties e 🗃️ cofre da party -->
+    <div id="pageParties" class="hidden">
+      <div id="ptList">
+        <h1>Minhas parties</h1>
+        <p class="muted" style="margin-top:-4px">Registre a formação da party (titulares e substitutos) para hunt e para bosses.
+          Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.</p>
+        <div id="ptCards"></div>
+        <button class="btn" id="ptNew" type="button">＋ Registrar party</button>
+        <div class="card hidden" id="ptFormBox"></div>
+      </div>
+      <div id="ptVault" class="hidden"></div>
     </div>
 
     <!-- 0.23.0: 🤝 Substituições -->

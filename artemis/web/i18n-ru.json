@@ -1252,5 +1252,9 @@
 "{0} · {1} · dropou {2}": "{0} · {1} · выпало у {2}",
 "{0} · {1} · dropou {2} ({3}x)": "{0} · {1} · выпало у {2} ({3}x)",
 "Data do drop inválida.": "Неверная дата дропа.",
-"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "Приложение 4rt3mi5 для Windows больше не поддерживается. Пользуйтесь 4rt3mi5 в браузере: {0}"
+"O app de Windows do 4rt3mi5 foi descontinuado. Use o 4rt3mi5 pelo navegador: {0}": "Приложение 4rt3mi5 для Windows больше не поддерживается. Пользуйтесь 4rt3mi5 в браузере: {0}",
+"Minhas parties": "Мои пати",
+"Minhas parties e cofre": "Мои пати и сейф",
+"Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "Зарегистрируйте состав пати (основные и запасные) для охоты и боссов. С ним 4rt3mi5 сам отмечает, кто зашёл как 🔁 замена в лутсплитах, а сейф делит продажи между основными игроками.",
+"＋ Registrar party": "＋ Зарегистрировать пати"
 }

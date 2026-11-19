@@ -155,6 +155,21 @@ def seed() -> str:
     store.add_solo(ME, s.fingerprint(ME), s.to_dict(), key, None, spots[0] if spots else None, 312)
     store._conn.commit()
 
+    # 🛡️ 0.24.0: party registrada da Graveborn com o cofre (as três sacolinhas) e um craft com a faixa de preço
+    pid = store.save_party(None, "Graveborn da semana", "both", "graveborn",
+                           [{"name": n, "role": "main"} for n in ("Bobeek", "Hilay", "Jioe", "Vcte")]
+                           + [{"name": "Kael Monge", "role": "sub"}], key)
+    for item, price in (("Ancient Crypt Rune", 12), ("Icy Crypt Rune", 12), ("Fiery Crypt Rune", 14),
+                        ("Deathly Crypt Rune", 40), ("Necromantic Crypt Rune", 75)):
+        store.set_party_price(pid, item, price * 1_000_000, key)
+    today = datetime.now().date().isoformat()
+    for item, origin, cost, who in (("Ancient Crypt Rune", "drop", None, "Bobeek"), ("Icy Crypt Rune", "buy", 12_000_000, "Hilay"),
+                                    ("Fiery Crypt Rune", "drop", None, "Jioe"), ("Deathly Crypt Rune", "buy", 40_000_000, "Vcte"),
+                                    ("Necromantic Crypt Rune", "drop", None, "Bobeek"), ("Fiery Crypt Rune", "service", 7_000_000, "Hilay"),
+                                    ("Ancient Crypt Rune", "drop", None, "Jioe")):
+        # service: runa garantida de 14kk -> a party paga a metade (7kk) ao serviçado, dividida entre os titulares
+        store.add_party_item(pid, item, 1, origin, cost, who, today, None, key, "Cliente Serv" if origin == "service" else None)
+
     store.set_user_price("falcon battleaxe", "demo-outro", 650_000)  # item sem NPC com preço -> drop raro na demo
     for n in (ME, "Hilay", "Jioe"):  # 🥇 ranking entre amigos
         store.ranking_join(n, True)
