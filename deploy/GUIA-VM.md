@@ -79,9 +79,10 @@ ssh artemis-vm
 bash ~/4rt3mi5/deploy/instalar-vm.sh
 exit
 ```
-O script atualiza o Ubuntu, liga as atualizações de segurança automáticas, instala o Docker, coloca o fuso de
-Brasília e agenda o vigia a cada 5 minutos. **Saia e entre de novo no SSH** depois dele, para a permissão do
-Docker valer.
+O script atualiza o Ubuntu, liga as atualizações automáticas (segurança, atualizações comuns do Ubuntu e do Docker),
+instala o Docker, coloca o fuso de Brasília e agenda o vigia a cada 5 minutos. Quando uma atualização pede reinício, a VM
+reinicia sozinha às 05:00 e o Docker religa os containers (arquivo `/etc/apt/apt.conf.d/52artemis-auto`). **Saia e entre
+de novo no SSH** depois dele, para a permissão do Docker valer.
 
 ## 6. Migrar (o site fica fora do ar por 2 a 5 minutos)
 ```powershell

@@ -3,7 +3,7 @@
 # Roda UMA vez, na VM, como o usuário normal (ubuntu):   bash ~/4rt3mi5/deploy/instalar-vm.sh
 #
 # O que faz:
-#   - atualiza o sistema e liga as atualizações de segurança automáticas
+#   - atualiza o sistema e liga as atualizações automáticas (segurança, comuns e Docker; reinicia às 05:00 se precisar)
 #   - cria memória swap se a máquina tiver menos de 2 GB de RAM
 #   - instala o Docker (script oficial) e deixa o usuário usar sem sudo
 #   - coloca o fuso horário de Brasília
@@ -19,6 +19,22 @@ sudo apt-get update -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y curl ca-certificates unattended-upgrades sqlite3
 sudo dpkg-reconfigure -f noninteractive unattended-upgrades
+# 0.24.0: a VM se mantém sozinha — atualizações comuns do Ubuntu e do Docker também entram, e ela reinicia
+# às 05:00 (Brasília) só quando uma atualização pedir. O Docker religa os containers (restart: unless-stopped).
+sudo tee /etc/apt/apt.conf.d/52artemis-auto >/dev/null <<'EOF'
+// 4rt3mi5: a VM se mantém sozinha (deploy/instalar-vm.sh)
+// Além das de segurança: atualizações comuns do Ubuntu e do Docker
+Unattended-Upgrade::Origins-Pattern {
+        "origin=Ubuntu,archive=${distro_codename}-updates";
+        "origin=Docker,archive=${distro_codename}";
+};
+// Reinicia sozinha às 05:00 (horário de Brasília) só quando uma atualização pedir
+Unattended-Upgrade::Automatic-Reboot "true";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "05:00";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+EOF
 
 sudo timedatectl set-timezone America/Sao_Paulo
 
