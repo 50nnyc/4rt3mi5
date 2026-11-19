@@ -120,10 +120,8 @@ sempre passa na frente). Isso deixa o percentil 95 da CPU acima dos 20% que a Or
 rodadas ao mesmo tempo, e o histórico fica em `data/manter-ativa.log` na VM. Para conferir, abra a VM no console →
 **Monitoring** → gráfico **CPU utilization**: ele deve mostrar picos em horários irregulares.
 
-**Rodadas extras pelo PC (opcional, deixa ainda menos previsível):** rode uma vez `deploy\manter-ativa-vm.bat`. Ele agenda
-no Windows uma tarefa de hora em hora que sorteia se roda (3 em cada 4) e quanto espera (0 a 40 min), e então pede à VM uma
-rodada curta (`manter-ativa.sh --extra`, 30 a 75 s). Histórico em `data\manter-ativa-vm.log` neste PC. Com o PC desligado,
-o cron da VM continua sozinho. Para remover: `schtasks /Delete /TN "4rt3mi5 manter VM ativa" /F`.
+**Rodadas extras (também na VM):** um segundo cron, de hora em hora, roda `manter-ativa.sh --extra`: sorteia se roda
+(3 em cada 4 horas), quanto espera (0 a 40 min) e a duração (30 a 75 s). Tudo fica na VM; nada depende deste PC.
 
 **Se tiver US$ 100 de limite no cartão** (a Oracle faz uma pré-autorização desse valor e devolve depois):
 - Menu ☰ → **Billing → Upgrade and Manage Payment** → **Pay As You Go**. Os recursos *Always Free* continuam

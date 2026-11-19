@@ -52,9 +52,11 @@ linha2="*/15 * * * * $PROJ/deploy/relatorio.sh --alertas >/dev/null 2>&1"
 { crontab -l 2>/dev/null | grep -v 'deploy/relatorio.sh' || true; echo "$linha1"; echo "$linha2"; } | crontab -
 
 # Mantém a VM "não ociosa" para a Oracle não recolher (~1 min de CPU a cada 10, prioridade mínima).
-# 0.24.0: --aleatorio sorteia o atraso (0 a 4 min) e a duração (45 a 90 s) de cada rodada.
+# 0.24.0: --aleatorio sorteia o atraso (0 a 4 min) e a duração (45 a 90 s) de cada rodada;
+# --extra (de hora em hora) soma rodadas em horários sorteados. Tudo na VM, sem depender de outro computador.
 linha="*/10 * * * * $PROJ/deploy/manter-ativa.sh --aleatorio >/dev/null 2>&1"
-{ crontab -l 2>/dev/null | grep -v 'deploy/manter-ativa.sh' || true; echo "$linha"; } | crontab -
+linha_extra="7 * * * * $PROJ/deploy/manter-ativa.sh --extra >/dev/null 2>&1"
+{ crontab -l 2>/dev/null | grep -v 'deploy/manter-ativa.sh' || true; echo "$linha"; echo "$linha_extra"; } | crontab -
 
 echo
 echo "== Pronto. Saia e entre de novo no SSH (para o grupo docker valer) e rode:"
