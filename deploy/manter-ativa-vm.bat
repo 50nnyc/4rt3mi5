@@ -6,7 +6,7 @@ rem Para remover:  schtasks /Delete /TN "4rt3mi5 manter VM ativa" /F
 set SCRIPT=%~dp0manter-ativa-vm.ps1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command ^
   "$a = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument '-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File \"%SCRIPT%\"';" ^
-  "$t = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(Get-Random -Minimum 5 -Maximum 55) -RepetitionInterval (New-TimeSpan -Hours 1);" ^
+  "$t = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes((Get-Random -Minimum 5 -Maximum 55)) -RepetitionInterval (New-TimeSpan -Hours 1);" ^
   "$s = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 50);" ^
   "Register-ScheduledTask -TaskName '4rt3mi5 manter VM ativa' -Action $a -Trigger $t -Settings $s -Force | Out-Null"
 if errorlevel 1 (
