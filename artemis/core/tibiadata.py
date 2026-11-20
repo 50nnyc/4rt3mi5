@@ -98,12 +98,14 @@ def fetch_character(name: str, timeout: float = 10) -> CharacterInfo | None:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.load(resp)
     except urllib.error.HTTPError as e:
-        if e.code in (400, 404):
+        if e.code in (400, 404, 422):
+            # 422 é a resposta do TibiaData para nome que não existe.
             return None
         if e.code == 502:
-            # Hoje o TibiaData responde 502 quando o personagem não existe
-            # (mas 502 também pode ser instabilidade momentânea).
-            raise TibiaDataError("Personagem não encontrado (ou o TibiaData está instável). Confira o nome.") from e
+            # 502 é falha do TibiaData (instabilidade ou erro ao carregar esse nome),
+            # não prova que o personagem não existe. Não usar "não encontrado" aqui,
+            # senão o site acusa um personagem real de não existir.
+            raise TibiaDataError("O TibiaData não conseguiu responder por esse nome agora (HTTP 502). Tente de novo em instantes.") from e
         raise TibiaDataError(f"TibiaData respondeu HTTP {e.code}.") from e
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
         raise TibiaDataError(f"Não foi possível consultar o TibiaData: {e}") from e

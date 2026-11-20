@@ -1155,21 +1155,38 @@ def _check_char_free(key: str, name: str) -> None:
 @app.post("/api/verify/start")
 def verify_start(body: CharIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
-    ch = char_or_404(body.character)
-    owner = store.char_owner(ch.name)
+    # Sem o TibiaData (fora do ar ou com erro para esse nome) o login não pode travar: o código é gerado
+    # mesmo assim, com mais tempo. A prova continua sendo o código no comentário, conferido em verify/check.
+    minutes, unconfirmed = 60, False
+    try:
+        name = char_or_404(body.character).name
+    except HTTPException as e:
+        if e.status_code != 503:
+            raise
+        name = " ".join((body.character or "").split())
+        if not _VALID_NAME.fullmatch(name):
+            raise HTTPException(422, "Nome de personagem inválido.")
+        minutes, unconfirmed = 240, True
+    owner = store.char_owner(name)
     if owner and owner != access["key"]:  # 0.23.0: o dono fica sabendo que alguém tentou vincular o personagem dele
-        store.note_char_claim(ch.name)
-    _check_char_free(access["key"], ch.name)
+        store.note_char_claim(name)
+    _check_char_free(access["key"], name)
     # Contato de confiança (main forçado pelo criador): entra direto, sem código de verificação.
-    if access.get("trusted") and store.is_linked(access["key"], ch.name):
-        token = device or store.issue_device(access["key"], ch.name)
+    if access.get("trusted") and store.is_linked(access["key"], name):
+        token = device or store.issue_device(access["key"], name)
         _log_login(request, access)
-        return {"token": token, "character": ch.name, "me": me_payload(access), "trusted": True}
+        return {"token": token, "character": name, "me": me_payload(access), "trusted": True}
     # Código já tem dono: um aparelho novo só pode verificar com um personagem já vinculado.
-    if access.get("main_char") and device is None and not store.is_linked(access["key"], ch.name):
+    if access.get("main_char") and device is None and not store.is_linked(access["key"], name):
         raise HTTPException(403, KEY_TAKEN)
-    v = store.start_verification(access["key"], ch.name)
-    return {"code": v["code"], "character": ch.name, "expires_at": v["expires_at"]}
+    v = store.start_verification(access["key"], name, minutes=minutes)
+    out = {"code": v["code"], "character": name, "expires_at": v["expires_at"]}
+    if unconfirmed:
+        out["unconfirmed"] = True
+        out["hint"] = ("O TibiaData está instável agora, então ainda não conferimos o personagem. "
+                       "Coloque o código no comentário do personagem no tibia.com e toque em conferir; "
+                       "o código vale por 4 horas.")
+    return out
 
 
 @app.post("/api/verify/check")

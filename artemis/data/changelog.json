@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "0.24.1",
+      "date": "2026-11-20",
+      "title": "Login com o TibiaData instável",
+      "changes": [
+        "🔐 Login com o TibiaData instável: quando o TibiaData está fora do ar, o código de entrada continua sendo gerado (vale por 4 horas). Basta colocar o código no comentário do personagem e tocar em conferir quando ele voltar. O envio de sessões nunca dependeu disso e segue funcionando. Também: personagem que não existe agora é recusado com a mensagem certa, e um TibiaData instável não é mais confundido com personagem inexistente."
+      ],
+      "tr": {
+        "en": { "title": "Login while TibiaData is unstable", "changes": [
+          "🔐 Login while TibiaData is unstable: when TibiaData is down, the login code is still issued (valid for 4 hours). Just put the code in the character's comment and tap check when it's back. Sending sessions never depended on this and still works. Also, a character that doesn't exist is now refused with the right message, and an unstable TibiaData is no longer mistaken for a missing character."] },
+        "es": { "title": "Login con TibiaData inestable", "changes": [
+          "🔐 Login con TibiaData inestable: cuando TibiaData está caído, el código de entrada sigue generándose (vale 4 horas). Solo pon el código en el comentario del personaje y toca conferir cuando vuelva. El envío de sesiones nunca dependió de esto y sigue funcionando. Además, un personaje que no existe ahora se rechaza con el mensaje correcto, y un TibiaData inestable ya no se confunde con un personaje inexistente."] },
+        "ja": { "title": "TibiaData不安定時のログイン", "changes": [
+          "🔐 TibiaData が不安定な時のログイン：TibiaData が落ちていても入場コードは発行されます（4時間有効）。コードをキャラクターのコメントに入れて、戻ったら確認を押すだけです。セッションの送信はこれに依存せず、引き続き動作します。また、存在しないキャラクターは正しいメッセージで拒否され、不安定な TibiaData が存在しないキャラクターと誤認されることもなくなりました。"] },
+        "de": { "title": "Login bei instabilem TibiaData", "changes": [
+          "🔐 Login bei instabilem TibiaData: Ist TibiaData gerade nicht erreichbar, wird der Login-Code trotzdem erzeugt (4 Stunden gültig). Einfach den Code in den Kommentar des Charakters schreiben und bei Rückkehr von TibiaData auf Prüfen tippen. Das Senden von Sessions hing nie davon ab und funktioniert weiterhin. Außerdem wird ein nicht existierender Charakter jetzt mit der richtigen Meldung abgelehnt, und ein instabiles TibiaData wird nicht mehr mit einem fehlenden Charakter verwechselt."] },
+        "pl": { "title": "Logowanie przy niestabilnym TibiaData", "changes": [
+          "🔐 Logowanie, gdy TibiaData jest niestabilne: gdy TibiaData nie działa, kod logowania nadal jest generowany (ważny 4 godziny). Wystarczy wpisać kod w komentarzu postaci i nacisnąć sprawdź, gdy TibiaData wróci. Wysyłanie sesji nigdy od tego nie zależało i nadal działa. Postać, która nie istnieje, jest teraz odrzucana z właściwym komunikatem, a niestabilne TibiaData nie jest już mylone z nieistniejącą postacią."] },
+        "fr": { "title": "Connexion quand TibiaData est instable", "changes": [
+          "🔐 Connexion quand TibiaData est instable : si TibiaData est hors ligne, le code de connexion est quand même généré (valable 4 heures). Il suffit de mettre le code dans le commentaire du personnage et de appuyer sur vérifier quand il revient. L'envoi des sessions n'en a jamais dépendu et fonctionne toujours. Un personnage inexistant est aussi refusé avec le bon message, et un TibiaData instable n'est plus confondu avec un personnage inexistant."] },
+        "ru": { "title": "Вход при нестабильном TibiaData", "changes": [
+          "🔐 Вход при нестабильном TibiaData: если TibiaData недоступен, код входа всё равно выдаётся (действует 4 часа). Достаточно поместить код в комментарий персонажа и нажать «проверить», когда сервис вернётся. Отправка сессий от этого никогда не зависела и работает как прежде. Несуществующий персонаж теперь отклоняется с правильным сообщением, а нестабильный TibiaData больше не путается с отсутствующим персонажем."] }
+      }
+    },
+    {
       "version": "0.24.0",
       "date": "2026-11-19",
       "title": "Parties registradas e cofre",
