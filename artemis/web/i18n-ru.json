@@ -1256,5 +1256,11 @@
 "Minhas parties": "Мои пати",
 "Minhas parties e cofre": "Мои пати и сейф",
 "Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "Зарегистрируйте состав пати (основные и запасные) для охоты и боссов. С ним 4rt3mi5 сам отмечает, кто зашёл как 🔁 замена в лутсплитах, а сейф делит продажи между основными игроками.",
-"＋ Registrar party": "＋ Зарегистрировать пати"
+"＋ Registrar party": "＋ Зарегистрировать пати",
+  "30 dias": "30 дней",
+  "90 dias": "90 дней",
+  "Minha lista": "Мой список",
+  "Ranking público": "Публичный рейтинг",
+  "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "XP, полученный за последние 30 или 90 дней, по данным TibiaData. Показываются только игроки из топ-1000 мира.",
+  "📊 XP do TibiaData": "📊 XP из TibiaData"
 }

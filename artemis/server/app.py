@@ -1155,6 +1155,16 @@ def _check_char_free(key: str, name: str) -> None:
 @app.post("/api/verify/start")
 def verify_start(body: CharIn, request: Request, session: tuple = Depends(optional_device)):
     access, device = session
+    # 0.25.0: personagem já verificado há menos de 30 dias, ou verificado à mão: entra sem consultar o TibiaData
+    # Aparelho já conhecido (com token) dispensa a checagem por 30 dias; verificação manual vale em qualquer aparelho.
+    # Chave copiada num aparelho novo continua precisando provar o personagem no comentário.
+    nome = " ".join(body.character.split())
+    info = store.trust_info(nome)
+    if store.is_linked(access["key"], nome) and store.trust_valid(nome) and \
+            (device is not None or bool(info and info["manual"])):
+        token = device or store.issue_device(access["key"], nome)
+        _log_login(request, access)
+        return {"token": token, "character": nome, "me": me_payload(access), "trusted": True}
     # Sem o TibiaData (fora do ar ou com erro para esse nome) o login não pode travar: o código é gerado
     # mesmo assim, com mais tempo. A prova continua sendo o código no comentário, conferido em verify/check.
     minutes, unconfirmed = 60, False
@@ -1208,6 +1218,7 @@ def verify_check(body: CodeIn, request: Request, session: tuple = Depends(option
         })
     _check_char_free(access["key"], ch.name)  # outra chave pode ter verificado o mesmo personagem nesse meio tempo
     token = store.complete_verification(access["key"], v["code"], ch.name, device)
+    store.trust_upsert(ch.name)  # 0.25.0: verificado agora; a próxima checagem automática é daqui a 30 dias
     _log_login(request, access)
     return {"token": token, "character": ch.name, "me": me_payload(access)}
 
@@ -2398,6 +2409,101 @@ def ranking_join(name: str, body: RankingJoinIn, access: dict = Depends(require_
     real = require_uploader(name, access)
     store.ranking_join(real, body.join)
     return {"joined": store.ranking_member(real)}
+
+
+# ------------------------------------------------------------------ 0.25.0: XP do TibiaData (30/90 dias) e ranking pessoal
+XP_DAYS = (30, 90)
+XP_REFRESH_MAX = 25  # personagens medidos por pedido (cada um custa algumas consultas ao TibiaData)
+
+
+class CustomRankIn(BaseModel):
+    character: Name
+
+
+class TrustIn(BaseModel):
+    character: Name
+    manual: bool = True
+
+
+def _xp_refresh(names: list[str]) -> None:
+    """Guarda hoje o XP total de cada personagem (highscore do TibiaData). Uma vez por dia por personagem."""
+    today = datetime.now().date().isoformat()
+    feitos = 0
+    for n in names:
+        if feitos >= XP_REFRESH_MAX:
+            break
+        if store.xp_has(n, today):
+            continue
+        feitos += 1
+        try:
+            ch = lookup_character(n)
+        except HTTPException:
+            continue
+        if not ch:
+            continue
+        got = fetch_experience(ch.name, ch.world, ch.level)  # (xp, idade do highscore) ou None
+        if got:
+            store.xp_save(ch.name, today, got[0])
+
+
+def _xp_rows(names: list[str], days: int) -> list[dict]:
+    """XP ganho nos últimos `days` dias, a partir dos snapshots. Sem histórico suficiente, mostra desde o 1º ponto."""
+    base_day = (datetime.now().date() - timedelta(days=days)).isoformat()
+    rows = []
+    for n in names:
+        latest = store.xp_latest(n)
+        if latest is None:
+            rows.append({"name": n, "xp": None, "gain": None, "since": None, "partial": True})
+            continue
+        base = store.xp_baseline(n, base_day)
+        partial = base is None
+        if base is None:
+            base = store.xp_first(n)
+        rows.append({"name": n, "xp": latest["xp"], "gain": latest["xp"] - base["xp"], "since": base["day"],
+                     "partial": partial})
+    rows.sort(key=lambda r: (r["gain"] is None, -(r["gain"] or 0), r["name"].lower()))
+    return rows
+
+
+@app.get("/api/xp-ranking")
+def xp_ranking(days: int = 30, scope: str = "board", access: dict = Depends(require_session)):
+    """scope=board: quem entrou no ranking (público). scope=mine: a lista pessoal de quem pediu (só ela vê)."""
+    days = days if days in XP_DAYS else 30
+    if scope == "mine":
+        names = [c["name"] for c in store.custom_list(access["key"])]
+    else:
+        names = [r["name"] for r in store.ranking_rows(since="0000-01-01T00:00:00")]
+    _xp_refresh(names)
+    return {"days": days, "scope": "mine" if scope == "mine" else "board", "rows": _xp_rows(names, days)}
+
+
+@app.post("/api/xp-ranking/mine")
+def xp_mine_add(body: CustomRankIn, access: dict = Depends(require_session)):
+    nome = " ".join(body.character.split())
+    if not _VALID_NAME.fullmatch(nome):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    store.custom_add(access["key"], nome)
+    return {"ok": True, "names": [c["name"] for c in store.custom_list(access["key"])]}
+
+
+@app.delete("/api/xp-ranking/mine/{name}")
+def xp_mine_remove(name: str, access: dict = Depends(require_session)):
+    store.custom_remove(access["key"], " ".join(name.split()))
+    return {"ok": True, "names": [c["name"] for c in store.custom_list(access["key"])]}
+
+
+def _admin_gate(request: Request, x_admin_token: str = Header(default="")) -> None:
+    require_admin(request, x_admin_token)  # definido mais abaixo; chamado só na requisição
+
+
+@app.post("/api/admin/char-trust", dependencies=[Depends(_admin_gate)])
+def char_trust_admin(body: TrustIn):
+    """Verificação manual pelo administrador: o personagem entra sem depender do TibiaData, sempre."""
+    nome = " ".join(body.character.split())
+    if not _VALID_NAME.fullmatch(nome):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    store.trust_upsert(nome, manual=body.manual)
+    return {"ok": True, "character": nome, "trust": store.trust_info(nome)}
 
 
 class PriceIn(BaseModel):

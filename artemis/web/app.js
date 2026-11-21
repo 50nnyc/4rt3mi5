@@ -1074,7 +1074,7 @@ function go(page, opts = {}) {
   if (page === "subs") loadSubs();
   if (page === "parties") { if (!opts.noPush) PT.vault = null; loadParties(); }
   Music.forPage(page);
-  if (page === "rank") loadRank();
+  if (page === "rank") { loadRank(); loadXp(); }
   if (page === "news") loadNews();
   if (page === "tnews") loadTnews();
   if (page === "cal") loadCal();
@@ -2107,6 +2107,48 @@ document.addEventListener("click", async (e) => {
 });
 
 $("#rankOthers").addEventListener("change", () => loadRank());
+
+/* ---------- 0.25.0: 📊 XP do TibiaData (30/90 dias) e ranking pessoal (lista privada) ---------- */
+S.xp = { days: 30, scope: "board" };
+async function loadXp() {
+  const body = $("#xpBody");
+  document.querySelectorAll("[data-xdays]").forEach((b) => b.classList.toggle("on", +b.dataset.xdays === S.xp.days));
+  document.querySelectorAll("[data-xscope]").forEach((b) => b.classList.toggle("on", b.dataset.xscope === S.xp.scope));
+  $("#xpMineAdd").classList.toggle("hidden", S.xp.scope !== "mine");
+  $("#xpMineAdd").innerHTML = S.xp.scope === "mine"
+    ? `<div class="row"><input id="xpAddName" maxlength="40" placeholder="Nome do personagem (amigo, meta, rival...)" style="flex:1"><button class="btn" style="margin:0" id="xpAddBtn">Adicionar</button></div>` : "";
+  body.innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=${S.xp.scope}`); }
+  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (!d.rows.length) {
+    body.innerHTML = `<p class="muted">${S.xp.scope === "mine" ? "Sua lista está vazia. Adicione amigos, metas ou rivais: só você vê." : "Ninguém no ranking ainda."}</p>`;
+    return;
+  }
+  const medal = ["🥇", "🥈", "🥉"];
+  body.innerHTML = `<div class="table-wrap"><table><tr><th>#</th><th>Personagem</th><th>Ganho ${d.days} dias</th><th>XP total</th><th></th></tr>
+    ${d.rows.map((r, i) => `<tr><td>${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
+      <td>${esc(r.name)}${r.partial && r.gain != null ? `<div class="muted" style="font-size:12px">desde ${esc(r.since)} (histórico ainda curto)</div>` : ""}
+          ${r.gain == null ? `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>` : ""}</td>
+      <td>${r.gain == null ? "–" : fmt(r.gain) + " XP"}</td><td>${r.xp == null ? "–" : fmt(r.xp)}</td>
+      <td>${S.xp.scope === "mine" ? `<button class="btn2" data-xdel="${esc(r.name)}" style="margin:0">Remover</button>` : ""}</td></tr>`).join("")}</table></div>
+    <div class="hint">O ganho é a diferença entre o XP de hoje e o de ${d.days} dias atrás, guardado 1 ponto por dia.</div>`;
+}
+document.addEventListener("click", async (e) => {
+  const dy = e.target.closest("[data-xdays]"), sc = e.target.closest("[data-xscope]"), add = e.target.closest("#xpAddBtn"), del = e.target.closest("[data-xdel]");
+  if (dy) { S.xp.days = +dy.dataset.xdays; loadXp(); }
+  if (sc) { S.xp.scope = sc.dataset.xscope; loadXp(); }
+  if (add) {
+    const nome = ($("#xpAddName").value || "").trim();
+    if (!nome) return;
+    try { await api("POST", "/api/xp-ranking/mine", { character: nome }); loadXp(); }
+    catch (err) { if (err.status !== 401) alert(err.message); }
+  }
+  if (del) {
+    try { await api("DELETE", `/api/xp-ranking/mine/${encodeURIComponent(del.dataset.xdel)}`); loadXp(); }
+    catch (err) { if (err.status !== 401) alert(err.message); }
+  }
+});
 
 /* ---------- 0.23.0: 🤝 substituições (link de envio e jogador autorizado) ---------- */
 const SUB_SCOPES = [["solo", "Hunt solo (Stacker)"], ["party", "Lootsplit e sessão da PT"], ["boss", "Bosses"]];

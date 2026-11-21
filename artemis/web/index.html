@@ -1014,6 +1014,17 @@
       </div>
       <label class="check-row" style="margin-top:8px"><input type="checkbox" id="rankOthers"> Incluir sessões jogadas por outra pessoa</label>
       <div id="rankBody" style="margin-top:12px"></div>
+      <!-- 0.25.0: XP oficial do TibiaData nos últimos 30 e 90 dias (público e lista pessoal) -->
+      <h2 style="margin-top:28px">📊 XP do TibiaData</h2>
+      <p class="muted" style="margin-top:-4px">XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.</p>
+      <div class="seg" id="xpDays">
+        <button data-xdays="30" class="on">30 dias</button><button data-xdays="90">90 dias</button>
+      </div>
+      <div class="seg" id="xpScope" style="margin-top:8px">
+        <button data-xscope="board" class="on">Ranking público</button><button data-xscope="mine">Minha lista</button>
+      </div>
+      <div id="xpMineAdd" class="hidden" style="margin-top:8px"></div>
+      <div id="xpBody" style="margin-top:12px"></div>
     </div>
 
     <!-- 0.24.0: 🛡️ Minhas parties e 🗃️ cofre da party -->

@@ -1256,5 +1256,11 @@
 "Minhas parties": "マイパーティ",
 "Minhas parties e cofre": "マイパーティと金庫",
 "Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "狩りとボス用のパーティ編成（レギュラーと控え）を登録します。登録すると、4rt3mi5 がルート分配で 🔁 控えとして入った人を自動でマークし、金庫は売上をレギュラーで分けます。",
-"＋ Registrar party": "＋ パーティを登録"
+"＋ Registrar party": "＋ パーティを登録",
+  "30 dias": "30日",
+  "90 dias": "90日",
+  "Minha lista": "マイリスト",
+  "Ranking público": "公開ランキング",
+  "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "直近30日または90日に獲得したXP（TibiaData計測）。ワールドのトップ1000にいる人だけが表示されます。",
+  "📊 XP do TibiaData": "📊 TibiaData の XP"
 }

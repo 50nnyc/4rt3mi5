@@ -1256,5 +1256,11 @@
 "Minhas parties": "Mes parties",
 "Minhas parties e cofre": "Mes parties et coffre",
 "Registre a formação da party (titulares e substitutos) para hunt e para bosses. Com ela o 4rt3mi5 já marca sozinho quem entrou como 🔁 substituto nos lootsplits, e o cofre divide as vendas entre os titulares.": "Enregistrez la composition de la party (titulaires et remplaçants) pour la chasse et les boss. Avec elle, 4rt3mi5 marque tout seul qui est venu en 🔁 remplaçant dans les lootsplits, et le coffre partage les ventes entre les titulaires.",
-"＋ Registrar party": "＋ Enregistrer la party"
+"＋ Registrar party": "＋ Enregistrer la party",
+  "30 dias": "30 jours",
+  "90 dias": "90 jours",
+  "Minha lista": "Ma liste",
+  "Ranking público": "Classement public",
+  "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "XP gagné sur les 30 ou 90 derniers jours, mesuré par TibiaData. Seuls ceux du top 1000 du monde apparaissent.",
+  "📊 XP do TibiaData": "📊 XP TibiaData"
 }

@@ -326,6 +326,28 @@ CREATE TABLE IF NOT EXISTS ranking_optin (
     name      TEXT NOT NULL,
     joined_at TEXT NOT NULL
 );
+-- 0.25.0: personagem já verificado (vale 30 dias) ou verificado à mão (manual = 1, vale sempre)
+CREATE TABLE IF NOT EXISTS char_trust (
+    name_key    TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    verified_at TEXT NOT NULL,
+    manual      INTEGER NOT NULL DEFAULT 0
+);
+-- 0.25.0: XP total do personagem por dia (o TibiaData não tem histórico; guardamos um ponto por dia)
+CREATE TABLE IF NOT EXISTS xp_snapshots (
+    name_key TEXT NOT NULL,
+    day      TEXT NOT NULL,
+    xp       INTEGER NOT NULL,
+    PRIMARY KEY (name_key, day)
+);
+-- 0.25.0: ranking pessoal de cada conta (só ela vê): amigos, metas, rivais
+CREATE TABLE IF NOT EXISTS custom_ranking (
+    owner_key TEXT NOT NULL,
+    name_key  TEXT NOT NULL,
+    name      TEXT NOT NULL,
+    added_at  TEXT NOT NULL,
+    PRIMARY KEY (owner_key, name_key)
+);
 -- 0.12.0: imagens da TibiaWiki guardadas no banco (o site busca na wiki só na primeira vez)
 CREATE TABLE IF NOT EXISTS wiki_images (
     name         TEXT PRIMARY KEY,
@@ -1728,6 +1750,76 @@ class Store:
             "AND (s.other_player = 0 OR ?) "  # 0.23.0: jogadas por outra pessoa só entram se pedir
             "LEFT JOIN char_info c ON c.name_key = r.name_key GROUP BY r.name_key", (since, 1 if include_others else 0))
         return [dict(r) for r in rows]
+
+    # ------------------------------------------------------------------ 0.25.0: confiança, XP e ranking pessoal
+    TRUST_DAYS = 30
+
+    def trust_upsert(self, name: str, manual: bool = False) -> None:
+        """Marca o personagem como verificado agora. Verificação manual nunca é desfeita por uma automática."""
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO char_trust (name_key, name, verified_at, manual) VALUES (?, ?, ?, ?) "
+                "ON CONFLICT(name_key) DO UPDATE SET name = excluded.name, verified_at = excluded.verified_at, "
+                "manual = MAX(char_trust.manual, excluded.manual)",
+                (name_key(name), name, _iso(utcnow()), 1 if manual else 0))
+            self._conn.commit()
+
+    def trust_valid(self, name: str) -> bool:
+        """Verificado à mão (vale sempre) ou verificado há menos de TRUST_DAYS dias."""
+        row = self._conn.execute("SELECT verified_at, manual FROM char_trust WHERE name_key = ?",
+                                 (name_key(name),)).fetchone()
+        if row is None:
+            return False
+        if row["manual"]:
+            return True
+        limite = _iso(utcnow() - timedelta(days=self.TRUST_DAYS))
+        return row["verified_at"] > limite
+
+    def trust_info(self, name: str) -> dict | None:
+        row = self._conn.execute("SELECT name, verified_at, manual FROM char_trust WHERE name_key = ?",
+                                 (name_key(name),)).fetchone()
+        return dict(row) if row else None
+
+    def xp_save(self, name: str, day: str, xp: int) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO xp_snapshots VALUES (?, ?, ?)", (name_key(name), day, xp))
+            self._conn.commit()
+
+    def xp_has(self, name: str, day: str) -> bool:
+        return self._conn.execute("SELECT 1 FROM xp_snapshots WHERE name_key = ? AND day = ?",
+                                  (name_key(name), day)).fetchone() is not None
+
+    def xp_baseline(self, name: str, day: str) -> dict | None:
+        """Ponto mais recente até `day` (inclusive)."""
+        row = self._conn.execute("SELECT day, xp FROM xp_snapshots WHERE name_key = ? AND day <= ? "
+                                 "ORDER BY day DESC LIMIT 1", (name_key(name), day)).fetchone()
+        return dict(row) if row else None
+
+    def xp_first(self, name: str) -> dict | None:
+        row = self._conn.execute("SELECT day, xp FROM xp_snapshots WHERE name_key = ? ORDER BY day ASC LIMIT 1",
+                                 (name_key(name),)).fetchone()
+        return dict(row) if row else None
+
+    def xp_latest(self, name: str) -> dict | None:
+        row = self._conn.execute("SELECT day, xp FROM xp_snapshots WHERE name_key = ? ORDER BY day DESC LIMIT 1",
+                                 (name_key(name),)).fetchone()
+        return dict(row) if row else None
+
+    def custom_add(self, owner: str, name: str) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR IGNORE INTO custom_ranking VALUES (?, ?, ?, ?)",
+                               (owner, name_key(name), name, _iso(utcnow())))
+            self._conn.commit()
+
+    def custom_remove(self, owner: str, name: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM custom_ranking WHERE owner_key = ? AND name_key = ?",
+                               (owner, name_key(name)))
+            self._conn.commit()
+
+    def custom_list(self, owner: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT name FROM custom_ranking WHERE owner_key = ? ORDER BY added_at", (owner,))]
 
     # ------------------------------------------------------------------ imagens da TibiaWiki (cache)
     def wiki_image(self, name: str) -> sqlite3.Row | None:

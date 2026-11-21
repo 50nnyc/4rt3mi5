@@ -1,6 +1,46 @@
 {
   "releases": [
     {
+      "version": "0.25.0",
+      "date": "2026-11-21",
+      "title": "Login resistente e ranking de XP",
+      "changes": [
+        "🔐 Entrar sem depender do TibiaData: quem já entrou no aparelho não precisa de nova verificação por 30 dias, mesmo com o TibiaData fora do ar, e o personagem marcado como verificado à mão entra sempre. Quando o prazo acaba, a verificação volta a ser pedida.",
+        "📊 Ranking de XP do TibiaData: o XP ganho nos últimos 30 dias (e nos 90 dias, numa aba própria) de quem está no ranking. Como o TibiaData não guarda histórico, o app guarda um ponto de XP por dia; por isso o ganho mostra o histórico que já existe, e avisa quando ainda é curto.",
+        "📝 Minha lista: cada conta monta a sua própria lista de personagens (amigos, metas, rivais) e vê o XP deles em 30 e 90 dias. Só você vê a sua lista."
+      ],
+      "tr": {
+        "en": { "title": "Sturdy login and XP ranking", "changes": [
+          "🔐 Getting in without depending on TibiaData: whoever already signed in on a device doesn't need to verify again for 30 days, even if TibiaData is down, and a character marked as verified by hand always gets in. When the period ends, verification is asked again.",
+          "📊 TibiaData XP ranking: the XP gained over the last 30 days (and 90 days, in its own tab) for those on the ranking. TibiaData keeps no history, so the app stores one XP point per day; the gain shows the history that already exists and says when it is still short.",
+          "📝 My list: each account builds its own list of characters (friends, goals, rivals) and sees their XP over 30 and 90 days. Only you see your list."] },
+        "es": { "title": "Login resistente y ranking de XP", "changes": [
+          "🔐 Entrar sin depender de TibiaData: quien ya entró desde un aparato no necesita verificarse de nuevo durante 30 días, aunque TibiaData esté caído, y el personaje marcado como verificado a mano siempre entra. Cuando vence el plazo, se vuelve a pedir la verificación.",
+          "📊 Ranking de XP de TibiaData: el XP ganado en los últimos 30 días (y 90 días, en su propia pestaña) de quienes están en el ranking. Como TibiaData no guarda historial, la app guarda un punto de XP por día; la ganancia muestra el historial que ya existe y avisa cuando todavía es corto.",
+          "📝 Mi lista: cada cuenta arma su propia lista de personajes (amigos, metas, rivales) y ve su XP en 30 y 90 días. Solo tú ves tu lista."] },
+        "ja": { "title": "安定したログインとXPランキング", "changes": [
+          "🔐 TibiaData に頼らず入場：一度ログインした端末は、TibiaData が落ちていても30日間は再確認なしで入れます。手動で確認済みにしたキャラクターは常に入れます。期限が過ぎると再び確認を求めます。",
+          "📊 TibiaData の XP ランキング：ランキングに載っている人の、直近30日（と90日のタブ）に得た XP。TibiaData は履歴を保存しないため、アプリが1日1回 XP を記録します。そのため増加量は既にある履歴分で、まだ短い場合はその旨を表示します。",
+          "📝 マイリスト：各アカウントが自分だけのキャラクター一覧（友達・目標・ライバル）を作り、その30日と90日の XP を見られます。リストを見られるのはあなただけです。"] },
+        "de": { "title": "Stabiler Login und XP-Rangliste", "changes": [
+          "🔐 Einloggen ohne Abhängigkeit von TibiaData: Wer sich schon auf einem Gerät angemeldet hat, muss 30 Tage lang nicht erneut prüfen, auch wenn TibiaData ausfällt. Ein von Hand als verifiziert markierter Charakter kommt immer rein. Nach Ablauf der Frist wird wieder geprüft.",
+          "📊 TibiaData-XP-Rangliste: die in den letzten 30 Tagen (und 90 Tagen, im eigenen Tab) gewonnene XP der Spieler auf der Rangliste. TibiaData speichert keine Historie, daher legt die App einen XP-Punkt pro Tag an; der Zuwachs zeigt die vorhandene Historie und weist darauf hin, wenn sie noch kurz ist.",
+          "📝 Meine Liste: jedes Konto stellt seine eigene Liste von Charakteren (Freunde, Ziele, Rivalen) zusammen und sieht deren XP über 30 und 90 Tage. Nur du siehst deine Liste."] },
+        "pl": { "title": "Stabilne logowanie i ranking XP", "changes": [
+          "🔐 Wejście bez zależności od TibiaData: kto już zalogował się na urządzeniu, nie musi weryfikować się ponownie przez 30 dni, nawet gdy TibiaData nie działa, a postać oznaczona ręcznie jako zweryfikowana wchodzi zawsze. Po upływie terminu weryfikacja jest znowu wymagana.",
+          "📊 Ranking XP z TibiaData: XP zdobyte w ostatnich 30 dniach (i 90 dniach, w osobnej zakładce) przez osoby z rankingu. TibiaData nie przechowuje historii, więc aplikacja zapisuje jeden punkt XP dziennie; przyrost pokazuje istniejącą historię i informuje, gdy jest jeszcze krótka.",
+          "📝 Moja lista: każde konto układa własną listę postaci (znajomi, cele, rywale) i widzi ich XP z 30 i 90 dni. Tylko Ty widzisz swoją listę."] },
+        "fr": { "title": "Connexion robuste et classement XP", "changes": [
+          "🔐 Entrer sans dépendre de TibiaData : celui qui s'est déjà connecté sur un appareil n'a pas à se revérifier pendant 30 jours, même si TibiaData est hors ligne, et un personnage marqué vérifié à la main entre toujours. Quand le délai expire, la vérification est de nouveau demandée.",
+          "📊 Classement XP TibiaData : l'XP gagné sur les 30 derniers jours (et 90 jours, dans son onglet) pour ceux du classement. TibiaData ne garde pas d'historique, donc l'application enregistre un point d'XP par jour ; le gain montre l'historique existant et signale quand il est encore court.",
+          "📝 Ma liste : chaque compte constitue sa propre liste de personnages (amis, objectifs, rivaux) et voit leur XP sur 30 et 90 jours. Vous seul voyez votre liste."] },
+        "ru": { "title": "Надёжный вход и рейтинг XP", "changes": [
+          "🔐 Вход без зависимости от TibiaData: тому, кто уже входил с этого устройства, не нужно проходить проверку снова 30 дней, даже если TibiaData недоступен, а персонаж, отмеченный как проверенный вручную, входит всегда. Когда срок истекает, проверка снова запрашивается.",
+          "📊 Рейтинг XP TibiaData: XP, полученный за последние 30 дней (и 90 дней, на отдельной вкладке) у тех, кто в рейтинге. TibiaData не хранит историю, поэтому приложение сохраняет одну точку XP в день; прирост показывает уже имеющуюся историю и сообщает, когда её ещё мало.",
+          "📝 Мой список: каждый аккаунт составляет свой список персонажей (друзья, цели, соперники) и видит их XP за 30 и 90 дней. Свой список видите только вы."] }
+      }
+    },
+    {
       "version": "0.24.2",
       "date": "2026-11-21",
       "title": "Busca de personagens de volta",
