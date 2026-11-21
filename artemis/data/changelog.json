@@ -1,6 +1,58 @@
 {
   "releases": [
     {
+      "version": "0.24.2",
+      "date": "2026-11-21",
+      "title": "Busca de personagens de volta",
+      "changes": [
+        "🔎 Busca de personagens de volta: o 4rt3mi5 passou a usar a versão nova da API do TibiaData (v5), que continua respondendo enquanto a antiga (v4) falha. Login e conferência do comentário voltam a funcionar normalmente. Se a v5 falhar, a v4 é usada como reserva. A XP exata pelo highscore também passou para a v5."
+      ],
+      "tr": {
+        "en": {
+          "title": "Character lookup is back",
+          "changes": [
+            "🔎 Character lookup is back: 4rt3mi5 now uses the new TibiaData API (v5), which keeps answering while the old one (v4) fails. Login and the comment check work normally again. If v5 fails, v4 is used as a backup. Exact XP from the highscores also moved to v5."
+          ]
+        },
+        "es": {
+          "title": "Búsqueda de personajes de vuelta",
+          "changes": [
+            "🔎 Búsqueda de personajes de vuelta: 4rt3mi5 ahora usa la nueva API de TibiaData (v5), que sigue respondiendo mientras la antigua (v4) falla. El login y la verificación del comentario vuelven a funcionar con normalidad. Si la v5 falla, se usa la v4 como respaldo. La XP exacta del highscore también pasó a la v5."
+          ]
+        },
+        "ja": {
+          "title": "キャラクター検索が復旧",
+          "changes": [
+            "🔎 キャラクター検索が復旧：4rt3mi5 は TibiaData の新しい API（v5）を使うようになりました。旧版（v4）が不調でも v5 は応答し続けます。ログインとコメント確認は通常どおり動作します。v5 が失敗した場合は v4 を予備として使います。ハイスコアからの正確な経験値も v5 に移行しました。"
+          ]
+        },
+        "de": {
+          "title": "Charaktersuche funktioniert wieder",
+          "changes": [
+            "🔎 Charaktersuche funktioniert wieder: 4rt3mi5 nutzt jetzt die neue TibiaData-API (v5), die weiter antwortet, während die alte (v4) ausfällt. Login und Kommentarprüfung funktionieren wieder normal. Fällt v5 aus, wird v4 als Reserve genutzt. Die exakte XP aus den Highscores kommt jetzt ebenfalls von v5."
+          ]
+        },
+        "pl": {
+          "title": "Wyszukiwanie postaci znów działa",
+          "changes": [
+            "🔎 Wyszukiwanie postaci znów działa: 4rt3mi5 korzysta teraz z nowego API TibiaData (v5), które odpowiada, gdy stare (v4) zawodzi. Logowanie i sprawdzanie komentarza znów działają normalnie. Jeśli v5 zawiedzie, v4 służy jako zapas. Dokładne XP z highscore również pochodzi teraz z v5."
+          ]
+        },
+        "fr": {
+          "title": "La recherche de personnages est de retour",
+          "changes": [
+            "🔎 La recherche de personnages est de retour : 4rt3mi5 utilise désormais la nouvelle API TibiaData (v5), qui continue de répondre pendant que l'ancienne (v4) échoue. La connexion et la vérification du commentaire fonctionnent de nouveau normalement. Si la v5 échoue, la v4 sert de secours. L'XP exacte des highscores passe aussi par la v5."
+          ]
+        },
+        "ru": {
+          "title": "Поиск персонажей снова работает",
+          "changes": [
+            "🔎 Поиск персонажей снова работает: 4rt3mi5 теперь использует новый API TibiaData (v5), который отвечает, пока старый (v4) сбоит. Вход и проверка комментария снова работают как обычно. Если v5 не отвечает, в качестве резерва используется v4. Точный опыт из хайскоров теперь тоже берётся из v5."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.24.1",
       "date": "2026-11-20",
       "title": "Login com o TibiaData instável",

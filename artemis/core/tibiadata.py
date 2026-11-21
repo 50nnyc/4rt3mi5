@@ -1,4 +1,4 @@
-"""Validação de personagens na API pública do TibiaData (v4). Só usa a stdlib."""
+"""Validação de personagens na API pública do TibiaData (v5, com a v4 de reserva). Só usa a stdlib."""
 from __future__ import annotations
 
 import json
@@ -7,7 +7,10 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 
-API_URL = "https://api.tibiadata.com/v4/character/{name}"
+# 0.24.2: a v5 (lançada em 23/10/2026) usa a API de fansite do Tibia.com e seguiu respondendo
+# quando o /v4/character caiu. A v4 sai do ar em 31/12/2026 e fica só de reserva até lá.
+API_URL = "https://api.tibiadata.com/v5/character/{name}"
+API_URL_FALLBACK = "https://api.tibiadata.com/v4/character/{name}"
 
 
 class TibiaDataError(RuntimeError):
@@ -23,7 +26,7 @@ class CharacterInfo:
     comment: str = ""
 
 
-HIGHSCORE_URL = "https://api.tibiadata.com/v4/highscores/{world}/experience/all/{page}"
+HIGHSCORE_URL = "https://api.tibiadata.com/v5/highscores/{world}/experience/all/{page}"
 
 
 def _get_json(url: str, timeout: float) -> dict:
@@ -87,19 +90,14 @@ def fetch_experience(name: str, world: str, level: int, timeout: float = 10) -> 
         return None
 
 
-def fetch_character(name: str, timeout: float = 10) -> CharacterInfo | None:
-    """Retorna os dados do personagem, ou None se ele não existir."""
-    name = " ".join(name.split())
-    if not name:
-        return None
-    url = API_URL.format(name=urllib.parse.quote(name))
+def _fetch_character_from(url: str, timeout: float) -> CharacterInfo | None:
     req = urllib.request.Request(url, headers={"User-Agent": "4rt3mi5", "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.load(resp)
     except urllib.error.HTTPError as e:
         if e.code in (400, 404, 422):
-            # 422 é a resposta do TibiaData para nome que não existe.
+            # 404 (v5) / 400 e 422 (v4) são as respostas do TibiaData para nome que não existe.
             return None
         if e.code == 502:
             # 502 é falha do TibiaData (instabilidade ou erro ao carregar esse nome),
@@ -120,3 +118,22 @@ def fetch_character(name: str, timeout: float = 10) -> CharacterInfo | None:
         world=ch.get("world", ""),
         comment=ch.get("comment", "") or "",
     )
+
+
+def fetch_character(name: str, timeout: float = 10) -> CharacterInfo | None:
+    """Retorna os dados do personagem, ou None se ele não existir.
+
+    Tenta a v5 primeiro; se ela falhar (rede ou erro do servidor), tenta a v4.
+    "Não existe" da v5 é resposta final: não insiste na v4.
+    """
+    name = " ".join(name.split())
+    if not name:
+        return None
+    quoted = urllib.parse.quote(name)
+    try:
+        return _fetch_character_from(API_URL.format(name=quoted), timeout)
+    except TibiaDataError as first:
+        try:
+            return _fetch_character_from(API_URL_FALLBACK.format(name=quoted), timeout)
+        except TibiaDataError:
+            raise first from None
