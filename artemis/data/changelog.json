@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.25.2",
+      "date": "2026-11-21",
+      "title": "Ranking de XP: visual ajustado para celular",
+      "changes": [
+        "📱 A tabela do ranking de XP cabe na tela do celular, com o ganho em destaque e os detalhes embaixo de cada nome.",
+        "🔄 O primeiro XP de todos os cadastrados pode ser guardado na hora, sem esperar as 09h, para o ranking já ter dados."
+      ],
+      "tr": {
+        "en": { "title": "XP ranking: layout adjusted for phones", "changes": [
+          "📱 The XP ranking table fits on phone screens, with the gain highlighted and the details under each name.",
+          "🔄 Everyone's first XP can be saved right away, without waiting for 09:00, so the ranking has data."] },
+        "es": { "title": "Ranking de XP: diseño ajustado para el celular", "changes": [
+          "📱 La tabla del ranking de XP cabe en la pantalla del celular, con la ganancia destacada y los detalles debajo de cada nombre.",
+          "🔄 El primer XP de todos puede guardarse al momento, sin esperar a las 09:00, para que el ranking ya tenga datos."] },
+        "ja": { "title": "XPランキング：スマホ向けに調整", "changes": [
+          "📱 XPランキングの表がスマホの画面に収まり、増加量を強調し、各名前の下に詳細を表示します。",
+          "🔄 全員の最初のXPを09:00を待たずにすぐ保存できるので、ランキングにすぐデータが入ります。"] },
+        "de": { "title": "XP-Rangliste: Ansicht für Handys angepasst", "changes": [
+          "📱 Die XP-Rangliste passt auf den Handybildschirm; der Zuwachs ist hervorgehoben und die Details stehen unter jedem Namen.",
+          "🔄 Der erste XP-Stand aller kann sofort gespeichert werden, ohne auf 09:00 zu warten, damit die Rangliste sofort Daten hat."] },
+        "pl": { "title": "Ranking XP: układ dostosowany do telefonu", "changes": [
+          "📱 Tabela rankingu XP mieści się na ekranie telefonu; przyrost jest wyróżniony, a szczegóły są pod każdym imieniem.",
+          "🔄 Pierwsze XP wszystkich można zapisać od razu, bez czekania do 09:00, żeby ranking od razu miał dane."] },
+        "fr": { "title": "Classement XP : mise en page adaptée au téléphone", "changes": [
+          "📱 Le tableau du classement XP tient sur l'écran du téléphone, avec le gain en évidence et les détails sous chaque nom.",
+          "🔄 Le premier XP de chacun peut être enregistré tout de suite, sans attendre 09h00, pour que le classement ait déjà des données."] },
+        "ru": { "title": "Рейтинг XP: вид адаптирован для телефона", "changes": [
+          "📱 Таблица рейтинга XP помещается на экран телефона: прирост выделен, а детали — под каждым именем.",
+          "🔄 Первый XP всех можно сохранить сразу, не дожидаясь 09:00, чтобы в рейтинге сразу были данные."] }
+      }
+    },
+    {
       "version": "0.25.1",
       "date": "2026-11-21",
       "title": "Ranking de XP: snapshot diário e regras claras",

@@ -2527,6 +2527,12 @@ def _admin_gate(request: Request, x_admin_token: str = Header(default="")) -> No
     require_admin(request, x_admin_token)  # definido mais abaixo; chamado só na requisição
 
 
+@app.post("/api/admin/xp-snapshot", dependencies=[Depends(_admin_gate)])
+def xp_snapshot_now():
+    """Tira o snapshot de XP agora, sem esperar as 09h. Não duplica quem já tem ponto de hoje."""
+    return {"saved": _xp_snapshot_all(), "tracked": len(store.xp_tracked_names())}
+
+
 @app.post("/api/admin/char-trust", dependencies=[Depends(_admin_gate)])
 def char_trust_admin(body: TrustIn):
     """Verificação manual pelo administrador: o personagem entra sem depender do TibiaData, sempre."""

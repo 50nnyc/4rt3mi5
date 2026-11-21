@@ -2127,13 +2127,16 @@ async function loadXp() {
     return;
   }
   const medal = ["🥇", "🥈", "🥉"];
-  body.innerHTML = `<div class="table-wrap"><table><tr><th>#</th><th>Personagem</th><th>Ganho ${d.days} dias</th><th>XP total</th><th></th></tr>
-    ${d.rows.map((r, i) => `<tr><td>${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
-      <td>${esc(r.name)}${r.partial && r.gain != null ? `<div class="muted" style="font-size:12px">desde ${esc(r.since)} (histórico ainda curto)</div>` : ""}
-          ${r.gain == null ? `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>` : ""}</td>
-      <td>${r.gain == null ? "–" : fmt(r.gain) + " XP"}</td><td>${r.xp == null ? "–" : fmt(r.xp)}</td>
-      <td>${S.xp.scope === "mine" ? `<button class="btn2" data-xdel="${esc(r.name)}" style="margin:0">Remover</button>` : ""}</td></tr>`).join("")}</table></div>
-    <div class="hint">O ganho é a diferença entre o XP de hoje e o de ${d.days} dias atrás, guardado 1 ponto por dia.</div>`;
+  const br = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
+  const W = "white-space:normal";  // a tabela global deixa tudo em uma linha; aqui o texto quebra para caber no celular
+  body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W}">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
+    ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
+      <td style="${W}"><b>${esc(r.name)}</b>${r.xp != null
+        ? `<div class="muted" style="font-size:12px">XP total ${fmt(r.xp)}${r.partial ? ` · desde ${br(r.since)}` : ""}</div>`
+        : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}
+        ${S.xp.scope === "mine" ? `<button class="btn2" data-xdel="${esc(r.name)}" style="margin:6px 0 0;padding:4px 10px;font-size:12px">Remover</button>` : ""}</td>
+      <td style="text-align:right;${W}">${r.gain == null ? "–" : `<b>${fmt(r.gain)}</b> XP`}</td></tr>`).join("")}</table></div>
+    <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois. "desde" aparece quando o histórico ainda é mais curto que a janela.</div>`;
 }
 document.addEventListener("click", async (e) => {
   const dy = e.target.closest("[data-xdays]"), sc = e.target.closest("[data-xscope]"), add = e.target.closest("#xpAddBtn"), del = e.target.closest("[data-xdel]");

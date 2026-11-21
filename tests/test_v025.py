@@ -187,6 +187,16 @@ class TrustAndRankingTests(unittest.TestCase):
         self.assertEqual(server._seconds_until_next_update(datetime(2026, 11, 21, 8, 0, tzinfo=brt)), 3600)
         self.assertEqual(server._seconds_until_next_update(datetime(2026, 11, 21, 10, 0, tzinfo=brt)), 23 * 3600)
 
+    def test_admin_can_take_the_snapshot_now(self):
+        self.login("Fora Treze")
+        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (777, 0)):
+            r = self.client.post("/api/admin/xp-snapshot", headers={"X-Admin-Token": server.CONFIG["admin_token"]})
+            again = self.client.post("/api/admin/xp-snapshot", headers={"X-Admin-Token": server.CONFIG["admin_token"]})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertGreaterEqual(r.json()["saved"], 1)
+        self.assertEqual(again.json()["saved"], 0)  # mesmo dia: nada duplicado
+        self.assertEqual(self.client.post("/api/admin/xp-snapshot").status_code, 401)
+
     def test_daily_snapshot_saves_registered_characters(self):
         self.login("Fora Doze")
         with mock.patch.object(server, "fetch_experience", lambda *a, **k: (123_456, 0)):
