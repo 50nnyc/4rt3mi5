@@ -69,7 +69,28 @@ async function enter() {
   loadReport();
   loadCalendar();
 }
-async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); loadContacts(); loadReport(); loadCalendar(); }
+async function reload() { KEYS = await api("GET", "/api/admin/keys"); render(); loadStatus(); loadScreens(); loadRecovery(); loadContacts(); loadReport(); loadCalendar(); loadScan(); }
+
+// 0.26.0: tempos da varredura (primeira carga, última e média) e as execuções recentes
+const fmtSec = (s) => (s == null ? "–" : s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : s >= 60 ? `${Math.floor(s / 60)} min ${Math.round(s % 60)} s` : `${Math.round(s)} s`);
+async function loadScan() {
+  const el = $("#scan");
+  let d;
+  try { d = await api("GET", "/api/admin/scan-stats"); } catch { return; }
+  const f = d.first_load, l = d.last;
+  el.innerHTML = `
+    <div class="row" style="flex-wrap:wrap;gap:18px">
+      <div><div class="muted">Primeira carga</div><b>${f ? fmtSec(f.seconds) : "ainda não rodou"}</b></div>
+      <div><div class="muted">Última atualização</div><b>${l ? fmtSec(l.seconds) : "–"}</b></div>
+      <div><div class="muted">Média</div><b>${fmtSec(d.avg_seconds)}</b></div>
+      <div><div class="muted">Acompanhados</div><b>${d.tracked_players}</b></div>
+      <div><div class="muted">Agenda</div><b>todo dia às ${String(d.schedule.hour).padStart(2, "0")}h (Brasília)</b></div>
+    </div>
+    ${l ? `<div class="hint">Última: ${esc(l.started_at)} · ${l.requests} consultas · ${l.errors} erros · ${l.worlds} mundos · ${l.matched} encontrados · ${l.changes} mudanças · ${l.world_changes} trocas de mundo</div>` : ""}
+    <div class="table-wrap" style="margin-top:10px"><table><tr><th>Dia</th><th>Tempo</th><th>Consultas</th><th>Erros</th><th>Mudanças</th><th>Trocas</th><th>Status</th></tr>
+      ${d.runs.map((r) => `<tr><td>${esc(r.started_at)}${r.first_load ? " · 1ª carga" : ""}</td><td>${fmtSec(r.seconds)}</td><td>${r.requests}</td><td>${r.errors}</td><td>${r.changes}</td><td>${r.world_changes}</td><td>${r.ok ? "ok" : esc(r.note || "falhou")}</td></tr>`).join("")}
+    </table></div>`;
+}
 
 /* 0.22.1: 📅 calendário do Tibia (HTML do Event Schedule colado daqui; o servidor guarda só os dados) */
 async function loadCalendar() {

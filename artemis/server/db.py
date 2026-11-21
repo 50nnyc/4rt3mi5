@@ -340,6 +340,48 @@ CREATE TABLE IF NOT EXISTS xp_snapshots (
     xp       INTEGER NOT NULL,
     PRIMARY KEY (name_key, day)
 );
+-- 0.26.0: último valor conhecido de cada personagem acompanhado (cadastrados e citados em party session)
+CREATE TABLE IF NOT EXISTS rank_players (
+    name_key      TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    world         TEXT,
+    level         INTEGER,
+    vocation      TEXT,
+    values_json   TEXT NOT NULL,
+    world_changes INTEGER NOT NULL DEFAULT 0,
+    updated_day   TEXT NOT NULL
+);
+-- 0.26.0: o que mudou em relação ao dia anterior (subiu/desceu) e trocas de mundo
+CREATE TABLE IF NOT EXISTS rank_changes (
+    day        TEXT NOT NULL,
+    name_key   TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    category   TEXT NOT NULL,
+    old_value  INTEGER,
+    new_value  INTEGER,
+    delta      INTEGER,
+    kind       TEXT NOT NULL,          -- up | down | world
+    world_from TEXT,
+    world_to   TEXT,
+    PRIMARY KEY (day, name_key, category)
+);
+CREATE INDEX IF NOT EXISTS ix_rank_changes_name ON rank_changes(name_key, day);
+-- 0.26.0: tempo de cada varredura (a primeira carga e as atualizações seguintes) para o painel de admin
+CREATE TABLE IF NOT EXISTS scan_runs (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    started_at    TEXT NOT NULL,
+    seconds       REAL NOT NULL,
+    first_load    INTEGER NOT NULL,
+    requests      INTEGER NOT NULL,
+    errors        INTEGER NOT NULL,
+    worlds        INTEGER NOT NULL,
+    tracked       INTEGER NOT NULL,
+    matched       INTEGER NOT NULL,
+    changes       INTEGER NOT NULL,
+    world_changes INTEGER NOT NULL,
+    ok            INTEGER NOT NULL,
+    note          TEXT NOT NULL DEFAULT ''
+);
 -- 0.25.0: ranking pessoal de cada conta (só ela vê): amigos, metas, rivais
 CREATE TABLE IF NOT EXISTS custom_ranking (
     owner_key TEXT NOT NULL,
@@ -1825,6 +1867,60 @@ class Store:
                                     "UNION SELECT name FROM custom_ranking"):
             nomes.setdefault(name_key(r["name"]), r["name"])
         return list(nomes.values())
+
+    # ------------------------------------------------------------------ 0.26.0: varredura de highscores
+    def rank_count(self) -> int:
+        return self._conn.execute("SELECT COUNT(*) FROM rank_players").fetchone()[0]
+
+    def rank_load_many(self, keys: list[str]) -> dict[str, dict]:
+        if not keys:
+            return {}
+        out = {}
+        for i in range(0, len(keys), 500):
+            lote = keys[i:i + 500]
+            marcas = ",".join("?" * len(lote))
+            for r in self._conn.execute(f"SELECT name_key, name, world, values_json, world_changes FROM rank_players "
+                                        f"WHERE name_key IN ({marcas})", lote):
+                out[r["name_key"]] = {"name": r["name"], "world": r["world"], "world_changes": r["world_changes"],
+                                      "values": json.loads(r["values_json"])}
+        return out
+
+    def rank_apply(self, *, day: str, updates: list[dict], changes: list[dict]) -> None:
+        """Grava o estado atual dos acompanhados e as diferenças do dia, numa só transação."""
+        with self._lock:
+            self._conn.executemany(
+                "INSERT INTO rank_players (name_key, name, world, level, vocation, values_json, world_changes, updated_day) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(name_key) DO UPDATE SET name = excluded.name, "
+                "world = excluded.world, level = excluded.level, vocation = excluded.vocation, "
+                "values_json = excluded.values_json, world_changes = excluded.world_changes, "
+                "updated_day = excluded.updated_day",
+                [(u["name_key"], u["name"], u["world"], u["level"], u["vocation"], json.dumps(u["values"]),
+                  u["world_changes"], day) for u in updates])
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO rank_changes (day, name_key, name, category, old_value, new_value, delta, kind, "
+                "world_from, world_to) VALUES (:day, :name_key, :name, :category, :old_value, :new_value, :delta, :kind, "
+                ":world_from, :world_to)", changes)
+            self._conn.commit()
+
+    def rank_changes_for(self, name: str, since: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT day, category, old_value, new_value, delta, kind, world_from, world_to FROM rank_changes "
+            "WHERE name_key = ? AND day >= ? ORDER BY day DESC, category", (name_key(name), since))]
+
+    def scan_run_add(self, **kw) -> None:
+        cols = ["started_at", "seconds", "first_load", "requests", "errors", "worlds", "tracked", "matched",
+                "changes", "world_changes", "ok", "note"]
+        valores = dict(kw)
+        valores["first_load"] = 1 if valores["first_load"] else 0
+        valores["ok"] = 1 if valores["ok"] else 0
+        with self._lock:
+            self._conn.execute(f"INSERT INTO scan_runs ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
+                               [valores[c] for c in cols])
+            self._conn.commit()
+
+    def scan_runs(self, limit: int = 30) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT * FROM scan_runs ORDER BY id DESC LIMIT ?", (limit,))]
 
     def custom_add(self, owner: str, name: str) -> None:
         with self._lock:

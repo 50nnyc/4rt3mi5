@@ -49,7 +49,9 @@ from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
 from artemis.core import tibiacal, tibianews
 from artemis.core import translate as translate_core
-from artemis.core.tibiadata import TibiaDataError, fetch_character, fetch_experience
+from artemis.core import rankscan
+from artemis.core.tibiadata import (HIGHSCORE_CATEGORIES, TibiaDataError, fetch_character, fetch_experience,
+                                    fetch_highscore_page, fetch_worlds_list)
 
 from . import mailer
 from .db import BASE_PLAYER_TYPES, Store, extra_player_types, name_key, normalize_key, session_content_hash
@@ -2438,24 +2440,18 @@ class TrustIn(BaseModel):
     manual: bool = True
 
 
+def _scan_now() -> dict:
+    """0.26.0: varredura de todos os mundos (XP, skills e demais categorias). Roda 1 vez por dia, às 09h BRT.
+    Guarda só os personagens acompanhados (cadastrados no site e citados em party session) e compara com o dia anterior."""
+    day = datetime.now(BRT).date().isoformat()
+    tracked = {name_key(n): n for n in store.xp_tracked_names()}
+    return rankscan.run_scan(store, day=day, tracked=tracked, fetch_page=fetch_highscore_page,
+                             fetch_worlds=fetch_worlds_list, key_fn=name_key, categories=HIGHSCORE_CATEGORIES)
+
+
 def _xp_snapshot_all() -> int:
-    """Guarda hoje o XP total de cada personagem cadastrado (highscore do TibiaData). Roda 1 vez por dia, às 09h BRT."""
-    today = datetime.now(BRT).date().isoformat()
-    guardados = 0
-    for n in store.xp_tracked_names():
-        if store.xp_has(n, today):
-            continue
-        try:
-            ch = lookup_character(n)
-        except HTTPException:
-            continue
-        if not ch:
-            continue
-        got = fetch_experience(ch.name, ch.world, ch.level)  # (xp, idade do highscore) ou None
-        if got:
-            store.xp_save(ch.name, today, got[0])
-            guardados += 1
-    return guardados
+    """Compatibilidade: o snapshot de XP agora sai da varredura. Devolve quantos acompanhados foram encontrados."""
+    return _scan_now().get("matched", 0)
 
 
 def _seconds_until_next_update(now: datetime | None = None) -> float:
@@ -2529,8 +2525,24 @@ def _admin_gate(request: Request, x_admin_token: str = Header(default="")) -> No
 
 @app.post("/api/admin/xp-snapshot", dependencies=[Depends(_admin_gate)])
 def xp_snapshot_now():
-    """Tira o snapshot de XP agora, sem esperar as 09h. Não duplica quem já tem ponto de hoje."""
-    return {"saved": _xp_snapshot_all(), "tracked": len(store.xp_tracked_names())}
+    """Roda a varredura agora, sem esperar as 09h (pode repetir: a comparação é sempre com o último valor guardado)."""
+    return _scan_now()
+
+
+@app.get("/api/admin/scan-stats", dependencies=[Depends(_admin_gate)])
+def scan_stats():
+    """Painel de admin: tempo da primeira carga, tempo de cada atualização e totais."""
+    runs = store.scan_runs(30)
+    primeira = next((r for r in reversed(store.scan_runs(1000)) if r["first_load"] and r["ok"]), None)
+    ok = [r for r in runs if r["ok"]]
+    return {
+        "first_load": primeira,
+        "last": ok[0] if ok else None,
+        "avg_seconds": round(sum(r["seconds"] for r in ok) / len(ok), 1) if ok else None,
+        "tracked_players": store.rank_count(),
+        "runs": runs,
+        "schedule": {"hour": XP_UPDATE_HOUR, "tz": "America/Sao_Paulo (UTC-3)"},
+    }
 
 
 @app.post("/api/admin/char-trust", dependencies=[Depends(_admin_gate)])

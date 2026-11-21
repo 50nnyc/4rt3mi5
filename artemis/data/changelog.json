@@ -1,6 +1,46 @@
 {
   "releases": [
     {
+      "version": "0.26.0",
+      "date": "2026-11-21",
+      "title": "Varredura de todos os mundos",
+      "changes": [
+        "🌍 Todo dia às 09h (Brasília) o site varre o highscore dos 90 mundos (XP e skills) e compara com o dia anterior: subiu ganha +, desceu aparece em vermelho.",
+        "🔁 Troca de mundo: quando um acompanhado muda de mundo, isso conta como 1 troca de mundo.",
+        "📊 O painel de admin mostra quanto tempo levou a primeira carga, a última atualização e a média."
+      ],
+      "tr": {
+        "en": { "title": "Scan of all worlds", "changes": [
+          "🌍 Every day at 09:00 (Brasília) the site scans the highscores of all 90 worlds (XP and skills) and compares with the day before: going up shows green +, going down shows red.",
+          "🔁 World change: when a tracked player moves to another world, it counts as 1 world change.",
+          "📊 The admin panel shows how long the first load took, the last update and the average."] },
+        "es": { "title": "Escaneo de todos los mundos", "changes": [
+          "🌍 Todos los días a las 09:00 (Brasilia) el sitio escanea el highscore de los 90 mundos (XP y skills) y compara con el día anterior: si sube aparece en verde +, si baja en rojo.",
+          "🔁 Cambio de mundo: cuando un seguido cambia de mundo, cuenta como 1 cambio de mundo.",
+          "📊 El panel de admin muestra cuánto tardó la primera carga, la última actualización y el promedio."] },
+        "ja": { "title": "全ワールドのスキャン", "changes": [
+          "🌍 毎日 09:00（ブラジリア時間）に全90ワールドのハイスコア（XPとスキル）をスキャンし、前日と比較します。上がれば緑の +、下がれば赤で表示。",
+          "🔁 ワールド移動：追跡中のキャラクターが別のワールドに移ると、ワールド移動が1回と数えられます。",
+          "📊 管理画面に、初回読み込み、直近の更新、平均の所要時間を表示します。"] },
+        "de": { "title": "Abgleich aller Welten", "changes": [
+          "🌍 Jeden Tag um 09:00 Uhr (Brasília) liest die Seite die Highscores aller 90 Welten (XP und Skills) und vergleicht mit dem Vortag: Anstieg grün +, Rückgang rot.",
+          "🔁 Weltwechsel: Wechselt ein beobachteter Charakter die Welt, zählt das als 1 Weltwechsel.",
+          "📊 Das Admin-Panel zeigt, wie lange der erste Lauf, das letzte Update und der Durchschnitt gedauert haben."] },
+        "pl": { "title": "Skanowanie wszystkich światów", "changes": [
+          "🌍 Codziennie o 09:00 (Brasília) strona skanuje highscore wszystkich 90 światów (XP i umiejętności) i porównuje z dniem poprzednim: wzrost zielony +, spadek czerwony.",
+          "🔁 Zmiana świata: gdy śledzona postać przechodzi do innego świata, liczy się to jako 1 zmiana świata.",
+          "📊 Panel admina pokazuje, ile trwało pierwsze ładowanie, ostatnia aktualizacja i średnia."] },
+        "fr": { "title": "Analyse de tous les mondes", "changes": [
+          "🌍 Chaque jour à 09h00 (Brasília), le site analyse le highscore des 90 mondes (XP et compétences) et compare avec la veille : hausse en vert +, baisse en rouge.",
+          "🔁 Changement de monde : quand un personnage suivi change de monde, cela compte comme 1 changement de monde.",
+          "📊 Le panneau admin affiche la durée du premier chargement, de la dernière mise à jour et la moyenne."] },
+        "ru": { "title": "Сканирование всех миров", "changes": [
+          "🌍 Каждый день в 09:00 (Бразилиа) сайт сканирует хайскоры всех 90 миров (XP и навыки) и сравнивает с предыдущим днём: рост — зелёный +, падение — красный.",
+          "🔁 Смена мира: когда отслеживаемый персонаж переходит в другой мир, это считается как 1 смена мира.",
+          "📊 Панель админа показывает, сколько заняла первая загрузка, последнее обновление и среднее время."] }
+      }
+    },
+    {
       "version": "0.25.3",
       "date": "2026-11-21",
       "title": "Ranking de XP com quem está nas parties",

@@ -35,6 +35,38 @@ def _get_json(url: str, timeout: float) -> dict:
         return json.load(resp)
 
 
+HIGHSCORE_PAGE_URL = "https://api.tibiadata.com/v5/highscores/{world}/{category}/all/{page}"
+WORLDS_URL = "https://api.tibiadata.com/v5/worlds"
+HIGHSCORE_CATEGORIES = (
+    "experience", "achievements", "charmpoints", "magiclevel", "shielding", "distancefighting", "clubfighting",
+    "swordfighting", "axefighting", "fistfighting", "fishing", "goshnarstaint", "loyaltypoints", "dromescore",
+    "bosspoints", "bountypoints", "weeklytasks", "phosphorusrecord",
+)
+
+
+def fetch_highscore_page(world: str, category: str, page: int, timeout: float = 15) -> list[dict]:
+    """Uma página (50 jogadores) do highscore de um mundo/categoria. Lista vazia quando a página não existe (fim)."""
+    url = HIGHSCORE_PAGE_URL.format(world=urllib.parse.quote(world), category=category, page=page)
+    try:
+        data = _get_json(url, timeout)
+    except urllib.error.HTTPError as e:
+        if e.code == 400:  # a v5 responde 400 depois da última página
+            return []
+        raise TibiaDataError(f"highscore {world}/{category}/{page}: HTTP {e.code}") from e
+    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
+        raise TibiaDataError(f"highscore {world}/{category}/{page}: {e}") from e
+    return (data.get("highscores") or {}).get("highscore_list") or []
+
+
+def fetch_worlds_list(timeout: float = 15) -> list[str]:
+    """Nomes dos mundos regulares (são 90 hoje)."""
+    try:
+        data = _get_json(WORLDS_URL, timeout)
+    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError) as e:
+        raise TibiaDataError(f"lista de mundos: {e}") from e
+    return [w["name"] for w in (data.get("worlds") or {}).get("regular_worlds", []) if w.get("name")]
+
+
 def fetch_experience(name: str, world: str, level: int, timeout: float = 10) -> tuple[int, int] | None:
     """XP exata do personagem, pelo highscore de experiência do mundo (top 1000).
 

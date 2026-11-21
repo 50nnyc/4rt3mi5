@@ -13,6 +13,15 @@ from tests import limpar_banco
 from tests.test_server import COMMENTS, fake_fetch
 
 
+def fake_hs(valores: dict[str, int]):
+    """Highscore falso: a categoria experience, página 1, com os personagens dados (mundo Antica)."""
+    def fetch(world, category, page, **_k):
+        if category == "experience" and page == 1 and world == "Antica":
+            return [{"name": n, "level": 300, "vocation": "Knight", "value": v} for n, v in valores.items()]
+        return []
+    return fetch
+
+
 def outage(*_a, **_k):
     raise TibiaDataError("O TibiaData não conseguiu responder por esse nome agora (HTTP 502).")
 
@@ -189,10 +198,39 @@ class TrustAndRankingTests(unittest.TestCase):
         conn.execute("PRAGMA foreign_keys = ON")
         self.assertIn("Fora Party", server.store.xp_board_names())
         self.assertIn("Fora Party", server.store.xp_tracked_names())
-        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (42_000, 0)):
+        with mock.patch.object(server, "fetch_highscore_page", fake_hs({"Fora Party": 42_000})), \
+                mock.patch.object(server, "fetch_worlds_list", lambda: ["Antica"]):
             server._xp_snapshot_all()
         hoje = server.datetime.now(server.BRT).date().isoformat()
         self.assertTrue(server.store.xp_has("Fora Party", hoje))
+
+    def test_scan_compares_with_previous_day_and_counts_world_changes(self):
+        from artemis.core import rankscan
+
+        def dia(day, world, xp):
+            def fetch_page(w, c, p):
+                if w == world and c == "experience" and p == 1:
+                    return [{"name": "Fora Mudou", "level": 300, "vocation": "Knight", "value": xp}]
+                return []
+            return rankscan.run_scan(server.store, day=day, tracked={name_key("Fora Mudou"): "Fora Mudou"},
+                                     fetch_page=fetch_page, fetch_worlds=lambda: ["Antica", "Celebra"], key_fn=name_key,
+                                     categories=("experience",), workers=2, pages=2)
+
+        primeiro = dia("2026-11-21", "Antica", 100)
+        self.assertTrue(primeiro["first_load"])
+        self.assertEqual(primeiro["changes"], 0)
+        segundo = dia("2026-11-22", "Celebra", 150)  # subiu 50 XP e trocou de Antica para Celebra
+        self.assertEqual(segundo["world_changes"], 1)
+        mudancas = {m["category"]: m for m in server.store.rank_changes_for("Fora Mudou", "2026-11-01")}
+        self.assertEqual(mudancas["experience"]["kind"], "up")
+        self.assertEqual(mudancas["experience"]["delta"], 50)
+        self.assertEqual(mudancas["world"]["world_from"], "Antica")
+        self.assertEqual(mudancas["world"]["world_to"], "Celebra")
+        dia("2026-11-23", "Celebra", 30)  # desceu 120
+        desceu = {m["category"]: m for m in server.store.rank_changes_for("Fora Mudou", "2026-11-23")}
+        self.assertEqual(desceu["experience"]["kind"], "down")
+        self.assertEqual(desceu["experience"]["delta"], -120)
+        self.assertEqual(server.store.scan_runs(1)[0]["ok"], 1)
 
     def test_next_update_is_0900_brasilia(self):
         from datetime import datetime
@@ -202,17 +240,19 @@ class TrustAndRankingTests(unittest.TestCase):
 
     def test_admin_can_take_the_snapshot_now(self):
         self.login("Fora Treze")
-        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (777, 0)):
+        with mock.patch.object(server, "fetch_highscore_page", fake_hs({"Fora Treze": 777})), \
+                mock.patch.object(server, "fetch_worlds_list", lambda: ["Antica"]):
             r = self.client.post("/api/admin/xp-snapshot", headers={"X-Admin-Token": server.CONFIG["admin_token"]})
             again = self.client.post("/api/admin/xp-snapshot", headers={"X-Admin-Token": server.CONFIG["admin_token"]})
         self.assertEqual(r.status_code, 200, r.text)
-        self.assertGreaterEqual(r.json()["saved"], 1)
-        self.assertEqual(again.json()["saved"], 0)  # mesmo dia: nada duplicado
+        self.assertGreaterEqual(r.json()["matched"], 1)
+        self.assertEqual(again.json()["changes"], 0)  # mesmo valor no dia seguinte: nada muda
         self.assertEqual(self.client.post("/api/admin/xp-snapshot").status_code, 401)
 
     def test_daily_snapshot_saves_registered_characters(self):
         self.login("Fora Doze")
-        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (123_456, 0)):
+        with mock.patch.object(server, "fetch_highscore_page", fake_hs({"Fora Doze": 123_456})), \
+                mock.patch.object(server, "fetch_worlds_list", lambda: ["Antica"]):
             guardados = server._xp_snapshot_all()
         self.assertGreaterEqual(guardados, 1)
         hoje = server.datetime.now(server.BRT).date().isoformat()
