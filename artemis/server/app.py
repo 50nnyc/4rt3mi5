@@ -147,7 +147,17 @@ async def lifespan(_app: FastAPI):
             except Exception as e:  # notícia nunca derruba o servidor
                 print("Falha ao atualizar as notícias do Tibia:", e)
             await asyncio.sleep(NEWS_SYNC_EVERY)
-    tasks = [asyncio.create_task(purge_loop()), asyncio.create_task(backup_loop())]
+    async def xp_loop():
+        # 0.25.1: snapshot de XP de todos os cadastrados, todo dia às 09h (Brasília)
+        while True:
+            await asyncio.sleep(_seconds_until_next_update())
+            try:
+                n = await asyncio.to_thread(_xp_snapshot_all)
+                print(f"XP do TibiaData: {n} personagens guardados")
+            except Exception as e:  # ranking nunca derruba o servidor
+                print("Falha no snapshot de XP:", e)
+    tasks = [asyncio.create_task(purge_loop()), asyncio.create_task(backup_loop()),
+             asyncio.create_task(xp_loop())]
     if NEWS_SYNC_EVERY > 0:
         tasks.append(asyncio.create_task(news_loop()))
     yield
@@ -2413,7 +2423,10 @@ def ranking_join(name: str, body: RankingJoinIn, access: dict = Depends(require_
 
 # ------------------------------------------------------------------ 0.25.0: XP do TibiaData (30/90 dias) e ranking pessoal
 XP_DAYS = (30, 90)
-XP_REFRESH_MAX = 25  # personagens medidos por pedido (cada um custa algumas consultas ao TibiaData)
+XP_TRACK_START = date(2026, 11, 21)              # o tracker só conta XP a partir deste dia
+XP_NOTE_UNTIL = XP_TRACK_START + timedelta(days=90)  # a observação com a data some sozinha depois disso
+XP_UPDATE_HOUR = 9                                # snapshot diário às 09h (horário de Brasília, UTC-3)
+BRT = timezone(timedelta(hours=-3))
 
 
 class CustomRankIn(BaseModel):
@@ -2425,16 +2438,13 @@ class TrustIn(BaseModel):
     manual: bool = True
 
 
-def _xp_refresh(names: list[str]) -> None:
-    """Guarda hoje o XP total de cada personagem (highscore do TibiaData). Uma vez por dia por personagem."""
-    today = datetime.now().date().isoformat()
-    feitos = 0
-    for n in names:
-        if feitos >= XP_REFRESH_MAX:
-            break
+def _xp_snapshot_all() -> int:
+    """Guarda hoje o XP total de cada personagem cadastrado (highscore do TibiaData). Roda 1 vez por dia, às 09h BRT."""
+    today = datetime.now(BRT).date().isoformat()
+    guardados = 0
+    for n in store.xp_tracked_names():
         if store.xp_has(n, today):
             continue
-        feitos += 1
         try:
             ch = lookup_character(n)
         except HTTPException:
@@ -2444,37 +2454,58 @@ def _xp_refresh(names: list[str]) -> None:
         got = fetch_experience(ch.name, ch.world, ch.level)  # (xp, idade do highscore) ou None
         if got:
             store.xp_save(ch.name, today, got[0])
+            guardados += 1
+    return guardados
+
+
+def _seconds_until_next_update(now: datetime | None = None) -> float:
+    """Segundos até o próximo 09h BRT (hoje, se ainda não passou; senão amanhã)."""
+    agora = now or datetime.now(BRT)
+    alvo = agora.replace(hour=XP_UPDATE_HOUR, minute=0, second=0, microsecond=0)
+    if alvo <= agora:
+        alvo += timedelta(days=1)
+    return (alvo - agora).total_seconds()
 
 
 def _xp_rows(names: list[str], days: int) -> list[dict]:
-    """XP ganho nos últimos `days` dias, a partir dos snapshots. Sem histórico suficiente, mostra desde o 1º ponto."""
-    base_day = (datetime.now().date() - timedelta(days=days)).isoformat()
+    """XP ganho nos últimos `days` dias, só a partir de 21/11/2026 e do 1º ponto de cada personagem.
+    partial = a contagem começou depois da janela (histórico ainda curto)."""
+    hoje = datetime.now(BRT).date()
+    janela = (hoje - timedelta(days=days)).isoformat()
+    corte = XP_TRACK_START.isoformat()
+    inicio = max(janela, corte)
     rows = []
     for n in names:
         latest = store.xp_latest(n)
         if latest is None:
             rows.append({"name": n, "xp": None, "gain": None, "since": None, "partial": True})
             continue
-        base = store.xp_baseline(n, base_day)
-        partial = base is None
-        if base is None:
-            base = store.xp_first(n)
+        # referência: último ponto até o início da contagem, desde que não seja anterior a 21/11/2026;
+        # se não houver, o primeiro ponto a partir daí; se ainda não houver nenhum, ganho zero por enquanto
+        ref = store.xp_baseline(n, inicio)
+        if ref is None or ref["day"] < corte:
+            ref = store.xp_first_from(n, inicio) or latest
+        base = ref
         rows.append({"name": n, "xp": latest["xp"], "gain": latest["xp"] - base["xp"], "since": base["day"],
-                     "partial": partial})
+                     "partial": base["day"] > janela})
     rows.sort(key=lambda r: (r["gain"] is None, -(r["gain"] or 0), r["name"].lower()))
     return rows
 
 
 @app.get("/api/xp-ranking")
 def xp_ranking(days: int = 30, scope: str = "board", access: dict = Depends(require_session)):
-    """scope=board: quem entrou no ranking (público). scope=mine: a lista pessoal de quem pediu (só ela vê)."""
+    """scope=board: todos os personagens cadastrados no site (público). scope=mine: a lista pessoal de quem pediu.
+    Lê só os snapshots guardados às 09h BRT; não consulta o TibiaData."""
     days = days if days in XP_DAYS else 30
     if scope == "mine":
         names = [c["name"] for c in store.custom_list(access["key"])]
     else:
-        names = [r["name"] for r in store.ranking_rows(since="0000-01-01T00:00:00")]
-    _xp_refresh(names)
-    return {"days": days, "scope": "mine" if scope == "mine" else "board", "rows": _xp_rows(names, days)}
+        names = store.xp_board_names()
+    hoje = datetime.now(BRT).date()
+    return {"days": days, "scope": "mine" if scope == "mine" else "board", "rows": _xp_rows(names, days),
+            "update": {"hour": XP_UPDATE_HOUR, "tz": "America/Sao_Paulo (UTC-3)"},
+            "track_start": XP_TRACK_START.isoformat(),
+            "note_visible": hoje < XP_NOTE_UNTIL, "note_until": XP_NOTE_UNTIL.isoformat()}
 
 
 @app.post("/api/xp-ranking/mine")

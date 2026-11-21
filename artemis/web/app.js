@@ -2121,8 +2121,9 @@ async function loadXp() {
   let d;
   try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=${S.xp.scope}`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  $("#xpNoteDated").classList.toggle("hidden", !d.note_visible);  // a data some sozinha após 90 dias
   if (!d.rows.length) {
-    body.innerHTML = `<p class="muted">${S.xp.scope === "mine" ? "Sua lista está vazia. Adicione amigos, metas ou rivais: só você vê." : "Ninguém no ranking ainda."}</p>`;
+    body.innerHTML = `<p class="muted">${S.xp.scope === "mine" ? "Sua lista está vazia. Adicione amigos, metas ou rivais: só você vê." : "Nenhum personagem cadastrado ainda."}</p>`;
     return;
   }
   const medal = ["🥇", "🥈", "🥉"];

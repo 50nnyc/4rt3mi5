@@ -28,7 +28,9 @@ class TrustAndRankingTests(unittest.TestCase):
         self.key = server.store.create_key(30, "v025")["key"]
         self.patches = [mock.patch.object(server, "fetch_character", fake_fetch),
                         mock.patch.object(server, "fetch_experience", lambda *a, **k: None),
-                        mock.patch.object(server.captcha, "verify", lambda *a, **k: None)]
+                        mock.patch.object(server.captcha, "verify", lambda *a, **k: None),
+                        # os testes de XP usam datas relativas a hoje: o início da contagem (21/11/2026) fica antes delas
+                        mock.patch.object(server, "XP_TRACK_START", date(2000, 1, 1))]
         for p in self.patches:
             p.start()
 
@@ -143,6 +145,55 @@ class TrustAndRankingTests(unittest.TestCase):
         self.assertEqual([c["name"] for c in server.store.custom_list(self.key)], ["Amigo Um"])
         r3 = self.client.delete("/api/xp-ranking/mine/Amigo%20Um", headers=hdr)
         self.assertEqual(r3.json()["names"], [])
+
+    # ---------------------------------------------------------------- regras de 0.25.1
+    def test_points_before_21_11_are_not_counted(self):
+        token = self.login("Fora Dez")
+        self.client.post("/api/xp-ranking/mine", json={"character": "Fora Dez"},
+                         headers={"X-Access-Key": self.key, "X-Device-Token": token})
+        hoje = date.today()
+        cutoff = hoje - timedelta(days=20)
+        s = server.store
+        s.xp_save("Fora Dez", (cutoff - timedelta(days=5)).isoformat(), 1_000)  # antes do início: não conta
+        s.xp_save("Fora Dez", cutoff.isoformat(), 3_000)
+        s.xp_save("Fora Dez", hoje.isoformat(), 5_000)
+        with mock.patch.object(server, "XP_TRACK_START", cutoff):
+            r = self.client.get("/api/xp-ranking?days=30&scope=mine", headers={"X-Access-Key": self.key, "X-Device-Token": token})
+        row = r.json()["rows"][0]
+        self.assertEqual(row["gain"], 2_000)
+        self.assertEqual(row["since"], cutoff.isoformat())
+        self.assertTrue(row["partial"])
+
+    def test_board_lists_every_registered_character(self):
+        token = self.login("Fora Onze")
+        r = self.client.get("/api/xp-ranking?days=30&scope=board", headers={"X-Access-Key": self.key, "X-Device-Token": token})
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertIn("Fora Onze", [row["name"] for row in r.json()["rows"]])
+        self.assertEqual(r.json()["update"]["hour"], 9)
+
+    def test_note_disappears_after_90_days(self):
+        token = self.login("Fora Doze Dois")
+        hdr = {"X-Access-Key": self.key, "X-Device-Token": token}
+        with mock.patch.object(server, "XP_NOTE_UNTIL", date.today() + timedelta(days=1)):
+            on = self.client.get("/api/xp-ranking?scope=board", headers=hdr).json()
+        with mock.patch.object(server, "XP_NOTE_UNTIL", date.today() - timedelta(days=1)):
+            off = self.client.get("/api/xp-ranking?scope=board", headers=hdr).json()
+        self.assertTrue(on["note_visible"])
+        self.assertFalse(off["note_visible"])
+
+    def test_next_update_is_0900_brasilia(self):
+        from datetime import datetime
+        brt = server.BRT
+        self.assertEqual(server._seconds_until_next_update(datetime(2026, 11, 21, 8, 0, tzinfo=brt)), 3600)
+        self.assertEqual(server._seconds_until_next_update(datetime(2026, 11, 21, 10, 0, tzinfo=brt)), 23 * 3600)
+
+    def test_daily_snapshot_saves_registered_characters(self):
+        self.login("Fora Doze")
+        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (123_456, 0)):
+            guardados = server._xp_snapshot_all()
+        self.assertGreaterEqual(guardados, 1)
+        hoje = server.datetime.now(server.BRT).date().isoformat()
+        self.assertTrue(server.store.xp_has("Fora Doze", hoje))
 
 
 if __name__ == "__main__":

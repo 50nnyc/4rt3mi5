@@ -1262,5 +1262,7 @@
   "Minha lista": "My list",
   "Ranking público": "Public ranking",
   "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "XP gained in the last 30 or 90 days, measured by TibiaData. Only those in the world's top 1000 appear.",
-  "📊 XP do TibiaData": "📊 TibiaData XP"
+  "📊 XP do TibiaData": "📊 TibiaData XP",
+  "⏱️ Atualiza todo dia às 09h (horário de Brasília). O tracker só conta a XP a partir do dia em que cada personagem é cadastrado no site.": "⏱️ Updates every day at 09:00 (Brasília time). The tracker only counts XP from the day each character is registered on the site.",
+  "Até 19/02/2027, a contagem também começa em 21/11/2026, mesmo para quem se cadastrou antes.": "Until 19/02/2027, counting also starts on 21/11/2026, even for those who registered earlier."
 }

@@ -1,6 +1,46 @@
 {
   "releases": [
     {
+      "version": "0.25.1",
+      "date": "2026-11-21",
+      "title": "Ranking de XP: snapshot diário e regras claras",
+      "changes": [
+        "📊 O ranking de XP agora mostra todos os personagens cadastrados no site, e cada conta vê o seu rank junto com os outros cadastrados.",
+        "⏱️ O XP é guardado todo dia às 09h (horário de Brasília). O tracker só conta a XP a partir do dia em que cada personagem é cadastrado no site, e, para a janela de 30 e 90 dias, só a partir de 21/11/2026.",
+        "📝 Uma observação no topo do ranking explica isso. A parte com a data de 21/11/2026 some sozinha em 19/02/2027, 90 dias depois."
+      ],
+      "tr": {
+        "en": { "title": "XP ranking: daily snapshot and clear rules", "changes": [
+          "📊 The XP ranking now shows every character registered on the site, and each account sees its rank next to the other registered ones.",
+          "⏱️ XP is saved every day at 09:00 (Brasília time). The tracker only counts XP from the day each character is registered on the site, and for the 30 and 90 day windows only from 21/11/2026.",
+          "📝 A note at the top of the ranking explains this. The part with the 21/11/2026 date disappears by itself on 19/02/2027, 90 days later."] },
+        "es": { "title": "Ranking de XP: snapshot diario y reglas claras", "changes": [
+          "📊 El ranking de XP ahora muestra todos los personajes registrados en el sitio, y cada cuenta ve su rango junto a los demás registrados.",
+          "⏱️ El XP se guarda todos los días a las 09:00 (hora de Brasilia). El tracker solo cuenta el XP desde el día en que cada personaje se registra en el sitio, y para las ventanas de 30 y 90 días solo desde el 21/11/2026.",
+          "📝 Una nota arriba del ranking lo explica. La parte con la fecha 21/11/2026 desaparece sola el 19/02/2027, 90 días después."] },
+        "ja": { "title": "XPランキング：毎日のスナップショットと明確なルール", "changes": [
+          "📊 XPランキングにはサイトに登録された全キャラクターが表示され、各アカウントは他の登録者と並んで自分の順位を見られます。",
+          "⏱️ XPは毎日 09:00（ブラジリア時間）に保存されます。トラッカーは各キャラクターをサイトに登録した日からのXPだけを数え、30日・90日の期間は2026/11/21からのみ数えます。",
+          "📝 ランキング上部の注記で説明しています。2026/11/21 の日付の部分は、90日後の 2027/02/19 に自動で消えます。"] },
+        "de": { "title": "XP-Rangliste: tägliche Momentaufnahme und klare Regeln", "changes": [
+          "📊 Die XP-Rangliste zeigt jetzt alle auf der Seite registrierten Charaktere, und jedes Konto sieht seinen Rang neben den anderen Registrierten.",
+          "⏱️ XP wird jeden Tag um 09:00 Uhr (Brasília-Zeit) gespeichert. Der Tracker zählt XP nur ab dem Tag, an dem jeder Charakter auf der Seite registriert wurde, und für die 30- und 90-Tage-Zeiträume nur ab dem 21.11.2026.",
+          "📝 Ein Hinweis oben in der Rangliste erklärt das. Der Teil mit dem Datum 21.11.2026 verschwindet am 19.02.2027 von selbst, 90 Tage später."] },
+        "pl": { "title": "Ranking XP: dzienny zapis i jasne zasady", "changes": [
+          "📊 Ranking XP pokazuje teraz wszystkie postacie zarejestrowane na stronie, a każde konto widzi swoje miejsce obok pozostałych zarejestrowanych.",
+          "⏱️ XP zapisuje się codziennie o 09:00 (czas Brasílii). Tracker liczy XP tylko od dnia rejestracji każdej postaci na stronie, a dla okien 30 i 90 dni tylko od 21.11.2026.",
+          "📝 Notatka na górze rankingu to wyjaśnia. Część z datą 21.11.2026 znika sama 19.02.2027, 90 dni później."] },
+        "fr": { "title": "Classement XP : instantané quotidien et règles claires", "changes": [
+          "📊 Le classement XP affiche désormais tous les personnages inscrits sur le site, et chaque compte voit son rang à côté des autres inscrits.",
+          "⏱️ L'XP est enregistrée chaque jour à 09h00 (heure de Brasília). Le tracker ne compte l'XP qu'à partir du jour où chaque personnage est inscrit sur le site, et pour les fenêtres de 30 et 90 jours seulement à partir du 21/11/2026.",
+          "📝 Une note en haut du classement l'explique. La partie avec la date du 21/11/2026 disparaît d'elle-même le 19/02/2027, 90 jours plus tard."] },
+        "ru": { "title": "Рейтинг XP: ежедневный снимок и понятные правила", "changes": [
+          "📊 Рейтинг XP теперь показывает всех персонажей, зарегистрированных на сайте, и каждый аккаунт видит свою позицию рядом с другими зарегистрированными.",
+          "⏱️ XP сохраняется каждый день в 09:00 (время Бразилиа). Трекер считает XP только с дня регистрации каждого персонажа на сайте, а для окон 30 и 90 дней — только с 21.11.2026.",
+          "📝 Заметка вверху рейтинга объясняет это. Часть с датой 21.11.2026 исчезает сама 19.02.2027, через 90 дней."] }
+      }
+    },
+    {
       "version": "0.25.0",
       "date": "2026-11-21",
       "title": "Login resistente e ranking de XP",

@@ -1805,6 +1805,24 @@ class Store:
                                  (name_key(name),)).fetchone()
         return dict(row) if row else None
 
+    def xp_first_from(self, name: str, day: str) -> dict | None:
+        """Primeiro ponto de XP do personagem a partir de `day` (inclusive)."""
+        row = self._conn.execute("SELECT day, xp FROM xp_snapshots WHERE name_key = ? AND day >= ? "
+                                 "ORDER BY day ASC LIMIT 1", (name_key(name), day)).fetchone()
+        return dict(row) if row else None
+
+    def xp_board_names(self) -> list[str]:
+        """Todos os personagens cadastrados no site (de qualquer conta), sem repetição."""
+        rows = self._conn.execute("SELECT name FROM key_chars GROUP BY name_key ORDER BY MIN(name)").fetchall()
+        return [r["name"] for r in rows]
+
+    def xp_tracked_names(self) -> list[str]:
+        """Personagens que precisam de snapshot: os cadastrados e os da lista pessoal de alguma conta."""
+        nomes = {}
+        for r in self._conn.execute("SELECT name FROM key_chars UNION SELECT name FROM custom_ranking"):
+            nomes.setdefault(name_key(r["name"]), r["name"])
+        return list(nomes.values())
+
     def custom_add(self, owner: str, name: str) -> None:
         with self._lock:
             self._conn.execute("INSERT OR IGNORE INTO custom_ranking VALUES (?, ?, ?, ?)",

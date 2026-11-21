@@ -1262,5 +1262,7 @@
   "Minha lista": "マイリスト",
   "Ranking público": "公開ランキング",
   "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "直近30日または90日に獲得したXP（TibiaData計測）。ワールドのトップ1000にいる人だけが表示されます。",
-  "📊 XP do TibiaData": "📊 TibiaData の XP"
+  "📊 XP do TibiaData": "📊 TibiaData の XP",
+  "⏱️ Atualiza todo dia às 09h (horário de Brasília). O tracker só conta a XP a partir do dia em que cada personagem é cadastrado no site.": "⏱️ 毎日 09:00（ブラジリア時間）に更新。トラッカーは各キャラクターをサイトに登録した日からのXPだけを数えます。",
+  "Até 19/02/2027, a contagem também começa em 21/11/2026, mesmo para quem se cadastrou antes.": "2027/02/19 まで、カウントは 2026/11/21 からも開始します（それ以前に登録した人も含む）。"
 }
