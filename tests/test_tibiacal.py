@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from artemis.core import tibiacal
+from tests import limpar_banco
 from tests.test_server import server  # mesmo banco temporário dos testes do servidor
 
 SAMPLE = (Path(__file__).parent / "fixtures" / "tibia_calendar_sample.html").read_text(encoding="utf-8")
@@ -33,6 +34,7 @@ class ParserTests(unittest.TestCase):
 class CalendarApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        limpar_banco(server.store._conn)
         cls.client = TestClient(server.app)
         key = server.store.create_key(30, "cal")["key"]
         server.store.force_main(key, "Leitor Calendario")

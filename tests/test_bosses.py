@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from artemis.core import bosses as boss_core
 from artemis.server import app as server
+from tests import limpar_banco
 from tests.test_core import EXAMPLE
 from tests.test_server import COMMENTS, fake_fetch
 
@@ -87,6 +88,7 @@ class BossCoreTests(unittest.TestCase):
 
 class BossServerTests(unittest.TestCase):
     def setUp(self):
+        limpar_banco(server.store._conn)
         self.client = TestClient(server.app)
         for cache in (server._char_cache, server._last_check, server._exp_cache, server._hits, server._fails):
             cache.clear()

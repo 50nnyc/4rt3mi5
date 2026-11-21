@@ -6,6 +6,7 @@ from unittest import mock
 from fastapi.testclient import TestClient
 
 from artemis.core import tibianews
+from tests import limpar_banco
 from tests.test_server import server  # mesmo banco temporário dos testes do servidor
 
 TODAY = date.today()
@@ -45,6 +46,7 @@ class SanitizeTests(unittest.TestCase):
 class TibiaNewsApiTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        limpar_banco(server.store._conn)
         cls.client = TestClient(server.app)
         key = server.store.create_key(30, "news")["key"]
         server.store.force_main(key, "Leitor Noticias")

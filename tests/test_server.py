@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from artemis.core.tibiadata import CharacterInfo  # noqa: E402
 from artemis.server import app as server  # noqa: E402
 from artemis.server.db import _iso, utcnow  # noqa: E402
+from tests import limpar_banco  # noqa: E402
 from tests.test_core import EXAMPLE  # noqa: E402
 from tests.test_session import SOLO  # noqa: E402
 
@@ -26,6 +27,7 @@ def fake_fetch(name, timeout=10):
 
 class ServerTests(unittest.TestCase):
     def setUp(self):
+        limpar_banco(server.store._conn)
         self.client = TestClient(server.app)
         server._char_cache.clear()
         server._last_check.clear()

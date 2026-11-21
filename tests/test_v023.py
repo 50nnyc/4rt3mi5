@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 from artemis.server import app as server
 from artemis.server.db import _iso, utcnow
+from tests import limpar_banco
 from tests.test_core import EXAMPLE
 from tests.test_server import COMMENTS, fake_fetch
 from tests.test_session import SOLO
@@ -23,6 +24,7 @@ def party_text(day: str) -> str:
 
 class SubsTests(unittest.TestCase):
     def setUp(self):
+        limpar_banco(server.store._conn)
         self.client = TestClient(server.app)
         for cache in (server._char_cache, server._last_check, server._exp_cache, server._hits, server._fails,
                       server._captcha_used):
