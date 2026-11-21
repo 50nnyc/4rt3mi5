@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "0.25.3",
+      "date": "2026-11-21",
+      "title": "Ranking de XP com quem está nas parties",
+      "changes": [
+        "👥 O ranking de XP agora também traz os personagens que aparecem nas hunts de party (Party Hunt Analyser), além dos cadastrados no site. Eles entram no snapshot das 09h junto com os demais."
+      ],
+      "tr": {
+        "en": { "title": "XP ranking with party members", "changes": [
+          "👥 The XP ranking now also includes the characters that appear in party hunts (Party Hunt Analyser), besides the ones registered on the site. They join the 09:00 snapshot with the rest."] },
+        "es": { "title": "Ranking de XP con quienes están en parties", "changes": [
+          "👥 El ranking de XP ahora también incluye los personajes que aparecen en las hunts de party (Party Hunt Analyser), además de los registrados en el sitio. Entran en el snapshot de las 09:00 junto con los demás."] },
+        "ja": { "title": "パーティのメンバーを含むXPランキング", "changes": [
+          "👥 XPランキングに、サイト登録者に加えてパーティ狩り（Party Hunt Analyser）に出てくるキャラクターも含まれるようになりました。09:00のスナップショットに他の人と一緒に入ります。"] },
+        "de": { "title": "XP-Rangliste mit Party-Mitgliedern", "changes": [
+          "👥 Die XP-Rangliste enthält jetzt auch die Charaktere aus Party-Jagden (Party Hunt Analyser), zusätzlich zu den auf der Seite registrierten. Sie kommen mit den übrigen in die Momentaufnahme um 09:00 Uhr."] },
+        "pl": { "title": "Ranking XP z członkami party", "changes": [
+          "👥 Ranking XP obejmuje teraz także postacie z polowań party (Party Hunt Analyser), oprócz zarejestrowanych na stronie. Trafiają do zapisu o 09:00 razem z resztą."] },
+        "fr": { "title": "Classement XP avec les membres des parties", "changes": [
+          "👥 Le classement XP inclut désormais aussi les personnages qui apparaissent dans les chasses en party (Party Hunt Analyser), en plus de ceux inscrits sur le site. Ils entrent dans l'instantané de 09h00 avec les autres."] },
+        "ru": { "title": "Рейтинг XP с участниками пати", "changes": [
+          "👥 В рейтинг XP теперь попадают и персонажи из охоты в пати (Party Hunt Analyser), помимо зарегистрированных на сайте. Они попадают в снимок в 09:00 вместе с остальными."] }
+      }
+    },
+    {
       "version": "0.25.2",
       "date": "2026-11-21",
       "title": "Ranking de XP: visual ajustado para celular",

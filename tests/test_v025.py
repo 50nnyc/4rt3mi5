@@ -181,6 +181,19 @@ class TrustAndRankingTests(unittest.TestCase):
         self.assertTrue(on["note_visible"])
         self.assertFalse(off["note_visible"])
 
+    def test_party_hunt_characters_are_on_the_board_and_tracked(self):
+        conn = server.store._conn
+        conn.execute("PRAGMA foreign_keys = OFF")  # teste: só precisamos de um id de hunt qualquer
+        conn.execute("INSERT INTO hunt_players (hunt_id, name_key, name) VALUES (?, ?, ?)", (999, name_key("Fora Party"), "Fora Party"))
+        conn.commit()
+        conn.execute("PRAGMA foreign_keys = ON")
+        self.assertIn("Fora Party", server.store.xp_board_names())
+        self.assertIn("Fora Party", server.store.xp_tracked_names())
+        with mock.patch.object(server, "fetch_experience", lambda *a, **k: (42_000, 0)):
+            server._xp_snapshot_all()
+        hoje = server.datetime.now(server.BRT).date().isoformat()
+        self.assertTrue(server.store.xp_has("Fora Party", hoje))
+
     def test_next_update_is_0900_brasilia(self):
         from datetime import datetime
         brt = server.BRT

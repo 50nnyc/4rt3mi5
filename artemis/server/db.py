@@ -1812,14 +1812,17 @@ class Store:
         return dict(row) if row else None
 
     def xp_board_names(self) -> list[str]:
-        """Todos os personagens cadastrados no site (de qualquer conta), sem repetição."""
-        rows = self._conn.execute("SELECT name FROM key_chars GROUP BY name_key ORDER BY MIN(name)").fetchall()
-        return [r["name"] for r in rows]
+        """Personagens do ranking: os cadastrados no site e os que aparecem nas hunts de party (Party Hunt Analyser)."""
+        nomes = {}
+        for r in self._conn.execute("SELECT name FROM key_chars UNION SELECT name FROM hunt_players"):
+            nomes.setdefault(name_key(r["name"]), r["name"])
+        return sorted(nomes.values(), key=str.lower)
 
     def xp_tracked_names(self) -> list[str]:
-        """Personagens que precisam de snapshot: os cadastrados e os da lista pessoal de alguma conta."""
+        """Personagens que precisam de snapshot: os do ranking e os da lista pessoal de alguma conta."""
         nomes = {}
-        for r in self._conn.execute("SELECT name FROM key_chars UNION SELECT name FROM custom_ranking"):
+        for r in self._conn.execute("SELECT name FROM key_chars UNION SELECT name FROM hunt_players "
+                                    "UNION SELECT name FROM custom_ranking"):
             nomes.setdefault(name_key(r["name"]), r["name"])
         return list(nomes.values())
 
