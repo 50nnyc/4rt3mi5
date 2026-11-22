@@ -1074,7 +1074,7 @@ function go(page, opts = {}) {
   if (page === "subs") loadSubs();
   if (page === "parties") { if (!opts.noPush) PT.vault = null; loadParties(); }
   Music.forPage(page);
-  if (page === "rank") { loadRank(); loadXp(); }
+  if (page === "rank") loadRankings();
   if (page === "news") loadNews();
   if (page === "tnews") loadTnews();
   if (page === "cal") loadCal();
@@ -2067,92 +2067,143 @@ function byPlaceBlock(b) {
     <div class="hint">Média por hora das suas sessões de 10 min ou mais em cada hunt. Melhor XP/h = a sua melhor sessão ali. Só para você se informar.</div></details>`;
 }
 
-/* ---------- 🥇 ranking entre amigos (só quem aceitar entrar) ---------- */
-S.rank = { metric: "xp", period: 7 };
-const RANK_FMT = { xp: (r) => fmt(r.xp) + " XP", xp_h: (r) => fmt(r.xp_h) + " XP/h", profit: (r) => fmt(r.profit) + " gp",
-                   profit_h: (r) => fmt(r.profit_h) + " gp/h", hours: (r) => String(r.hours).replace(".", ",") + " h" };
-async function loadRank() {
-  const body = $("#rankBody");
-  body.innerHTML = skeleton("stack");
-  let d;
-  try { d = await api("GET", `/api/ranking?period=${S.rank.period}&metric=${S.rank.metric}&nick=${encodeURIComponent(S.nick)}&others=${$("#rankOthers").checked ? 1 : 0}`); }
-  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
-  const owner = isMine(S.nick);
-  $("#rankJoin").innerHTML = !owner ? `<div class="card muted">Você está vendo ${esc(S.nick)}. Só o dono do personagem decide se ele entra no ranking.</div>`
-    : d.joined ? `<div class="card row"><span>✔ <b>${esc(S.nick)}</b> está no ranking.</span><button class="btn2" data-rank-join="0">Sair do ranking</button></div>`
-    : `<div class="card"><b>Quer entrar no ranking?</b>
-        <p class="muted" style="margin:4px 0 8px">Seus totais do Stacker (XP, lucro e horas da semana e do mês) passam a aparecer aqui para
-          todos que usam o 4rt3mi5. Você pode sair quando quiser.</p>
-        <button class="btn" style="margin:0" data-rank-join="1">Entrar com ${esc(S.nick)}</button></div>`;
-  document.querySelectorAll("[data-rmetric]").forEach((b) => b.classList.toggle("on", b.dataset.rmetric === d.metric));
-  document.querySelectorAll("[data-rperiod]").forEach((b) => b.classList.toggle("on", +b.dataset.rperiod === d.period));
-  if (!d.rows.length) { body.innerHTML = `<p class="muted">Ninguém entrou no ranking ainda. Seja o primeiro!</p>`; return; }
-  const me = S.nick.toLowerCase(), medal = ["🥇", "🥈", "🥉"];
-  body.innerHTML = `<div class="table-wrap"><table><tr><th>#</th><th>Jogador</th><th>${esc($(`[data-rmetric="${d.metric}"]`).textContent)}</th><th>Sessões</th></tr>
-    ${d.rows.map((r, i) => `<tr class="${r.name.toLowerCase() === me ? "me" : ""}"><td>${medal[i] || i + 1}</td>
-      <td>${vdot(r.name)}${esc(r.name)}${r.level ? `<div class="muted" style="font-size:12px">level ${r.level}${r.vocation ? " · " + esc(r.vocation) : ""}</div>` : ""}</td>
-      <td>${RANK_FMT[d.metric](r)}</td><td>${r.sessions}</td></tr>`).join("")}</table></div>
-    <div class="hint">XP/h e lucro/h = total do período dividido pelas horas de hunt. Lucro = Balance das sessões.</div>`;
-  ensureVocations(d.rows.map((r) => r.name)).then((c) => { if (c && S.page === "rank") paintVocations(body); });
+/* ---------- 0.26.1: 🥇 Rankings — Usuários do Artemis (XP 30/90), Geral (top 1000 por métrica) e ficha do jogador ---------- */
+S.rtab = "artemis";
+S.xp = { days: 30 };
+S.geral = { metric: "level", page: 1 };
+const GERAL_LABELS = { level: "Level", experience: "Experiência", magiclevel: "Magic Level", shielding: "Shielding",
+  distancefighting: "Distance Fighting", clubfighting: "Club Fighting", swordfighting: "Sword Fighting",
+  axefighting: "Axe Fighting", fistfighting: "Fist Fighting", fishing: "Fishing", achievements: "Achievements",
+  charmpoints: "Charm Points", goshnarstaint: "Goshnar's Taint", loyaltypoints: "Loyalty Points", dromescore: "Drome Score",
+  bosspoints: "Boss Points", bountypoints: "Bounty Points", weeklytasks: "Weekly Tasks", phosphorusrecord: "Phosphorus Record" };
+const brData = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
+
+function loadRankings() { showRankTab(S.rtab); }
+function showRankTab(t) {
+  S.rtab = t;
+  document.querySelectorAll("[data-rtab]").forEach((b) => b.classList.toggle("on", b.dataset.rtab === t));
+  $("#tabArtemis").classList.toggle("hidden", t !== "artemis");
+  $("#tabGeral").classList.toggle("hidden", t !== "geral");
+  if (t === "artemis") loadXp(); else loadGeral();
 }
-document.addEventListener("click", async (e) => {
-  const m = e.target.closest("[data-rmetric]"), p = e.target.closest("[data-rperiod]"), j = e.target.closest("[data-rank-join]");
-  if (m) { S.rank.metric = m.dataset.rmetric; loadRank(); }
-  if (p) { S.rank.period = +p.dataset.rperiod; loadRank(); }
-  if (j) {
-    j.disabled = true;
-    try { await api("POST", `/api/ranking/${encodeURIComponent(S.nick)}`, { join: j.dataset.rankJoin === "1" }); loadRank(); }
-    catch (err) { j.disabled = false; if (err.status !== 401) alert(err.message); }
-  }
-});
 
-$("#rankOthers").addEventListener("change", () => loadRank());
-
-/* ---------- 0.25.0: 📊 XP do TibiaData (30/90 dias) e ranking pessoal (lista privada) ---------- */
-S.xp = { days: 30, scope: "board" };
 async function loadXp() {
   const body = $("#xpBody");
   document.querySelectorAll("[data-xdays]").forEach((b) => b.classList.toggle("on", +b.dataset.xdays === S.xp.days));
-  document.querySelectorAll("[data-xscope]").forEach((b) => b.classList.toggle("on", b.dataset.xscope === S.xp.scope));
-  $("#xpMineAdd").classList.toggle("hidden", S.xp.scope !== "mine");
-  $("#xpMineAdd").innerHTML = S.xp.scope === "mine"
-    ? `<div class="row"><input id="xpAddName" maxlength="40" placeholder="Nome do personagem (amigo, meta, rival...)" style="flex:1"><button class="btn" style="margin:0" id="xpAddBtn">Adicionar</button></div>` : "";
   body.innerHTML = skeleton("stack");
   let d;
-  try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=${S.xp.scope}`); }
+  try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=board`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
-  $("#xpNoteDated").classList.toggle("hidden", !d.note_visible);  // a data some sozinha após 90 dias
-  if (!d.rows.length) {
-    body.innerHTML = `<p class="muted">${S.xp.scope === "mine" ? "Sua lista está vazia. Adicione amigos, metas ou rivais: só você vê." : "Nenhum personagem cadastrado ainda."}</p>`;
-    return;
-  }
-  const medal = ["🥇", "🥈", "🥉"];
-  const br = (iso) => (iso ? iso.split("-").reverse().join("/") : "");
-  const W = "white-space:normal";  // a tabela global deixa tudo em uma linha; aqui o texto quebra para caber no celular
-  body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W}">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
+  $("#xpNoteDated").classList.toggle("hidden", !d.note_visible);
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">Nenhum personagem acompanhado ainda.</p>`; return; }
+  const medal = ["🥇", "🥈", "🥉"], W = "white-space:normal";
+  body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
     ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
-      <td style="${W}"><b>${esc(r.name)}</b>${r.xp != null
-        ? `<div class="muted" style="font-size:12px">XP total ${fmt(r.xp)}${r.partial ? ` · desde ${br(r.since)}` : ""}</div>`
-        : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}
-        ${S.xp.scope === "mine" ? `<button class="btn2" data-xdel="${esc(r.name)}" style="margin:6px 0 0;padding:4px 10px;font-size:12px">Remover</button>` : ""}</td>
+      <td style="${W};text-align:left"><a href="#" data-player="${esc(r.name)}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>${r.xp != null
+        ? `<div class="muted" style="font-size:12px">XP total ${fmt(r.xp)}${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
+        : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}</td>
       <td style="text-align:right;${W}">${r.gain == null ? "–" : `<b>${fmt(r.gain)}</b> XP`}</td></tr>`).join("")}</table></div>
-    <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois. "desde" aparece quando o histórico ainda é mais curto que a janela.</div>`;
+    <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois.</div>`;
 }
-document.addEventListener("click", async (e) => {
-  const dy = e.target.closest("[data-xdays]"), sc = e.target.closest("[data-xscope]"), add = e.target.closest("#xpAddBtn"), del = e.target.closest("[data-xdel]");
-  if (dy) { S.xp.days = +dy.dataset.xdays; loadXp(); }
-  if (sc) { S.xp.scope = sc.dataset.xscope; loadXp(); }
-  if (add) {
-    const nome = ($("#xpAddName").value || "").trim();
-    if (!nome) return;
-    try { await api("POST", "/api/xp-ranking/mine", { character: nome }); loadXp(); }
-    catch (err) { if (err.status !== 401) alert(err.message); }
-  }
-  if (del) {
-    try { await api("DELETE", `/api/xp-ranking/mine/${encodeURIComponent(del.dataset.xdel)}`); loadXp(); }
-    catch (err) { if (err.status !== 401) alert(err.message); }
-  }
+
+async function loadGeral() {
+  const sel = $("#geralMetric");
+  if (!sel.options.length) sel.innerHTML = Object.entries(GERAL_LABELS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
+  sel.value = S.geral.metric;
+  const body = $("#geralBody");
+  body.innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/rank/geral?metric=${S.geral.metric}&page=${S.geral.page}`); }
+  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  $("#geralDay").textContent = d.day ? `Varredura de ${brData(d.day)} · 100 por página` : "Ainda não há varredura.";
+  $("#geralPage").textContent = `Página ${d.page} de ${d.pages}`;
+  $("#geralPrev").disabled = d.page <= 1;
+  $("#geralNext").disabled = d.page >= d.pages;
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">Sem dados ainda. O ranking aparece depois da primeira varredura (09h).</p>`; return; }
+  const W = "white-space:normal";
+  body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:52px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:120px;${W}">${esc(GERAL_LABELS[S.geral.metric])}</th></tr>
+    ${d.rows.map((r) => `<tr><td style="${W}">${r.pos}</td>
+      <td style="${W};text-align:left"><a href="#" data-player="${esc(r.name)}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>
+        <div class="muted" style="font-size:12px">${esc(r.world || "")}${r.vocation ? " · " + esc(r.vocation) : ""}${r.level ? " · level " + r.level : ""}</div></td>
+      <td style="text-align:right;${W}">${fmt(r.value)}</td></tr>`).join("")}</table></div>`;
+}
+
+async function openPlayer(name) {
+  $("#playerModal").classList.remove("hidden");
+  $("#pmTitle").textContent = name;
+  $("#pmBody").innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/rank/player/${encodeURIComponent(name)}`); }
+  catch (err) { $("#pmBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  const c = d.calc;
+  $("#pmBody").innerHTML = `
+    <div class="row" style="flex-wrap:wrap;gap:14px">
+      <div><div class="muted">Vocação</div><b>${esc(d.vocation || "–")}</b></div>
+      <div><div class="muted">Level</div><b>${d.level ?? "–"}</b></div>
+      <div><div class="muted">Mundo</div><b>${esc(d.world || "–")}</b></div>
+      ${c ? `<div><div class="muted">HP</div><b>${fmt(c.hp)}</b></div><div><div class="muted">Mana</div><b>${fmt(c.mana)}</b></div><div><div class="muted">Cap</div><b>${fmt(c.cap)} oz</b></div>` : ""}
+    </div>
+    ${c ? `<div class="hint">HP, mana e cap calculados pela regra do jogo a partir do level e da vocação.</div>` : ""}
+    <div class="row" style="gap:14px;margin-top:12px;flex-wrap:wrap">
+      <div><div class="muted">XP ganha 30 dias</div><b>${d.xp.d30.gain == null ? "–" : fmt(d.xp.d30.gain)}</b></div>
+      <div><div class="muted">XP ganha 90 dias</div><b>${d.xp.d90.gain == null ? "–" : fmt(d.xp.d90.gain)}</b></div>
+      <div><div class="muted">XP total</div><b>${d.xp.total == null ? "–" : fmt(d.xp.total)}</b></div>
+    </div>
+    <div class="seg" style="margin-top:14px">
+      <button data-pmc="daily" class="on">Diária</button><button data-pmc="monthly">Mensal</button><button data-pmc="quarterly">Trimestral</button>
+    </div>
+    <div id="pmSvg" style="margin-top:8px"></div>
+    <h3 style="margin-top:16px">Alterações recentes</h3>
+    <div id="pmChanges"></div>`;
+  S.pm = d;
+  paintPmChart("daily");
+  paintPmChanges(d.changes);
+}
+
+function paintPmChart(kind) {
+  document.querySelectorAll("[data-pmc]").forEach((b) => b.classList.toggle("on", b.dataset.pmc === kind));
+  const ch = S.pm.charts;
+  const rows = kind === "daily" ? ch.daily.map((r) => ({ k: r.day, v: r.gain }))
+    : kind === "monthly" ? ch.monthly.map((r) => ({ k: r.month, v: r.gain }))
+    : ch.quarterly.map((r) => ({ k: r.quarter, v: r.gain }));
+  const el = $("#pmSvg");
+  if (!rows.length) { el.innerHTML = `<p class="muted">Ainda não há pontos suficientes. A contagem começa em 21/11/2026 e cresce a cada dia.</p>`; return; }
+  const max = Math.max(1, ...rows.map((r) => Math.abs(r.v)));
+  const W = 520, H = 160, P = 24, bw = (W - 2 * P) / rows.length;
+  const bars = rows.map((r, i) => {
+    const h = Math.abs(r.v) / max * (H / 2 - P), x = P + i * bw + bw * 0.15, w = bw * 0.7;
+    const y = r.v >= 0 ? H / 2 - h : H / 2;
+    const col = r.v >= 0 ? "#3ddc84" : "#ff5c5c";
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(h, 1).toFixed(1)}" fill="${col}"><title>${esc(r.k)}: ${fmt(r.v)} XP</title></rect>`;
+  }).join("");
+  const total = rows.reduce((a, r) => a + r.v, 0);
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Gráfico de XP">
+      <line x1="${P}" x2="${W - P}" y1="${H / 2}" y2="${H / 2}" stroke="currentColor" opacity=".3"/>${bars}</svg>
+    <div class="hint">Barras verdes: XP ganha. Vermelhas: XP perdida. Total no período: ${fmt(total)} XP.</div>`;
+}
+
+function paintPmChanges(list) {
+  const el = $("#pmChanges");
+  if (!list.length) { el.innerHTML = `<p class="muted">Nenhuma alteração registrada.</p>`; return; }
+  el.innerHTML = list.map((m) => {
+    const nome = GERAL_LABELS[m.category] || m.category;
+    const cor = m.kind === "up" ? "#3ddc84" : "#ff5c5c";
+    return `<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(128,128,128,.25)">
+      <span>${brData(m.day)} · ${esc(nome)}</span><b style="color:${cor}">${m.delta > 0 ? "+" : ""}${fmt(m.delta)}</b></div>`;
+  }).join("");
+}
+
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-rtab]"), dy = e.target.closest("[data-xdays]"), pl = e.target.closest("[data-player]"), pmc = e.target.closest("[data-pmc]");
+  if (tab) return showRankTab(tab.dataset.rtab);
+  if (dy) { S.xp.days = +dy.dataset.xdays; return loadXp(); }
+  if (pl) { e.preventDefault(); return openPlayer(pl.dataset.player); }
+  if (pmc) return paintPmChart(pmc.dataset.pmc);
+  if (e.target.closest("#pmClose") || e.target.id === "playerModal") return $("#playerModal").classList.add("hidden");
+  if (e.target.closest("#geralPrev")) { S.geral.page--; return loadGeral(); }
+  if (e.target.closest("#geralNext")) { S.geral.page++; return loadGeral(); }
 });
+$("#geralMetric").addEventListener("change", (e) => { S.geral.metric = e.target.value; S.geral.page = 1; loadGeral(); });
 
 /* ---------- 0.23.0: 🤝 substituições (link de envio e jogador autorizado) ---------- */
 const SUB_SCOPES = [["solo", "Hunt solo (Stacker)"], ["party", "Lootsplit e sessão da PT"], ["boss", "Bosses"]];

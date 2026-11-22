@@ -50,6 +50,7 @@ from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
 from artemis.core import tibiacal, tibianews
 from artemis.core import translate as translate_core
 from artemis.core import rankscan
+from artemis.core import vocation as vocation_core
 from artemis.core.tibiadata import (HIGHSCORE_CATEGORIES, TibiaDataError, fetch_character, fetch_experience,
                                     fetch_highscore_page, fetch_worlds_list)
 
@@ -2553,6 +2554,53 @@ def char_trust_admin(body: TrustIn):
         raise HTTPException(422, "Nome de personagem inválido.")
     store.trust_upsert(nome, manual=body.manual)
     return {"ok": True, "character": nome, "trust": store.trust_info(nome)}
+
+
+# ------------------------------------------------------------------ 0.26.1: rankings (geral, por jogador)
+RANK_PAGE = 100
+RANK_METRICS = ["level", "experience", "magiclevel", "shielding", "distancefighting", "clubfighting", "swordfighting",
+                "axefighting", "fistfighting", "fishing", "achievements", "charmpoints", "goshnarstaint",
+                "loyaltypoints", "dromescore", "bosspoints", "bountypoints", "weeklytasks", "phosphorusrecord"]
+
+
+@app.get("/api/rank/geral")
+def rank_geral(metric: str = "level", page: int = 1, _: dict = Depends(require_session)):
+    """Ranking geral: top 1000 por métrica, de todos os mundos. 100 por página."""
+    metric = metric if metric in RANK_METRICS else "level"
+    page = min(max(page, 1), 10)
+    rows = store.rank_top_page(metric, (page - 1) * RANK_PAGE, RANK_PAGE)
+    return {"metric": metric, "page": page, "pages": 10, "per_page": RANK_PAGE, "day": store.rank_top_day(),
+            "metrics": RANK_METRICS, "rows": rows}
+
+
+@app.get("/api/rank/player/{name}")
+def rank_player(name: str, _: dict = Depends(require_session)):
+    """Janela pública de um jogador acompanhado: XP diária, mensal e trimestral (a partir de 21/11/2026), HP/mana/cap
+    calculados e alterações de skill, achievements e charm points (sem trocas de mundo)."""
+    p = store.rank_player(" ".join(name.split()))
+    if p is None:
+        raise HTTPException(404, "Personagem não acompanhado.")
+    corte = XP_TRACK_START.isoformat()
+    pts = store.xp_series(p["name"], corte)
+    diarios = [{"day": b["day"], "gain": b["xp"] - a["xp"]} for a, b in zip(pts, pts[1:])]
+    mensais, trimestrais = {}, {}
+    for d in diarios:
+        ano, mes = d["day"][:4], int(d["day"][5:7])
+        mensais[f"{ano}-{mes:02d}"] = mensais.get(f"{ano}-{mes:02d}", 0) + d["gain"]
+        tri = f"{ano}-T{(mes - 1) // 3 + 1}"
+        trimestrais[tri] = trimestrais.get(tri, 0) + d["gain"]
+    mudancas = [m for m in store.rank_changes_for(p["name"], corte) if m["kind"] != "world"]
+    return {
+        "name": p["name"], "world": p["world"], "vocation": p["vocation"], "level": p["level"],
+        "calc": vocation_core.calcular(p["level"], p["vocation"]),
+        "xp": {"total": p["values"].get("experience"), "d30": _xp_rows([p["name"]], 30)[0],
+               "d90": _xp_rows([p["name"]], 90)[0]},
+        "charts": {"daily": diarios[-90:],
+                   "monthly": [{"month": k, "gain": v} for k, v in sorted(mensais.items())],
+                   "quarterly": [{"quarter": k, "gain": v} for k, v in sorted(trimestrais.items())]},
+        "changes": mudancas[:60],
+        "track_start": corte, "updated_day": p["updated_day"],
+    }
 
 
 class PriceIn(BaseModel):

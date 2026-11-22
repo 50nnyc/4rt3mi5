@@ -1264,5 +1264,12 @@
   "XP ganha nos últimos 30 ou 90 dias, medida pelo TibiaData. Só aparece quem está no top 1000 do mundo.": "XP ganado en los últimos 30 o 90 días, medido por TibiaData. Solo aparece quien está en el top 1000 del mundo.",
   "📊 XP do TibiaData": "📊 XP de TibiaData",
   "⏱️ Atualiza todo dia às 09h (horário de Brasília). O tracker só conta a XP a partir do dia em que cada personagem é cadastrado no site.": "⏱️ Se actualiza todos los días a las 09:00 (hora de Brasilia). El tracker solo cuenta el XP desde el día en que cada personaje se registra en el sitio.",
-  "Até 19/02/2027, a contagem também começa em 21/11/2026, mesmo para quem se cadastrou antes.": "Hasta el 19/02/2027, el conteo también empieza el 21/11/2026, incluso para quienes se registraron antes."
+  "Até 19/02/2027, a contagem também começa em 21/11/2026, mesmo para quem se cadastrou antes.": "Hasta el 19/02/2027, el conteo también empieza el 21/11/2026, incluso para quienes se registraron antes.",
+  "Geral": "General",
+  "Próxima ›": "Siguiente ›",
+  "‹ Anterior": "‹ Anterior",
+  "Rankings": "Rankings",
+  "Usuários do Artemis": "Usuarios de Artemis",
+  "Quem tem conta no Artemis ou jogou numa party com alguém que tem. XP medida pelo TibiaData.": "Quienes tienen cuenta en Artemis o jugaron en party con alguien que la tiene. XP medido por TibiaData.",
+  "Top 1000 de todos os mundos. Clique em um nome para ver a ficha do jogador.": "Top 1000 de todos los mundos. Haz clic en un nombre para ver la ficha del jugador."
 }

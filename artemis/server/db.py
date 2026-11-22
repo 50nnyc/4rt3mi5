@@ -382,6 +382,18 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     ok            INTEGER NOT NULL,
     note          TEXT NOT NULL DEFAULT ''
 );
+-- 0.26.1: ranking geral (top 1000 por métrica, de todos os mundos), guardado a cada varredura
+CREATE TABLE IF NOT EXISTS rank_top (
+    metric     TEXT NOT NULL,
+    pos        INTEGER NOT NULL,
+    name       TEXT NOT NULL,
+    world      TEXT,
+    level      INTEGER,
+    vocation   TEXT,
+    value      INTEGER,
+    day        TEXT NOT NULL,
+    PRIMARY KEY (metric, pos)
+);
 -- 0.25.0: ranking pessoal de cada conta (só ela vê): amigos, metas, rivais
 CREATE TABLE IF NOT EXISTS custom_ranking (
     owner_key TEXT NOT NULL,
@@ -1853,6 +1865,12 @@ class Store:
                                  "ORDER BY day ASC LIMIT 1", (name_key(name), day)).fetchone()
         return dict(row) if row else None
 
+    def xp_series(self, name: str, since: str) -> list[dict]:
+        """Pontos diários de XP do personagem desde `since` (inclusive), em ordem de dia."""
+        return [dict(r) for r in self._conn.execute(
+            "SELECT day, xp FROM xp_snapshots WHERE name_key = ? AND day >= ? ORDER BY day",
+            (name_key(name), since))]
+
     def xp_board_names(self) -> list[str]:
         """Personagens do ranking: os cadastrados no site e os que aparecem nas hunts de party (Party Hunt Analyser)."""
         nomes = {}
@@ -1917,6 +1935,34 @@ class Store:
             self._conn.execute(f"INSERT INTO scan_runs ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))})",
                                [valores[c] for c in cols])
             self._conn.commit()
+
+    def rank_top_replace(self, day: str, tops: dict) -> None:
+        """Troca o ranking geral inteiro pelo da varredura de hoje (uma transação)."""
+        linhas = []
+        for metrica, itens in tops.items():
+            for pos, (valor, nome, mundo, level, voc) in enumerate(itens, start=1):
+                linhas.append((metrica, pos, nome, mundo, level, voc, valor, day))
+        with self._lock:
+            self._conn.execute("DELETE FROM rank_top")
+            self._conn.executemany("INSERT INTO rank_top VALUES (?, ?, ?, ?, ?, ?, ?, ?)", linhas)
+            self._conn.commit()
+
+    def rank_top_page(self, metric: str, offset: int, limit: int) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT pos, name, world, level, vocation, value FROM rank_top WHERE metric = ? "
+            "ORDER BY pos LIMIT ? OFFSET ?", (metric, limit, offset))]
+
+    def rank_top_day(self) -> str | None:
+        r = self._conn.execute("SELECT MAX(day) FROM rank_top").fetchone()
+        return r[0] if r else None
+
+    def rank_player(self, name: str) -> dict | None:
+        r = self._conn.execute("SELECT name, world, level, vocation, values_json, updated_day FROM rank_players "
+                               "WHERE name_key = ?", (name_key(name),)).fetchone()
+        if r is None:
+            return None
+        return {"name": r["name"], "world": r["world"], "level": r["level"], "vocation": r["vocation"],
+                "values": json.loads(r["values_json"]), "updated_day": r["updated_day"]}
 
     def scan_runs(self, limit: int = 30) -> list[dict]:
         return [dict(r) for r in self._conn.execute(

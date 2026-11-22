@@ -1,0 +1,22 @@
+{
+  "_fontes": [
+    "Manual oficial do Tibia, secao 5.1.9 'Vocation Specific Data' (texto colado pelo administrador)",
+    "TibiaWiki BR: Knight, Paladin, Druid, Sorcerer, Monk (ganhos por level; conferidos e iguais ao manual)"
+  ],
+  "_regra": "Calculo so para level 8 ou mais. Abaixo do level 8 nada e calculado nem exibido.",
+  "valores_no_level_8": {
+    "_fonte": "Confirmado pelo administrador: todas as vocacoes tem 185 HP, 90 mana e 470 oz de cap no level 8.",
+    "hp": 185,
+    "mana": 90,
+    "cap": 470
+  },
+  "formula_a_partir_do_level_8": "valor(L) = valor_level_8 + ganho_por_level_apos_8 * (L - 8)",
+  "ganho_por_level_apos_8": {
+    "Knight":   {"hp": 15, "mana": 5,  "cap": 25},
+    "Paladin":  {"hp": 10, "mana": 15, "cap": 20},
+    "Druid":    {"hp": 5,  "mana": 30, "cap": 10},
+    "Sorcerer": {"hp": 5,  "mana": 30, "cap": 10},
+    "Monk":     {"hp": 10, "mana": 10, "cap": 25}
+  },
+  "observacao": "Mostrar o valor calculado somente para level 8 ou mais."
+}

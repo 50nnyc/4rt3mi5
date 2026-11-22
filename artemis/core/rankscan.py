@@ -13,6 +13,16 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 PAGES = 20          # 20 páginas x 50 = top 1000
 WORKERS = 6         # consultas em paralelo (medido: ~276 ms cada)
+TOP = 1000          # tamanho do ranking geral por métrica
+_LIMITE_TRIM = 3000 # acima disso o acumulado é aparado para o top (economiza memória)
+
+
+def _guarda(tops: dict, metrica: str, item: tuple) -> None:
+    lista = tops.setdefault(metrica, [])
+    lista.append(item)
+    if len(lista) > _LIMITE_TRIM:
+        lista.sort(key=lambda t: (-(t[0] or 0), t[1].lower()))
+        del lista[TOP:]
 
 
 def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worlds, key_fn,
@@ -32,6 +42,7 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
 
     tarefas = [(w, c, p) for w in worlds for c in categories for p in range(1, pages + 1)]
     found: dict[str, dict] = {}   # name_key -> {name, world, level, vocation, values}
+    tops: dict[str, list] = {}    # métrica -> [(valor, nome, mundo, level, vocação)] (aparado no caminho)
 
     def trabalho(t):
         w, c, p = t
@@ -47,6 +58,12 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
                 errors += 1
                 continue
             for r in rows:
+                # 0.26.1: top global por métrica (todos os jogadores, não só os acompanhados)
+                item = (r.get("value"), r["name"], w, r.get("level"), r.get("vocation"))
+                if item[0] is not None:
+                    _guarda(tops, c, item)
+                if c == "experience":
+                    _guarda(tops, "level", (r.get("level"), r["name"], w, r.get("level"), r.get("vocation")))
                 nk = key_fn(r.get("name", ""))
                 if nk not in tracked:
                     continue
@@ -56,6 +73,9 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
                 reg["values"][c] = r.get("value")
                 if c == "experience" or reg.get("level") is None:
                     reg["level"] = r.get("level", reg.get("level"))
+
+    store.rank_top_replace(day, {m: sorted(v, key=lambda t: (-(t[0] or 0), t[1].lower()))[:TOP]
+                                 for m, v in tops.items()})
 
     updates, changes, world_changes = [], [], 0
     previos = store.rank_load_many(list(found))

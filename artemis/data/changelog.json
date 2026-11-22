@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.26.1",
+      "date": "2026-11-22",
+      "title": "Rankings em abas e ficha do jogador",
+      "changes": [
+        "🥇 O menu agora se chama Rankings, com duas abas: Usuários do Artemis (XP ganha em 30 e 90 dias) e Geral (top 1000 de todos os mundos, por level, skills e demais métricas, em páginas de 100).",
+        "👤 Clique no nome de um jogador acompanhado para ver a ficha: vocação, level, HP, mana e cap calculados pela regra do jogo (a partir do level 8), XP ganha e gráficos de XP diária, mensal e trimestral, a partir de 21/11/2026, e as alterações recentes de skills e achievements."
+      ],
+      "tr": {
+        "en": { "title": "Rankings in tabs and player profile", "changes": [
+          "🥇 The menu is now called Rankings, with two tabs: Artemis users (XP gained in 30 and 90 days) and General (top 1000 across all worlds, by level, skills and other metrics, in pages of 100).",
+          "👤 Click a tracked player's name to see the profile: vocation, level, HP, mana and cap calculated by the game's rules (from level 8), XP gained and daily, monthly and quarterly XP charts from 21/11/2026, and recent skill and achievement changes."] },
+        "es": { "title": "Rankings por pestañas y ficha del jugador", "changes": [
+          "🥇 El menú ahora se llama Rankings, con dos pestañas: Usuarios de Artemis (XP ganado en 30 y 90 días) y General (top 1000 de todos los mundos, por level, skills y demás métricas, en páginas de 100).",
+          "👤 Haz clic en el nombre de un jugador seguido para ver la ficha: vocación, level, HP, mana y cap calculados con la regla del juego (desde el level 8), XP ganado y gráficos de XP diaria, mensual y trimestral desde el 21/11/2026, y los cambios recientes de skills y achievements."] },
+        "ja": { "title": "タブ式のランキングとプロフィール", "changes": [
+          "🥇 メニューは「Rankings」になり、2つのタブがあります：Artemisユーザー（30日・90日で得たXP）と総合（全ワールドのトップ1000、レベル・スキルなど、100件ずつのページ）。",
+          "👤 追跡中のプレイヤー名をクリックするとプロフィールが開きます：職業、レベル、HP、マナ、キャップ（ゲームのルールで計算、レベル8以上）、獲得XP、2026/11/21以降の日次・月次・四半期のXPグラフ、最近のスキル・アチーブメントの変化。"] },
+        "de": { "title": "Ranglisten in Tabs und Spielerprofil", "changes": [
+          "🥇 Das Menü heißt jetzt Rangliste, mit zwei Tabs: Artemis-Nutzer (in 30 und 90 Tagen gewonnene XP) und Gesamt (Top 1000 aller Welten nach Level, Skills und weiteren Werten, in Seiten zu 100).",
+          "👤 Klicke auf den Namen eines beobachteten Spielers, um das Profil zu sehen: Beruf, Level, HP, Mana und Kapazität nach den Spielregeln berechnet (ab Level 8), gewonnene XP und Diagramme der täglichen, monatlichen und vierteljährlichen XP ab 21.11.2026 sowie letzte Änderungen bei Skills und Achievements."] },
+        "pl": { "title": "Rankingi w zakładkach i karta gracza", "changes": [
+          "🥇 Menu nazywa się teraz Rankingi, z dwiema zakładkami: Użytkownicy Artemis (XP zdobyte w 30 i 90 dni) oraz Ogólny (top 1000 ze wszystkich światów, według levelu, umiejętności i innych wartości, po 100 na stronę).",
+          "👤 Kliknij imię śledzonego gracza, aby zobaczyć kartę: zawód, level, HP, manę i cap obliczone wg zasad gry (od levelu 8), zdobyte XP oraz wykresy dziennego, miesięcznego i kwartalnego XP od 21.11.2026 i ostatnie zmiany umiejętności i achievementów."] },
+        "fr": { "title": "Classements en onglets et fiche du joueur", "changes": [
+          "🥇 Le menu s'appelle maintenant Classements, avec deux onglets : Utilisateurs d'Artemis (XP gagnée sur 30 et 90 jours) et Général (top 1000 de tous les mondes, par level, compétences et autres métriques, par pages de 100).",
+          "👤 Cliquez sur le nom d'un joueur suivi pour voir sa fiche : vocation, level, HP, mana et cap calculés selon les règles du jeu (à partir du level 8), XP gagnée et graphiques de l'XP quotidienne, mensuelle et trimestrielle depuis le 21/11/2026, et les changements récents de compétences et d'achievements."] },
+        "ru": { "title": "Рейтинги с вкладками и карточка игрока", "changes": [
+          "🥇 Меню теперь называется «Рейтинги», с двумя вкладками: Пользователи Artemis (XP за 30 и 90 дней) и Общий (топ-1000 по всем мирам, по уровню, навыкам и прочим показателям, по 100 на странице).",
+          "👤 Нажмите на имя отслеживаемого игрока, чтобы открыть карточку: профессия, уровень, HP, мана и кап, рассчитанные по правилам игры (с 8 уровня), полученный XP и графики дневного, месячного и квартального XP с 21.11.2026, а также последние изменения навыков и достижений."] }
+      }
+    },
+    {
       "version": "0.26.0",
       "date": "2026-11-21",
       "title": "Varredura de todos os mundos",
