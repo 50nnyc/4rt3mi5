@@ -2475,7 +2475,13 @@ def _xp_rows(names: list[str], days: int) -> list[dict]:
     for n in names:
         latest = store.xp_latest(n)
         if latest is None:
-            rows.append({"name": n, "xp": None, "gain": None, "since": None, "partial": True})
+            # 0.27.1: sem highscore (fora do top 1000) → usa o XP das sessões solo enviadas no período
+            sess = store.xp_session_gain(n, inicio)
+            if sess is None:
+                rows.append({"name": n, "xp": None, "gain": None, "since": None, "partial": True, "source": None})
+            else:
+                rows.append({"name": n, "xp": None, "gain": sess["gain"], "since": sess["first_day"],
+                             "partial": sess["first_day"] > janela, "source": "sessoes"})
             continue
         # referência: último ponto até o início da contagem, desde que não seja anterior a 21/11/2026;
         # se não houver, o primeiro ponto a partir daí; se ainda não houver nenhum, ganho zero por enquanto
@@ -2484,7 +2490,7 @@ def _xp_rows(names: list[str], days: int) -> list[dict]:
             ref = store.xp_first_from(n, inicio) or latest
         base = ref
         rows.append({"name": n, "xp": latest["xp"], "gain": latest["xp"] - base["xp"], "since": base["day"],
-                     "partial": base["day"] > janela})
+                     "partial": base["day"] > janela, "source": "highscore"})
     rows.sort(key=lambda r: (r["gain"] is None, -(r["gain"] or 0), r["name"].lower()))
     return rows
 
@@ -2722,7 +2728,8 @@ def vip_add(body: VipAddIn, access: dict = Depends(require_session)):
     if store.is_linked(access["key"], nome):
         raise HTTPException(422, "Esse personagem já é seu.")
     store.vip_add(access["key"], access.get("main_char"), nome)
-    return {"ok": True}
+    # 0.27.1: sem cadastro no site o pedido fica parado; o front oferece convidar a pessoa para o site
+    return {"ok": True, "has_account": store.char_has_account(nome)}
 
 
 @app.delete("/api/vip/{name}")

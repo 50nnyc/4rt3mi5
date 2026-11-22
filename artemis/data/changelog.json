@@ -1,6 +1,38 @@
 {
   "releases": [
     {
+      "version": "0.27.1",
+      "date": "2026-11-22",
+      "title": "XP de solo e convite no WhatsApp",
+      "changes": [
+        "📊 XP das hunts solo agora conta no controle de XP: se o personagem não aparece no highscore (fora do top 1000), o ganho de 30 e 90 dias usa as sessões solo que você enviou.",
+        "🤝 Convite pelo WhatsApp: ao adicionar alguém que ainda não tem cadastro, o app pergunta se você quer convidar. Informe DDD e celular, e a mensagem pronta abre no WhatsApp para você enviar."
+      ],
+      "tr": {
+        "en": { "title": "Solo XP and WhatsApp invite", "changes": [
+          "📊 Solo hunt XP now counts in the XP control: if a character is not on the highscore (outside the top 1000), the 30 and 90-day gain uses the solo sessions you sent.",
+          "🤝 WhatsApp invite: when you add someone who has no account yet, the app asks if you want to invite them. Enter their area code and mobile number, and a ready message opens in WhatsApp for you to send."] },
+        "es": { "title": "XP solo e invitación por WhatsApp", "changes": [
+          "📊 El XP de las hunts solo ahora cuenta en el control de XP: si el personaje no sale en el highscore (fuera del top 1000), la ganancia de 30 y 90 días usa las sesiones solo que enviaste.",
+          "🤝 Invitación por WhatsApp: al agregar a alguien que aún no tiene cuenta, la app pregunta si quieres invitarlo. Escribe el código de área y el celular, y se abre un mensaje listo en WhatsApp para que lo envíes."] },
+        "ja": { "title": "単独XPとWhatsApp招待", "changes": [
+          "📊 単独ハントのXPがXP管理に含まれるようになりました。キャラクターがハイスコアにない場合（上位1000位の外）、30日・90日の獲得XPは送信した単独セッションから計算します。",
+          "🤝 WhatsAppでの招待：アカウントのない人を追加すると、招待するか確認します。市外局番と携帯番号を入力すると、準備された文面がWhatsAppで開き、送信できます。"] },
+        "de": { "title": "Solo-XP und WhatsApp-Einladung", "changes": [
+          "📊 XP aus Solo-Hunts zählt jetzt für die XP-Kontrolle: Wenn ein Charakter nicht in der Highscore-Liste steht (außerhalb der Top 1000), nutzt der Gewinn für 30 und 90 Tage die Solo-Sitzungen, die du gesendet hast.",
+          "🤝 Einladung per WhatsApp: Wenn du jemanden ohne Konto hinzufügst, fragt die App, ob du ihn einladen möchtest. Gib Vorwahl und Handynummer ein, dann öffnet sich die fertige Nachricht in WhatsApp zum Senden."] },
+        "pl": { "title": "XP solo i zaproszenie przez WhatsApp", "changes": [
+          "📊 XP z huntów solo liczy się teraz w kontroli XP: jeśli postaci nie ma w highscore (poza top 1000), zysk z 30 i 90 dni korzysta z sesji solo, które wysłałeś.",
+          "🤝 Zaproszenie przez WhatsApp: gdy dodasz osobę bez konta, aplikacja zapyta, czy chcesz ją zaprosić. Wpisz numer kierunkowy i komórkę, a gotowa wiadomość otworzy się w WhatsAppie do wysłania."] },
+        "fr": { "title": "XP solo et invitation WhatsApp", "changes": [
+          "📊 Le XP des hunts solo compte maintenant dans le contrôle d'XP : si le personnage n'est pas au highscore (hors du top 1000), le gain sur 30 et 90 jours utilise les sessions solo que vous avez envoyées.",
+          "🤝 Invitation par WhatsApp : en ajoutant quelqu'un qui n'a pas encore de compte, l'app demande si vous voulez l'inviter. Saisissez l'indicatif et le portable, et le message prêt s'ouvre dans WhatsApp pour l'envoi."] },
+        "ru": { "title": "XP соло и приглашение в WhatsApp", "changes": [
+          "📊 XP с соло-охот теперь учитывается в контроле XP: если персонажа нет в хайскоре (вне топ-1000), прирост за 30 и 90 дней берётся из отправленных вами соло-сессий.",
+          "🤝 Приглашение через WhatsApp: когда вы добавляете человека без аккаунта, приложение спрашивает, хотите ли вы его пригласить. Введите код города и номер мобильного, и готовое сообщение откроется в WhatsApp для отправки."] }
+      }
+    },
+    {
       "version": "0.27.0",
       "date": "2026-11-22",
       "title": "VIP List e aba Amigos",

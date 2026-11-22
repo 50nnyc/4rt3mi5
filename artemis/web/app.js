@@ -2104,9 +2104,11 @@ async function loadXp() {
     ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
       <td style="${W};text-align:left"><a href="#" data-player="${esc(r.name)}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>${r.xp != null
         ? `<div class="muted" style="font-size:12px">${r.partial ? `desde ${brData(r.since)}` : ""}</div>`
-        : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}</td>
+        : r.gain != null
+          ? `<div class="muted" style="font-size:12px">pelas sessões solo enviadas${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
+          : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}</td>
       <td style="text-align:right;${W}">${r.gain == null ? "–" : `<b>${fmt(r.gain)}</b> XP`}</td></tr>`).join("")}</table></div>
-    <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois.</div>`;
+    <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois. Quando não há highscore do personagem (fora do top 1000), o ganho vem das sessões solo enviadas.</div>`;
 }
 
 async function loadGeral() {
@@ -5041,6 +5043,76 @@ function vipEntryCard(e, scopes) {
   </div>`;
 }
 
+// 0.27.1: quando o personagem adicionado não tem cadastro no site, oferece convidar pelo WhatsApp.
+// O DDD e o número são usados só para montar o link wa.me na hora; nada é guardado nem enviado pelo site.
+function inviteMessage(nome) {
+  return `Oi! Estou usando o 4rt3mi5 (artemishunt.com.br) para acompanhar hunts e XP no Tibia. ` +
+    `Faz o seu cadastro e vincula o seu personagem ${nome}, assim a gente consegue ver as hunts juntos. Bora?`;
+}
+
+function closeInviteBox() {
+  document.getElementById("inviteBox")?.remove();
+}
+
+function openInviteBox(nome) {
+  closeInviteBox();
+  const box = document.createElement("div");
+  box.id = "inviteBox";
+  box.setAttribute("style", "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:70;overflow:auto;padding:16px");
+  box.innerHTML = `<div class="card" style="max-width:460px;margin:40px auto;position:relative">
+      <b>${esc(nome)} ainda não tem cadastro no site</b>
+      <p class="hint" style="white-space:normal;margin-top:6px">Quer convidar essa pessoa para o 4rt3mi5? Quando ela entrar e vincular o personagem, o pedido de VIP fica disponível para ela responder.</p>
+      <div data-inv-step="ask" class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+        <button class="btn" data-inv-yes style="margin:0">Sim, convidar</button>
+        <button class="btn2" data-inv-close style="margin:0">Não, obrigado</button>
+      </div>
+      <div data-inv-step="phone" class="hidden" style="margin-top:12px">
+        <label class="muted" style="font-size:13px">Celular com WhatsApp</label>
+        <div class="row" style="gap:8px;margin-top:4px">
+          <input id="invDdd" inputmode="numeric" maxlength="2" placeholder="DDD" style="width:72px">
+          <input id="invNum" inputmode="numeric" maxlength="11" placeholder="Número" class="grow">
+        </div>
+        <div class="err hidden" id="invErr" style="margin-top:6px"></div>
+        <label class="muted" style="font-size:13px;display:block;margin-top:12px">Mensagem pronta (pode editar)</label>
+        <textarea id="invMsg" rows="4" style="width:100%;margin-top:4px">${esc(inviteMessage(nome))}</textarea>
+        <div class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
+          <button class="btn" data-inv-wa style="margin:0">Abrir WhatsApp com a mensagem</button>
+          <button class="btn2" data-inv-copy style="margin:0">Copiar mensagem</button>
+        </div>
+        <p class="hint" style="white-space:normal;margin-top:8px">O WhatsApp abre com a mensagem pronta; você confere e envia por lá.</p>
+      </div>
+    </div>`;
+  box.addEventListener("click", (ev) => {
+    if (ev.target === box || ev.target.closest("[data-inv-close]")) return closeInviteBox();
+    if (ev.target.closest("[data-inv-yes]")) {
+      box.querySelector('[data-inv-step="ask"]').classList.add("hidden");
+      box.querySelector('[data-inv-step="phone"]').classList.remove("hidden");
+      return box.querySelector("#invDdd").focus();
+    }
+    if (ev.target.closest("[data-inv-copy]")) {
+      const txt = box.querySelector("#invMsg").value;
+      const btn = ev.target.closest("[data-inv-copy]");
+      const marca = () => { btn.textContent = "Copiado!"; };
+      navigator.clipboard?.writeText(txt).then(marca, () => box.querySelector("#invMsg").select());
+      return;
+    }
+    if (ev.target.closest("[data-inv-wa]")) {
+      const ddd = box.querySelector("#invDdd").value.replace(/\D/g, "");
+      const num = box.querySelector("#invNum").value.replace(/\D/g, "");
+      const err = box.querySelector("#invErr");
+      if (!/^\d{2}$/.test(ddd) || !/^\d{8,9}$/.test(num)) {
+        err.textContent = "Informe o DDD (2 números) e o celular (8 ou 9 números).";
+        err.classList.remove("hidden");
+        return;
+      }
+      err.classList.add("hidden");
+      const texto = encodeURIComponent(box.querySelector("#invMsg").value);
+      window.open(`https://wa.me/55${ddd}${num}?text=${texto}`, "_blank", "noopener");
+    }
+  });
+  document.body.appendChild(box);
+}
+
 async function loadVip() {
   let d;
   try { d = await api("GET", "/api/vip/list"); }
@@ -5131,8 +5203,9 @@ document.addEventListener("click", async (e) => {
     if (add) {
       const nome = ($("#vipAddName").value || "").trim();
       if (!nome) return;
-      await api("POST", "/api/vip/add", { character: nome });
+      const feito = await api("POST", "/api/vip/add", { character: nome });
       $("#vipAddName").value = "";
+      if (feito && feito.has_account === false) openInviteBox(nome);
       return loadVip();
     }
     if (del) {

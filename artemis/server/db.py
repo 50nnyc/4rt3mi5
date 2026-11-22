@@ -1885,6 +1885,18 @@ class Store:
             "SELECT day, xp FROM xp_snapshots WHERE name_key = ? AND day >= ? ORDER BY day",
             (name_key(name), since))]
 
+    def xp_session_gain(self, name: str, since: str) -> dict | None:
+        """0.27.1: XP ganha nas sessões solo (Hunt Analyser individual) enviadas para o personagem desde `since`
+        (AAAA-MM-DD, inclusive). Usado quando não há highscore/snapshot para ele (fora do top 1000).
+        Devolve None se não houver nenhuma sessão no período."""
+        row = self._conn.execute(
+            "SELECT COALESCE(SUM(xp), 0) AS gain, COUNT(*) AS n, MIN(substr(started_at, 1, 10)) AS first_day "
+            "FROM solo_sessions WHERE name_key = ? AND substr(started_at, 1, 10) >= ?",
+            (name_key(name), since)).fetchone()
+        if not row or not row["n"]:
+            return None
+        return {"gain": row["gain"], "sessions": row["n"], "first_day": row["first_day"]}
+
     def xp_board_names(self) -> list[str]:
         """Personagens do ranking: os cadastrados no site e os que aparecem nas hunts de party (Party Hunt Analyser)."""
         nomes = {}
