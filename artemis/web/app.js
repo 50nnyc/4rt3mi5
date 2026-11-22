@@ -2071,7 +2071,7 @@ function byPlaceBlock(b) {
 S.rtab = "artemis";
 S.xp = { days: 30 };
 S.geral = { metric: "level", page: 1 };
-const GERAL_LABELS = { level: "Level", experience: "Experiência", magiclevel: "Magic Level", shielding: "Shielding",
+const GERAL_LABELS = { level: "Level", magiclevel: "Magic Level", shielding: "Shielding",
   distancefighting: "Distance Fighting", clubfighting: "Club Fighting", swordfighting: "Sword Fighting",
   axefighting: "Axe Fighting", fistfighting: "Fist Fighting", fishing: "Fishing", achievements: "Achievements",
   charmpoints: "Charm Points", goshnarstaint: "Goshnar's Taint", loyaltypoints: "Loyalty Points", dromescore: "Drome Score",
@@ -2100,7 +2100,7 @@ async function loadXp() {
   body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
     ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
       <td style="${W};text-align:left"><a href="#" data-player="${esc(r.name)}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>${r.xp != null
-        ? `<div class="muted" style="font-size:12px">XP total ${fmt(r.xp)}${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
+        ? `<div class="muted" style="font-size:12px">${r.partial ? `desde ${brData(r.since)}` : ""}</div>`
         : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}</td>
       <td style="text-align:right;${W}">${r.gain == null ? "–" : `<b>${fmt(r.gain)}</b> XP`}</td></tr>`).join("")}</table></div>
     <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois.</div>`;
@@ -2147,7 +2147,6 @@ async function openPlayer(name) {
     <div class="row" style="gap:14px;margin-top:12px;flex-wrap:wrap">
       <div><div class="muted">XP ganha 30 dias</div><b>${d.xp.d30.gain == null ? "–" : fmt(d.xp.d30.gain)}</b></div>
       <div><div class="muted">XP ganha 90 dias</div><b>${d.xp.d90.gain == null ? "–" : fmt(d.xp.d90.gain)}</b></div>
-      <div><div class="muted">XP total</div><b>${d.xp.total == null ? "–" : fmt(d.xp.total)}</b></div>
     </div>
     <div class="seg" style="margin-top:14px">
       <button data-pmc="daily" class="on">Diária</button><button data-pmc="monthly">Mensal</button><button data-pmc="quarterly">Trimestral</button>

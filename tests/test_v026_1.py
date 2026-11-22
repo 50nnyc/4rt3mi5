@@ -96,6 +96,8 @@ class RankingTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         corpo = r.json()
         self.assertEqual(corpo["calc"]["hp"], 185 + 10 * 192)   # Paladin de level 200
+        self.assertNotIn("total", corpo["xp"])                   # XP total do personagem nunca aparece no ranking
+        self.assertNotIn("experience", server.RANK_METRICS)      # nem como métrica do ranking geral
         self.assertEqual([d["gain"] for d in corpo["charts"]["daily"]], [500, 700])
         self.assertEqual(corpo["charts"]["monthly"][-1]["gain"], 1200)
         self.assertTrue(corpo["charts"]["quarterly"])

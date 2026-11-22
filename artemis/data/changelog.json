@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "0.26.2",
+      "date": "2026-11-22",
+      "title": "XP só como ganho de 30 e 90 dias",
+      "changes": [
+        "📊 Em todo o ranking, XP sempre é o ganho dos últimos 30 ou 90 dias. O XP total do personagem saiu das telas, e a aba Geral não tem mais a métrica de XP total."
+      ],
+      "tr": {
+        "en": { "title": "XP only as a 30 and 90 day gain", "changes": [
+          "📊 Everywhere in the rankings, XP is always the gain over the last 30 or 90 days. The character's total XP was removed from the screens, and the General tab no longer has a total XP metric."] },
+        "es": { "title": "XP solo como ganancia de 30 y 90 días", "changes": [
+          "📊 En todo el ranking, el XP siempre es la ganancia de los últimos 30 o 90 días. El XP total del personaje salió de las pantallas, y la pestaña General ya no tiene la métrica de XP total."] },
+        "ja": { "title": "XPは30日・90日の増加量だけ", "changes": [
+          "📊 ランキングのXPは、常に直近30日または90日の増加量です。キャラクターの累計XPは画面から消え、総合タブにも累計XPの項目はありません。"] },
+        "de": { "title": "XP nur als Zuwachs in 30 und 90 Tagen", "changes": [
+          "📊 In der gesamten Rangliste ist XP immer der Zuwachs der letzten 30 oder 90 Tage. Die Gesamt-XP des Charakters wurde aus den Ansichten entfernt, und der Tab Gesamt hat keine Gesamt-XP-Kennzahl mehr."] },
+        "pl": { "title": "XP tylko jako przyrost z 30 i 90 dni", "changes": [
+          "📊 W całym rankingu XP to zawsze przyrost z ostatnich 30 lub 90 dni. Łączne XP postaci zniknęło z ekranów, a zakładka Ogólny nie ma już wskaźnika łącznego XP."] },
+        "fr": { "title": "XP uniquement comme gain sur 30 et 90 jours", "changes": [
+          "📊 Dans tout le classement, l'XP est toujours le gain des 30 ou 90 derniers jours. L'XP totale du personnage a disparu des écrans, et l'onglet Général n'a plus de métrique d'XP totale."] },
+        "ru": { "title": "XP только как прирост за 30 и 90 дней", "changes": [
+          "📊 Во всём рейтинге XP — это всегда прирост за последние 30 или 90 дней. Общий XP персонажа убран с экранов, а во вкладке «Общий» больше нет показателя общего XP."] }
+      }
+    },
+    {
       "version": "0.26.1",
       "date": "2026-11-22",
       "title": "Rankings em abas e ficha do jogador",

@@ -60,7 +60,7 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
             for r in rows:
                 # 0.26.1: top global por métrica (todos os jogadores, não só os acompanhados)
                 item = (r.get("value"), r["name"], w, r.get("level"), r.get("vocation"))
-                if item[0] is not None:
+                if item[0] is not None and c != "experience":  # XP total não é métrica de ranking (ver 0.26.2)
                     _guarda(tops, c, item)
                 if c == "experience":
                     _guarda(tops, "level", (r.get("level"), r["name"], w, r.get("level"), r.get("vocation")))

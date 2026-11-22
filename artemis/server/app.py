@@ -2558,7 +2558,8 @@ def char_trust_admin(body: TrustIn):
 
 # ------------------------------------------------------------------ 0.26.1: rankings (geral, por jogador)
 RANK_PAGE = 100
-RANK_METRICS = ["level", "experience", "magiclevel", "shielding", "distancefighting", "clubfighting", "swordfighting",
+# XP aqui NUNCA é o total do personagem: o ranking de XP é sempre o ganho em 30/90 dias (aba Usuários do Artemis)
+RANK_METRICS = ["level", "magiclevel", "shielding", "distancefighting", "clubfighting", "swordfighting",
                 "axefighting", "fistfighting", "fishing", "achievements", "charmpoints", "goshnarstaint",
                 "loyaltypoints", "dromescore", "bosspoints", "bountypoints", "weeklytasks", "phosphorusrecord"]
 
@@ -2589,12 +2590,13 @@ def rank_player(name: str, _: dict = Depends(require_session)):
         mensais[f"{ano}-{mes:02d}"] = mensais.get(f"{ano}-{mes:02d}", 0) + d["gain"]
         tri = f"{ano}-T{(mes - 1) // 3 + 1}"
         trimestrais[tri] = trimestrais.get(tri, 0) + d["gain"]
-    mudancas = [m for m in store.rank_changes_for(p["name"], corte) if m["kind"] != "world"]
+    # alterações de skills/achievements/charm points; o XP total não aparece (XP é só o ganho em 30/90 dias)
+    mudancas = [m for m in store.rank_changes_for(p["name"], corte)
+                if m["kind"] != "world" and m["category"] != "experience"]
     return {
         "name": p["name"], "world": p["world"], "vocation": p["vocation"], "level": p["level"],
         "calc": vocation_core.calcular(p["level"], p["vocation"]),
-        "xp": {"total": p["values"].get("experience"), "d30": _xp_rows([p["name"]], 30)[0],
-               "d90": _xp_rows([p["name"]], 90)[0]},
+        "xp": {"d30": _xp_rows([p["name"]], 30)[0], "d90": _xp_rows([p["name"]], 90)[0]},
         "charts": {"daily": diarios[-90:],
                    "monthly": [{"month": k, "gain": v} for k, v in sorted(mensais.items())],
                    "quarterly": [{"quarter": k, "gain": v} for k, v in sorted(trimestrais.items())]},
