@@ -2605,6 +2605,193 @@ def rank_player(name: str, _: dict = Depends(require_session)):
     }
 
 
+# ------------------------------------------------------------------ 0.27.0: VIP List
+VIP_SCOPES = ["xp", "skills", "hunts", "hunt_details"]
+# xp = gráficos de XP diária/mensal/trimestral · skills = níveis de skill, achievements e charm points
+# hunts = lista de hunts (local e data) · hunt_details = balance, parte de cada um, duração e XP das sessões solo
+
+
+class VipAddIn(BaseModel):
+    character: Name
+
+
+class VipShareIn(BaseModel):
+    on: bool
+    scopes: list[str] = []
+
+
+class VipAnswerIn(BaseModel):
+    accept: bool
+    scopes: list[str] = []
+
+
+def _csv(texto: str | None) -> list[str]:
+    return [x for x in (texto or "").split(",") if x in VIP_SCOPES]
+
+
+def _vip_effective(link: dict) -> list[str]:
+    """Só vale o que o dono pediu E a outra pessoa aceitou. Sem resposta, nada."""
+    if not link["requested"] or link["approved"] is None:
+        return []
+    aceitos = _csv(link["approved"])
+    return [s for s in _csv(link["requested"]) if s in aceitos]
+
+
+def _vip_state(link: dict) -> str:
+    if not link["requested"]:
+        return "off"
+    if link["approved"] is None:
+        return "pending"
+    return "on" if _vip_effective(link) else "declined"
+
+
+def _since(days: int) -> str:
+    return (datetime.now(BRT).date() - timedelta(days=days)).isoformat()
+
+
+def _xp_charts(name: str) -> dict:
+    corte = XP_TRACK_START.isoformat()
+    pts = store.xp_series(name, corte)
+    diarios = [{"day": b["day"], "gain": b["xp"] - a["xp"]} for a, b in zip(pts, pts[1:])]
+    mensais, trimestrais = {}, {}
+    for d in diarios:
+        ano, mes = d["day"][:4], int(d["day"][5:7])
+        mensais[f"{ano}-{mes:02d}"] = mensais.get(f"{ano}-{mes:02d}", 0) + d["gain"]
+        trimestrais[f"{ano}-T{(mes - 1) // 3 + 1}"] = trimestrais.get(f"{ano}-T{(mes - 1) // 3 + 1}", 0) + d["gain"]
+    return {"daily": diarios[-90:],
+            "monthly": [{"month": k, "gain": v} for k, v in sorted(mensais.items())],
+            "quarterly": [{"quarter": k, "gain": v} for k, v in sorted(trimestrais.items())]}
+
+
+def _vip_basic(name: str) -> dict:
+    """Informação básica (sempre visível para quem adicionou): nick, vocação, level, HP/mana/cap, XP 30/90 dias
+    e hunts em 30 dias. As hunts só aparecem para quem tem conta no site (sem conta, o campo some)."""
+    p = store.rank_player(name)
+    level = p["level"] if p else None
+    voc = p["vocation"] if p else None
+    tem_conta = store.char_has_account(name)
+    return {
+        "name": p["name"] if p else name, "tracked": p is not None, "world": p["world"] if p else None,
+        "vocation": voc, "level": level, "calc": vocation_core.calcular(level, voc),
+        "xp": {"d30": _xp_rows([name], 30)[0], "d90": _xp_rows([name], 90)[0]},
+        "hunts30": len(store.party_hunts_since(name, _since(30))) if tem_conta else None,
+    }
+
+
+def _vip_details(name: str, eff: list[str]) -> dict:
+    out = {}
+    if "xp" in eff:
+        out["xp"] = _xp_charts(name)
+    if "skills" in eff:
+        p = store.rank_player(name)
+        out["skills"] = {k: v for k, v in (p["values"] if p else {}).items() if k != "experience"}
+    if "hunts" in eff or "hunt_details" in eff:
+        hunts = store.party_hunts_since(name, _since(30))
+        if "hunt_details" in eff:
+            out["hunts"] = hunts
+            out["solo_sessions"] = store.solo_sessions_for(name, _since(30))
+        else:
+            out["hunts"] = [{"started_at": h["started_at"], "place": h["place"]} for h in hunts]
+    return out
+
+
+def _my_names(access: dict) -> list[str]:
+    return [c["name"] for c in store.key_chars(access["key"])]
+
+
+@app.get("/api/vip/list")
+def vip_list(access: dict = Depends(require_session)):
+    """Minha VIP List (com o que cada um liberou) e os convites que eu recebi."""
+    entradas = []
+    for link in store.vip_list_owner(access["key"]):
+        entradas.append({**_vip_basic(link["target_name"]), "id": link["id"], "state": _vip_state(link),
+                         "requested": _csv(link["requested"]), "effective": _vip_effective(link)})
+    minhas_nk = [name_key(n) for n in _my_names(access)]
+    convites = []
+    for link in store.vip_invites_for(minhas_nk):
+        convites.append({"id": link["id"], "owner_char": link["owner_char"], "target_name": link["target_name"],
+                         "requested": _csv(link["requested"]), "added_at": link["added_at"]})
+    return {"entries": entradas, "incoming": convites, "scopes": VIP_SCOPES}
+
+
+@app.post("/api/vip/add")
+def vip_add(body: VipAddIn, access: dict = Depends(require_session)):
+    nome = " ".join(body.character.split())
+    if not _VALID_NAME.fullmatch(nome):
+        raise HTTPException(422, "Nome de personagem inválido.")
+    if store.is_linked(access["key"], nome):
+        raise HTTPException(422, "Esse personagem já é seu.")
+    store.vip_add(access["key"], access.get("main_char"), nome)
+    return {"ok": True}
+
+
+@app.delete("/api/vip/{name}")
+def vip_remove(name: str, access: dict = Depends(require_session)):
+    store.vip_remove(access["key"], " ".join(name.split()))
+    return {"ok": True}
+
+
+@app.post("/api/vip/{name}/share")
+def vip_share(name: str, body: VipShareIn, access: dict = Depends(require_session)):
+    """Dono liga/desliga o pedido. Ligar pede permissão de novo (resposta zerada). Desligar tira os detalhes na hora."""
+    link = store.vip_get(access["key"], " ".join(name.split()))
+    if link is None:
+        raise HTTPException(404, "Esse personagem não está na sua VIP List.")
+    if body.on:
+        escolhidos = [s for s in body.scopes if s in VIP_SCOPES]
+        if not escolhidos:
+            raise HTTPException(422, "Escolha pelo menos uma informação para pedir.")
+        store.vip_set_request(link["id"], ",".join(escolhidos))
+    else:
+        store.vip_set_request(link["id"], "")
+    return {"ok": True}
+
+
+@app.post("/api/vip/invites/{link_id}/answer")
+def vip_answer(link_id: int, body: VipAnswerIn, access: dict = Depends(require_session)):
+    """Quem recebeu o convite aceita (com o que quer compartilhar) ou recusa. Vale também para revogar depois."""
+    link = store.vip_by_id(link_id)
+    if link is None or not store.is_linked(access["key"], link["target_name"]):
+        raise HTTPException(404, "Convite não encontrado.")
+    if not link["requested"]:
+        raise HTTPException(409, "O dono desligou esse pedido.")
+    aprovados = [s for s in body.scopes if s in _csv(link["requested"])] if body.accept else []
+    store.vip_answer(link_id, ",".join(aprovados))
+    return {"ok": True, "approved": aprovados}
+
+
+@app.get("/api/vip/view/{name}")
+def vip_view(name: str, access: dict = Depends(require_session)):
+    """Ficha de quem está na minha VIP List: sempre o básico; o detalhe só do que a pessoa liberou."""
+    nome = " ".join(name.split())
+    link = store.vip_get(access["key"], nome)
+    if link is None:
+        raise HTTPException(404, "Esse personagem não está na sua VIP List.")
+    eff = _vip_effective(link)
+    return {**_vip_basic(nome), "state": _vip_state(link), "effective": eff,
+            "details": _vip_details(nome, eff)}
+
+
+@app.get("/api/rank/amigos")
+def rank_amigos(days: int = 30, sort: str = "level", access: dict = Depends(require_session)):
+    """Aba Amigos: meus personagens + quem está na minha VIP List (mesmo sem aceite). Ordena por level ou XP ganha."""
+    days = days if days in XP_DAYS else 30
+    nomes = [(n, "mine") for n in _my_names(access)] + [(l["target_name"], "vip") for l in store.vip_list_owner(access["key"])]
+    linhas = []
+    for nome, origem in nomes:
+        b = _vip_basic(nome)
+        linhas.append({"name": b["name"], "origin": origem, "tracked": b["tracked"], "world": b["world"],
+                       "vocation": b["vocation"], "level": b["level"],
+                       "xp_gain": (b["xp"]["d30"] if days == 30 else b["xp"]["d90"])["gain"],
+                       "values": {k: v for k, v in ((store.rank_player(nome) or {"values": {}})["values"]).items()
+                                  if k != "experience"}})
+    if sort == "xp":
+        linhas.sort(key=lambda r: (r["xp_gain"] is None, -(r["xp_gain"] or 0), r["name"].lower()))
+    else:
+        linhas.sort(key=lambda r: (r["level"] is None, -(r["level"] or 0), r["name"].lower()))
+    return {"days": days, "sort": "xp" if sort == "xp" else "level", "rows": linhas}
+
+
 class PriceIn(BaseModel):
     item: Annotated[str, Field(min_length=1, max_length=80)]
     price: int | None = None

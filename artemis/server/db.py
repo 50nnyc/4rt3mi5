@@ -382,6 +382,20 @@ CREATE TABLE IF NOT EXISTS scan_runs (
     ok            INTEGER NOT NULL,
     note          TEXT NOT NULL DEFAULT ''
 );
+-- 0.27.0: VIP List. Quem adiciona (dono) escolhe o nick; o que ele PEDE ver fica em requested (csv).
+-- O que a outra pessoa ACEITA compartilhar fica em approved: NULL = ainda sem resposta, '' = recusou/revogou.
+CREATE TABLE IF NOT EXISTS vip_links (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_key   TEXT NOT NULL,
+    owner_char  TEXT,
+    target_nk   TEXT NOT NULL,
+    target_name TEXT NOT NULL,
+    added_at    TEXT NOT NULL,
+    requested   TEXT NOT NULL DEFAULT '',
+    approved    TEXT,
+    answered_at TEXT,
+    UNIQUE (owner_key, target_nk)
+);
 -- 0.26.1: ranking geral (top 1000 por métrica, de todos os mundos), guardado a cada varredura
 CREATE TABLE IF NOT EXISTS rank_top (
     metric     TEXT NOT NULL,
@@ -1946,6 +1960,84 @@ class Store:
             self._conn.execute("DELETE FROM rank_top")
             self._conn.executemany("INSERT INTO rank_top VALUES (?, ?, ?, ?, ?, ?, ?, ?)", linhas)
             self._conn.commit()
+
+    # ------------------------------------------------------------------ 0.27.0: VIP List
+    def vip_add(self, owner_key: str, owner_char: str | None, name: str) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR IGNORE INTO vip_links (owner_key, owner_char, target_nk, target_name, added_at) "
+                               "VALUES (?, ?, ?, ?, ?)", (owner_key, owner_char, name_key(name), name, _iso(utcnow())))
+            self._conn.commit()
+
+    def vip_remove(self, owner_key: str, name: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM vip_links WHERE owner_key = ? AND target_nk = ?", (owner_key, name_key(name)))
+            self._conn.commit()
+
+    def vip_get(self, owner_key: str, name: str) -> dict | None:
+        r = self._conn.execute("SELECT * FROM vip_links WHERE owner_key = ? AND target_nk = ?",
+                               (owner_key, name_key(name))).fetchone()
+        return dict(r) if r else None
+
+    def vip_by_id(self, link_id: int) -> dict | None:
+        r = self._conn.execute("SELECT * FROM vip_links WHERE id = ?", (link_id,)).fetchone()
+        return dict(r) if r else None
+
+    def vip_list_owner(self, owner_key: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT * FROM vip_links WHERE owner_key = ? ORDER BY added_at", (owner_key,))]
+
+    def vip_set_request(self, link_id: int, scopes_csv: str) -> None:
+        """Pedido do dono. Sempre zera a resposta: ligar de novo exige nova autorização da outra pessoa."""
+        with self._lock:
+            self._conn.execute("UPDATE vip_links SET requested = ?, approved = NULL, answered_at = NULL WHERE id = ?",
+                               (scopes_csv, link_id))
+            self._conn.commit()
+
+    def vip_answer(self, link_id: int, approved_csv: str) -> None:
+        with self._lock:
+            self._conn.execute("UPDATE vip_links SET approved = ?, answered_at = ? WHERE id = ?",
+                               (approved_csv, _iso(utcnow()), link_id))
+            self._conn.commit()
+
+    def vip_invites_for(self, name_keys: list[str]) -> list[dict]:
+        """Pedidos que aguardam resposta de quem tem um destes personagens."""
+        if not name_keys:
+            return []
+        marcas = ",".join("?" * len(name_keys))
+        return [dict(r) for r in self._conn.execute(
+            f"SELECT * FROM vip_links WHERE target_nk IN ({marcas}) AND requested != '' AND approved IS NULL "
+            f"ORDER BY added_at", name_keys)]
+
+    def vip_accepted_for(self, name_keys: list[str]) -> list[dict]:
+        if not name_keys:
+            return []
+        marcas = ",".join("?" * len(name_keys))
+        return [dict(r) for r in self._conn.execute(
+            f"SELECT * FROM vip_links WHERE target_nk IN ({marcas}) AND approved IS NOT NULL ORDER BY added_at", name_keys)]
+
+    def char_has_account(self, name: str) -> bool:
+        return self._conn.execute("SELECT 1 FROM key_chars WHERE name_key = ? LIMIT 1", (name_key(name),)).fetchone() is not None
+
+    def party_hunts_since(self, name: str, since: str) -> list[dict]:
+        """Hunts de party (Party Hunt Analyser) em que o personagem jogou desde `since`, com a parte dele."""
+        rows = self._conn.execute(
+            "SELECT h.id, h.started_at, h.report_json, pl.name AS place FROM hunts h "
+            "JOIN hunt_players hp ON hp.hunt_id = h.id LEFT JOIN hunt_places pl ON pl.id = h.place_id "
+            "WHERE hp.name_key = ? AND h.started_at >= ? ORDER BY h.started_at DESC", (name_key(name), since)).fetchall()
+        out = []
+        for r in rows:
+            rep = json.loads(r["report_json"] or "{}")
+            me = next((p for p in rep.get("players", []) if name_key(p.get("name", "")) == name_key(name)), {})
+            out.append({"id": r["id"], "started_at": r["started_at"], "place": r["place"],
+                        "duration_seconds": rep.get("duration_seconds"), "players_count": rep.get("players_count"),
+                        "balance": me.get("balance"), "profit_each": rep.get("profit_each")})
+        return out
+
+    def solo_sessions_for(self, name: str, since: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT started_at, xp, balance, duration_seconds, session_label FROM solo_sessions "
+            "WHERE name_key = ? AND started_at >= ? AND other_player = 0 ORDER BY started_at DESC",
+            (name_key(name), since))]
 
     def rank_top_page(self, metric: str, offset: int, limit: int) -> list[dict]:
         return [dict(r) for r in self._conn.execute(

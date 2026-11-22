@@ -1067,6 +1067,7 @@ function go(page, opts = {}) {
   $("#pageCal").classList.toggle("hidden", page !== "cal");
   $("#pageAch").classList.toggle("hidden", page !== "ach");
   $("#pageRank").classList.toggle("hidden", page !== "rank");
+  $("#pageVip").classList.toggle("hidden", page !== "vip");
   $("#pageSettings").classList.toggle("hidden", page !== "settings");
   $("#pageSubs").classList.toggle("hidden", page !== "subs");
   $("#pageParties").classList.toggle("hidden", page !== "parties");
@@ -1075,6 +1076,7 @@ function go(page, opts = {}) {
   if (page === "parties") { if (!opts.noPush) PT.vault = null; loadParties(); }
   Music.forPage(page);
   if (page === "rank") loadRankings();
+  if (page === "vip") loadVip();
   if (page === "news") loadNews();
   if (page === "tnews") loadTnews();
   if (page === "cal") loadCal();
@@ -2084,7 +2086,8 @@ function showRankTab(t) {
   document.querySelectorAll("[data-rtab]").forEach((b) => b.classList.toggle("on", b.dataset.rtab === t));
   $("#tabArtemis").classList.toggle("hidden", t !== "artemis");
   $("#tabGeral").classList.toggle("hidden", t !== "geral");
-  if (t === "artemis") loadXp(); else loadGeral();
+  $("#tabAmigos").classList.toggle("hidden", t !== "amigos");
+  if (t === "artemis") loadXp(); else if (t === "geral") loadGeral(); else loadAmigos();
 }
 
 async function loadXp() {
@@ -4995,3 +4998,174 @@ $("#contactAgain").addEventListener("click", () => {
 });
 
 boot();
+
+/* ---------- 0.27.0: ⭐ VIP List (quem eu acompanho, o que cada um liberou e os convites que recebi) e aba Amigos ---------- */
+const VIP_LABEL = { xp: "Gráficos de XP (diária, mensal, trimestral)", skills: "Skills, achievements e charm points",
+  hunts: "Lista de hunts (local e data)", hunt_details: "Detalhes de cada hunt (balance, sua parte e XP solo)" };
+const brDateTime = (s) => (s ? `${s.slice(0, 10).split("-").reverse().join("/")} ${s.slice(11, 16)}` : "");
+const SKILL_LABEL = { magiclevel: "Magic Level", shielding: "Shielding", distancefighting: "Distance", clubfighting: "Club",
+  swordfighting: "Sword", axefighting: "Axe", fistfighting: "Fist", fishing: "Fishing", achievements: "Achievements",
+  charmpoints: "Charm Points", goshnarstaint: "Goshnar's Taint", loyaltypoints: "Loyalty", dromescore: "Drome",
+  bosspoints: "Boss Points", bountypoints: "Bounty", weeklytasks: "Weekly Tasks", phosphorusrecord: "Phosphorus" };
+S.vip = { sort: "level", days: 30 };
+
+function vipStateText(e, nome) {
+  if (e.state === "pending") return `Aguardando a resposta de ${esc(nome)}.`;
+  if (e.state === "declined") return `${esc(nome)} não aceitou compartilhar. Você pode pedir de novo.`;
+  if (e.state === "on") return `Compartilhando com você: ${e.effective.map((s) => esc(VIP_LABEL[s])).join(" · ")}.`;
+  return "Nada pedido ainda.";
+}
+
+function vipEntryCard(e, scopes) {
+  const c = e.calc;
+  const nome = e.name;
+  const boxes = scopes.map((s) => `<label class="check-row"><input type="checkbox" data-vsc="${s}" ${e.requested.includes(s) || e.state === "off" ? "checked" : ""}> ${esc(VIP_LABEL[s])}</label>`).join("");
+  const acao = e.state === "on"
+    ? `<button class="btn2" data-voff="${e.id}" style="margin:0">Desligar</button>`
+    : e.state === "pending" ? ""
+    : `<button class="btn" data-vreq="${e.id}" style="margin:0">Pedir permissão</button>`;
+  return `<div class="card" style="margin-bottom:10px" data-vcard="${e.id}">
+    <div class="row" style="justify-content:space-between;flex-wrap:wrap">
+      <a href="#" data-vview="${esc(nome)}" style="font-weight:700;color:inherit;text-decoration:underline dotted">${esc(nome)}</a>
+      <button class="btn2" data-vdel="${esc(nome)}" style="margin:0;padding:4px 10px;font-size:12px">Remover</button>
+    </div>
+    <div class="muted" style="font-size:13px;margin-top:4px">${e.vocation ? esc(e.vocation) : "–"}${e.level ? " · level " + e.level : ""}${c ? ` · HP ${fmt(c.hp)} · Mana ${fmt(c.mana)} · Cap ${fmt(c.cap)} oz` : ""}</div>
+    <div class="row" style="gap:16px;margin-top:8px;flex-wrap:wrap">
+      <div><div class="muted" style="font-size:12px">XP ganha 30 dias</div><b>${e.xp.d30.gain == null ? "–" : fmt(e.xp.d30.gain)}</b></div>
+      <div><div class="muted" style="font-size:12px">XP ganha 90 dias</div><b>${e.xp.d90.gain == null ? "–" : fmt(e.xp.d90.gain)}</b></div>
+      ${e.hunts30 != null ? `<div><div class="muted" style="font-size:12px">Hunts em 30 dias</div><b>${e.hunts30}</b></div>` : ""}
+    </div>
+    <div class="hint" style="margin-top:8px">${vipStateText(e, nome)}</div>
+    ${e.state === "pending" ? "" : `<div style="margin-top:6px">${boxes}</div>`}
+    <div class="row" style="margin-top:8px">${acao}</div>
+  </div>`;
+}
+
+async function loadVip() {
+  let d;
+  try { d = await api("GET", "/api/vip/list"); }
+  catch (err) { if (err.status !== 401) $("#vipList").innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  $("#vipIncoming").innerHTML = d.incoming.map((c) => `
+    <div class="card" style="margin-bottom:10px" data-inv="${c.id}">
+      <b>${esc(c.owner_char || "Alguém")}</b> quer ver estas informações de ${esc(c.target_name)}:
+      <div style="margin-top:8px">${d.scopes.filter((s) => c.requested.includes(s)).map((s) =>
+        `<label class="check-row"><input type="checkbox" data-isc="${s}" checked> ${esc(VIP_LABEL[s])}</label>`).join("")}</div>
+      <div class="hint">Desmarque o que não quer compartilhar. Você pode mudar isso depois.</div>
+      <div class="row" style="margin-top:8px"><button class="btn" data-vacc="${c.id}" style="margin:0">Aceitar</button><button class="btn2" data-vdec="${c.id}" style="margin:0">Recusar</button></div>
+    </div>`).join("");
+  $("#vipList").innerHTML = d.entries.length
+    ? d.entries.map((e) => vipEntryCard(e, d.scopes)).join("")
+    : `<p class="muted">Sua VIP List está vazia. Adicione um nick acima.</p>`;
+}
+
+async function loadAmigos() {
+  const body = $("#amigosBody");
+  document.querySelectorAll("[data-asort]").forEach((b) => b.classList.toggle("on", b.dataset.asort === S.vip.sort));
+  document.querySelectorAll("[data-adays]").forEach((b) => b.classList.toggle("on", +b.dataset.adays === S.vip.days));
+  body.innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/rank/amigos?days=${S.vip.days}&sort=${S.vip.sort}`); }
+  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">Nenhum personagem ainda.</p>`; return; }
+  const W = "white-space:normal";
+  body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">XP ${d.days} dias</th></tr>
+    ${d.rows.map((r, i) => `<tr><td style="${W}">${i + 1}</td>
+      <td style="${W};text-align:left"><a href="#" data-amigo="${esc(r.name)}" data-origem="${r.origin}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>
+        <div class="muted" style="font-size:12px">${r.vocation ? esc(r.vocation) : "–"}${r.level ? " · level " + r.level : ""}</div>
+        <div class="muted" style="font-size:11px">${Object.entries(r.values).map(([k, v]) => `${esc(SKILL_LABEL[k] || k)} ${fmt(v)}`).join(" · ")}</div></td>
+      <td style="text-align:right;${W}">${r.xp_gain == null ? "–" : `<b>${fmt(r.xp_gain)}</b>`}</td></tr>`).join("")}</table></div>`;
+}
+
+async function openVipView(nome) {
+  $("#playerModal").classList.remove("hidden");
+  $("#pmTitle").textContent = nome;
+  $("#pmBody").innerHTML = skeleton("stack");
+  let d;
+  try { d = await api("GET", `/api/vip/view/${encodeURIComponent(nome)}`); }
+  catch (err) { $("#pmBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  const c = d.calc, t = d.details;
+  let html = `<div class="row" style="flex-wrap:wrap;gap:14px">
+      <div><div class="muted">Vocação</div><b>${esc(d.vocation || "–")}</b></div>
+      <div><div class="muted">Level</div><b>${d.level ?? "–"}</b></div>
+      <div><div class="muted">Mundo</div><b>${esc(d.world || "–")}</b></div>
+      ${c ? `<div><div class="muted">HP</div><b>${fmt(c.hp)}</b></div><div><div class="muted">Mana</div><b>${fmt(c.mana)}</b></div><div><div class="muted">Cap</div><b>${fmt(c.cap)} oz</b></div>` : ""}
+    </div>
+    <div class="row" style="gap:14px;margin-top:12px;flex-wrap:wrap">
+      <div><div class="muted">XP ganha 30 dias</div><b>${d.xp.d30.gain == null ? "–" : fmt(d.xp.d30.gain)}</b></div>
+      <div><div class="muted">XP ganha 90 dias</div><b>${d.xp.d90.gain == null ? "–" : fmt(d.xp.d90.gain)}</b></div>
+      ${d.hunts30 != null ? `<div><div class="muted">Hunts em 30 dias</div><b>${d.hunts30}</b></div>` : ""}
+    </div>`;
+  if (t.xp) {
+    html += `<div class="seg" style="margin-top:14px"><button data-pmc="daily" class="on">Diária</button><button data-pmc="monthly">Mensal</button><button data-pmc="quarterly">Trimestral</button></div><div id="pmSvg" style="margin-top:8px"></div>`;
+    S.pm = { charts: t.xp };
+  }
+  if (t.skills) {
+    html += `<h3 style="margin-top:16px">Skills e achievements</h3><div class="hint" style="white-space:normal">${Object.entries(t.skills).map(([k, v]) => `${esc(SKILL_LABEL[k] || k)}: <b>${fmt(v)}</b>`).join(" · ")}</div>`;
+  }
+  if (t.hunts) {
+    const det = !!t.solo_sessions;
+    html += `<h3 style="margin-top:16px">Hunts (30 dias)</h3>` + (t.hunts.length
+      ? `<div class="table-wrap"><table><tr><th>Quando</th><th>Local</th>${det ? "<th style='text-align:right'>Sua parte</th><th style='text-align:right'>Balance</th>" : ""}</tr>
+          ${t.hunts.map((h) => `<tr><td style="white-space:normal">${brDateTime(h.started_at)}</td><td style="white-space:normal">${esc(h.place || "sem local")}</td>${det ? `<td style="text-align:right">${h.profit_each == null ? "–" : fmt(h.profit_each)}</td><td style="text-align:right">${h.balance == null ? "–" : fmt(h.balance)}</td>` : ""}</tr>`).join("")}</table></div>`
+      : `<p class="muted">Nenhuma hunt nos últimos 30 dias.</p>`);
+  }
+  if (t.solo_sessions) {
+    html += `<h3 style="margin-top:16px">Hunts solo (30 dias)</h3>` + (t.solo_sessions.length
+      ? `<div class="table-wrap"><table><tr><th>Quando</th><th style="text-align:right">XP</th><th style="text-align:right">Balance</th></tr>
+          ${t.solo_sessions.map((s) => `<tr><td style="white-space:normal">${brDateTime(s.started_at)}</td><td style="text-align:right">${fmt(s.xp)}</td><td style="text-align:right">${fmt(s.balance)}</td></tr>`).join("")}</table></div>`
+      : `<p class="muted">Nenhuma sessão solo nos últimos 30 dias.</p>`);
+  }
+  if (!Object.keys(t).length) {
+    html += `<p class="muted" style="margin-top:14px">Ainda não há detalhes liberados por ${esc(nome)}.</p>`;
+  }
+  $("#pmBody").innerHTML = html;
+  if (t.xp) paintPmChart("daily");
+}
+
+document.addEventListener("click", async (e) => {
+  const add = e.target.closest("#vipAddBtn"), del = e.target.closest("[data-vdel]"), req = e.target.closest("[data-vreq]"),
+    off = e.target.closest("[data-voff]"), acc = e.target.closest("[data-vacc]"), dec = e.target.closest("[data-vdec]"),
+    vv = e.target.closest("[data-vview]"), am = e.target.closest("[data-amigo]"), so = e.target.closest("[data-asort]"),
+    ad = e.target.closest("[data-adays]");
+  try {
+    if (add) {
+      const nome = ($("#vipAddName").value || "").trim();
+      if (!nome) return;
+      await api("POST", "/api/vip/add", { character: nome });
+      $("#vipAddName").value = "";
+      return loadVip();
+    }
+    if (del) {
+      if (!confirm(`Remover ${del.dataset.vdel} da sua VIP List?`)) return;
+      await api("DELETE", `/api/vip/${encodeURIComponent(del.dataset.vdel)}`);
+      return loadVip();
+    }
+    if (req) {
+      const card = req.closest("[data-vcard]");
+      const scopes = [...card.querySelectorAll("[data-vsc]:checked")].map((x) => x.dataset.vsc);
+      if (!scopes.length) return alert("Escolha pelo menos uma informação para pedir.");
+      const nome = card.querySelector("[data-vview]").dataset.vview;
+      await api("POST", `/api/vip/${encodeURIComponent(nome)}/share`, { on: true, scopes });
+      return loadVip();
+    }
+    if (off) {
+      const nome = off.closest("[data-vcard]").querySelector("[data-vview]").dataset.vview;
+      if (!confirm(`Tem certeza que quer desligar o compartilhamento com ${nome}? Os detalhes somem da sua tela agora. Se ligar de novo, vai precisar pedir permissão outra vez.`)) return;
+      await api("POST", `/api/vip/${encodeURIComponent(nome)}/share`, { on: false, scopes: [] });
+      return loadVip();
+    }
+    if (acc || dec) {
+      const card = (acc || dec).closest("[data-inv]");
+      const id = (acc || dec).dataset.vacc || (acc || dec).dataset.vdec;
+      const scopes = [...card.querySelectorAll("[data-isc]:checked")].map((x) => x.dataset.isc);
+      await api("POST", `/api/vip/invites/${id}/answer`, { accept: !!acc, scopes: acc ? scopes : [] });
+      return loadVip();
+    }
+    if (vv) { e.preventDefault(); return openVipView(vv.dataset.vview); }
+    if (am) { e.preventDefault(); return am.dataset.origem === "mine" ? openPlayer(am.dataset.amigo) : openVipView(am.dataset.amigo); }
+    if (so) { S.vip.sort = so.dataset.asort; return loadAmigos(); }
+    if (ad) { S.vip.days = +ad.dataset.adays; return loadAmigos(); }
+  } catch (err) {
+    if (err.status !== 401) alert(err.message);
+  }
+});

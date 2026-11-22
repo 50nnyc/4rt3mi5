@@ -916,6 +916,7 @@
     <button class="item" data-page="subs"><span class="ic">🤝</span>Substituições <span class="badge hidden" id="subsBadge" title="Envios novos pelo seu link"></span></button>
     <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Rankings</button>
+    <button class="item" data-page="vip"><span class="ic">⭐</span>VIP List</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
     <div class="section">Tibia</div>
     <button class="item" data-page="tnews"><span class="ic">📰</span>Novidades</button>
@@ -1005,7 +1006,7 @@
     <div id="pageRank" class="hidden">
       <h1>Rankings</h1>
       <div class="seg" id="rankTabs">
-        <button data-rtab="artemis" class="on">Usuários do Artemis</button><button data-rtab="geral">Geral</button>
+        <button data-rtab="artemis" class="on">Usuários do Artemis</button><button data-rtab="geral">Geral</button><button data-rtab="amigos">Amigos</button>
       </div>
 
       <!-- 0.26.1: aba Usuários do Artemis (XP ganha em 30/90 dias, de quem está cadastrado ou jogou em party com alguém cadastrado) -->
@@ -1033,6 +1034,30 @@
           <button class="btn2" id="geralNext" style="margin:0">Próxima ›</button>
         </div>
       </div>
+    </div>
+
+    <!-- 0.27.0: aba Amigos (meus personagens + VIP List, sem depender do aceite) -->
+    <div id="tabAmigos" class="hidden" style="margin-top:12px">
+      <p class="muted" style="margin-top:-4px">Seus personagens e quem está na sua VIP List. XP sempre é o ganho dos últimos 30 ou 90 dias.</p>
+      <div class="seg" id="amigosSort">
+        <button data-asort="level" class="on">Level</button><button data-asort="xp">XP</button>
+      </div>
+      <div class="seg" id="amigosDays" style="margin-top:8px">
+        <button data-adays="30" class="on">30 dias</button><button data-adays="90">90 dias</button>
+      </div>
+      <div id="amigosBody" style="margin-top:12px"></div>
+    </div>
+
+    <!-- 0.27.0: VIP List (quem eu acompanho e o que cada um liberou; convites que recebi) -->
+    <div id="pageVip" class="hidden">
+      <h1>VIP List</h1>
+      <p class="muted" style="margin-top:-4px">Adicione quem você quer acompanhar. Você sempre vê o básico. Os detalhes só aparecem quando a pessoa aceita compartilhar.</p>
+      <div id="vipIncoming"></div>
+      <div class="row" style="margin-top:12px">
+        <input id="vipAddName" class="grow" maxlength="40" placeholder="Nick do personagem">
+        <button class="btn" id="vipAddBtn" style="margin:0">Adicionar</button>
+      </div>
+      <div id="vipList" style="margin-top:12px"></div>
     </div>
 
     <!-- 0.26.1: ficha do jogador (pública, só para quem está acompanhado) -->

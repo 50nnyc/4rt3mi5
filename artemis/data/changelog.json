@@ -1,6 +1,46 @@
 {
   "releases": [
     {
+      "version": "0.27.0",
+      "date": "2026-11-22",
+      "title": "VIP List e aba Amigos",
+      "changes": [
+        "⭐ VIP List: adicione qualquer nick e acompanhe o básico (vocação, level, HP, mana, cap, XP ganha em 30 e 90 dias e hunts em 30 dias). Você pede o que quer ver; a outra pessoa aceita ou recusa, escolhendo o que compartilha. Desligar pede confirmação e tira os detalhes na hora; religar pede permissão de novo.",
+        "🤝 Convites: quem recebe o pedido vê quem pediu e o que foi pedido, e decide o que liberar.",
+        "👥 Aba Amigos em Rankings: seus personagens e quem está na sua VIP List, ordenados por level ou por XP de 30/90 dias."
+      ],
+      "tr": {
+        "en": { "title": "VIP List and Friends tab", "changes": [
+          "⭐ VIP List: add any nick and follow the basics (vocation, level, HP, mana, cap, XP gained in 30 and 90 days and hunts in 30 days). You ask for what you want to see; the other person accepts or declines, choosing what to share. Turning it off asks for confirmation and removes the details at once; turning it back on asks permission again.",
+          "🤝 Invitations: whoever receives a request sees who asked and what was asked, and decides what to share.",
+          "👥 Friends tab in Rankings: your characters and the people on your VIP List, sorted by level or XP gained in 30/90 days."] },
+        "es": { "title": "VIP List y pestaña Amigos", "changes": [
+          "⭐ VIP List: agrega cualquier nick y sigue lo básico (vocación, level, HP, mana, cap, XP ganado en 30 y 90 días y hunts en 30 días). Pides lo que quieres ver; la otra persona acepta o rechaza, eligiendo qué compartir. Desactivarlo pide confirmación y quita los detalles al instante; volver a activarlo pide permiso de nuevo.",
+          "🤝 Invitaciones: quien recibe la solicitud ve quién la envió y qué pidió, y decide qué liberar.",
+          "👥 Pestaña Amigos en Rankings: tus personajes y quienes están en tu VIP List, ordenados por level o por XP ganado en 30/90 días."] },
+        "ja": { "title": "VIP Listとフレンドタブ", "changes": [
+          "⭐ VIP List：任意のキャラクター名を追加し、基本情報（職業・レベル・HP・マナ・キャップ・30日・90日の獲得XP・30日のハント数）をフォローできます。見たい項目を申請し、相手が承諾・拒否して共有範囲を選びます。オフにすると確認が出て、詳細はすぐ消えます。再びオンにするには改めて許可が必要です。",
+          "🤝 招待：申請を受けた人は、誰がどの項目を求めたかを確認し、共有する内容を決めます。",
+          "👥 ランキングのフレンドタブ：自分のキャラクターとVIP Listの人を、レベルまたは30日・90日の獲得XPで並べます。"] },
+        "de": { "title": "VIP-Liste und Freunde-Tab", "changes": [
+          "⭐ VIP-Liste: Füge einen beliebigen Nick hinzu und verfolge die Grundinfos (Beruf, Level, HP, Mana, Kapazität, in 30 und 90 Tagen gewonnene XP und Hunts in 30 Tagen). Du bittest um das, was du sehen willst; die Person akzeptiert oder lehnt ab und wählt, was sie teilt. Ausschalten fragt nach Bestätigung und entfernt die Details sofort; wieder einschalten braucht erneut eine Erlaubnis.",
+          "🤝 Einladungen: Wer die Anfrage erhält, sieht, wer gefragt hat und was, und entscheidet, was freigegeben wird.",
+          "👥 Freunde-Tab in den Ranglisten: deine Charaktere und die Personen auf deiner VIP-Liste, sortiert nach Level oder nach XP der letzten 30/90 Tage."] },
+        "pl": { "title": "Lista VIP i zakładka Znajomi", "changes": [
+          "⭐ Lista VIP: dodaj dowolny nick i śledź podstawowe dane (zawód, level, HP, manę, cap, XP zdobyte w 30 i 90 dni oraz hunty w 30 dni). Prosisz o to, co chcesz widzieć; druga osoba akceptuje lub odrzuca, wybierając, co udostępnia. Wyłączenie wymaga potwierdzenia i od razu usuwa szczegóły; ponowne włączenie wymaga nowej zgody.",
+          "🤝 Zaproszenia: kto dostaje prośbę, widzi, kto ją wysłał i o co prosi, i decyduje, co udostępnić.",
+          "👥 Zakładka Znajomi w Rankingach: twoje postacie i osoby z listy VIP, posortowane według levelu lub XP zdobytego w 30/90 dni."] },
+        "fr": { "title": "VIP List et onglet Amis", "changes": [
+          "⭐ VIP List : ajoutez n'importe quel nick et suivez l'essentiel (vocation, level, HP, mana, cap, XP gagnée sur 30 et 90 jours et hunts sur 30 jours). Vous demandez ce que vous voulez voir ; l'autre personne accepte ou refuse, en choisissant ce qu'elle partage. Désactiver demande confirmation et retire les détails tout de suite ; le réactiver redemande l'autorisation.",
+          "🤝 Invitations : celui qui reçoit la demande voit qui l'a envoyée et ce qui est demandé, et décide de ce qu'il partage.",
+          "👥 Onglet Amis dans les Classements : vos personnages et les personnes de votre VIP List, triés par level ou par XP gagnée sur 30/90 jours."] },
+        "ru": { "title": "VIP List и вкладка «Друзья»", "changes": [
+          "⭐ VIP List: добавьте любой ник и следите за основным (профессия, уровень, HP, мана, кап, XP за 30 и 90 дней и охоты за 30 дней). Вы запрашиваете то, что хотите видеть; человек принимает или отклоняет, выбирая, чем делиться. Выключение просит подтверждения и сразу убирает подробности; повторное включение снова требует разрешения.",
+          "🤝 Приглашения: получатель запроса видит, кто спросил и что именно, и решает, чем поделиться.",
+          "👥 Вкладка «Друзья» в рейтингах: ваши персонажи и люди из VIP List, по уровню или по XP за 30/90 дней."] }
+      }
+    },
+    {
       "version": "0.26.2",
       "date": "2026-11-22",
       "title": "XP só como ganho de 30 e 90 dias",

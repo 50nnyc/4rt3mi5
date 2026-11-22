@@ -1271,5 +1271,12 @@
   "Rankings": "ランキング",
   "Usuários do Artemis": "Artemisユーザー",
   "Quem tem conta no Artemis ou jogou numa party com alguém que tem. XP medida pelo TibiaData.": "Artemisアカウントを持つ人、またはアカウント保有者とパーティを組んだ人。XPはTibiaDataで計測。",
-  "Top 1000 de todos os mundos. Clique em um nome para ver a ficha do jogador.": "全ワールドのトップ1000。名前をクリックするとプロフィールを表示します。"
+  "Top 1000 de todos os mundos. Clique em um nome para ver a ficha do jogador.": "全ワールドのトップ1000。名前をクリックするとプロフィールを表示します。",
+  "Adicionar": "追加",
+  "Adicione quem você quer acompanhar. Você sempre vê o básico. Os detalhes só aparecem quando a pessoa aceita compartilhar.": "フォローしたい人を追加してください。基本情報は常に見られます。詳細は相手が共有を承諾した場合のみ表示されます。",
+  "Amigos": "フレンド",
+  "Level": "レベル",
+  "Nick do personagem": "キャラクター名",
+  "Seus personagens e quem está na sua VIP List. XP sempre é o ganho dos últimos 30 ou 90 dias.": "あなたのキャラクターとVIP Listの人たち。XPは常に直近30日または90日の増加量です。",
+  "VIP List": "VIPリスト"
 }
