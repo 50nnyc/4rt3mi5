@@ -1,6 +1,77 @@
 {
   "releases": [
     {
+      "version": "0.28.0",
+      "date": "2026-11-23",
+      "title": "Início mais vivo e Lootsplit para compartilhar",
+      "summary": "O Início mostra o que importa hoje (boost do dia, conquistas e tendência das suas hunts) e o Lootsplit vira texto pronto para o Discord ou o WhatsApp.",
+      "changes": [
+        "🔥 Início: novo cartão \"Boost de hoje\" com a criatura e o boss boosted do dia, mais um cartão de Conquistas com a próxima mais perto de sair e um mini-gráfico de tendência das suas hunts.",
+        "💬 Lootsplit: botão \"Copiar resumo para Discord/WhatsApp\" com a hunt, o valor de cada um e quem transfere para quem.",
+        "🛡️ Hunts: filtro por vocação (Knight, Paladin, Druid, Sorcerer ou Monk) junto com o filtro de level. Entram só jogadores com vocação já conhecida.",
+        "📈 Ao salvar uma sessão, a confirmação mostra o XP e o XP/h. No ranking de XP, passar o mouse na origem do número explica de onde ele vem, e termos como Loot, Supplies e Loot type ganharam explicação.",
+        "🤝 O convite pelo WhatsApp agora diz o que a pessoa ganha ao entrar no site."
+      ],
+      "tr": {
+        "en": { "title": "A livelier Home and shareable Lootsplit",
+          "summary": "Home shows what matters today (daily boost, achievements and your hunt trend) and Lootsplit becomes a ready-made text for Discord or WhatsApp.",
+          "changes": [
+          "🔥 Home: a new \"Today's boost\" card with the boosted creature and boss of the day, plus an Achievements card with the next one closest to unlocking and a small trend chart of your hunts.",
+          "💬 Lootsplit: a \"Copy summary for Discord/WhatsApp\" button with the hunt, each player's share and who transfers to whom.",
+          "🛡️ Hunts: filter by vocation (Knight, Paladin, Druid, Sorcerer or Monk) alongside the level filter. Only players with a known vocation are included.",
+          "📈 When you save a session, the confirmation shows the XP and XP/h. In the XP ranking, hovering over a number's source explains where it comes from, and terms like Loot, Supplies and Loot type now have explanations.",
+          "🤝 The WhatsApp invite now says what the person gains by joining the site."] },
+        "es": { "title": "Inicio más vivo y Lootsplit para compartir",
+          "summary": "El Inicio muestra lo que importa hoy (boost del día, logros y tendencia de tus hunts) y el Lootsplit se vuelve un texto listo para Discord o WhatsApp.",
+          "changes": [
+          "🔥 Inicio: nueva tarjeta \"Boost de hoy\" con la criatura y el boss boosted del día, además de una tarjeta de Logros con el siguiente más cercano y un mini gráfico de tendencia de tus hunts.",
+          "💬 Lootsplit: botón \"Copiar resumen para Discord/WhatsApp\" con la hunt, lo que recibe cada uno y quién transfiere a quién.",
+          "🛡️ Hunts: filtro por vocación (Knight, Paladin, Druid, Sorcerer o Monk) junto al filtro de level. Solo entran jugadores con vocación ya conocida.",
+          "📈 Al guardar una sesión, la confirmación muestra el XP y el XP/h. En el ranking de XP, al pasar el cursor por el origen del número se explica de dónde viene, y términos como Loot, Supplies y Loot type tienen explicación.",
+          "🤝 La invitación por WhatsApp ahora dice qué gana la persona al entrar en el sitio."] },
+        "ja": { "title": "ホームがより便利に、Lootsplitを共有しやすく",
+          "summary": "ホームに今日大事な情報（今日のブースト、実績、ハントの推移）が並び、LootsplitはDiscordやWhatsApp向けの文章としてコピーできます。",
+          "changes": [
+          "🔥 ホーム：今日のブーストされたクリーチャーとボスを表示する「今日のブースト」カード、解除が近い実績のカード、ハントの推移を示す小さなグラフを追加しました。",
+          "💬 Lootsplit：ハント内容、各自の取り分、誰が誰に送金するかをまとめた「Discord/WhatsApp用にサマリーをコピー」ボタンを追加しました。",
+          "🛡️ ハント：レベルの絞り込みに加えて、職業（Knight、Paladin、Druid、Sorcerer、Monk）で絞り込めるようになりました。職業が判明している人だけが対象です。",
+          "📈 セッションを保存すると、確認メッセージにXPとXP/hが表示されます。XPランキングでは数値の出どころにカーソルを合わせると説明が出て、Loot、Supplies、Loot typeなどの用語にも説明が付きました。",
+          "🤝 WhatsAppの招待に、サイトに登録すると何ができるかが書かれるようになりました。"] },
+        "de": { "title": "Lebendigere Startseite und teilbarer Lootsplit",
+          "summary": "Die Startseite zeigt, was heute zählt (Tages-Boost, Erfolge und der Trend deiner Hunts), und der Lootsplit wird zu einem fertigen Text für Discord oder WhatsApp.",
+          "changes": [
+          "🔥 Startseite: neue Karte \"Boost von heute\" mit der geboosteten Kreatur und dem Boss des Tages, dazu eine Erfolge-Karte mit dem nächsten fast erreichten Erfolg und ein kleines Trenddiagramm deiner Hunts.",
+          "💬 Lootsplit: Button \"Zusammenfassung für Discord/WhatsApp kopieren\" mit Hunt, Anteil jedes Spielers und wer an wen überweist.",
+          "🛡️ Hunts: Filter nach Berufung (Knight, Paladin, Druid, Sorcerer oder Monk) zusätzlich zum Level-Filter. Es zählen nur Spieler mit bekannter Berufung.",
+          "📈 Beim Speichern einer Sitzung zeigt die Bestätigung XP und XP/h. In der XP-Rangliste erklärt der Hinweis an der Zahl, woher sie stammt, und Begriffe wie Loot, Supplies und Loot type sind jetzt erklärt.",
+          "🤝 Die WhatsApp-Einladung sagt jetzt, was die Person davon hat, der Seite beizutreten."] },
+        "pl": { "title": "Żywszy ekran główny i Lootsplit do udostępniania",
+          "summary": "Ekran główny pokazuje to, co ważne dziś (boost dnia, osiągnięcia i trend twoich huntów), a Lootsplit staje się gotowym tekstem na Discorda lub WhatsAppa.",
+          "changes": [
+          "🔥 Ekran główny: nowa karta \"Boost na dziś\" z boostowanym stworem i bossem dnia, karta Osiągnięć z kolejnym najbliższym do zdobycia oraz mały wykres trendu twoich huntów.",
+          "💬 Lootsplit: przycisk \"Kopiuj podsumowanie na Discord/WhatsApp\" z huntem, udziałem każdego gracza i informacją, kto komu przelewa.",
+          "🛡️ Hunty: filtr według profesji (Knight, Paladin, Druid, Sorcerer lub Monk) obok filtra poziomu. Liczą się tylko gracze ze znaną profesją.",
+          "📈 Po zapisaniu sesji potwierdzenie pokazuje XP i XP/h. W rankingu XP podpowiedź przy liczbie wyjaśnia, skąd pochodzi, a pojęcia takie jak Loot, Supplies i Loot type mają teraz wyjaśnienia.",
+          "🤝 Zaproszenie przez WhatsApp mówi teraz, co osoba zyska, dołączając do strony."] },
+        "fr": { "title": "Accueil plus vivant et Lootsplit à partager",
+          "summary": "L'accueil montre ce qui compte aujourd'hui (boost du jour, succès et tendance de vos hunts) et le Lootsplit devient un texte prêt pour Discord ou WhatsApp.",
+          "changes": [
+          "🔥 Accueil : nouvelle carte « Boost du jour » avec la créature et le boss boostés du jour, une carte Succès avec le prochain le plus proche et un mini-graphique de tendance de vos hunts.",
+          "💬 Lootsplit : bouton « Copier le résumé pour Discord/WhatsApp » avec la hunt, la part de chacun et qui transfère à qui.",
+          "🛡️ Hunts : filtre par vocation (Knight, Paladin, Druid, Sorcerer ou Monk) en plus du filtre de niveau. Seuls les joueurs à la vocation connue sont inclus.",
+          "📈 À l'enregistrement d'une session, la confirmation affiche l'XP et l'XP/h. Dans le classement d'XP, survoler l'origine du chiffre explique d'où il vient, et des termes comme Loot, Supplies et Loot type sont expliqués.",
+          "🤝 L'invitation WhatsApp indique maintenant ce que la personne gagne en rejoignant le site."] },
+        "ru": { "title": "Живая главная и Lootsplit для отправки",
+          "summary": "Главная показывает главное на сегодня (буст дня, достижения и динамику ваших охот), а Lootsplit превращается в готовый текст для Discord или WhatsApp.",
+          "changes": [
+          "🔥 Главная: новая карточка «Буст на сегодня» с бустнутым существом и боссом дня, карточка достижений с ближайшим к получению и мини-график динамики ваших охот.",
+          "💬 Lootsplit: кнопка «Скопировать итог для Discord/WhatsApp» с охотой, долей каждого и тем, кто кому переводит.",
+          "🛡️ Охоты: фильтр по профессии (Knight, Paladin, Druid, Sorcerer или Monk) вместе с фильтром по уровню. Учитываются только игроки с известной профессией.",
+          "📈 При сохранении сессии подтверждение показывает XP и XP/ч. В рейтинге XP подсказка у числа объясняет, откуда оно взято, а термины Loot, Supplies и Loot type теперь объяснены.",
+          "🤝 Приглашение в WhatsApp теперь объясняет, что человек получит, зарегистрировавшись на сайте."] }
+      }
+    },
+    {
       "version": "0.27.2",
       "date": "2026-11-23",
       "title": "Correção na aba Amigos",

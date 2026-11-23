@@ -1359,7 +1359,7 @@ function huntCard(h, name, title) {
     <details style="margin-top:4px"><summary class="link">Transferências e detalhes da PT ▾</summary>
       <h2>Transferências</h2>${transfersBox(h)}
       <h2>Jogadores</h2>${partyTable(h, name)}
-      <div class="muted" style="margin-top:8px">Loot ${fmt(h.loot)} · Supplies ${fmt(h.supplies)} · Loot type ${esc(h.loot_type || "—")}</div>
+      <div class="muted" style="margin-top:8px"><abbr title="Valor de todo o loot pego pela PT">Loot</abbr> ${fmt(h.loot)} · <abbr title="Gasto com comida, runas e potions">Supplies</abbr> ${fmt(h.supplies)} · <abbr title="Como o Party Hunt Analyser valorizou o loot (campo Loot Type do relatório)">Loot type</abbr> ${esc(h.loot_type || "—")}</div>
       ${rulesBox(h)}
       ${tagsBox(h)}
       ${deleteButton(h)}
@@ -1432,6 +1432,16 @@ function huntPlaceRow(h) {
   if (!h.id || h.kind === "boss" || !("place" in h)) return "";
   return `<div class="tagline-row" style="font-size:14px">${placeTag("hunt", h)}</div>`;
 }
+/** Mini-gráfico de linha (SVG) para mostrar a tendência de uma lista de valores. Sem dados suficientes, não mostra nada. */
+function sparkline(vals, label) {
+  if (!Array.isArray(vals) || vals.length < 2) return "";
+  const w = 240, hgt = 48, lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
+  const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(hgt - 3 - ((v - lo) / span) * (hgt - 6)).toFixed(1)}`).join(" ");
+  const last = vals[vals.length - 1];
+  return `<div class="spark" role="img" aria-label="${esc(label)}: último valor ${fmt(last)}">
+    <svg viewBox="0 0 ${w} ${hgt}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
+    <div class="hint" style="margin:2px 0 0"><span>${esc(label)}</span> · <span>último:</span> <b>${fmt(last)}</b></div></div>`;
+}
 function statGrid(items) {
   return `<div class="stats">${items.map(([k, v, cls]) => `<div class="stat"><span class="muted">${k}</span><b class="${cls || ""}">${v}</b></div>`).join("")}</div>`;
 }
@@ -1452,6 +1462,7 @@ function releaseCard(r, highlight) {
   const n = newsText(r);
   return `<div class="card${highlight ? " news-new" : ""}">
     <div class="row"><b><span>Versão ${esc(r.version)}</span>${n.title ? `<span data-i18n-skip> · ${esc(n.title)}</span>` : ""}</b><span class="muted" style="font-size:13px">${esc(d)}</span></div>
+    ${(n.summary || r.summary) ? `<p class="news-summary" style="margin:6px 0 2px"><b>O que muda para você:</b> <span data-i18n-skip>${esc(n.summary || r.summary)}</span></p>` : ""}
     ${newsItems(n)}</div>`;
 }
 async function loadNews() {
@@ -1691,17 +1702,20 @@ async function loadHome() {
     ${owe ? `<div class="neg" style="margin-top:4px">Você ainda deve ${fmt(owe)} gp em ${oweN} ${oweN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     ${due ? `<div class="pos" style="margin-top:4px">Falta receber ${fmt(due)} gp de ${dueN} ${dueN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     <div class="hint">Depois de transferir no banco, toque em "✔ Já paguei" na hunt. Quem recebe também pode marcar "✔ Recebi".</div></div>` : "";
-  const [news, streak, notices] = await Promise.all([headline, api("GET", "/api/streak").catch(() => null), subsNotices(),
-    refreshChangesFab().catch(() => {})]);
+  const [news, streak, notices, , ach, boosted] = await Promise.all([headline, api("GET", "/api/streak").catch(() => null), subsNotices(),
+    refreshChangesFab().catch(() => {}), achievementsFor(S.nick), api("GET", "/api/tibia/boosted").catch(() => null)]);
   if (S.mode !== mode || S.page !== "home") return;
   const n = (v, suffix = "") => `<span data-count="${v}" data-suffix="${suffix}">${fmt(v)}${suffix}</span>`;
   el.innerHTML = `${expiryNotice(streak)}${notices}
     ${headlineCard(news)}
     ${pendingCard}
+    ${boostedCard(boosted)}
+    ${achHomeCard(ach)}
     <h2>👥 Última hunt em party</h2>
     ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt") : emptyState("home")}
     ${streak ? streakTeaser(streak) : ""}
     ${hunts.length ? `<h2>Totais</h2>
+    ${sparkline(hunts.map((h) => h.profit_each_per_hour).reverse(), "Gp/h por pessoa, da mais antiga para a mais recente")}
     ${statGrid([["Hunts", n(hunts.length)], ["Profit total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
                 ["Tempo de hunt", dur(secs)], ["Média por hora", n(secs ? Math.round(total * 3600 / secs) : 0, " gp")],
                 ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
@@ -1718,17 +1732,20 @@ async function loadHome() {
 }
 /** Início no modo Solo: notícia do Tibia e a última sessão do Hunt Session Stacker. */
 async function loadHomeSolo(el, headline) {
-  const [news, d, streak, notices] = await Promise.all([headline, api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=7`).catch(() => null),
-    api("GET", "/api/streak").catch(() => null), subsNotices(), refreshChangesFab().catch(() => {})]);
+  const [news, d, streak, notices, , ach, boosted] = await Promise.all([headline, api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=7`).catch(() => null),
+    api("GET", "/api/streak").catch(() => null), subsNotices(), refreshChangesFab().catch(() => {}), achievementsFor(S.nick),
+    api("GET", "/api/tibia/boosted").catch(() => null)]);
   if (S.mode !== "solo" || S.page !== "home") return;
   if (d) S.prices = { ...S.prices, ...(d.prices || {}) };
   const last = d && d.sessions.length ? d.sessions[0] : null;
   el.innerHTML = `${expiryNotice(streak)}${notices}
     ${headlineCard(news)}
+    ${boostedCard(boosted)}
+    ${achHomeCard(ach)}
     <h2>🧍 Última hunt solo</h2>
     ${last ? soloItem(last).replace("<details class=\"card\">", "<details class=\"card\" open>") : emptyState("stack")}
     <button class="btn2" data-page-link="stack" style="width:100%; margin-top:4px">📈 Abrir o Hunt Session Stacker</button>
-    ${d && d.sessions.length ? `<h2>Totais do dia ${d.day ? dayLabel(d.day) : ""}</h2>${soloStats(d.day_totals)}` : ""}
+    ${d && d.sessions.length ? `<h2>Totais do dia ${d.day ? dayLabel(d.day) : ""}</h2>${sparkline(d.sessions.map((s) => s.xp || 0).reverse(), "XP de cada sessão, da mais antiga para a mais recente")}${soloStats(d.day_totals)}` : ""}
     ${streak ? streakTeaser(streak) : ""}`;
   countUp(el);
   if (streak) celebrateRewards(streak.granted);
@@ -1780,12 +1797,23 @@ window.addEventListener("online", () => setTimeout(flushDrafts, 2000));
 // 0.22.0: primeiro o que importa (quem paga quem, pronto para copiar), depois o texto para quem não tem o app,
 // e só então o próximo passo de acordo com o tipo de player.
 function quickTransfers(h) {
-  if (!h.transfers.length) return `<div class="card quick"><b>💸 Transferências</b><p class="muted" style="margin:4px 0 0">Ninguém precisa transferir: todos ficaram com ${fmt(h.profit_each)} gp.</p></div>`;
+  if (!h.transfers.length) return `<div class="card quick"><b>💸 Transferências</b><p class="muted" style="margin:4px 0 0">Ninguém precisa transferir: todos ficaram com ${fmt(h.profit_each)} gp.</p>
+    <div class="row" style="margin-top:8px"><button class="copy" data-copy="${esc(splitSummary(h))}">📋 Copiar resumo para Discord/WhatsApp</button></div></div>`;
   const all = h.transfers.map((t) => `${t.payer}: ${t.command}`).join("\n");
   return `<div class="card quick"><div class="row"><b>💸 Quem transfere para quem</b><button class="copy" data-copy="${esc(all)}">Copiar todas</button></div>
     ${h.transfers.map((t) => `<div class="tx"><div class="row"><span><b class="${isMine(t.payer) ? "gold" : ""}">${vdot(t.payer)}${esc(t.payer)}</b> → <b class="${isMine(t.receiver) ? "gold" : ""}">${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)} gp</b></div>
       <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("")}
-    <div class="hint">Cada um que paga digita o comando no banco do Tibia (NPC banker). Cada um fica com ${fmt(h.profit_each)} gp.</div></div>`;
+    <div class="hint">Cada um que paga digita o comando no banco do Tibia (NPC banker). Cada um fica com ${fmt(h.profit_each)} gp.</div>
+    <div class="row" style="margin-top:8px"><button class="copy" data-copy="${esc(splitSummary(h))}">📋 Copiar resumo para Discord/WhatsApp</button></div></div>`;
+}
+/** Resumo do lootsplit para colar no Discord ou no WhatsApp (texto simples, sem depender do app). */
+function splitSummary(h) {
+  const lines = [`🏹 Lootsplit${h.place ? " · " + h.place.name : ""}`,
+    `⏱️ ${dur(h.duration_seconds)} · ${h.players_count} jogadores`,
+    `💰 Cada um: ${fmt(h.profit_each)} gp (${fmt(h.profit_each_per_hour)} gp/h)`, ""];
+  if (h.transfers.length) lines.push("💸 Quem transfere para quem:", ...h.transfers.map((t) => `• ${t.payer} → ${t.receiver}: ${fmt(t.amount)} gp`));
+  else lines.push("✅ Ninguém precisa transferir.");
+  return lines.join("\n");
 }
 /** Texto pronto para mandar no chat do jogo para quem paga e não tem o app. */
 function payerMessage(h, payer) {
@@ -2103,9 +2131,9 @@ async function loadXp() {
   body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
     ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
       <td style="${W};text-align:left"><a href="#" data-player="${esc(r.name)}" style="font-weight:600;color:inherit;text-decoration:underline dotted">${esc(r.name)}</a>${r.xp != null
-        ? `<div class="muted" style="font-size:12px">${r.partial ? `desde ${brData(r.since)}` : ""}</div>`
+        ? `<div class="muted" style="font-size:12px"><abbr title="XP medida pelo highscore do Tibia (top 1000), conferida todo dia">highscore</abbr>${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
         : r.gain != null
-          ? `<div class="muted" style="font-size:12px">pelas sessões solo enviadas${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
+          ? `<div class="muted" style="font-size:12px"><abbr title="Este personagem está fora do top 1000, então o ganho é a soma das sessões solo que ele enviou ao site">pelas sessões solo enviadas</abbr>${r.partial ? ` · desde ${brData(r.since)}` : ""}</div>`
           : `<div class="muted" style="font-size:12px">sem dados ainda (fora do top 1000 ou ainda não medido)</div>`}</td>
       <td style="text-align:right;${W}">${r.gain == null ? "–" : `<b>${fmt(r.gain)}</b> XP`}</td></tr>`).join("")}</table></div>
     <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois. Quando não há highscore do personagem (fora do top 1000), o ganho vem das sessões solo enviadas.</div>`;
@@ -3531,12 +3559,13 @@ async function loadRanking() {
   const qs = new URLSearchParams({ sort: S.htab, mode: huntMode() });
   if ($("#lvlMin").value) qs.set("min_level", $("#lvlMin").value);
   if ($("#lvlMax").value) qs.set("max_level", $("#lvlMax").value);
+  if ($("#vocFilter").value) qs.set("vocation", $("#vocFilter").value);
   el.innerHTML = skeleton("list");
   let d;
   try { d = await api("GET", "/api/places/ranking?" + qs); } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   if (d.mode && d.mode !== huntMode()) return;  // trocou de aba enquanto carregava
   const party = huntMode() === "party";
-  if (!d.rows.length) { el.innerHTML = `<p class="muted">Nenhuma hunt ${party ? "em party" : "solo"} com dados ${$("#lvlMin").value || $("#lvlMax").value ? "nessa faixa de level" : "ainda"}. ${party ? "Cole o lootsplit e escolha a hunt." : "Envie sessões pelo Hunt Session Stacker escolhendo a hunt."}</p>`; return; }
+  if (!d.rows.length) { el.innerHTML = `<p class="muted">Nenhuma hunt ${party ? "em party" : "solo"} com dados ${$("#lvlMin").value || $("#lvlMax").value || $("#vocFilter").value ? "nesse filtro (level ou vocação; só entram jogadores com vocação conhecida)" : "ainda"}. ${party ? "Cole o lootsplit e escolha a hunt." : "Envie sessões pelo Hunt Session Stacker escolhendo a hunt."}</p>`; return; }
   const gold = S.htab === "gold";
   el.innerHTML = `<div class="card" style="padding:6px 10px">${d.rows.map((r, i) => `<div class="rank" data-cmp-add="${r.id}" title="Toque para comparar">
       <span class="pos">#${i + 1}</span>
@@ -3732,12 +3761,15 @@ async function saveStackSession() {
     const after = await loadStack({ quiet: true });
     if (r.created && !r.switched_from) { celebrateProgress(before, after); checkAchievements(); }
     const s = (after && after.sessions.find((x) => x.id === r.session.id)) || r.session;
+    // Feedback com número: o jogador vê o que entrou (XP e XP/h) em vez de só "Salvo".
+    const resumo = r.created && s && s.xp != null && s.duration_seconds
+      ? ` · ${kk(s.xp)} XP em ${dur(s.duration_seconds)} (${kk(Math.round((s.xp * 3600) / s.duration_seconds))} XP/h)` : "";
     startFlow("solo", r.session.id, {
       note: r.switched_from ? `Salva em ${r.saved_as}: ele tem um lootsplit no mesmo horário.` : "",
-      banner: r.created ? "Sessão salva ✔" : "Essa sessão já estava salva ✔",
+      banner: r.created ? `Sessão salva ✔${resumo}` : "Essa sessão já estava salva ✔",
       hasPlace: !!(s.place || s.place_id), hasInput: !!s.input,
       after: () => loadStack({ quiet: true }).then(() => {
-        $("#stackResult").insertAdjacentHTML("afterbegin", `<div class="banner ok">${r.created ? "Sessão adicionada ✔" : "Essa sessão já estava salva ✔"}</div>${compareBanner(Flow.compare || r.compare)}`);
+        $("#stackResult").insertAdjacentHTML("afterbegin", `<div class="banner ok">${r.created ? `Sessão adicionada ✔${esc(resumo)}` : "Essa sessão já estava salva ✔"}</div>${compareBanner(Flow.compare || r.compare)}`);
       }),
     });
   } catch (err) {
@@ -4546,6 +4578,30 @@ function achProgress(a) {
   const f = a.id === "marathon" ? dur : ["loot_kk", "xp_kk", "slayer"].includes(a.id) ? kk : fmt;
   return `${f(a.value)} / ${f(a.target)}`;
 }
+/** Início: criatura e boss do dia (boosted). Sem dado, não mostra nada. */
+function boostedCard(b) {
+  if (!b || (!b.creature && !b.boss)) return "";
+  const one = (label, name, hint) => name ? `<div style="display:flex;align-items:center;gap:8px;min-width:0">${creatureImg(name, 32)}
+    <span style="min-width:0"><span class="muted" style="font-size:12px;display:block">${label}</span><b data-i18n-skip>${esc(name)}</b></span></div>` : "";
+  return `<div class="card"><b>🔥 Boost de hoje</b>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:8px">
+      ${one("Criatura", b.creature)}${one("Boss", b.boss)}</div>
+    <div class="hint">Criatura boosted dá mais XP e loot; boss boosted, mais chance de loot. Vale até o próximo server save. ${TN_CREDIT}</div></div>`;
+}
+/** Início: resumo de conquistas e a próxima mais perto de sair. Falha em silêncio (não atrapalha a tela). */
+function achievementsFor(nick) {
+  return api("GET", `/api/achievements/${encodeURIComponent(nick)}`).catch(() => null);
+}
+function achHomeCard(d) {
+  if (!d || !Array.isArray(d.achievements) || !d.achievements.length) return "";
+  const got = d.achievements.filter((a) => a.unlocked).length, total = d.achievements.length;
+  const next = d.achievements.filter((a) => !a.unlocked).sort((a, b) => b.pct - a.pct)[0];
+  return `<div class="card"><div class="row"><b>🏅 Conquistas</b><span class="muted">${got} de ${total}</span></div>
+    ${next ? `<div style="margin-top:8px"><b>${next.emoji} ${esc(next.title)}</b> <span class="muted" style="font-size:13px">próxima</span>
+      <div class="gbar"><div style="width:${next.pct}%"></div></div><div class="hint">${achProgress(next)}</div></div>`
+      : `<p class="muted" style="margin:6px 0 0">Todas desbloqueadas 🎉</p>`}
+    <button class="link" data-page-link="ach" style="margin-top:6px">Ver todas as conquistas →</button></div>`;
+}
 function achCard(a) {
   return `<div class="ach ${a.unlocked ? "on" : "lock"}"><div class="em">${a.emoji}</div><b>${esc(a.title)}</b><p>${esc(a.description)}</p>
     ${a.unlocked ? `<div class="done-tag">✔ Desbloqueada</div>`
@@ -5061,7 +5117,7 @@ function openInviteBox(nome) {
   box.setAttribute("style", "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:70;overflow:auto;padding:16px");
   box.innerHTML = `<div class="card" style="max-width:460px;margin:40px auto;position:relative">
       <b>${esc(nome)} ainda não tem cadastro no site</b>
-      <p class="hint" style="white-space:normal;margin-top:6px">Quer convidar essa pessoa para o 4rt3mi5? Quando ela entrar e vincular o personagem, o pedido de VIP fica disponível para ela responder.</p>
+      <p class="hint" style="white-space:normal;margin-top:6px">Quer convidar essa pessoa para o 4rt3mi5? Ela vai poder ver as hunts, a divisão de loot e os rankings de vocês, e responder ao pedido de VIP assim que vincular o personagem.</p>
       <div data-inv-step="ask" class="row" style="margin-top:10px;gap:8px;flex-wrap:wrap">
         <button class="btn" data-inv-yes style="margin:0">Sim, convidar</button>
         <button class="btn2" data-inv-close style="margin:0">Não, obrigado</button>

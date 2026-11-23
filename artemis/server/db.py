@@ -2142,9 +2142,13 @@ class Store:
             self._conn.commit()
 
     def place_stats(self, min_level: int | None = None, max_level: int | None = None,
-                    place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600) -> list[dict]:
-        """XP/h, gold/h (balance), level médio e nº de jogadores por hunt. Ignora sessões com menos de 10 min."""
+                    place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600,
+                    vocation: str | None = None) -> list[dict]:
+        """XP/h, gold/h (balance), level médio e nº de jogadores por hunt. Ignora sessões com menos de 10 min.
+        vocation (0.28.0): knight/paladin/druid/sorcerer/monk; só conta quem já tem a vocação conhecida (char_info)."""
         where, args = ["s.duration_seconds >= ?", "s.other_player = 0"], [min_seconds]  # 0.23.0: só quem jogou no próprio
+        if vocation:
+            where.append("LOWER(COALESCE(c.vocation, '')) LIKE ?"); args.append(f"%{vocation}%")
         if min_level is not None:
             where.append("s.level >= ?"); args.append(min_level)
         if max_level is not None:
@@ -2158,6 +2162,7 @@ class Store:
             "SUM(s.xp) AS xp, SUM(s.balance) AS balance, SUM(s.supplies) AS supplies, SUM(s.duration_seconds) AS seconds, "
             "ROUND(AVG(s.level)) AS avg_level, MIN(s.level) AS min_level, MAX(s.level) AS max_level "
             "FROM solo_sessions s JOIN hunt_places p ON p.id = s.place_id "
+            "LEFT JOIN char_info c ON c.name_key = s.name_key "
             f"WHERE {' AND '.join(where)} GROUP BY p.id", args)
         out = []
         for r in rows:
@@ -2192,7 +2197,8 @@ class Store:
         return self._conn.execute(f"SELECT h.id, h.place_id, h.report_json FROM hunts h WHERE {' AND '.join(where)}", args).fetchall()
 
     def party_place_stats(self, min_level: int | None = None, max_level: int | None = None,
-                          place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600) -> list[dict]:
+                          place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600,
+                          vocation: str | None = None) -> list[dict]:
         """Mesmo formato do place_stats, só com lootsplits. Gold/h = lucro de cada um por hora;
         XP/h vem dos Hunt Session Analyzers que os membros juntaram ao lootsplit."""
         hunts = self._party_hunts_at(place_ids, name)
@@ -2206,6 +2212,11 @@ class Store:
         levels = {r[0]: r[1] for r in self._conn.execute(
             f"SELECT name_key, level FROM char_info WHERE level IS NOT NULL AND name_key IN "
             f"(SELECT name_key FROM hunt_players WHERE hunt_id IN ({marks}))", ids)}
+        vocs: dict[str, str] = {}  # 0.28.0: vocação conhecida de cada membro (para o filtro por vocação)
+        if vocation:
+            vocs = {r[0]: (r[1] or "").lower() for r in self._conn.execute(
+                f"SELECT name_key, vocation FROM char_info WHERE name_key IN "
+                f"(SELECT name_key FROM hunt_players WHERE hunt_id IN ({marks}))", ids)}
         xp: dict[int, list[int]] = {}  # hunt_id -> [xp, segundos] das sessões juntadas
         for r in self._conn.execute(f"SELECT hunt_id, name_key, data_json FROM party_sessions WHERE hunt_id IN ({marks}) "
                                     "AND other_player = 0", ids):
@@ -2220,6 +2231,8 @@ class Store:
             secs = int(rep.get("duration_seconds") or 0)
             if secs < min_seconds:
                 continue
+            if vocation and not any(vocation in vocs.get(k, "") for k in members.get(h["id"], [])):
+                continue  # nenhum membro com essa vocação
             lv = [levels[k] for k in members.get(h["id"], []) if k in levels]
             avg_lv = sum(lv) / len(lv) if lv else None
             if (min_level is not None or max_level is not None) and avg_lv is None:

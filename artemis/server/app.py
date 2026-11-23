@@ -47,7 +47,7 @@ from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
-from artemis.core import tibiacal, tibianews
+from artemis.core import tibiacal, tibianews, tibiaboosted
 from artemis.core import translate as translate_core
 from artemis.core import rankscan
 from artemis.core import vocation as vocation_core
@@ -657,6 +657,24 @@ def tibia_headline(lang: str = "", _: dict = Depends(require_session)):
         return None
     _translate_news(rows, _lang(lang))
     return _news_out(rows[0])
+
+
+_BOOSTED_CACHE: dict = {"at": 0.0, "data": None}
+_BOOSTED_TTL = 1800  # 30 min: o boost só muda uma vez por dia (server save)
+
+
+@app.get("/api/tibia/boosted")
+def tibia_boosted(_: dict = Depends(require_session)):
+    """Criatura e boss do dia, para o Início. Cache curto na memória; fonte fora do ar não quebra a tela."""
+    now = time.time()
+    if _BOOSTED_CACHE["data"] is not None and now - _BOOSTED_CACHE["at"] < _BOOSTED_TTL:
+        return _BOOSTED_CACHE["data"]
+    try:
+        data = tibiaboosted.fetch_boosted()
+    except tibiaboosted.TibiaBoostedError:
+        return _BOOSTED_CACHE["data"]  # último valor conhecido (ou None)
+    _BOOSTED_CACHE.update(at=now, data=data)
+    return data
 
 
 @app.get("/api/tibia/archive")
@@ -2336,9 +2354,10 @@ def _place_stats(mode: str, **kw) -> list[dict]:
 
 @app.get("/api/places/ranking")
 def places_ranking(sort: str = "xp", min_level: int | None = None, max_level: int | None = None, mode: str = "solo",
-                   _: dict = Depends(require_session)):
+                   vocation: str = "", _: dict = Depends(require_session)):
     mode = "party" if mode == "party" else "solo"
-    rows = _place_stats(mode, min_level=min_level, max_level=max_level)
+    voc = vocation.lower() if vocation.lower() in ("knight", "paladin", "druid", "sorcerer", "monk") else None
+    rows = _place_stats(mode, min_level=min_level, max_level=max_level, vocation=voc)
     key = "gold_per_hour" if sort == "gold" else "xp_per_hour"
     return {"sort": sort, "mode": mode, "rows": sorted(rows, key=lambda r: -r[key])}
 
