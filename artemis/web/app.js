@@ -762,24 +762,29 @@ async function showNick(prefill = true) {
   showOnly("nickScreen");
   $("#nickErr").textContent = "";
   $("#nickBack").classList.toggle("hidden", !S.char);
-  paintModePick(S.mode || null);  // a cada entrada a pessoa diz se a sessão é solo ou party
   const last = prefill ? ((await kv.get("nick")) || (S.me && S.me.main_char)) : null;
   if (last && !$("#nickInput").value) $("#nickInput").value = last;
+  // 0.29.0: quem já tem personagem entra direto no Início (o Solo/Party é trocado nos menus)
+  if (last && prefill && !S.char) {
+    try { await enterWithNick(last); return; } catch (err) { if (err.status === 401) return; }
+  }
   setTimeout(() => $("#nickInput").focus(), 50);
+}
+async function enterWithNick(name) {
+  S.char = await api("GET", `/api/character/${encodeURIComponent(name)}`);
+  S.nick = S.char.name;
+  await kv.set("nick", S.nick);
+  const saved = await kv.get("mode");
+  await setMode(S.mode || (saved === "party" ? "party" : "solo"), { nav: false });
+  openApp("home");
 }
 $("#nickForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = $("#nickInput").value.trim().replace(/\s+/g, " ");
   if (!name) return;
-  const picked = $("#nickMode").dataset.mode;
-  if (!picked) { $("#nickErr").textContent = "Escolha se hoje é hunt solo ou em party."; return; }
   const btn = e.currentTarget.querySelector("button[type=submit]"); btn.disabled = true; $("#nickErr").textContent = "";
   try {
-    S.char = await api("GET", `/api/character/${encodeURIComponent(name)}`);
-    S.nick = S.char.name;
-    await kv.set("nick", S.nick);
-    await setMode(picked, { nav: false });
-    openApp(modePage());
+    await enterWithNick(name);
   } catch (err) {
     if (err.status !== 401) $("#nickErr").textContent = err.message;
   } finally { btn.disabled = false; }
@@ -790,18 +795,6 @@ $("#nickForm").addEventListener("submit", async (e) => {
 // Solo → Hunt Session Stacker; Party → Lootsplit. Bosses e Hunts seguem a mesma escolha.
 S.mode = null;
 const modePage = () => (S.mode === "party" ? "loot" : "stack");
-function paintModePick(m) {
-  const box = $("#nickMode");
-  box.dataset.mode = m || "";
-  box.querySelectorAll("[data-mode-pick]").forEach((b) => {
-    const on = b.dataset.modePick === m;
-    b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on));
-  });
-}
-$("#nickMode").addEventListener("click", (e) => {
-  const b = e.target.closest("[data-mode-pick]");
-  if (b) { paintModePick(b.dataset.modePick); $("#nickErr").textContent = ""; }
-});
 function paintMode() {
   const party = S.mode === "party";
   $("#modeSwitch").dataset.mode = party ? "party" : "solo";
@@ -1148,12 +1141,16 @@ const HUNTS_BY_ID = new Map();  // "kind:id" -> hunt mostrada (para os botões d
 const huntRef = (h) => { const k = `${h.kind || "hunt"}:${h.id}`; if (h.id) HUNTS_BY_ID.set(k, h); return k; };
 function paidButton(h, t) {
   if (!h.id) return "";
-  const ref = huntRef(h), canMark = isMine(t.payer) || isMine(t.receiver);
+  const ref = huntRef(h), party = isMine(t.payer) || isMine(t.receiver), leader = isLeader(h), canMark = party || leader;
   if (t.paid_at) return `<span class="pos" style="font-size:13px">✔ pago ${esc(new Date(t.paid_at).toLocaleDateString("pt-BR"))}</span>
     ${canMark ? `<button class="link" style="font-size:13px" data-paid="${ref}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}" data-set="0">desfazer</button>` : ""}`;
   if (!canMark) return `<span class="muted" style="font-size:13px">⏳ falta pagar</span>`;
-  return `<button class="btn2" style="padding:4px 10px; font-size:13px" data-paid="${ref}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}" data-set="1">${t.receiver.toLowerCase() !== (S.nick || "").toLowerCase() && isMine(t.payer) ? "✔ Já paguei" : "✔ Recebi"}</button>`;
+  // 0.29.0: o líder da PT confirma por quem esqueceu de marcar
+  const label = !party ? "✔ Confirmar pagamento (líder)" : t.receiver.toLowerCase() !== (S.nick || "").toLowerCase() && isMine(t.payer) ? "✔ Já paguei" : "✔ Recebi";
+  return `<button class="btn2" style="padding:4px 10px; font-size:13px" data-paid="${ref}" data-payer="${esc(t.payer)}" data-receiver="${esc(t.receiver)}" data-set="1">${label}</button>`;
 }
+/** Líder da PT: quem enviou o lootsplit ou o personagem marcado como líder no relatório. */
+const isLeader = (h) => !!h.can_delete || (h.players || []).some((p) => p.is_leader && isMine(p.name));
 function actionBox(v, h) {
   if (!v.inParty) return "";
   if (v.totalPay > 0) return `<div class="action pay"><div class="title">${v.pendingPay ? `Você deve transferir ${fmt(v.pendingPay)} gp` : `Você já pagou tudo ✔ (${fmt(v.totalPay)} gp)`}</div>
@@ -1677,6 +1674,53 @@ function headlineCard(n) {
     <div class="row" style="margin-top:6px"><button class="link" data-page-link="tnews">Ver todas as novidades →</button>${n.translated ? `<span class="hint" style="margin:0">🌐 tradução automática</span>` : ""}</div>
     <div class="hint" style="margin:4px 0 0">${TN_CREDIT}</div></article>`;
 }
+/* ---------- 0.29.0: 🎯 "Essa hunt serve?" (meta por hora) e 📝 recap da semana ---------- */
+const GOAL = { mode: "solo", hist: [] };
+function goalCard(mode, hist) {
+  GOAL.mode = mode; GOAL.hist = hist;
+  return `<h2>🎯 Essa hunt serve?</h2><div class="card">
+    <label class="muted" for="goalIn">${mode === "party" ? "Quanto você quer ganhar por hora? (gp/h)" : "Quanto você quer ganhar por hora? (XP/h)"}</label>
+    <input id="goalIn" data-goal-in inputmode="numeric" autocomplete="off" placeholder="${mode === "party" ? "1500000" : "800000"}" style="margin-top:6px">
+    <div id="goalOut" class="hint" style="margin-top:8px">Digite a meta para ver quantas das suas hunts chegaram lá e quais lugares costumam render isso no seu level.</div></div>`;
+}
+let goalSeq = 0;
+document.addEventListener("input", async (e) => {
+  const inp = e.target.closest("[data-goal-in]");
+  if (!inp) return;
+  const out = $("#goalOut"), target = parseInt(inp.value.replace(/\D/g, ""), 10), seq = ++goalSeq;
+  if (!(target > 0)) { out.textContent = I18N.t("Digite a meta para ver quantas das suas hunts chegaram lá e quais lugares costumam render isso no seu level."); return; }
+  const party = GOAL.mode === "party", hist = GOAL.hist.filter((v) => v > 0);
+  const hit = hist.filter((v) => v >= target).length;
+  const lines = [hist.length ? tf("Você passou disso em {0} de {1} hunts.", hit, hist.length) : I18N.t("Ainda não há hunts suas para comparar.")];
+  try {
+    const lvl = (S.char && S.char.level) || 0;
+    const qs = new URLSearchParams({ sort: party ? "gold" : "xp", mode: party ? "party" : "solo" });
+    if (lvl) { qs.set("min_level", Math.max(1, lvl - 60)); qs.set("max_level", lvl + 60); }
+    const r = await api("GET", "/api/places/ranking?" + qs);
+    if (seq !== goalSeq) return;
+    const key = party ? "gold_per_hour" : "xp_per_hour", unit = party ? "gp/h" : "XP/h";
+    const ok = r.rows.filter((p) => p[key] >= target).sort((a, b) => a[key] - b[key]).slice(0, 3);
+    if (ok.length) lines.push(I18N.t("Lugares do seu level que costumam render isso:"), ...ok.map((p) => `• ${p.name} · ${fmt(p[key])} ${unit}`));
+    else if (r.rows.length) { const best = r.rows[0]; lines.push(tf("Nenhum lugar do seu level chega nisso ainda. O melhor é {0}, com {1}.", best.name, `${fmt(best[key])} ${unit}`)); }
+  } catch (err) { if (err.status === 401) return; }
+  if (seq === goalSeq) out.innerHTML = lines.map((l) => `<div data-i18n-skip>${esc(l)}</div>`).join("");
+});
+/** Texto da semana (últimos 7 dias) para colar no Discord/WhatsApp. */
+function recapCard(mode, items) {
+  const since = Date.now() - 7 * 86400000;
+  const week = items.filter((x) => new Date(x.at).getTime() >= since);
+  if (!week.length) return "";
+  const secs = week.reduce((a, x) => a + x.secs, 0), sum = week.reduce((a, x) => a + x.value, 0);
+  const best = week.reduce((a, x) => (x.perHour > a.perHour ? x : a), week[0]);
+  const party = mode === "party", unit = party ? "gp" : "XP";
+  const text = [tf("📅 Minha semana no Tibia · 4rt3mi5"),
+    tf("🏹 {0} · {1} de hunt", party ? tf("{0} hunts em party", week.length) : tf("{0} sessões solo", week.length), dur(secs)),
+    tf("💰 {0}: {1} ({2}/h)", party ? tf("Lucro") : tf("XP"), `${fmt(sum)} ${unit}`, `${fmt(secs ? Math.round(sum * 3600 / secs) : 0)} ${unit}`),
+    tf("🥇 Melhor: {0} · {1}/h", best.label, `${fmt(best.perHour)} ${unit}`)].join("\n");
+  return `<div class="card"><b>📝 Recap da semana</b>
+    <div class="msgbox" data-i18n-skip style="white-space:pre-line">${esc(text)}</div>
+    <div class="row" style="justify-content:flex-end"><button class="copy" data-copy="${esc(text)}">📋 Copiar para Discord/WhatsApp</button></div></div>`;
+}
 async function loadHome() {
   const el = $("#pageHome");
   el.innerHTML = skeleton("home");
@@ -1719,6 +1763,9 @@ async function loadHome() {
     ${statGrid([["Hunts", n(hunts.length)], ["Profit total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
                 ["Tempo de hunt", dur(secs)], ["Média por hora", n(secs ? Math.round(total * 3600 / secs) : 0, " gp")],
                 ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
+    ${recapCard("party", hunts.map((h) => ({ at: h.started_at, secs: h.duration_seconds, value: view(h, S.nick).profit, perHour: h.profit_each_per_hour,
+      label: h.place ? h.place.name : new Date(h.started_at).toLocaleDateString("pt-BR") })))}
+    ${goalCard("party", hunts.map((h) => h.profit_each_per_hour))}
     <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
     <h2>Todas as hunts (${hunts.length})</h2>
     ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}`;
@@ -1746,6 +1793,9 @@ async function loadHomeSolo(el, headline) {
     ${last ? soloItem(last).replace("<details class=\"card\">", "<details class=\"card\" open>") : emptyState("stack")}
     <button class="btn2" data-page-link="stack" style="width:100%; margin-top:4px">📈 Abrir o Hunt Session Stacker</button>
     ${d && d.sessions.length ? `<h2>Totais do dia ${d.day ? dayLabel(d.day) : ""}</h2>${sparkline(d.sessions.map((s) => s.xp || 0).reverse(), "XP de cada sessão, da mais antiga para a mais recente")}${soloStats(d.day_totals)}` : ""}
+    ${d && d.sessions.length ? recapCard("solo", d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => ({ at: s.started_at, secs: s.duration_seconds, value: s.xp,
+      perHour: Math.round(s.xp * 3600 / s.duration_seconds), label: new Date(s.started_at).toLocaleDateString("pt-BR") }))) : ""}
+    ${goalCard("solo", d ? d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => Math.round(s.xp * 3600 / s.duration_seconds)) : [])}
     ${streak ? streakTeaser(streak) : ""}`;
   countUp(el);
   if (streak) celebrateRewards(streak.granted);
@@ -1798,13 +1848,13 @@ window.addEventListener("online", () => setTimeout(flushDrafts, 2000));
 // e só então o próximo passo de acordo com o tipo de player.
 function quickTransfers(h) {
   if (!h.transfers.length) return `<div class="card quick"><b>💸 Transferências</b><p class="muted" style="margin:4px 0 0">Ninguém precisa transferir: todos ficaram com ${fmt(h.profit_each)} gp.</p>
-    <div class="row" style="margin-top:8px"><button class="copy" data-copy="${esc(splitSummary(h))}">📋 Copiar resumo para Discord/WhatsApp</button></div></div>`;
+    <div class="row" style="margin-top:8px">${shareMenuButton(h)}</div></div>`;
   const all = h.transfers.map((t) => `${t.payer}: ${t.command}`).join("\n");
   return `<div class="card quick"><div class="row"><b>💸 Quem transfere para quem</b><button class="copy" data-copy="${esc(all)}">Copiar todas</button></div>
     ${h.transfers.map((t) => `<div class="tx"><div class="row"><span><b class="${isMine(t.payer) ? "gold" : ""}">${vdot(t.payer)}${esc(t.payer)}</b> → <b class="${isMine(t.receiver) ? "gold" : ""}">${esc(t.receiver)}</b></span><b class="gold">${fmt(t.amount)} gp</b></div>
       <div class="row"><code>${esc(t.command)}</code><button class="copy" data-copy="${esc(t.command)}">Copiar</button></div></div>`).join("")}
     <div class="hint">Cada um que paga digita o comando no banco do Tibia (NPC banker). Cada um fica com ${fmt(h.profit_each)} gp.</div>
-    <div class="row" style="margin-top:8px"><button class="copy" data-copy="${esc(splitSummary(h))}">📋 Copiar resumo para Discord/WhatsApp</button></div></div>`;
+    <div class="row" style="margin-top:8px">${shareMenuButton(h)}</div></div>`;
 }
 /** Resumo do lootsplit para colar no Discord ou no WhatsApp (texto simples, sem depender do app). */
 function splitSummary(h) {
@@ -1816,22 +1866,30 @@ function splitSummary(h) {
   return lines.join("\n");
 }
 /** Texto pronto para mandar no chat do jogo para quem paga e não tem o app. */
-function payerMessage(h, payer) {
+function payerMessage(h, name) {
   // 0.23.0: a mensagem vai copiada para o chat do Tibia: já sai no idioma escolhido (frase inteira, valores no lugar)
-  const mine = h.transfers.filter((t) => t.payer === payer);
-  const lines = mine.map((t) => tf("{0} gp para {1} ({2})", fmt(t.amount), t.receiver, t.command)).join(I18N.lang === "pt-BR" ? " e " : "; ");
-  return tf("{0}, lootsplit da hunt: cada um ficou com {1} gp. Você precisa transferir {2}.", payer, fmt(h.profit_each), lines);
+  // 0.29.0: o nome da pessoa também aparece na frase ("Hilay precisa transferir…"), e quem só recebe tem a sua versão
+  const sep = I18N.lang === "pt-BR" ? " e " : "; ";
+  const pays = h.transfers.filter((t) => t.payer === name), gets = h.transfers.filter((t) => t.receiver === name);
+  const payTxt = pays.map((t) => tf("{0} gp para {1} ({2})", fmt(t.amount), t.receiver, t.command)).join(sep);
+  const getTxt = gets.map((t) => tf("{0} gp de {1}", fmt(t.amount), t.payer)).join(sep);
+  if (pays.length) {
+    const base = tf("{0}, lootsplit da hunt: cada um ficou com {1} gp. {0} precisa transferir {2}.", name, fmt(h.profit_each), payTxt);
+    return gets.length ? base + " " + tf("{0} também vai receber {1}.", name, getTxt) : base;
+  }
+  return tf("{0}, lootsplit da hunt: cada um ficou com {1} gp. {0} vai receber {2}.", name, fmt(h.profit_each), getTxt);
 }
 /** Frase com valores no idioma escolhido: traduz o modelo ("… {0} …") e depois põe os valores. */
 function tf(template, ...vals) {
   return I18N.t(template).replace(/\{(\d+)\}/g, (m, i) => (vals[+i] === undefined ? m : String(vals[+i])));
 }
 function partyMessages(h) {
-  const payers = [...new Set(h.transfers.map((t) => t.payer))].filter((p) => !isMine(p));
+  // 0.29.0: quem paga e também quem só recebe (cada um com a sua mensagem)
+  const payers = [...new Set(h.transfers.flatMap((t) => [t.payer, t.receiver]))].filter((p) => !isMine(p));
   if (!payers.length) return "";
   const all = payers.map((p) => payerMessage(h, p)).join("\n");
   return `<div class="card"><div class="row"><b>💬 Mensagem para quem não tem o app</b>${payers.length > 1 ? `<button class="copy" data-copy="${esc(all)}">Copiar todas</button>` : ""}</div>
-    <p class="muted" style="margin:2px 0 0; font-size:14px">Copie e mande no chat do Tibia para a pessoa saber quanto e para quem pagar.</p>
+    <p class="muted" style="margin:2px 0 0; font-size:14px">Copie e mande no chat do Tibia para a pessoa saber quanto pagar ou receber.</p>
     ${payers.map((p) => { const m = payerMessage(h, p); return `<div class="msgbox">${esc(m)}</div>
       <div class="row" style="justify-content:flex-end"><button class="copy" data-copy="${esc(m)}">Copiar mensagem para ${esc(p)}</button></div>`; }).join("")}</div>`;
 }
@@ -2018,7 +2076,7 @@ function killChips(kills) {
 /** Imagem da criatura na TibiaWiki BR ("dragon lord" -> Dragon_Lord.gif). Some se não existir. */
 function creatureImg(name, size = 24) {
   const small = new Set(["of", "the", "de", "da", "do"]);
-  const title = String(name).split(" ").map((w, i) => (i && small.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+  const title = String(name).split(" ").map((w, i) => (i && small.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");  // 0.29.0: "Unaz The Mean" -> Unaz_the_Mean.gif
   return `<img src="${WIKI_FILE(title)}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none; object-fit:contain" data-err="remove">`;
 }
 function itemsChart(items) {
@@ -4781,6 +4839,61 @@ async function openShare(id) {
   };
 }
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-share]"); if (b) { e.preventDefault(); openShare(b.dataset.share); } });
+
+/* ---------- 0.29.0: 📤 Compartilhar (um só lugar para resumo, comandos, imagem e link público) ---------- */
+const SHARE_MENU = new Map();
+function shareMenuButton(h) {
+  const id = "m" + (++shareSeq);
+  SHARE_MENU.set(id, h);
+  return `<button class="copy" data-share-menu="${id}">📤 Compartilhar</button>`;
+}
+function shareOption(title, desc, action) {
+  return `<div class="row" style="padding:10px 0; border-top:1px solid var(--line); align-items:flex-start">
+    <div style="flex:1 1 200px"><b>${title}</b><div class="hint">${desc}</div></div><div>${action}</div></div>`;
+}
+function openShareMenu(id) {
+  const h = SHARE_MENU.get(id);
+  if (!h) return;
+  const cmds = h.transfers.map((t) => `${t.payer}: ${t.command}`).join("\n");
+  const imgId = "s" + (++shareSeq); SHARE.set(imgId, { kind: "hunt", obj: h });
+  const canLink = !!h.id && !(S.me && S.me.readonly);
+  openModal(`<h3>📤 Compartilhar este lootsplit</h3>
+    ${shareOption("📋 Resumo para Discord/WhatsApp", "Texto curto com o resultado e quem paga quem. Para colar no grupo.",
+      `<button class="btn2" data-copy="${esc(splitSummary(h))}">Copiar</button>`)}
+    ${h.transfers.length ? shareOption("💸 Só os comandos de transferência", "Uma linha por pagador, para quem vai fazer os pagamentos.",
+      `<button class="btn2" data-copy="${esc(cmds)}">Copiar</button>`) : ""}
+    ${shareOption("🖼️ Imagem para postar", "Um card pronto com o resultado da hunt.", `<button class="btn2" data-share="${imgId}">Abrir</button>`)}
+    ${shareOption("🔗 Link público", canLink
+      ? "Quem abrir vê o resultado e as transferências, sem criar conta. Vale 30 dias e você pode cancelar."
+      : "Salve este lootsplit na sua conta para poder criar um link.",
+      canLink ? `<button class="btn2" data-link-create="${h.id}">Criar link</button>` : "")}
+    <div id="shareLinkBox"></div>
+    <div class="actions"><button class="btn2" data-close-modal>Fechar</button></div>`);
+}
+async function shareLinkAction(btn) {
+  const box = $("#shareLinkBox"), id = btn.dataset.linkCreate || btn.dataset.linkRevoke;
+  btn.disabled = true;
+  try {
+    if (btn.dataset.linkRevoke) {
+      await api("DELETE", `/api/hunt/${id}/link`);
+      box.innerHTML = `<div class="hint">Link cancelado. Quem tinha o endereço não consegue mais abrir.</div>`;
+      return;
+    }
+    const r = await api("POST", `/api/hunt/${id}/link`);
+    const url = (S.api || location.origin) + r.path;
+    box.innerHTML = `<div class="msgbox" data-i18n-skip>${esc(url)}</div>
+      <div class="row" style="justify-content:flex-end; gap:8px"><button class="btn2" data-link-revoke="${esc(id)}">Cancelar link</button>
+      <button class="btn2" data-copy="${esc(url)}">Copiar link</button></div>
+      <div class="hint">O link mostra os nomes, os valores e as transferências desta hunt para quem o receber.</div>`;
+  } catch (err) { if (err.status !== 401) box.innerHTML = `<div class="err" data-i18n-skip>${esc(err.message)}</div>`; }
+  finally { btn.disabled = false; }
+}
+document.addEventListener("click", (e) => {
+  const m = e.target.closest("[data-share-menu]");
+  if (m) { e.preventDefault(); openShareMenu(m.dataset.shareMenu); return; }
+  const l = e.target.closest("[data-link-create],[data-link-revoke]");
+  if (l) { e.preventDefault(); shareLinkAction(l); }
+});
 
 /* ---------- janelas ---------- */
 function openModal(html) { $("#modalBox").innerHTML = html; $("#modal").classList.remove("hidden"); }

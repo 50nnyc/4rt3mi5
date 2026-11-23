@@ -1670,8 +1670,11 @@ def _set_paid(kind: str, hunt_id: int, body: PaidIn, access: dict) -> dict:
               and name_key(t["receiver"]) == name_key(body.receiver)), None)
     if t is None:
         raise HTTPException(404, "Essa transferência não existe nesse lootsplit.")
-    if not (store.is_linked(access["key"], t["payer"]) or store.is_linked(access["key"], t["receiver"])):
-        raise HTTPException(403, {"message": "Só quem paga ou quem recebe pode marcar essa transferência.",
+    # 0.29.0: o líder da PT (quem enviou o lootsplit estando nela, ou o líder do jogo) marca por quem esqueceu
+    is_leader = (h.get("uploader_key") == access["key"] and any(store.is_linked(access["key"], p["name"]) for p in h["players"])) \
+        or any(p.get("is_leader") and store.is_linked(access["key"], p["name"]) for p in h["players"])
+    if not (is_leader or store.is_linked(access["key"], t["payer"]) or store.is_linked(access["key"], t["receiver"])):
+        raise HTTPException(403, {"message": "Só quem paga, quem recebe ou o líder da PT pode marcar essa transferência.",
                                   "hint": FORBIDDEN_HINT})
     store.set_paid(kind, hunt_id, t["payer"], t["receiver"], t["amount"], access["key"], body.paid)
     return {"hunt": _hunt_payload(kind, hunt_id, access)}
@@ -1772,6 +1775,71 @@ def public_news(lang: str = ""):
     rows = _news_with_content(store.tibia_news_latest(("news",), PUBLIC_NEWS))
     _translate_news(rows, _lang(lang))
     return {"updated_at": store.meta("tibia_news_ok_at"), "news": [_news_out(r) for r in rows]}
+
+
+# ------------------------------------------------------------------ 0.29.0: link público do lootsplit
+_SPLIT_TOKEN = re.compile(r"[A-Za-z0-9_-]{8,24}")
+
+
+def _split_link_guard(hunt_id: int, access: dict) -> dict:
+    h = _load_hunt("hunt", hunt_id)
+    in_party = any(store.is_linked(access["key"], p["name"]) for p in h["players"])
+    if not (in_party or h.get("uploader_key") == access["key"]):
+        raise HTTPException(403, {"message": "Só quem estava na PT pode criar o link.", "hint": FORBIDDEN_HINT})
+    return h
+
+
+@app.post("/api/hunt/{hunt_id}/link")
+def split_link_create(hunt_id: int, access: dict = Depends(require_session)):
+    """Cria (ou renova) o link público deste lootsplit. Quem tem o endereço vê o resultado, sem conta."""
+    _split_link_guard(hunt_id, access)
+    link = store.split_link_create(hunt_id, access["key"])
+    return {"path": f"/l/{link['token']}", "expires_at": link["expires_at"], "days": store.SPLIT_LINK_DAYS}
+
+
+@app.delete("/api/hunt/{hunt_id}/link")
+def split_link_revoke(hunt_id: int, access: dict = Depends(require_session)):
+    _split_link_guard(hunt_id, access)
+    store.split_link_revoke(hunt_id)
+    return {"revoked": True}
+
+
+def _public_split(h: dict) -> dict:
+    """Só o que o resultado mostra: nada de código de acesso, quem enviou ou impressão digital."""
+    place = store.place(h["place_id"]) if h.get("place_id") else None
+    return {"started_at": h["started_at"], "duration_seconds": h["duration_seconds"], "players_count": h["players_count"],
+            "profit_each": h["profit_each"], "profit_each_per_hour": h["profit_each_per_hour"],
+            "place": place["name"] if place else None,
+            "transfers": [{"payer": t["payer"], "receiver": t["receiver"], "amount": t["amount"], "command": t["command"],
+                           "paid": bool(t.get("paid_at"))} for t in h["transfers"]]}
+
+
+@app.get("/api/public/split/{token}")
+def public_split(token: str):
+    hid = store.split_link_hunt_id(token) if _SPLIT_TOKEN.fullmatch(token) else None
+    h = store.hunt(hid) if hid else None
+    if h is None:
+        raise HTTPException(404, "Esse link não vale mais (venceu ou foi cancelado). Peça um novo a quem enviou.")
+    return _public_split(h)
+
+
+@app.get("/l/{token}", include_in_schema=False)
+def split_page(token: str):
+    """Página do link público: sem conta, sem indexar, com texto de prévia para Discord/WhatsApp."""
+    import html as _html
+    page = (WEB_DIR / "split.html").read_text(encoding="utf-8")
+    hid = store.split_link_hunt_id(token) if _SPLIT_TOKEN.fullmatch(token) else None
+    h = store.hunt(hid) if hid else None
+    if h is not None:
+        desc = f"{h['players_count']} jogadores · cada um ficou com {h['profit_each']:,} gp".replace(",", ".")
+        page = page.replace("<!--OG-->", f'<meta property="og:title" content="Lootsplit · 4rt3mi5"><meta property="og:description" content="{_html.escape(desc)}"><meta property="og:type" content="website">')
+    return Response(page, media_type="text/html", headers={"Cache-Control": "no-store"},
+                    status_code=200 if h is not None else 404)
+
+
+@app.get("/split.js", include_in_schema=False)
+def split_script():
+    return FileResponse(WEB_DIR / "split.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 @app.post("/api/lootsplit")

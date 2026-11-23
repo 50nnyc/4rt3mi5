@@ -320,6 +320,14 @@ CREATE TABLE IF NOT EXISTS hunt_payments (
     marked_by    TEXT,
     PRIMARY KEY (kind, hunt_id, payer_key, receiver_key)
 );
+-- 0.29.0: link público de um lootsplit (quem tem o endereço vê o resultado, sem conta; expira e pode ser revogado)
+CREATE TABLE IF NOT EXISTS split_links (
+    token       TEXT PRIMARY KEY,
+    hunt_id     INTEGER NOT NULL,
+    created_by  TEXT NOT NULL,
+    created_at  TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+);
 -- 0.12.0: personagens que aceitaram aparecer no 🥇 Ranking entre amigos
 CREATE TABLE IF NOT EXISTS ranking_optin (
     name_key  TEXT PRIMARY KEY,
@@ -1479,8 +1487,39 @@ class Store:
                                    (kind, hunt_id, name_key(payer), name_key(receiver)))
             self._conn.commit()
 
+    # ---- 0.29.0: link público
+    SPLIT_LINK_DAYS = 30
+
+    def split_link_create(self, hunt_id: int, by_key: str) -> dict:
+        """Um link por lootsplit: pedir de novo devolve o mesmo (renovando o prazo)."""
+        import secrets
+        now = utcnow()
+        exp = _iso(now + timedelta(days=self.SPLIT_LINK_DAYS))
+        with self._lock:
+            row = self._conn.execute("SELECT token FROM split_links WHERE hunt_id = ?", (hunt_id,)).fetchone()
+            token = row["token"] if row else secrets.token_urlsafe(9)
+            if row:
+                self._conn.execute("UPDATE split_links SET expires_at = ? WHERE token = ?", (exp, token))
+            else:
+                self._conn.execute("INSERT INTO split_links VALUES (?, ?, ?, ?, ?)", (token, hunt_id, by_key, _iso(now), exp))
+            self._conn.commit()
+        return {"token": token, "expires_at": exp}
+
+    def split_link_hunt_id(self, token: str) -> int | None:
+        row = self._conn.execute("SELECT hunt_id, expires_at FROM split_links WHERE token = ?", (token,)).fetchone()
+        if row is None or row["expires_at"] < _iso(utcnow()):
+            return None
+        return row["hunt_id"]
+
+    def split_link_revoke(self, hunt_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM split_links WHERE hunt_id = ?", (hunt_id,))
+            self._conn.commit()
+
     def _forget_split(self, kind: str, hunt_id: int) -> None:
         """Hunt apagada: some com as regras, os pagamentos e as marcações dela (chamar dentro do _lock)."""
+        if kind == "hunt":
+            self._conn.execute("DELETE FROM split_links WHERE hunt_id = ?", (hunt_id,))
         self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_tags WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
