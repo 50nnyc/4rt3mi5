@@ -184,7 +184,7 @@ async def invalid_input(_request: Request, exc: RequestValidationError):
 MAX_BODY = 512 * 1024                          # nenhum envio legítimo passa disso
 RATE_RULES = {"read": (240, 60), "write": (40, 60), "upload": (30, 600),   # (máx., janela em s) por IP
               "img": (600, 60), "track": (120, 60)}                         # imagens (/img/wiki/...) e uso das telas
-UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/places", "/api/lootsplit/preview", "/api/public/lootsplit",
+UPLOAD_PATHS = {"/api/lootsplit", "/api/stacker", "/api/stacker/preview","/api/places", "/api/lootsplit/preview", "/api/public/lootsplit",
                 "/api/bosses/session", "/api/bosses/lootsplit", "/api/store/free",
                 "/api/account/register", "/api/recovery", "/api/recovery/login", "/api/contact",
                 "/api/link/info", "/api/link/send", "/api/links"}  # 0.23.0: link de envio
@@ -255,7 +255,7 @@ async def security_headers(request: Request, call_next):
 # menos entrar/sair, as contas que só calculam (sem salvar) e o formulário de contato.
 GUEST_READONLY = "Conta de visitante: só visualização. Nada pode ser enviado, salvo ou alterado."
 GUEST_ALLOWED = {"/api/auth", "/api/account/login", "/api/account/resume", "/api/account/logout",
-                 "/api/lootsplit/preview", "/api/public/lootsplit", "/api/contact"}
+                 "/api/lootsplit/preview", "/api/stacker/preview", "/api/public/lootsplit", "/api/contact"}
 
 
 def _is_guest(request: Request) -> bool:
@@ -907,7 +907,7 @@ def account_register(body: AccountIn):
     if not USERNAME_RE.fullmatch(body.username):
         raise HTTPException(422, "A conta deve ter de 3 a 20 letras ou números, sem espaços nem caracteres especiais.")
     if not PASSWORD_RE.fullmatch(body.password):
-        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os especiais _ ! @ -")
+        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os caracteres especiais _ ! @ -")
     if body.confirm is not None and body.confirm != body.password:
         raise HTTPException(422, "As senhas não são iguais.")
     acc = store.create_account(body.username, body.password)
@@ -961,7 +961,7 @@ def account_reset(body: ResetIn, request: Request):
     ip = client_ip(request)
     _login_check_blocked(ip)
     if not PASSWORD_RE.fullmatch(body.password):
-        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os especiais _ ! @ -")
+        raise HTTPException(422, "A senha deve ter de 6 a 64 caracteres: números, letras e os caracteres especiais _ ! @ -")
     if body.confirm is not None and body.confirm != body.password:
         raise HTTPException(422, "As senhas não são iguais.")
     acc = store.use_reset_code(body.username.strip(), body.code, body.password)
@@ -1273,7 +1273,7 @@ def _open_player_types() -> tuple:
 
 
 def _sharing_types() -> tuple:
-    """Quem junta sessão e Input Analyzer ao que é da PT (os tipos extras contam como Hardcore)."""
+    """Quem junta sessão e Input Analyser ao que é da PT (os tipos extras contam como Hardcore)."""
     return ("hardcore", "comum") + extra_player_types()
 
 
@@ -1462,7 +1462,7 @@ def _input_view(i: dict) -> dict:
     return {**i, **damage_core.summary(i)}
 
 
-SAME_PERIOD_SECONDS = 60  # folga entre o relógio do Hunt Session Analyser e o do Party Hunt Analyser
+SAME_PERIOD_SECONDS = 60  # folga entre o relógio do Hunt Analyser e o do Party Hunt Analyser
 
 
 def _discrepancy(s: dict, h: dict) -> list[str]:
@@ -1871,9 +1871,9 @@ def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
 # ------------------------------------------------------------------ 0.20.0: local da hunt, Input Analyser e sessões da PT
 PLACE_EDIT_LIMIT = 2  # trocas do local depois de definido; a primeira escolha não conta
 PLACE_LOCKED = "Para alterar novamente entre em contato com o administrador."
-INPUT_ONLY_HARDCORE = "O Player Novato não compartilha o Input Analyzer. Troque o tipo de player em ⚙️ Configurações."
+INPUT_ONLY_HARDCORE = "O Player Novato não compartilha o Input Analyser. Troque o tipo de player em ⚙️ Configurações."
 SESSION_NOT_NOVATO = "O Player Novato não compartilha a sessão. Troque o tipo de player em ⚙️ Configurações."
-INPUT_LOCKED = "Esse Input Analyzer já foi salvo e não pode ser editado."
+INPUT_LOCKED = "Esse Input Analyser já foi salvo e não pode ser editado."
 
 
 class PlaceSet(BaseModel):
@@ -1953,7 +1953,7 @@ def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_s
 
 @app.post("/api/hunt/{hunt_id}/session")
 def hunt_member_session(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
-    """Hunt Session Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore).
+    """Hunt Analyser de um membro da PT junto ao lootsplit (Player Comum ou Hardcore).
     0.23.0: o jogador autorizado (for_char) junta pelo dono; vale o tipo de player do dono."""
     try:
         session = parse_solo_session(body.raw_text)
@@ -2407,7 +2407,7 @@ def solo_input(session_id: int, body: RawIn, access: dict = Depends(require_sess
     if row is None:
         raise HTTPException(404, "Sessão não encontrada.")
     if row["uploader_key"] != access["key"]:
-        raise HTTPException(403, "Só quem enviou a sessão pode juntar o Input Analyzer.")
+        raise HTTPException(403, "Só quem enviou a sessão pode juntar o Input Analyser.")
     data = _parse_input(body.raw_text)
     saved, created = store.add_input("solo", session_id, row["name"], data, access["key"])
     if not created:
@@ -2443,7 +2443,7 @@ def places_mine(nick: str, mode: str = "solo", access: dict = Depends(require_se
 @app.get("/api/places/compare")
 def places_compare(ids: str, nick: str = "", mode: str = "solo", access: dict = Depends(require_session)):
     """Básico (XP/h, gold/h, level) para todas as hunts. Detalhes (criaturas, itens, dano) só das hunts do próprio
-    player; o dano recebido de todos (Input Analyzers públicos) só para o Player Hardcore."""
+    player; o dano recebido de todos (Input Analysers públicos) só para o Player Hardcore."""
     mode = "party" if mode == "party" else "solo"
     place_ids = [int(i) for i in ids.split(",") if i.strip().isdigit()][:3]
     general = {r["id"]: r for r in _place_stats(mode, place_ids=place_ids)}
@@ -2582,8 +2582,18 @@ def _xp_rows(names: list[str], days: int) -> list[dict]:
     return rows
 
 
+def _filter_world(rows: list[dict], world: str) -> tuple[list[dict], list[str], str]:
+    """0.30.1: filtro por mundo das abas Usuários do 4rt3mi5 e Amigos. Vazio = todos os mundos.
+    Devolve (linhas filtradas, mundos que aparecem nas linhas, mundo aplicado)."""
+    worlds = sorted({r["world"] for r in rows if r.get("world")})
+    escolhido = next((w for w in worlds if w.lower() == (world or "").strip().lower()), "")
+    if escolhido:
+        rows = [r for r in rows if r.get("world") == escolhido]
+    return rows, worlds, escolhido
+
+
 @app.get("/api/xp-ranking")
-def xp_ranking(days: int = 30, scope: str = "board", access: dict = Depends(require_session)):
+def xp_ranking(days: int = 30, scope: str = "board", world: str = "", access: dict = Depends(require_session)):
     """scope=board: todos os personagens cadastrados no site (público). scope=mine: a lista pessoal de quem pediu.
     Lê só os snapshots guardados às 09h BRT; não consulta o TibiaData."""
     days = days if days in XP_DAYS else 30
@@ -2592,7 +2602,12 @@ def xp_ranking(days: int = 30, scope: str = "board", access: dict = Depends(requ
     else:
         names = store.xp_board_names()
     hoje = datetime.now(BRT).date()
-    return {"days": days, "scope": "mine" if scope == "mine" else "board", "rows": _xp_rows(names, days),
+    rows = _xp_rows(names, days)
+    for r in rows:  # 0.30.1: mundo de cada personagem acompanhado (sem ele, só aparece em "Todos os mundos")
+        p = store.rank_player(r["name"])
+        r["world"] = p["world"] if p else None
+    rows, worlds, world = _filter_world(rows, world)
+    return {"days": days, "scope": "mine" if scope == "mine" else "board", "rows": rows, "worlds": worlds, "world": world,
             "update": {"hour": XP_UPDATE_HOUR, "tz": "America/Sao_Paulo (UTC-3)"},
             "track_start": XP_TRACK_START.isoformat(),
             "note_visible": hoje < XP_NOTE_UNTIL, "note_until": XP_NOTE_UNTIL.isoformat()}
@@ -2651,20 +2666,29 @@ def char_trust_admin(body: TrustIn):
 
 # ------------------------------------------------------------------ 0.26.1: rankings (geral, por jogador)
 RANK_PAGE = 100
-# XP aqui NUNCA é o total do personagem: o ranking de XP é sempre o ganho em 30/90 dias (aba Usuários do Artemis)
+# XP aqui NUNCA é o total do personagem: o ranking de XP é sempre o ganho em 30/90 dias (aba Usuários do 4rt3mi5)
 RANK_METRICS = ["level", "magiclevel", "shielding", "distancefighting", "clubfighting", "swordfighting",
                 "axefighting", "fistfighting", "fishing", "achievements", "charmpoints", "goshnarstaint",
                 "loyaltypoints", "dromescore", "bosspoints", "bountypoints", "weeklytasks", "phosphorusrecord"]
 
 
 @app.get("/api/rank/geral")
-def rank_geral(metric: str = "level", page: int = 1, _: dict = Depends(require_session)):
-    """Ranking geral: top 1000 por métrica, de todos os mundos. 100 por página."""
+def rank_geral(metric: str = "level", page: int = 1, world: str = "", _: dict = Depends(require_session)):
+    """Ranking geral: top 1000 por métrica, de todos os mundos (100 por página). 0.30.0: com `world`, só aquele mundo
+    (o top guardado do mundo; enquanto não houver, os dele dentro do top 1000 geral)."""
     metric = metric if metric in RANK_METRICS else "level"
+    worlds = store.rank_worlds()
+    world = next((w for w in worlds if w.lower() == world.strip().lower()), "") if world else ""
+    if world:
+        page = max(page, 1)
+        rows, total, source = store.rank_world_page(metric, world, (page - 1) * RANK_PAGE, RANK_PAGE)
+        pages = max(1, -(-total // RANK_PAGE))
+        return {"metric": metric, "page": min(page, pages), "pages": pages, "per_page": RANK_PAGE, "day": store.rank_top_day(),
+                "metrics": RANK_METRICS, "rows": rows, "world": world, "worlds": worlds, "total": total, "source": source}
     page = min(max(page, 1), 10)
     rows = store.rank_top_page(metric, (page - 1) * RANK_PAGE, RANK_PAGE)
     return {"metric": metric, "page": page, "pages": 10, "per_page": RANK_PAGE, "day": store.rank_top_day(),
-            "metrics": RANK_METRICS, "rows": rows}
+            "metrics": RANK_METRICS, "rows": rows, "world": "", "worlds": worlds}
 
 
 @app.get("/api/rank/player/{name}")
@@ -2867,7 +2891,7 @@ def vip_view(name: str, access: dict = Depends(require_session)):
 
 
 @app.get("/api/rank/amigos")
-def rank_amigos(days: int = 30, sort: str = "level", access: dict = Depends(require_session)):
+def rank_amigos(days: int = 30, sort: str = "level", world: str = "", access: dict = Depends(require_session)):
     """Aba Amigos: meus personagens + quem está na minha VIP List (mesmo sem aceite). Ordena por level ou XP ganha."""
     days = days if days in XP_DAYS else 30
     nomes = [(n, "mine") for n in _my_names(access)] + [(l["target_name"], "vip") for l in store.vip_list_owner(access["key"])]
@@ -2883,7 +2907,8 @@ def rank_amigos(days: int = 30, sort: str = "level", access: dict = Depends(requ
         linhas.sort(key=lambda r: (r["xp_gain"] is None, -(r["xp_gain"] or 0), r["name"].lower()))
     else:
         linhas.sort(key=lambda r: (r["level"] is None, -(r["level"] or 0), r["name"].lower()))
-    return {"days": days, "sort": "xp" if sort == "xp" else "level", "rows": linhas}
+    linhas, worlds, world = _filter_world(linhas, world)
+    return {"days": days, "sort": "xp" if sort == "xp" else "level", "rows": linhas, "worlds": worlds, "world": world}
 
 
 class PriceIn(BaseModel):
@@ -2902,6 +2927,16 @@ def set_item_price(body: PriceIn, access: dict = Depends(require_session)):
         raise HTTPException(422, "Preço inválido.")
     store.set_user_price(key, access["key"], body.price)
     return store.price_info([key], access["key"])[key]
+
+
+@app.post("/api/stacker/preview")
+def stacker_preview(body: PublicLootIn, _: dict = Depends(require_session)):
+    """0.30.0: lê o Hunt Analyser sem salvar (sessão ao vivo: o site só compara o ritmo com a meta)."""
+    try:
+        s = parse_solo_session(body.raw_text).to_dict()
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+    return {k: s.get(k) for k in ("started_at", "ended_at", "duration_seconds", "xp", "raw_xp", "balance", "supplies")}
 
 
 @app.post("/api/stacker")
@@ -3017,7 +3052,7 @@ def _link_session_to_party(row: dict) -> dict | None:
 
 @app.post("/api/bosses/session")
 def boss_session_upload(body: BossSessionIn, access: dict = Depends(require_session)):
-    """Hunt Session Analyser de bosses (solo ou party). Fica visível só para o dono."""
+    """Hunt Analyser de bosses (solo ou party). Fica visível só para o dono."""
     try:
         session = parse_solo_session(body.raw_text)
     except ParseError as e:
@@ -4153,7 +4188,7 @@ def link_send(body: LinkSendIn, request: Request):
         created = created or tagged
         summary = {"players": len(report["players"]), "profit_each": report["profit_each"],
                    "duration_seconds": report.get("duration_seconds")}
-    else:  # Hunt Session Analyser
+    else:  # Hunt Analyser
         try:
             session = parse_solo_session(text)
         except ParseError as e:

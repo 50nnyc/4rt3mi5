@@ -107,7 +107,7 @@ class SubsTests(unittest.TestCase):
         return r.json()
 
     def recent(self, text: str) -> str:
-        """Texto do analyser com a data de hoje (o link só aceita hunts do período dele)."""
+        """Texto do Analyser com a data de hoje (o link só aceita hunts do período dele)."""
         today = utcnow().date().isoformat()
         return text.replace("2026-11-04", today)
 

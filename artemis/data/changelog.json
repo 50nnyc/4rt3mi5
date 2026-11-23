@@ -1,6 +1,90 @@
 {
   "releases": [
     {
+      "version": "0.30.0",
+      "date": "2026-11-23",
+      "title": "Sessão ao vivo e ranking por mundo",
+      "summary": "Acompanhe o ritmo de XP da hunt enquanto joga e filtre o ranking Geral pelo seu mundo.",
+      "changes": [
+        "⏱️ Hunt Session Stacker: nova \"Sessão ao vivo\". Defina uma meta de XP/h, cole o Hunt Analyser de tempos em tempos e veja o ritmo da hunt, o ritmo desde a última atualização e como está contra a sua média. Nada é salvo no servidor, e ao finalizar você escolhe se salva a sessão.",
+        "🌍 Ranking Geral: filtro por mundo. Cada mundo mostra o seu top 200 por categoria, com o seu mundo no topo da lista. Enquanto a próxima varredura não roda, aparecem os do mundo que estão no top 1000 geral.",
+        "🌍 O filtro de mundo também vale nas abas Usuários do 4rt3mi5 e Amigos, e \"Todos os mundos\" é sempre o padrão.",
+        "✍️ Revisão de todos os textos: português corrigido, nomes padronizados (Hunt Analyser, Input Analyser e a marca 4rt3mi5), tratamento unificado em francês e textos que estavam sem tradução agora aparecem nos 7 idiomas."
+      ],
+      "tr": {
+        "en": {
+          "title": "Live session and ranking by world",
+          "summary": "Follow your hunt's XP pace while you play and filter the General ranking by your world.",
+          "changes": [
+            "⏱️ Hunt Session Stacker: a new \"Live session\". Set an XP/h goal, paste the Hunt Analyser from time to time and see the hunt's pace, the pace since the last update and how you compare with your average. Nothing is saved on the server, and when you finish you choose whether to save the session.",
+            "🌍 General ranking: filter by world. Each world shows its top 200 per category, with your world at the top of the list. Until the next scan runs, those from the world who are in the overall top 1000 appear.",
+            "🌍 The world filter also works in the 4rt3mi5 users and Friends tabs, and \"All worlds\" is always the default.",
+            "✍️ Every text was reviewed: Portuguese fixed, names standardized (Hunt Analyser, Input Analyser and the 4rt3mi5 brand), a consistent form of address in French, and texts that had no translation now appear in all 7 languages."
+          ]
+        },
+        "es": {
+          "title": "Sesión en vivo y ranking por mundo",
+          "summary": "Sigue el ritmo de XP de tu hunt mientras juegas y filtra el ranking General por tu mundo.",
+          "changes": [
+            "⏱️ Hunt Session Stacker: nueva \"Sesión en vivo\". Define una meta de XP/h, pega el Hunt Analyser de vez en cuando y mira el ritmo de la hunt, el ritmo desde la última actualización y cómo vas frente a tu promedio. Nada se guarda en el servidor, y al finalizar eliges si guardas la sesión.",
+            "🌍 Ranking General: filtro por mundo. Cada mundo muestra su top 200 por categoría, con tu mundo al principio de la lista. Mientras no corra la próxima exploración, aparecen los del mundo que están en el top 1000 general.",
+            "🌍 El filtro de mundo también funciona en las pestañas Usuarios de 4rt3mi5 y Amigos, y \"Todos los mundos\" es siempre el valor por defecto.",
+            "✍️ Se revisaron todos los textos: portugués corregido, nombres unificados (Hunt Analyser, Input Analyser y la marca 4rt3mi5), trato uniforme en francés y los textos que no tenían traducción ahora aparecen en los 7 idiomas."
+          ]
+        },
+        "ja": {
+          "title": "ライブセッションとワールド別ランキング",
+          "summary": "プレイ中に狩りのXPペースを追跡し、総合ランキングを自分のワールドで絞り込めます。",
+          "changes": [
+            "⏱️ Hunt Session Stacker：新しい「ライブセッション」。XP/hの目標を決め、ときどきHunt Analyserを貼り付けると、狩りのペース、前回更新からのペース、平均との比較が分かります。サーバーには何も保存されず、終了時にセッションを保存するか選べます。",
+            "🌍 総合ランキング：ワールドで絞り込めます。各ワールドはカテゴリごとの上位200を表示し、自分のワールドが先頭に並びます。次回のスキャンまでは、総合トップ1000に入っているそのワールドのプレイヤーを表示します。",
+            "🌍 ワールドの絞り込みは「4rt3mi5のユーザー」タブと「友達」タブでも使え、初期状態は常に「すべてのワールド」です。",
+            "✍️ すべての文章を見直しました。ポルトガル語の修正、名称の統一（Hunt Analyser、Input Analyser、ブランド名4rt3mi5）、フランス語の呼びかけの統一、翻訳がなかった文章の7言語対応です。"
+          ]
+        },
+        "de": {
+          "title": "Live-Sitzung und Ranking nach Welt",
+          "summary": "Verfolge das XP-Tempo deiner Hunt beim Spielen und filtere das allgemeine Ranking nach deiner Welt.",
+          "changes": [
+            "⏱️ Hunt Session Stacker: neue \"Live-Sitzung\". Lege ein XP/h-Ziel fest, füge ab und zu den Hunt Analyser ein und sieh das Tempo der Hunt, das Tempo seit dem letzten Update und den Vergleich mit deinem Durchschnitt. Nichts wird auf dem Server gespeichert, und beim Beenden wählst du, ob die Sitzung gespeichert wird.",
+            "🌍 Allgemeines Ranking: Filter nach Welt. Jede Welt zeigt ihre Top 200 pro Kategorie, deine Welt steht oben in der Liste. Bis der nächste Scan läuft, erscheinen die aus der Welt, die im Gesamt-Top-1000 sind.",
+            "🌍 Der Welt-Filter gilt auch in den Tabs 4rt3mi5-Nutzer und Freunde, und \"Alle Welten\" ist immer die Voreinstellung.",
+            "✍️ Alle Texte wurden geprüft: Portugiesisch korrigiert, Namen vereinheitlicht (Hunt Analyser, Input Analyser und die Marke 4rt3mi5), einheitliche Anrede im Französischen, und Texte ohne Übersetzung erscheinen jetzt in allen 7 Sprachen."
+          ]
+        },
+        "pl": {
+          "title": "Sesja na żywo i ranking według świata",
+          "summary": "Śledź tempo XP swojego huntu podczas gry i filtruj ranking Ogólny według swojego świata.",
+          "changes": [
+            "⏱️ Hunt Session Stacker: nowa \"Sesja na żywo\". Ustaw cel XP/h, od czasu do czasu wklej Hunt Analyser i zobacz tempo huntu, tempo od ostatniej aktualizacji oraz porównanie ze swoją średnią. Nic nie jest zapisywane na serwerze, a po zakończeniu wybierasz, czy zapisać sesję.",
+            "🌍 Ranking Ogólny: filtr według świata. Każdy świat pokazuje swoje top 200 w kategorii, a twój świat jest na górze listy. Do następnego skanowania pojawiają się gracze ze świata z ogólnego top 1000.",
+            "🌍 Filtr świata działa też w zakładkach Użytkownicy 4rt3mi5 i Znajomi, a \"Wszystkie światy\" to zawsze ustawienie domyślne.",
+            "✍️ Sprawdzono wszystkie teksty: poprawiono portugalski, ujednolicono nazwy (Hunt Analyser, Input Analyser i marka 4rt3mi5), spójną formę zwrotu we francuskim, a teksty bez tłumaczenia pojawiają się teraz we wszystkich 7 językach."
+          ]
+        },
+        "fr": {
+          "title": "Session en direct et classement par monde",
+          "summary": "Suivez le rythme d'XP de votre hunt pendant que vous jouez et filtrez le classement Général par votre monde.",
+          "changes": [
+            "⏱️ Hunt Session Stacker : nouvelle \"Session en direct\". Définissez un objectif d'XP/h, collez le Hunt Analyser de temps en temps et voyez le rythme de la hunt, le rythme depuis la dernière mise à jour et la comparaison avec votre moyenne. Rien n'est enregistré sur le serveur, et à la fin vous choisissez d'enregistrer la session.",
+            "🌍 Classement Général : filtre par monde. Chaque monde affiche son top 200 par catégorie, avec votre monde en tête de liste. Tant que le prochain scan n'a pas tourné, ceux du monde présents dans le top 1000 général s'affichent.",
+            "🌍 Le filtre par monde fonctionne aussi dans les onglets Utilisateurs de 4rt3mi5 et Amis, et \"Tous les mondes\" est toujours la valeur par défaut.",
+            "✍️ Tous les textes ont été relus : portugais corrigé, noms uniformisés (Hunt Analyser, Input Analyser et la marque 4rt3mi5), vouvoiement cohérent en français, et les textes sans traduction apparaissent maintenant dans les 7 langues."
+          ]
+        },
+        "ru": {
+          "title": "Сессия в реальном времени и рейтинг по миру",
+          "summary": "Следите за темпом XP охоты во время игры и фильтруйте общий рейтинг по вашему миру.",
+          "changes": [
+            "⏱️ Hunt Session Stacker: новая «Сессия в реальном времени». Задайте цель по XP/h, время от времени вставляйте Hunt Analyser и смотрите темп охоты, темп с прошлого обновления и сравнение со средним. Ничего не сохраняется на сервере, а по окончании вы выбираете, сохранять ли сессию.",
+            "🌍 Общий рейтинг: фильтр по миру. Каждый мир показывает свои топ-200 по категории, ваш мир — в начале списка. Пока не прошло следующее сканирование, показываются игроки мира из общего топ-1000.",
+            "🌍 Фильтр по миру работает и во вкладках «Пользователи 4rt3mi5» и «Друзья», а по умолчанию всегда выбрано «Все миры».",
+            "✍️ Все тексты проверены: исправлен португальский, унифицированы названия (Hunt Analyser, Input Analyser и бренд 4rt3mi5), единое обращение во французском, а тексты без перевода теперь есть на всех 7 языках."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.29.0",
       "date": "2026-11-23",
       "title": "Entrada direta e Lootsplit com link",
@@ -15,76 +99,97 @@
         "🔥 Corrigido: a imagem do boss do dia não aparecia."
       ],
       "tr": {
-        "en": { "title": "Direct entry and Lootsplit with a link",
+        "en": {
+          "title": "Direct entry and Lootsplit with a link",
           "summary": "You land straight on Home, and Lootsplit gains a Share menu, a public link, leader confirmation, an hourly goal and a weekly recap.",
           "changes": [
-          "🚪 When you log in, you go straight to 🏠 Home. Solo/Party is no longer asked and is switched from the menus.",
-          "💬 Lootsplit: the messages for people without the app now also say the person's name in the sentence, and those who only receive have their own version.",
-          "📤 Lootsplit: a new \"Share\" button with a Discord/WhatsApp summary, just the commands, an image and a public link.",
-          "🔗 Public link: whoever opens it sees the result and who pays whom, no account needed. Valid for 30 days and can be canceled.",
-          "✔ The PT leader can confirm the payment for someone who forgot to mark it.",
-          "🎯 Home: \"Is this hunt good enough?\" compares your hourly goal with your hunts and with places at your level, and the 📝 Weekly recap becomes a ready-to-post text.",
-          "🔥 Fixed: the image of the boss of the day did not show up."] },
-        "es": { "title": "Entrada directa y Lootsplit con enlace",
+            "🚪 When you log in, you go straight to 🏠 Home. Solo/Party is no longer asked and is switched from the menus.",
+            "💬 Lootsplit: the messages for people without the app now also say the person's name in the sentence, and those who only receive have their own version.",
+            "📤 Lootsplit: a new \"Share\" button with a Discord/WhatsApp summary, just the commands, an image and a public link.",
+            "🔗 Public link: whoever opens it sees the result and who pays whom, no account needed. Valid for 30 days and can be canceled.",
+            "✔ The PT leader can confirm the payment for someone who forgot to mark it.",
+            "🎯 Home: \"Is this hunt good enough?\" compares your hourly goal with your hunts and with places at your level, and the 📝 Weekly recap becomes a ready-to-post text.",
+            "🔥 Fixed: the image of the boss of the day did not show up."
+          ]
+        },
+        "es": {
+          "title": "Entrada directa y Lootsplit con enlace",
           "summary": "Entras directo al Inicio, y el Lootsplit gana un menú Compartir, enlace público, confirmación del líder, meta por hora y resumen de la semana.",
           "changes": [
-          "🚪 Al entrar, vas directo al 🏠 Inicio. Ya no se pregunta Solo/Party y se cambia desde los menús.",
-          "💬 Lootsplit: los mensajes para quien no tiene la app ahora dicen el nombre de la persona también en la frase, y quien solo recibe tiene su versión.",
-          "📤 Lootsplit: nuevo botón \"Compartir\" con resumen para Discord/WhatsApp, solo los comandos, imagen y enlace público.",
-          "🔗 Enlace público: quien lo abra ve el resultado y quién paga a quién, sin crear cuenta. Vale 30 días y se puede cancelar.",
-          "✔ El líder de la PT puede confirmar el pago por quien olvidó marcarlo.",
-          "🎯 Inicio: \"¿Esta hunt sirve?\" compara tu meta por hora con tus hunts y con los lugares de tu nivel, y el 📝 Resumen de la semana se vuelve un texto listo para publicar.",
-          "🔥 Corregido: la imagen del boss del día no aparecía."] },
-        "ja": { "title": "ホームへ直接入り、Lootsplitをリンクで共有",
+            "🚪 Al entrar, vas directo al 🏠 Inicio. Ya no se pregunta Solo/Party y se cambia desde los menús.",
+            "💬 Lootsplit: los mensajes para quien no tiene la app ahora dicen el nombre de la persona también en la frase, y quien solo recibe tiene su versión.",
+            "📤 Lootsplit: nuevo botón \"Compartir\" con resumen para Discord/WhatsApp, solo los comandos, imagen y enlace público.",
+            "🔗 Enlace público: quien lo abra ve el resultado y quién paga a quién, sin crear cuenta. Vale 30 días y se puede cancelar.",
+            "✔ El líder de la PT puede confirmar el pago por quien olvidó marcarlo.",
+            "🎯 Inicio: \"¿Esta hunt sirve?\" compara tu meta por hora con tus hunts y con los lugares de tu nivel, y el 📝 Resumen de la semana se vuelve un texto listo para publicar.",
+            "🔥 Corregido: la imagen del boss del día no aparecía."
+          ]
+        },
+        "ja": {
+          "title": "ホームへ直接入り、Lootsplitをリンクで共有",
           "summary": "ログインするとすぐホームが開き、Lootsplitには共有メニュー、公開リンク、リーダーによる確認、時間あたりの目標、週のまとめが加わりました。",
           "changes": [
-          "🚪 ログインするとそのまま🏠ホームに移動します。ソロ/パーティの質問はなくなり、メニューで切り替えます。",
-          "💬 Lootsplit：アプリを使っていない人向けのメッセージに、文中にも名前が入るようになり、受け取るだけの人用のメッセージも作られます。",
-          "📤 Lootsplit：「共有」ボタンを追加。Discord/WhatsApp用のサマリー、コマンドのみ、画像、公開リンクを選べます。",
-          "🔗 公開リンク：開いた人は、アカウントなしで結果と誰が誰に払うかを見られます。30日間有効で、取り消せます。",
-          "✔ PTのリーダーが、マークし忘れた人の代わりに支払いを確認できます。",
-          "🎯 ホーム：「この狩りで足りる？」で、時間あたりの目標をあなたの狩りやあなたのレベルの場所と比較でき、📝週のまとめは投稿用のテキストになります。",
-          "🔥 修正：今日のボスの画像が表示されない問題を直しました。"] },
-        "de": { "title": "Direkter Einstieg und Lootsplit mit Link",
+            "🚪 ログインするとそのまま🏠ホームに移動します。ソロ/パーティの質問はなくなり、メニューで切り替えます。",
+            "💬 Lootsplit：アプリを使っていない人向けのメッセージに、文中にも名前が入るようになり、受け取るだけの人用のメッセージも作られます。",
+            "📤 Lootsplit：「共有」ボタンを追加。Discord/WhatsApp用のサマリー、コマンドのみ、画像、公開リンクを選べます。",
+            "🔗 公開リンク：開いた人は、アカウントなしで結果と誰が誰に払うかを見られます。30日間有効で、取り消せます。",
+            "✔ PTのリーダーが、マークし忘れた人の代わりに支払いを確認できます。",
+            "🎯 ホーム：「この狩りで足りる？」で、時間あたりの目標をあなたの狩りやあなたのレベルの場所と比較でき、📝週のまとめは投稿用のテキストになります。",
+            "🔥 修正：今日のボスの画像が表示されない問題を直しました。"
+          ]
+        },
+        "de": {
+          "title": "Direkter Einstieg und Lootsplit mit Link",
           "summary": "Du landest direkt auf der Startseite, und der Lootsplit bekommt ein Teilen-Menü, einen öffentlichen Link, Bestätigung durch den Leader, ein Stundenziel und einen Wochenrückblick.",
           "changes": [
-          "🚪 Beim Anmelden geht es direkt zur 🏠 Startseite. Solo/Party wird nicht mehr gefragt und über die Menüs gewechselt.",
-          "💬 Lootsplit: Die Nachrichten für Leute ohne die App nennen den Namen jetzt auch im Satz, und wer nur empfängt, hat eine eigene Version.",
-          "📤 Lootsplit: neuer Button \"Teilen\" mit Zusammenfassung für Discord/WhatsApp, nur den Befehlen, einem Bild und einem öffentlichen Link.",
-          "🔗 Öffentlicher Link: Wer ihn öffnet, sieht das Ergebnis und wer wem zahlt, ohne Konto. 30 Tage gültig und widerrufbar.",
-          "✔ Der PT-Leader kann die Zahlung für jemanden bestätigen, der vergessen hat, sie zu markieren.",
-          "🎯 Startseite: \"Reicht diese Hunt?\" vergleicht dein Stundenziel mit deinen Hunts und mit Orten auf deinem Level, und der 📝 Wochenrückblick wird zum fertigen Text zum Posten.",
-          "🔥 Behoben: Das Bild des Bosses des Tages wurde nicht angezeigt."] },
-        "pl": { "title": "Bezpośrednie wejście i Lootsplit z linkiem",
+            "🚪 Beim Anmelden geht es direkt zur 🏠 Startseite. Solo/Party wird nicht mehr gefragt und über die Menüs gewechselt.",
+            "💬 Lootsplit: Die Nachrichten für Leute ohne die App nennen den Namen jetzt auch im Satz, und wer nur empfängt, hat eine eigene Version.",
+            "📤 Lootsplit: neuer Button \"Teilen\" mit Zusammenfassung für Discord/WhatsApp, nur den Befehlen, einem Bild und einem öffentlichen Link.",
+            "🔗 Öffentlicher Link: Wer ihn öffnet, sieht das Ergebnis und wer wem zahlt, ohne Konto. 30 Tage gültig und widerrufbar.",
+            "✔ Der PT-Leader kann die Zahlung für jemanden bestätigen, der vergessen hat, sie zu markieren.",
+            "🎯 Startseite: \"Reicht diese Hunt?\" vergleicht dein Stundenziel mit deinen Hunts und mit Orten auf deinem Level, und der 📝 Wochenrückblick wird zum fertigen Text zum Posten.",
+            "🔥 Behoben: Das Bild des Bosses des Tages wurde nicht angezeigt."
+          ]
+        },
+        "pl": {
+          "title": "Bezpośrednie wejście i Lootsplit z linkiem",
           "summary": "Po zalogowaniu trafiasz prosto na Start, a Lootsplit zyskuje menu Udostępnij, publiczny link, potwierdzenie przez lidera, cel godzinowy i podsumowanie tygodnia.",
           "changes": [
-          "🚪 Po zalogowaniu trafiasz prosto na 🏠 Start. Solo/Party nie jest już pytane i przełączasz je w menu.",
-          "💬 Lootsplit: wiadomości dla osób bez aplikacji zawierają teraz imię także w zdaniu, a ten, kto tylko otrzymuje, ma własną wersję.",
-          "📤 Lootsplit: nowy przycisk \"Udostępnij\" z podsumowaniem na Discord/WhatsApp, samymi komendami, obrazem i publicznym linkiem.",
-          "🔗 Publiczny link: kto go otworzy, zobaczy wynik i kto komu płaci, bez konta. Ważny 30 dni i można go anulować.",
-          "✔ Lider PT może potwierdzić płatność za osobę, która zapomniała ją zaznaczyć.",
-          "🎯 Start: \"Czy ten hunt wystarczy?\" porównuje twój cel godzinowy z twoimi huntami i miejscami na twoim levelu, a 📝 Podsumowanie tygodnia staje się gotowym tekstem do wrzucenia.",
-          "🔥 Naprawiono: obraz bossa dnia się nie wyświetlał."] },
-        "fr": { "title": "Entrée directe et Lootsplit avec lien",
+            "🚪 Po zalogowaniu trafiasz prosto na 🏠 Start. Solo/Party nie jest już pytane i przełączasz je w menu.",
+            "💬 Lootsplit: wiadomości dla osób bez aplikacji zawierają teraz imię także w zdaniu, a ten, kto tylko otrzymuje, ma własną wersję.",
+            "📤 Lootsplit: nowy przycisk \"Udostępnij\" z podsumowaniem na Discord/WhatsApp, samymi komendami, obrazem i publicznym linkiem.",
+            "🔗 Publiczny link: kto go otworzy, zobaczy wynik i kto komu płaci, bez konta. Ważny 30 dni i można go anulować.",
+            "✔ Lider PT może potwierdzić płatność za osobę, która zapomniała ją zaznaczyć.",
+            "🎯 Start: \"Czy ten hunt wystarczy?\" porównuje twój cel godzinowy z twoimi huntami i miejscami na twoim levelu, a 📝 Podsumowanie tygodnia staje się gotowym tekstem do wrzucenia.",
+            "🔥 Naprawiono: obraz bossa dnia się nie wyświetlał."
+          ]
+        },
+        "fr": {
+          "title": "Entrée directe et Lootsplit avec lien",
           "summary": "Vous arrivez directement sur l'Accueil, et le Lootsplit gagne un menu Partager, un lien public, la confirmation du chef, un objectif horaire et un récap de la semaine.",
           "changes": [
-          "🚪 À la connexion, vous allez directement à 🏠 Accueil. Solo/Party n'est plus demandé et se change depuis les menus.",
-          "💬 Lootsplit : les messages pour ceux qui n'ont pas l'app indiquent maintenant le nom aussi dans la phrase, et celui qui ne fait que recevoir a sa version.",
-          "📤 Lootsplit : nouveau bouton \"Partager\" avec résumé pour Discord/WhatsApp, seulement les commandes, une image et un lien public.",
-          "🔗 Lien public : celui qui l'ouvre voit le résultat et qui paie qui, sans compte. Valable 30 jours et annulable.",
-          "✔ Le chef de la PT peut confirmer le paiement pour quelqu'un qui a oublié de le marquer.",
-          "🎯 Accueil : \"Cette hunt convient ?\" compare votre objectif horaire à vos hunts et aux lieux de votre niveau, et le 📝 Récap de la semaine devient un texte prêt à publier.",
-          "🔥 Corrigé : l'image du boss du jour ne s'affichait pas."] },
-        "ru": { "title": "Прямой вход и Lootsplit со ссылкой",
+            "🚪 À la connexion, vous allez directement à 🏠 Accueil. Solo/Party n'est plus demandé et se change depuis les menus.",
+            "💬 Lootsplit : les messages pour ceux qui n'ont pas l'app indiquent maintenant le nom aussi dans la phrase, et celui qui ne fait que recevoir a sa version.",
+            "📤 Lootsplit : nouveau bouton \"Partager\" avec résumé pour Discord/WhatsApp, seulement les commandes, une image et un lien public.",
+            "🔗 Lien public : celui qui l'ouvre voit le résultat et qui paie qui, sans compte. Valable 30 jours et annulable.",
+            "✔ Le chef de la PT peut confirmer le paiement pour quelqu'un qui a oublié de le marquer.",
+            "🎯 Accueil : \"Cette hunt convient ?\" compare votre objectif horaire à vos hunts et aux lieux de votre niveau, et le 📝 Récap de la semaine devient un texte prêt à publier.",
+            "🔥 Corrigé : l'image du boss du jour ne s'affichait pas."
+          ]
+        },
+        "ru": {
+          "title": "Прямой вход и Lootsplit со ссылкой",
           "summary": "Вы сразу попадаете на Главную, а Lootsplit получает меню «Поделиться», публичную ссылку, подтверждение лидера, цель в час и итоги недели.",
           "changes": [
-          "🚪 При входе вы сразу попадаете на 🏠 Главную. Solo/Party больше не спрашивается и переключается в меню.",
-          "💬 Lootsplit: сообщения для тех, у кого нет приложения, теперь называют имя и внутри фразы, а у того, кто только получает, есть своя версия.",
-          "📤 Lootsplit: новая кнопка «Поделиться» с итогом для Discord/WhatsApp, только командами, картинкой и публичной ссылкой.",
-          "🔗 Публичная ссылка: кто откроет, увидит результат и кто кому платит, без аккаунта. Действует 30 дней и её можно отменить.",
-          "✔ Лидер PT может подтвердить оплату за того, кто забыл отметить.",
-          "🎯 Главная: «Подходит ли эта охота?» сравнивает вашу цель в час с вашими охотами и местами вашего уровня, а 📝 Итоги недели становятся готовым текстом для публикации.",
-          "🔥 Исправлено: картинка босса дня не отображалась."] }
+            "🚪 При входе вы сразу попадаете на 🏠 Главную. Solo/Party больше не спрашивается и переключается в меню.",
+            "💬 Lootsplit: сообщения для тех, у кого нет приложения, теперь называют имя и внутри фразы, а у того, кто только получает, есть своя версия.",
+            "📤 Lootsplit: новая кнопка «Поделиться» с итогом для Discord/WhatsApp, только командами, картинкой и публичной ссылкой.",
+            "🔗 Публичная ссылка: кто откроет, увидит результат и кто кому платит, без аккаунта. Действует 30 дней и её можно отменить.",
+            "✔ Лидер PT может подтвердить оплату за того, кто забыл отметить.",
+            "🎯 Главная: «Подходит ли эта охота?» сравнивает вашу цель в час с вашими охотами и местами вашего уровня, а 📝 Итоги недели становятся готовым текстом для публикации.",
+            "🔥 Исправлено: картинка босса дня не отображалась."
+          ]
+        }
       }
     },
     {
@@ -100,62 +205,83 @@
         "🤝 O convite pelo WhatsApp agora diz o que a pessoa ganha ao entrar no site."
       ],
       "tr": {
-        "en": { "title": "A livelier Home and shareable Lootsplit",
+        "en": {
+          "title": "A livelier Home and shareable Lootsplit",
           "summary": "Home shows what matters today (daily boost, achievements and your hunt trend) and Lootsplit becomes a ready-made text for Discord or WhatsApp.",
           "changes": [
-          "🔥 Home: a new \"Today's boost\" card with the boosted creature and boss of the day, plus an Achievements card with the next one closest to unlocking and a small trend chart of your hunts.",
-          "💬 Lootsplit: a \"Copy summary for Discord/WhatsApp\" button with the hunt, each player's share and who transfers to whom.",
-          "🛡️ Hunts: filter by vocation (Knight, Paladin, Druid, Sorcerer or Monk) alongside the level filter. Only players with a known vocation are included.",
-          "📈 When you save a session, the confirmation shows the XP and XP/h. In the XP ranking, hovering over a number's source explains where it comes from, and terms like Loot, Supplies and Loot type now have explanations.",
-          "🤝 The WhatsApp invite now says what the person gains by joining the site."] },
-        "es": { "title": "Inicio más vivo y Lootsplit para compartir",
+            "🔥 Home: a new \"Today's boost\" card with the boosted creature and boss of the day, plus an Achievements card with the next one closest to unlocking and a small trend chart of your hunts.",
+            "💬 Lootsplit: a \"Copy summary for Discord/WhatsApp\" button with the hunt, each player's share and who transfers to whom.",
+            "🛡️ Hunts: filter by vocation (Knight, Paladin, Druid, Sorcerer or Monk) alongside the level filter. Only players with a known vocation are included.",
+            "📈 When you save a session, the confirmation shows the XP and XP/h. In the XP ranking, hovering over a number's source explains where it comes from, and terms like Loot, Supplies and Loot type now have explanations.",
+            "🤝 The WhatsApp invite now says what the person gains by joining the site."
+          ]
+        },
+        "es": {
+          "title": "Inicio más vivo y Lootsplit para compartir",
           "summary": "El Inicio muestra lo que importa hoy (boost del día, logros y tendencia de tus hunts) y el Lootsplit se vuelve un texto listo para Discord o WhatsApp.",
           "changes": [
-          "🔥 Inicio: nueva tarjeta \"Boost de hoy\" con la criatura y el boss boosted del día, además de una tarjeta de Logros con el siguiente más cercano y un mini gráfico de tendencia de tus hunts.",
-          "💬 Lootsplit: botón \"Copiar resumen para Discord/WhatsApp\" con la hunt, lo que recibe cada uno y quién transfiere a quién.",
-          "🛡️ Hunts: filtro por vocación (Knight, Paladin, Druid, Sorcerer o Monk) junto al filtro de level. Solo entran jugadores con vocación ya conocida.",
-          "📈 Al guardar una sesión, la confirmación muestra el XP y el XP/h. En el ranking de XP, al pasar el cursor por el origen del número se explica de dónde viene, y términos como Loot, Supplies y Loot type tienen explicación.",
-          "🤝 La invitación por WhatsApp ahora dice qué gana la persona al entrar en el sitio."] },
-        "ja": { "title": "ホームがより便利に、Lootsplitを共有しやすく",
+            "🔥 Inicio: nueva tarjeta \"Boost de hoy\" con la criatura y el boss boosted del día, además de una tarjeta de Logros con el siguiente más cercano y un mini gráfico de tendencia de tus hunts.",
+            "💬 Lootsplit: botón \"Copiar resumen para Discord/WhatsApp\" con la hunt, lo que recibe cada uno y quién transfiere a quién.",
+            "🛡️ Hunts: filtro por vocación (Knight, Paladin, Druid, Sorcerer o Monk) junto al filtro de level. Solo entran jugadores con vocación ya conocida.",
+            "📈 Al guardar una sesión, la confirmación muestra el XP y el XP/h. En el ranking de XP, al pasar el cursor por el origen del número se explica de dónde viene, y términos como Loot, Supplies y Loot type tienen explicación.",
+            "🤝 La invitación por WhatsApp ahora dice qué gana la persona al entrar en el sitio."
+          ]
+        },
+        "ja": {
+          "title": "ホームがより便利に、Lootsplitを共有しやすく",
           "summary": "ホームに今日大事な情報（今日のブースト、実績、ハントの推移）が並び、LootsplitはDiscordやWhatsApp向けの文章としてコピーできます。",
           "changes": [
-          "🔥 ホーム：今日のブーストされたクリーチャーとボスを表示する「今日のブースト」カード、解除が近い実績のカード、ハントの推移を示す小さなグラフを追加しました。",
-          "💬 Lootsplit：ハント内容、各自の取り分、誰が誰に送金するかをまとめた「Discord/WhatsApp用にサマリーをコピー」ボタンを追加しました。",
-          "🛡️ ハント：レベルの絞り込みに加えて、職業（Knight、Paladin、Druid、Sorcerer、Monk）で絞り込めるようになりました。職業が判明している人だけが対象です。",
-          "📈 セッションを保存すると、確認メッセージにXPとXP/hが表示されます。XPランキングでは数値の出どころにカーソルを合わせると説明が出て、Loot、Supplies、Loot typeなどの用語にも説明が付きました。",
-          "🤝 WhatsAppの招待に、サイトに登録すると何ができるかが書かれるようになりました。"] },
-        "de": { "title": "Lebendigere Startseite und teilbarer Lootsplit",
+            "🔥 ホーム：今日のブーストされたクリーチャーとボスを表示する「今日のブースト」カード、解除が近い実績のカード、ハントの推移を示す小さなグラフを追加しました。",
+            "💬 Lootsplit：ハント内容、各自の取り分、誰が誰に送金するかをまとめた「Discord/WhatsApp用にサマリーをコピー」ボタンを追加しました。",
+            "🛡️ ハント：レベルの絞り込みに加えて、職業（Knight、Paladin、Druid、Sorcerer、Monk）で絞り込めるようになりました。職業が判明している人だけが対象です。",
+            "📈 セッションを保存すると、確認メッセージにXPとXP/hが表示されます。XPランキングでは数値の出どころにカーソルを合わせると説明が出て、Loot、Supplies、Loot typeなどの用語にも説明が付きました。",
+            "🤝 WhatsAppの招待に、サイトに登録すると何ができるかが書かれるようになりました。"
+          ]
+        },
+        "de": {
+          "title": "Lebendigere Startseite und teilbarer Lootsplit",
           "summary": "Die Startseite zeigt, was heute zählt (Tages-Boost, Erfolge und der Trend deiner Hunts), und der Lootsplit wird zu einem fertigen Text für Discord oder WhatsApp.",
           "changes": [
-          "🔥 Startseite: neue Karte \"Boost von heute\" mit der geboosteten Kreatur und dem Boss des Tages, dazu eine Erfolge-Karte mit dem nächsten fast erreichten Erfolg und ein kleines Trenddiagramm deiner Hunts.",
-          "💬 Lootsplit: Button \"Zusammenfassung für Discord/WhatsApp kopieren\" mit Hunt, Anteil jedes Spielers und wer an wen überweist.",
-          "🛡️ Hunts: Filter nach Berufung (Knight, Paladin, Druid, Sorcerer oder Monk) zusätzlich zum Level-Filter. Es zählen nur Spieler mit bekannter Berufung.",
-          "📈 Beim Speichern einer Sitzung zeigt die Bestätigung XP und XP/h. In der XP-Rangliste erklärt der Hinweis an der Zahl, woher sie stammt, und Begriffe wie Loot, Supplies und Loot type sind jetzt erklärt.",
-          "🤝 Die WhatsApp-Einladung sagt jetzt, was die Person davon hat, der Seite beizutreten."] },
-        "pl": { "title": "Żywszy ekran główny i Lootsplit do udostępniania",
+            "🔥 Startseite: neue Karte \"Boost von heute\" mit der geboosteten Kreatur und dem Boss des Tages, dazu eine Erfolge-Karte mit dem nächsten fast erreichten Erfolg und ein kleines Trenddiagramm deiner Hunts.",
+            "💬 Lootsplit: Button \"Zusammenfassung für Discord/WhatsApp kopieren\" mit Hunt, Anteil jedes Spielers und wer an wen überweist.",
+            "🛡️ Hunts: Filter nach Berufung (Knight, Paladin, Druid, Sorcerer oder Monk) zusätzlich zum Level-Filter. Es zählen nur Spieler mit bekannter Berufung.",
+            "📈 Beim Speichern einer Sitzung zeigt die Bestätigung XP und XP/h. In der XP-Rangliste erklärt der Hinweis an der Zahl, woher sie stammt, und Begriffe wie Loot, Supplies und Loot type sind jetzt erklärt.",
+            "🤝 Die WhatsApp-Einladung sagt jetzt, was die Person davon hat, der Seite beizutreten."
+          ]
+        },
+        "pl": {
+          "title": "Żywszy ekran główny i Lootsplit do udostępniania",
           "summary": "Ekran główny pokazuje to, co ważne dziś (boost dnia, osiągnięcia i trend twoich huntów), a Lootsplit staje się gotowym tekstem na Discorda lub WhatsAppa.",
           "changes": [
-          "🔥 Ekran główny: nowa karta \"Boost na dziś\" z boostowanym stworem i bossem dnia, karta Osiągnięć z kolejnym najbliższym do zdobycia oraz mały wykres trendu twoich huntów.",
-          "💬 Lootsplit: przycisk \"Kopiuj podsumowanie na Discord/WhatsApp\" z huntem, udziałem każdego gracza i informacją, kto komu przelewa.",
-          "🛡️ Hunty: filtr według profesji (Knight, Paladin, Druid, Sorcerer lub Monk) obok filtra poziomu. Liczą się tylko gracze ze znaną profesją.",
-          "📈 Po zapisaniu sesji potwierdzenie pokazuje XP i XP/h. W rankingu XP podpowiedź przy liczbie wyjaśnia, skąd pochodzi, a pojęcia takie jak Loot, Supplies i Loot type mają teraz wyjaśnienia.",
-          "🤝 Zaproszenie przez WhatsApp mówi teraz, co osoba zyska, dołączając do strony."] },
-        "fr": { "title": "Accueil plus vivant et Lootsplit à partager",
+            "🔥 Ekran główny: nowa karta \"Boost na dziś\" z boostowanym stworem i bossem dnia, karta Osiągnięć z kolejnym najbliższym do zdobycia oraz mały wykres trendu twoich huntów.",
+            "💬 Lootsplit: przycisk \"Kopiuj podsumowanie na Discord/WhatsApp\" z huntem, udziałem każdego gracza i informacją, kto komu przelewa.",
+            "🛡️ Hunty: filtr według profesji (Knight, Paladin, Druid, Sorcerer lub Monk) obok filtra poziomu. Liczą się tylko gracze ze znaną profesją.",
+            "📈 Po zapisaniu sesji potwierdzenie pokazuje XP i XP/h. W rankingu XP podpowiedź przy liczbie wyjaśnia, skąd pochodzi, a pojęcia takie jak Loot, Supplies i Loot type mają teraz wyjaśnienia.",
+            "🤝 Zaproszenie przez WhatsApp mówi teraz, co osoba zyska, dołączając do strony."
+          ]
+        },
+        "fr": {
+          "title": "Accueil plus vivant et Lootsplit à partager",
           "summary": "L'accueil montre ce qui compte aujourd'hui (boost du jour, succès et tendance de vos hunts) et le Lootsplit devient un texte prêt pour Discord ou WhatsApp.",
           "changes": [
-          "🔥 Accueil : nouvelle carte « Boost du jour » avec la créature et le boss boostés du jour, une carte Succès avec le prochain le plus proche et un mini-graphique de tendance de vos hunts.",
-          "💬 Lootsplit : bouton « Copier le résumé pour Discord/WhatsApp » avec la hunt, la part de chacun et qui transfère à qui.",
-          "🛡️ Hunts : filtre par vocation (Knight, Paladin, Druid, Sorcerer ou Monk) en plus du filtre de niveau. Seuls les joueurs à la vocation connue sont inclus.",
-          "📈 À l'enregistrement d'une session, la confirmation affiche l'XP et l'XP/h. Dans le classement d'XP, survoler l'origine du chiffre explique d'où il vient, et des termes comme Loot, Supplies et Loot type sont expliqués.",
-          "🤝 L'invitation WhatsApp indique maintenant ce que la personne gagne en rejoignant le site."] },
-        "ru": { "title": "Живая главная и Lootsplit для отправки",
+            "🔥 Accueil : nouvelle carte « Boost du jour » avec la créature et le boss boostés du jour, une carte Succès avec le prochain le plus proche et un mini-graphique de tendance de vos hunts.",
+            "💬 Lootsplit : bouton « Copier le résumé pour Discord/WhatsApp » avec la hunt, la part de chacun et qui transfère à qui.",
+            "🛡️ Hunts : filtre par vocation (Knight, Paladin, Druid, Sorcerer ou Monk) en plus du filtre de niveau. Seuls les joueurs à la vocation connue sont inclus.",
+            "📈 À l'enregistrement d'une session, la confirmation affiche l'XP et l'XP/h. Dans le classement d'XP, survoler l'origine du chiffre explique d'où il vient, et des termes comme Loot, Supplies et Loot type sont expliqués.",
+            "🤝 L'invitation WhatsApp indique maintenant ce que la personne gagne en rejoignant le site."
+          ]
+        },
+        "ru": {
+          "title": "Живая главная и Lootsplit для отправки",
           "summary": "Главная показывает главное на сегодня (буст дня, достижения и динамику ваших охот), а Lootsplit превращается в готовый текст для Discord или WhatsApp.",
           "changes": [
-          "🔥 Главная: новая карточка «Буст на сегодня» с бустнутым существом и боссом дня, карточка достижений с ближайшим к получению и мини-график динамики ваших охот.",
-          "💬 Lootsplit: кнопка «Скопировать итог для Discord/WhatsApp» с охотой, долей каждого и тем, кто кому переводит.",
-          "🛡️ Охоты: фильтр по профессии (Knight, Paladin, Druid, Sorcerer или Monk) вместе с фильтром по уровню. Учитываются только игроки с известной профессией.",
-          "📈 При сохранении сессии подтверждение показывает XP и XP/ч. В рейтинге XP подсказка у числа объясняет, откуда оно взято, а термины Loot, Supplies и Loot type теперь объяснены.",
-          "🤝 Приглашение в WhatsApp теперь объясняет, что человек получит, зарегистрировавшись на сайте."] }
+            "🔥 Главная: новая карточка «Буст на сегодня» с бустнутым существом и боссом дня, карточка достижений с ближайшим к получению и мини-график динамики ваших охот.",
+            "💬 Lootsplit: кнопка «Скопировать итог для Discord/WhatsApp» с охотой, долей каждого и тем, кто кому переводит.",
+            "🛡️ Охоты: фильтр по профессии (Knight, Paladin, Druid, Sorcerer или Monk) вместе с фильтром по уровню. Учитываются только игроки с известной профессией.",
+            "📈 При сохранении сессии подтверждение показывает XP и XP/h. В рейтинге XP подсказка у числа объясняет, откуда оно взято, а термины Loot, Supplies и Loot type теперь объяснены.",
+            "🤝 Приглашение в WhatsApp теперь объясняет, что человек получит, зарегистрировавшись на сайте."
+          ]
+        }
       }
     },
     {
@@ -166,20 +292,48 @@
         "🔧 A aba Amigos em Rankings não aparece mais em outras telas, como a de Novidades do Tibia."
       ],
       "tr": {
-        "en": { "title": "Friends tab fix", "changes": [
-          "🔧 The Friends tab in Rankings no longer shows up on other screens, such as the Tibia News page."] },
-        "es": { "title": "Corrección en la pestaña Amigos", "changes": [
-          "🔧 La pestaña Amigos en Rankings ya no aparece en otras pantallas, como la de Noticias de Tibia."] },
-        "ja": { "title": "フレンドタブの修正", "changes": [
-          "🔧 ランキングのフレンドタブが、Tibiaニュースなど他の画面に表示されなくなりました。"] },
-        "de": { "title": "Korrektur im Freunde-Tab", "changes": [
-          "🔧 Der Freunde-Tab in den Ranglisten erscheint nicht mehr auf anderen Seiten, etwa der Tibia-Nachrichtenseite."] },
-        "pl": { "title": "Poprawka zakładki Znajomi", "changes": [
-          "🔧 Zakładka Znajomi w Rankingach nie pojawia się już na innych ekranach, na przykład na stronie newsów Tibia."] },
-        "fr": { "title": "Correction de l'onglet Amis", "changes": [
-          "🔧 L'onglet Amis des Classements n'apparaît plus sur d'autres écrans, comme la page des actualités Tibia."] },
-        "ru": { "title": "Исправление вкладки «Друзья»", "changes": [
-          "🔧 Вкладка «Друзья» в рейтингах больше не появляется на других экранах, например на странице новостей Tibia."] }
+        "en": {
+          "title": "Friends tab fix",
+          "changes": [
+            "🔧 The Friends tab in Rankings no longer shows up on other screens, such as the Tibia News page."
+          ]
+        },
+        "es": {
+          "title": "Corrección en la pestaña Amigos",
+          "changes": [
+            "🔧 La pestaña Amigos en Rankings ya no aparece en otras pantallas, como la de Noticias de Tibia."
+          ]
+        },
+        "ja": {
+          "title": "フレンドタブの修正",
+          "changes": [
+            "🔧 ランキングのフレンドタブが、Tibiaニュースなど他の画面に表示されなくなりました。"
+          ]
+        },
+        "de": {
+          "title": "Korrektur im Freunde-Tab",
+          "changes": [
+            "🔧 Der Freunde-Tab in den Ranglisten erscheint nicht mehr auf anderen Seiten, etwa der Tibia-Nachrichtenseite."
+          ]
+        },
+        "pl": {
+          "title": "Poprawka zakładki Znajomi",
+          "changes": [
+            "🔧 Zakładka Znajomi w Rankingach nie pojawia się już na innych ekranach, na przykład na stronie newsów Tibia."
+          ]
+        },
+        "fr": {
+          "title": "Correction de l'onglet Amis",
+          "changes": [
+            "🔧 L'onglet Amis des Classements n'apparaît plus sur d'autres écrans, comme la page des actualités Tibia."
+          ]
+        },
+        "ru": {
+          "title": "Исправление вкладки «Друзья»",
+          "changes": [
+            "🔧 Вкладка «Друзья» в рейтингах больше не появляется на других экранах, например на странице новостей Tibia."
+          ]
+        }
       }
     },
     {
@@ -191,27 +345,55 @@
         "🤝 Convite pelo WhatsApp: ao adicionar alguém que ainda não tem cadastro, o app pergunta se você quer convidar. Informe DDD e celular, e a mensagem pronta abre no WhatsApp para você enviar."
       ],
       "tr": {
-        "en": { "title": "Solo XP and WhatsApp invite", "changes": [
-          "📊 Solo hunt XP now counts in the XP control: if a character is not on the highscore (outside the top 1000), the 30 and 90-day gain uses the solo sessions you sent.",
-          "🤝 WhatsApp invite: when you add someone who has no account yet, the app asks if you want to invite them. Enter their area code and mobile number, and a ready message opens in WhatsApp for you to send."] },
-        "es": { "title": "XP solo e invitación por WhatsApp", "changes": [
-          "📊 El XP de las hunts solo ahora cuenta en el control de XP: si el personaje no sale en el highscore (fuera del top 1000), la ganancia de 30 y 90 días usa las sesiones solo que enviaste.",
-          "🤝 Invitación por WhatsApp: al agregar a alguien que aún no tiene cuenta, la app pregunta si quieres invitarlo. Escribe el código de área y el celular, y se abre un mensaje listo en WhatsApp para que lo envíes."] },
-        "ja": { "title": "単独XPとWhatsApp招待", "changes": [
-          "📊 単独ハントのXPがXP管理に含まれるようになりました。キャラクターがハイスコアにない場合（上位1000位の外）、30日・90日の獲得XPは送信した単独セッションから計算します。",
-          "🤝 WhatsAppでの招待：アカウントのない人を追加すると、招待するか確認します。市外局番と携帯番号を入力すると、準備された文面がWhatsAppで開き、送信できます。"] },
-        "de": { "title": "Solo-XP und WhatsApp-Einladung", "changes": [
-          "📊 XP aus Solo-Hunts zählt jetzt für die XP-Kontrolle: Wenn ein Charakter nicht in der Highscore-Liste steht (außerhalb der Top 1000), nutzt der Gewinn für 30 und 90 Tage die Solo-Sitzungen, die du gesendet hast.",
-          "🤝 Einladung per WhatsApp: Wenn du jemanden ohne Konto hinzufügst, fragt die App, ob du ihn einladen möchtest. Gib Vorwahl und Handynummer ein, dann öffnet sich die fertige Nachricht in WhatsApp zum Senden."] },
-        "pl": { "title": "XP solo i zaproszenie przez WhatsApp", "changes": [
-          "📊 XP z huntów solo liczy się teraz w kontroli XP: jeśli postaci nie ma w highscore (poza top 1000), zysk z 30 i 90 dni korzysta z sesji solo, które wysłałeś.",
-          "🤝 Zaproszenie przez WhatsApp: gdy dodasz osobę bez konta, aplikacja zapyta, czy chcesz ją zaprosić. Wpisz numer kierunkowy i komórkę, a gotowa wiadomość otworzy się w WhatsAppie do wysłania."] },
-        "fr": { "title": "XP solo et invitation WhatsApp", "changes": [
-          "📊 Le XP des hunts solo compte maintenant dans le contrôle d'XP : si le personnage n'est pas au highscore (hors du top 1000), le gain sur 30 et 90 jours utilise les sessions solo que vous avez envoyées.",
-          "🤝 Invitation par WhatsApp : en ajoutant quelqu'un qui n'a pas encore de compte, l'app demande si vous voulez l'inviter. Saisissez l'indicatif et le portable, et le message prêt s'ouvre dans WhatsApp pour l'envoi."] },
-        "ru": { "title": "XP соло и приглашение в WhatsApp", "changes": [
-          "📊 XP с соло-охот теперь учитывается в контроле XP: если персонажа нет в хайскоре (вне топ-1000), прирост за 30 и 90 дней берётся из отправленных вами соло-сессий.",
-          "🤝 Приглашение через WhatsApp: когда вы добавляете человека без аккаунта, приложение спрашивает, хотите ли вы его пригласить. Введите код города и номер мобильного, и готовое сообщение откроется в WhatsApp для отправки."] }
+        "en": {
+          "title": "Solo XP and WhatsApp invite",
+          "changes": [
+            "📊 Solo hunt XP now counts in the XP control: if a character is not on the highscore (outside the top 1000), the 30 and 90-day gain uses the solo sessions you sent.",
+            "🤝 WhatsApp invite: when you add someone who has no account yet, the app asks if you want to invite them. Enter their area code and mobile number, and a ready message opens in WhatsApp for you to send."
+          ]
+        },
+        "es": {
+          "title": "XP solo e invitación por WhatsApp",
+          "changes": [
+            "📊 El XP de las hunts solo ahora cuenta en el control de XP: si el personaje no sale en el highscore (fuera del top 1000), la ganancia de 30 y 90 días usa las sesiones solo que enviaste.",
+            "🤝 Invitación por WhatsApp: al agregar a alguien que aún no tiene cuenta, la app pregunta si quieres invitarlo. Escribe el código de área y el celular, y se abre un mensaje listo en WhatsApp para que lo envíes."
+          ]
+        },
+        "ja": {
+          "title": "単独XPとWhatsApp招待",
+          "changes": [
+            "📊 単独ハントのXPがXP管理に含まれるようになりました。キャラクターがハイスコアにない場合（上位1000位の外）、30日・90日の獲得XPは送信した単独セッションから計算します。",
+            "🤝 WhatsAppでの招待：アカウントのない人を追加すると、招待するか確認します。市外局番と携帯番号を入力すると、準備された文面がWhatsAppで開き、送信できます。"
+          ]
+        },
+        "de": {
+          "title": "Solo-XP und WhatsApp-Einladung",
+          "changes": [
+            "📊 XP aus Solo-Hunts zählt jetzt für die XP-Kontrolle: Wenn ein Charakter nicht in der Highscore-Liste steht (außerhalb der Top 1000), nutzt der Gewinn für 30 und 90 Tage die Solo-Sitzungen, die du gesendet hast.",
+            "🤝 Einladung per WhatsApp: Wenn du jemanden ohne Konto hinzufügst, fragt die App, ob du ihn einladen möchtest. Gib Vorwahl und Handynummer ein, dann öffnet sich die fertige Nachricht in WhatsApp zum Senden."
+          ]
+        },
+        "pl": {
+          "title": "XP solo i zaproszenie przez WhatsApp",
+          "changes": [
+            "📊 XP z huntów solo liczy się teraz w kontroli XP: jeśli postaci nie ma w highscore (poza top 1000), zysk z 30 i 90 dni korzysta z sesji solo, które wysłałeś.",
+            "🤝 Zaproszenie przez WhatsApp: gdy dodasz osobę bez konta, aplikacja zapyta, czy chcesz ją zaprosić. Wpisz numer kierunkowy i komórkę, a gotowa wiadomość otworzy się w WhatsAppie do wysłania."
+          ]
+        },
+        "fr": {
+          "title": "XP solo et invitation WhatsApp",
+          "changes": [
+            "📊 Le XP des hunts solo compte maintenant dans le contrôle d'XP : si le personnage n'est pas au highscore (hors du top 1000), le gain sur 30 et 90 jours utilise les sessions solo que vous avez envoyées.",
+            "🤝 Invitation par WhatsApp : en ajoutant quelqu'un qui n'a pas encore de compte, l'app demande si vous voulez l'inviter. Saisissez l'indicatif et le portable, et le message prêt s'ouvre dans WhatsApp pour l'envoi."
+          ]
+        },
+        "ru": {
+          "title": "XP соло и приглашение в WhatsApp",
+          "changes": [
+            "📊 XP с соло-охот теперь учитывается в контроле XP: если персонажа нет в хайскоре (вне топ-1000), прирост за 30 и 90 дней берётся из отправленных вами соло-сессий.",
+            "🤝 Приглашение через WhatsApp: когда вы добавляете человека без аккаунта, приложение спрашивает, хотите ли вы его пригласить. Введите код города и номер мобильного, и готовое сообщение откроется в WhatsApp для отправки."
+          ]
+        }
       }
     },
     {
@@ -224,34 +406,62 @@
         "👥 Aba Amigos em Rankings: seus personagens e quem está na sua VIP List, ordenados por level ou por XP de 30/90 dias."
       ],
       "tr": {
-        "en": { "title": "VIP List and Friends tab", "changes": [
-          "⭐ VIP List: add any nick and follow the basics (vocation, level, HP, mana, cap, XP gained in 30 and 90 days and hunts in 30 days). You ask for what you want to see; the other person accepts or declines, choosing what to share. Turning it off asks for confirmation and removes the details at once; turning it back on asks permission again.",
-          "🤝 Invitations: whoever receives a request sees who asked and what was asked, and decides what to share.",
-          "👥 Friends tab in Rankings: your characters and the people on your VIP List, sorted by level or XP gained in 30/90 days."] },
-        "es": { "title": "VIP List y pestaña Amigos", "changes": [
-          "⭐ VIP List: agrega cualquier nick y sigue lo básico (vocación, level, HP, mana, cap, XP ganado en 30 y 90 días y hunts en 30 días). Pides lo que quieres ver; la otra persona acepta o rechaza, eligiendo qué compartir. Desactivarlo pide confirmación y quita los detalles al instante; volver a activarlo pide permiso de nuevo.",
-          "🤝 Invitaciones: quien recibe la solicitud ve quién la envió y qué pidió, y decide qué liberar.",
-          "👥 Pestaña Amigos en Rankings: tus personajes y quienes están en tu VIP List, ordenados por level o por XP ganado en 30/90 días."] },
-        "ja": { "title": "VIP Listとフレンドタブ", "changes": [
-          "⭐ VIP List：任意のキャラクター名を追加し、基本情報（職業・レベル・HP・マナ・キャップ・30日・90日の獲得XP・30日のハント数）をフォローできます。見たい項目を申請し、相手が承諾・拒否して共有範囲を選びます。オフにすると確認が出て、詳細はすぐ消えます。再びオンにするには改めて許可が必要です。",
-          "🤝 招待：申請を受けた人は、誰がどの項目を求めたかを確認し、共有する内容を決めます。",
-          "👥 ランキングのフレンドタブ：自分のキャラクターとVIP Listの人を、レベルまたは30日・90日の獲得XPで並べます。"] },
-        "de": { "title": "VIP-Liste und Freunde-Tab", "changes": [
-          "⭐ VIP-Liste: Füge einen beliebigen Nick hinzu und verfolge die Grundinfos (Beruf, Level, HP, Mana, Kapazität, in 30 und 90 Tagen gewonnene XP und Hunts in 30 Tagen). Du bittest um das, was du sehen willst; die Person akzeptiert oder lehnt ab und wählt, was sie teilt. Ausschalten fragt nach Bestätigung und entfernt die Details sofort; wieder einschalten braucht erneut eine Erlaubnis.",
-          "🤝 Einladungen: Wer die Anfrage erhält, sieht, wer gefragt hat und was, und entscheidet, was freigegeben wird.",
-          "👥 Freunde-Tab in den Ranglisten: deine Charaktere und die Personen auf deiner VIP-Liste, sortiert nach Level oder nach XP der letzten 30/90 Tage."] },
-        "pl": { "title": "Lista VIP i zakładka Znajomi", "changes": [
-          "⭐ Lista VIP: dodaj dowolny nick i śledź podstawowe dane (zawód, level, HP, manę, cap, XP zdobyte w 30 i 90 dni oraz hunty w 30 dni). Prosisz o to, co chcesz widzieć; druga osoba akceptuje lub odrzuca, wybierając, co udostępnia. Wyłączenie wymaga potwierdzenia i od razu usuwa szczegóły; ponowne włączenie wymaga nowej zgody.",
-          "🤝 Zaproszenia: kto dostaje prośbę, widzi, kto ją wysłał i o co prosi, i decyduje, co udostępnić.",
-          "👥 Zakładka Znajomi w Rankingach: twoje postacie i osoby z listy VIP, posortowane według levelu lub XP zdobytego w 30/90 dni."] },
-        "fr": { "title": "VIP List et onglet Amis", "changes": [
-          "⭐ VIP List : ajoutez n'importe quel nick et suivez l'essentiel (vocation, level, HP, mana, cap, XP gagnée sur 30 et 90 jours et hunts sur 30 jours). Vous demandez ce que vous voulez voir ; l'autre personne accepte ou refuse, en choisissant ce qu'elle partage. Désactiver demande confirmation et retire les détails tout de suite ; le réactiver redemande l'autorisation.",
-          "🤝 Invitations : celui qui reçoit la demande voit qui l'a envoyée et ce qui est demandé, et décide de ce qu'il partage.",
-          "👥 Onglet Amis dans les Classements : vos personnages et les personnes de votre VIP List, triés par level ou par XP gagnée sur 30/90 jours."] },
-        "ru": { "title": "VIP List и вкладка «Друзья»", "changes": [
-          "⭐ VIP List: добавьте любой ник и следите за основным (профессия, уровень, HP, мана, кап, XP за 30 и 90 дней и охоты за 30 дней). Вы запрашиваете то, что хотите видеть; человек принимает или отклоняет, выбирая, чем делиться. Выключение просит подтверждения и сразу убирает подробности; повторное включение снова требует разрешения.",
-          "🤝 Приглашения: получатель запроса видит, кто спросил и что именно, и решает, чем поделиться.",
-          "👥 Вкладка «Друзья» в рейтингах: ваши персонажи и люди из VIP List, по уровню или по XP за 30/90 дней."] }
+        "en": {
+          "title": "VIP List and Friends tab",
+          "changes": [
+            "⭐ VIP List: add any nick and follow the basics (vocation, level, HP, mana, cap, XP gained in 30 and 90 days and hunts in 30 days). You ask for what you want to see; the other person accepts or declines, choosing what to share. Turning it off asks for confirmation and removes the details at once; turning it back on asks permission again.",
+            "🤝 Invitations: whoever receives a request sees who asked and what was asked, and decides what to share.",
+            "👥 Friends tab in Rankings: your characters and the people on your VIP List, sorted by level or XP gained in 30/90 days."
+          ]
+        },
+        "es": {
+          "title": "VIP List y pestaña Amigos",
+          "changes": [
+            "⭐ VIP List: agrega cualquier nick y sigue lo básico (vocación, level, HP, mana, cap, XP ganado en 30 y 90 días y hunts en 30 días). Pides lo que quieres ver; la otra persona acepta o rechaza, eligiendo qué compartir. Desactivarlo pide confirmación y quita los detalles al instante; volver a activarlo pide permiso de nuevo.",
+            "🤝 Invitaciones: quien recibe la solicitud ve quién la envió y qué pidió, y decide qué liberar.",
+            "👥 Pestaña Amigos en Rankings: tus personajes y quienes están en tu VIP List, ordenados por level o por XP ganado en 30/90 días."
+          ]
+        },
+        "ja": {
+          "title": "VIP Listとフレンドタブ",
+          "changes": [
+            "⭐ VIP List：任意のキャラクター名を追加し、基本情報（職業・レベル・HP・マナ・キャップ・30日・90日の獲得XP・30日のハント数）をフォローできます。見たい項目を申請し、相手が承諾・拒否して共有範囲を選びます。オフにすると確認が出て、詳細はすぐ消えます。再びオンにするには改めて許可が必要です。",
+            "🤝 招待：申請を受けた人は、誰がどの項目を求めたかを確認し、共有する内容を決めます。",
+            "👥 ランキングのフレンドタブ：自分のキャラクターとVIP Listの人を、レベルまたは30日・90日の獲得XPで並べます。"
+          ]
+        },
+        "de": {
+          "title": "VIP-Liste und Freunde-Tab",
+          "changes": [
+            "⭐ VIP-Liste: Füge einen beliebigen Nick hinzu und verfolge die Grundinfos (Beruf, Level, HP, Mana, Kapazität, in 30 und 90 Tagen gewonnene XP und Hunts in 30 Tagen). Du bittest um das, was du sehen willst; die Person akzeptiert oder lehnt ab und wählt, was sie teilt. Ausschalten fragt nach Bestätigung und entfernt die Details sofort; wieder einschalten braucht erneut eine Erlaubnis.",
+            "🤝 Einladungen: Wer die Anfrage erhält, sieht, wer gefragt hat und was, und entscheidet, was freigegeben wird.",
+            "👥 Freunde-Tab in den Ranglisten: deine Charaktere und die Personen auf deiner VIP-Liste, sortiert nach Level oder nach XP der letzten 30/90 Tage."
+          ]
+        },
+        "pl": {
+          "title": "Lista VIP i zakładka Znajomi",
+          "changes": [
+            "⭐ Lista VIP: dodaj dowolny nick i śledź podstawowe dane (zawód, level, HP, manę, cap, XP zdobyte w 30 i 90 dni oraz hunty w 30 dni). Prosisz o to, co chcesz widzieć; druga osoba akceptuje lub odrzuca, wybierając, co udostępnia. Wyłączenie wymaga potwierdzenia i od razu usuwa szczegóły; ponowne włączenie wymaga nowej zgody.",
+            "🤝 Zaproszenia: kto dostaje prośbę, widzi, kto ją wysłał i o co prosi, i decyduje, co udostępnić.",
+            "👥 Zakładka Znajomi w Rankingach: twoje postacie i osoby z listy VIP, posortowane według levelu lub XP zdobytego w 30/90 dni."
+          ]
+        },
+        "fr": {
+          "title": "VIP List et onglet Amis",
+          "changes": [
+            "⭐ VIP List : ajoutez n'importe quel nick et suivez l'essentiel (vocation, level, HP, mana, cap, XP gagnée sur 30 et 90 jours et hunts sur 30 jours). Vous demandez ce que vous voulez voir ; l'autre personne accepte ou refuse, en choisissant ce qu'elle partage. Désactiver demande confirmation et retire les détails tout de suite ; le réactiver redemande l'autorisation.",
+            "🤝 Invitations : celui qui reçoit la demande voit qui l'a envoyée et ce qui est demandé, et décide de ce qu'il partage.",
+            "👥 Onglet Amis dans les Classements : vos personnages et les personnes de votre VIP List, triés par level ou par XP gagnée sur 30/90 jours."
+          ]
+        },
+        "ru": {
+          "title": "VIP List и вкладка «Друзья»",
+          "changes": [
+            "⭐ VIP List: добавьте любой ник и следите за основным (профессия, уровень, HP, мана, кап, XP за 30 и 90 дней и охоты за 30 дней). Вы запрашиваете то, что хотите видеть; человек принимает или отклоняет, выбирая, чем делиться. Выключение просит подтверждения и сразу убирает подробности; повторное включение снова требует разрешения.",
+            "🤝 Приглашения: получатель запроса видит, кто спросил и что именно, и решает, чем поделиться.",
+            "👥 Вкладка «Друзья» в рейтингах: ваши персонажи и люди из VIP List, по уровню или по XP за 30/90 дней."
+          ]
+        }
       }
     },
     {
@@ -262,20 +472,48 @@
         "📊 Em todo o ranking, XP sempre é o ganho dos últimos 30 ou 90 dias. O XP total do personagem saiu das telas, e a aba Geral não tem mais a métrica de XP total."
       ],
       "tr": {
-        "en": { "title": "XP only as a 30 and 90 day gain", "changes": [
-          "📊 Everywhere in the rankings, XP is always the gain over the last 30 or 90 days. The character's total XP was removed from the screens, and the General tab no longer has a total XP metric."] },
-        "es": { "title": "XP solo como ganancia de 30 y 90 días", "changes": [
-          "📊 En todo el ranking, el XP siempre es la ganancia de los últimos 30 o 90 días. El XP total del personaje salió de las pantallas, y la pestaña General ya no tiene la métrica de XP total."] },
-        "ja": { "title": "XPは30日・90日の増加量だけ", "changes": [
-          "📊 ランキングのXPは、常に直近30日または90日の増加量です。キャラクターの累計XPは画面から消え、総合タブにも累計XPの項目はありません。"] },
-        "de": { "title": "XP nur als Zuwachs in 30 und 90 Tagen", "changes": [
-          "📊 In der gesamten Rangliste ist XP immer der Zuwachs der letzten 30 oder 90 Tage. Die Gesamt-XP des Charakters wurde aus den Ansichten entfernt, und der Tab Gesamt hat keine Gesamt-XP-Kennzahl mehr."] },
-        "pl": { "title": "XP tylko jako przyrost z 30 i 90 dni", "changes": [
-          "📊 W całym rankingu XP to zawsze przyrost z ostatnich 30 lub 90 dni. Łączne XP postaci zniknęło z ekranów, a zakładka Ogólny nie ma już wskaźnika łącznego XP."] },
-        "fr": { "title": "XP uniquement comme gain sur 30 et 90 jours", "changes": [
-          "📊 Dans tout le classement, l'XP est toujours le gain des 30 ou 90 derniers jours. L'XP totale du personnage a disparu des écrans, et l'onglet Général n'a plus de métrique d'XP totale."] },
-        "ru": { "title": "XP только как прирост за 30 и 90 дней", "changes": [
-          "📊 Во всём рейтинге XP — это всегда прирост за последние 30 или 90 дней. Общий XP персонажа убран с экранов, а во вкладке «Общий» больше нет показателя общего XP."] }
+        "en": {
+          "title": "XP only as a 30 and 90 day gain",
+          "changes": [
+            "📊 Everywhere in the rankings, XP is always the gain over the last 30 or 90 days. The character's total XP was removed from the screens, and the General tab no longer has a total XP metric."
+          ]
+        },
+        "es": {
+          "title": "XP solo como ganancia de 30 y 90 días",
+          "changes": [
+            "📊 En todo el ranking, el XP siempre es la ganancia de los últimos 30 o 90 días. El XP total del personaje salió de las pantallas, y la pestaña General ya no tiene la métrica de XP total."
+          ]
+        },
+        "ja": {
+          "title": "XPは30日・90日の増加量だけ",
+          "changes": [
+            "📊 ランキングのXPは、常に直近30日または90日の増加量です。キャラクターの累計XPは画面から消え、総合タブにも累計XPの項目はありません。"
+          ]
+        },
+        "de": {
+          "title": "XP nur als Zuwachs in 30 und 90 Tagen",
+          "changes": [
+            "📊 In der gesamten Rangliste ist XP immer der Zuwachs der letzten 30 oder 90 Tage. Die Gesamt-XP des Charakters wurde aus den Ansichten entfernt, und der Tab Gesamt hat keine Gesamt-XP-Kennzahl mehr."
+          ]
+        },
+        "pl": {
+          "title": "XP tylko jako przyrost z 30 i 90 dni",
+          "changes": [
+            "📊 W całym rankingu XP to zawsze przyrost z ostatnich 30 lub 90 dni. Łączne XP postaci zniknęło z ekranów, a zakładka Ogólny nie ma już wskaźnika łącznego XP."
+          ]
+        },
+        "fr": {
+          "title": "XP uniquement comme gain sur 30 et 90 jours",
+          "changes": [
+            "📊 Dans tout le classement, l'XP est toujours le gain des 30 ou 90 derniers jours. L'XP totale du personnage a disparu des écrans, et l'onglet Général n'a plus de métrique d'XP totale."
+          ]
+        },
+        "ru": {
+          "title": "XP только как прирост за 30 и 90 дней",
+          "changes": [
+            "📊 Во всём рейтинге XP — это всегда прирост за последние 30 или 90 дней. Общий XP персонажа убран с экранов, а во вкладке «Общий» больше нет показателя общего XP."
+          ]
+        }
       }
     },
     {
@@ -283,31 +521,59 @@
       "date": "2026-11-22",
       "title": "Rankings em abas e ficha do jogador",
       "changes": [
-        "🥇 O menu agora se chama Rankings, com duas abas: Usuários do Artemis (XP ganha em 30 e 90 dias) e Geral (top 1000 de todos os mundos, por level, skills e demais métricas, em páginas de 100).",
+        "🥇 O menu agora se chama Rankings, com duas abas: Usuários do 4rt3mi5 (XP ganha em 30 e 90 dias) e Geral (top 1000 de todos os mundos, por level, skills e demais métricas, em páginas de 100).",
         "👤 Clique no nome de um jogador acompanhado para ver a ficha: vocação, level, HP, mana e cap calculados pela regra do jogo (a partir do level 8), XP ganha e gráficos de XP diária, mensal e trimestral, a partir de 21/11/2026, e as alterações recentes de skills e achievements."
       ],
       "tr": {
-        "en": { "title": "Rankings in tabs and player profile", "changes": [
-          "🥇 The menu is now called Rankings, with two tabs: Artemis users (XP gained in 30 and 90 days) and General (top 1000 across all worlds, by level, skills and other metrics, in pages of 100).",
-          "👤 Click a tracked player's name to see the profile: vocation, level, HP, mana and cap calculated by the game's rules (from level 8), XP gained and daily, monthly and quarterly XP charts from 21/11/2026, and recent skill and achievement changes."] },
-        "es": { "title": "Rankings por pestañas y ficha del jugador", "changes": [
-          "🥇 El menú ahora se llama Rankings, con dos pestañas: Usuarios de Artemis (XP ganado en 30 y 90 días) y General (top 1000 de todos los mundos, por level, skills y demás métricas, en páginas de 100).",
-          "👤 Haz clic en el nombre de un jugador seguido para ver la ficha: vocación, level, HP, mana y cap calculados con la regla del juego (desde el level 8), XP ganado y gráficos de XP diaria, mensual y trimestral desde el 21/11/2026, y los cambios recientes de skills y achievements."] },
-        "ja": { "title": "タブ式のランキングとプロフィール", "changes": [
-          "🥇 メニューは「Rankings」になり、2つのタブがあります：Artemisユーザー（30日・90日で得たXP）と総合（全ワールドのトップ1000、レベル・スキルなど、100件ずつのページ）。",
-          "👤 追跡中のプレイヤー名をクリックするとプロフィールが開きます：職業、レベル、HP、マナ、キャップ（ゲームのルールで計算、レベル8以上）、獲得XP、2026/11/21以降の日次・月次・四半期のXPグラフ、最近のスキル・アチーブメントの変化。"] },
-        "de": { "title": "Ranglisten in Tabs und Spielerprofil", "changes": [
-          "🥇 Das Menü heißt jetzt Rangliste, mit zwei Tabs: Artemis-Nutzer (in 30 und 90 Tagen gewonnene XP) und Gesamt (Top 1000 aller Welten nach Level, Skills und weiteren Werten, in Seiten zu 100).",
-          "👤 Klicke auf den Namen eines beobachteten Spielers, um das Profil zu sehen: Beruf, Level, HP, Mana und Kapazität nach den Spielregeln berechnet (ab Level 8), gewonnene XP und Diagramme der täglichen, monatlichen und vierteljährlichen XP ab 21.11.2026 sowie letzte Änderungen bei Skills und Achievements."] },
-        "pl": { "title": "Rankingi w zakładkach i karta gracza", "changes": [
-          "🥇 Menu nazywa się teraz Rankingi, z dwiema zakładkami: Użytkownicy Artemis (XP zdobyte w 30 i 90 dni) oraz Ogólny (top 1000 ze wszystkich światów, według levelu, umiejętności i innych wartości, po 100 na stronę).",
-          "👤 Kliknij imię śledzonego gracza, aby zobaczyć kartę: zawód, level, HP, manę i cap obliczone wg zasad gry (od levelu 8), zdobyte XP oraz wykresy dziennego, miesięcznego i kwartalnego XP od 21.11.2026 i ostatnie zmiany umiejętności i achievementów."] },
-        "fr": { "title": "Classements en onglets et fiche du joueur", "changes": [
-          "🥇 Le menu s'appelle maintenant Classements, avec deux onglets : Utilisateurs d'Artemis (XP gagnée sur 30 et 90 jours) et Général (top 1000 de tous les mondes, par level, compétences et autres métriques, par pages de 100).",
-          "👤 Cliquez sur le nom d'un joueur suivi pour voir sa fiche : vocation, level, HP, mana et cap calculés selon les règles du jeu (à partir du level 8), XP gagnée et graphiques de l'XP quotidienne, mensuelle et trimestrielle depuis le 21/11/2026, et les changements récents de compétences et d'achievements."] },
-        "ru": { "title": "Рейтинги с вкладками и карточка игрока", "changes": [
-          "🥇 Меню теперь называется «Рейтинги», с двумя вкладками: Пользователи Artemis (XP за 30 и 90 дней) и Общий (топ-1000 по всем мирам, по уровню, навыкам и прочим показателям, по 100 на странице).",
-          "👤 Нажмите на имя отслеживаемого игрока, чтобы открыть карточку: профессия, уровень, HP, мана и кап, рассчитанные по правилам игры (с 8 уровня), полученный XP и графики дневного, месячного и квартального XP с 21.11.2026, а также последние изменения навыков и достижений."] }
+        "en": {
+          "title": "Rankings in tabs and player profile",
+          "changes": [
+            "🥇 The menu is now called Rankings, with two tabs: Artemis users (XP gained in 30 and 90 days) and General (top 1000 across all worlds, by level, skills and other metrics, in pages of 100).",
+            "👤 Click a tracked player's name to see the profile: vocation, level, HP, mana and cap calculated by the game's rules (from level 8), XP gained and daily, monthly and quarterly XP charts from 21/11/2026, and recent skill and achievement changes."
+          ]
+        },
+        "es": {
+          "title": "Rankings por pestañas y ficha del jugador",
+          "changes": [
+            "🥇 El menú ahora se llama Rankings, con dos pestañas: Usuarios de Artemis (XP ganado en 30 y 90 días) y General (top 1000 de todos los mundos, por level, skills y demás métricas, en páginas de 100).",
+            "👤 Haz clic en el nombre de un jugador seguido para ver la ficha: vocación, level, HP, mana y cap calculados con la regla del juego (desde el level 8), XP ganado y gráficos de XP diaria, mensual y trimestral desde el 21/11/2026, y los cambios recientes de skills y achievements."
+          ]
+        },
+        "ja": {
+          "title": "タブ式のランキングとプロフィール",
+          "changes": [
+            "🥇 メニューは「Rankings」になり、2つのタブがあります：Artemisユーザー（30日・90日で得たXP）と総合（全ワールドのトップ1000、レベル・スキルなど、100件ずつのページ）。",
+            "👤 追跡中のプレイヤー名をクリックするとプロフィールが開きます：職業、レベル、HP、マナ、キャップ（ゲームのルールで計算、レベル8以上）、獲得XP、2026/11/21以降の日次・月次・四半期のXPグラフ、最近のスキル・アチーブメントの変化。"
+          ]
+        },
+        "de": {
+          "title": "Ranglisten in Tabs und Spielerprofil",
+          "changes": [
+            "🥇 Das Menü heißt jetzt Rangliste, mit zwei Tabs: Artemis-Nutzer (in 30 und 90 Tagen gewonnene XP) und Gesamt (Top 1000 aller Welten nach Level, Skills und weiteren Werten, in Seiten zu 100).",
+            "👤 Klicke auf den Namen eines beobachteten Spielers, um das Profil zu sehen: Beruf, Level, HP, Mana und Kapazität nach den Spielregeln berechnet (ab Level 8), gewonnene XP und Diagramme der täglichen, monatlichen und vierteljährlichen XP ab 21.11.2026 sowie letzte Änderungen bei Skills und Achievements."
+          ]
+        },
+        "pl": {
+          "title": "Rankingi w zakładkach i karta gracza",
+          "changes": [
+            "🥇 Menu nazywa się teraz Rankingi, z dwiema zakładkami: Użytkownicy Artemis (XP zdobyte w 30 i 90 dni) oraz Ogólny (top 1000 ze wszystkich światów, według levelu, umiejętności i innych wartości, po 100 na stronę).",
+            "👤 Kliknij imię śledzonego gracza, aby zobaczyć kartę: zawód, level, HP, manę i cap obliczone wg zasad gry (od levelu 8), zdobyte XP oraz wykresy dziennego, miesięcznego i kwartalnego XP od 21.11.2026 i ostatnie zmiany umiejętności i achievementów."
+          ]
+        },
+        "fr": {
+          "title": "Classements en onglets et fiche du joueur",
+          "changes": [
+            "🥇 Le menu s'appelle maintenant Classements, avec deux onglets : Utilisateurs d'Artemis (XP gagnée sur 30 et 90 jours) et Général (top 1000 de tous les mondes, par level, compétences et autres métriques, par pages de 100).",
+            "👤 Cliquez sur le nom d'un joueur suivi pour voir sa fiche : vocation, level, HP, mana et cap calculés selon les règles du jeu (à partir du level 8), XP gagnée et graphiques de l'XP quotidienne, mensuelle et trimestrielle depuis le 21/11/2026, et les changements récents de compétences et d'achievements."
+          ]
+        },
+        "ru": {
+          "title": "Рейтинги с вкладками и карточка игрока",
+          "changes": [
+            "🥇 Меню теперь называется «Рейтинги», с двумя вкладками: Пользователи Artemis (XP за 30 и 90 дней) и Общий (топ-1000 по всем мирам, по уровню, навыкам и прочим показателям, по 100 на странице).",
+            "👤 Нажмите на имя отслеживаемого игрока, чтобы открыть карточку: профессия, уровень, HP, мана и кап, рассчитанные по правилам игры (с 8 уровня), полученный XP и графики дневного, месячного и квартального XP с 21.11.2026, а также последние изменения навыков и достижений."
+          ]
+        }
       }
     },
     {
@@ -320,34 +586,62 @@
         "📊 O painel de admin mostra quanto tempo levou a primeira carga, a última atualização e a média."
       ],
       "tr": {
-        "en": { "title": "Scan of all worlds", "changes": [
-          "🌍 Every day at 09:00 (Brasília) the site scans the highscores of all 90 worlds (XP and skills) and compares with the day before: going up shows green +, going down shows red.",
-          "🔁 World change: when a tracked player moves to another world, it counts as 1 world change.",
-          "📊 The admin panel shows how long the first load took, the last update and the average."] },
-        "es": { "title": "Escaneo de todos los mundos", "changes": [
-          "🌍 Todos los días a las 09:00 (Brasilia) el sitio escanea el highscore de los 90 mundos (XP y skills) y compara con el día anterior: si sube aparece en verde +, si baja en rojo.",
-          "🔁 Cambio de mundo: cuando un seguido cambia de mundo, cuenta como 1 cambio de mundo.",
-          "📊 El panel de admin muestra cuánto tardó la primera carga, la última actualización y el promedio."] },
-        "ja": { "title": "全ワールドのスキャン", "changes": [
-          "🌍 毎日 09:00（ブラジリア時間）に全90ワールドのハイスコア（XPとスキル）をスキャンし、前日と比較します。上がれば緑の +、下がれば赤で表示。",
-          "🔁 ワールド移動：追跡中のキャラクターが別のワールドに移ると、ワールド移動が1回と数えられます。",
-          "📊 管理画面に、初回読み込み、直近の更新、平均の所要時間を表示します。"] },
-        "de": { "title": "Abgleich aller Welten", "changes": [
-          "🌍 Jeden Tag um 09:00 Uhr (Brasília) liest die Seite die Highscores aller 90 Welten (XP und Skills) und vergleicht mit dem Vortag: Anstieg grün +, Rückgang rot.",
-          "🔁 Weltwechsel: Wechselt ein beobachteter Charakter die Welt, zählt das als 1 Weltwechsel.",
-          "📊 Das Admin-Panel zeigt, wie lange der erste Lauf, das letzte Update und der Durchschnitt gedauert haben."] },
-        "pl": { "title": "Skanowanie wszystkich światów", "changes": [
-          "🌍 Codziennie o 09:00 (Brasília) strona skanuje highscore wszystkich 90 światów (XP i umiejętności) i porównuje z dniem poprzednim: wzrost zielony +, spadek czerwony.",
-          "🔁 Zmiana świata: gdy śledzona postać przechodzi do innego świata, liczy się to jako 1 zmiana świata.",
-          "📊 Panel admina pokazuje, ile trwało pierwsze ładowanie, ostatnia aktualizacja i średnia."] },
-        "fr": { "title": "Analyse de tous les mondes", "changes": [
-          "🌍 Chaque jour à 09h00 (Brasília), le site analyse le highscore des 90 mondes (XP et compétences) et compare avec la veille : hausse en vert +, baisse en rouge.",
-          "🔁 Changement de monde : quand un personnage suivi change de monde, cela compte comme 1 changement de monde.",
-          "📊 Le panneau admin affiche la durée du premier chargement, de la dernière mise à jour et la moyenne."] },
-        "ru": { "title": "Сканирование всех миров", "changes": [
-          "🌍 Каждый день в 09:00 (Бразилиа) сайт сканирует хайскоры всех 90 миров (XP и навыки) и сравнивает с предыдущим днём: рост — зелёный +, падение — красный.",
-          "🔁 Смена мира: когда отслеживаемый персонаж переходит в другой мир, это считается как 1 смена мира.",
-          "📊 Панель админа показывает, сколько заняла первая загрузка, последнее обновление и среднее время."] }
+        "en": {
+          "title": "Scan of all worlds",
+          "changes": [
+            "🌍 Every day at 09:00 (Brasília) the site scans the highscores of all 90 worlds (XP and skills) and compares with the day before: going up shows green +, going down shows red.",
+            "🔁 World change: when a tracked player moves to another world, it counts as 1 world change.",
+            "📊 The admin panel shows how long the first load took, the last update and the average."
+          ]
+        },
+        "es": {
+          "title": "Escaneo de todos los mundos",
+          "changes": [
+            "🌍 Todos los días a las 09:00 (Brasilia) el sitio escanea el highscore de los 90 mundos (XP y skills) y compara con el día anterior: si sube aparece en verde +, si baja en rojo.",
+            "🔁 Cambio de mundo: cuando un seguido cambia de mundo, cuenta como 1 cambio de mundo.",
+            "📊 El panel de admin muestra cuánto tardó la primera carga, la última actualización y el promedio."
+          ]
+        },
+        "ja": {
+          "title": "全ワールドのスキャン",
+          "changes": [
+            "🌍 毎日 09:00（ブラジリア時間）に全90ワールドのハイスコア（XPとスキル）をスキャンし、前日と比較します。上がれば緑の +、下がれば赤で表示。",
+            "🔁 ワールド移動：追跡中のキャラクターが別のワールドに移ると、ワールド移動が1回と数えられます。",
+            "📊 管理画面に、初回読み込み、直近の更新、平均の所要時間を表示します。"
+          ]
+        },
+        "de": {
+          "title": "Abgleich aller Welten",
+          "changes": [
+            "🌍 Jeden Tag um 09:00 Uhr (Brasília) liest die Seite die Highscores aller 90 Welten (XP und Skills) und vergleicht mit dem Vortag: Anstieg grün +, Rückgang rot.",
+            "🔁 Weltwechsel: Wechselt ein beobachteter Charakter die Welt, zählt das als 1 Weltwechsel.",
+            "📊 Das Admin-Panel zeigt, wie lange der erste Lauf, das letzte Update und der Durchschnitt gedauert haben."
+          ]
+        },
+        "pl": {
+          "title": "Skanowanie wszystkich światów",
+          "changes": [
+            "🌍 Codziennie o 09:00 (Brasília) strona skanuje highscore wszystkich 90 światów (XP i umiejętności) i porównuje z dniem poprzednim: wzrost zielony +, spadek czerwony.",
+            "🔁 Zmiana świata: gdy śledzona postać przechodzi do innego świata, liczy się to jako 1 zmiana świata.",
+            "📊 Panel admina pokazuje, ile trwało pierwsze ładowanie, ostatnia aktualizacja i średnia."
+          ]
+        },
+        "fr": {
+          "title": "Analyse de tous les mondes",
+          "changes": [
+            "🌍 Chaque jour à 09h00 (Brasília), le site analyse le highscore des 90 mondes (XP et compétences) et compare avec la veille : hausse en vert +, baisse en rouge.",
+            "🔁 Changement de monde : quand un personnage suivi change de monde, cela compte comme 1 changement de monde.",
+            "📊 Le panneau admin affiche la durée du premier chargement, de la dernière mise à jour et la moyenne."
+          ]
+        },
+        "ru": {
+          "title": "Сканирование всех миров",
+          "changes": [
+            "🌍 Каждый день в 09:00 (Бразилиа) сайт сканирует хайскоры всех 90 миров (XP и навыки) и сравнивает с предыдущим днём: рост — зелёный +, падение — красный.",
+            "🔁 Смена мира: когда отслеживаемый персонаж переходит в другой мир, это считается как 1 смена мира.",
+            "📊 Панель админа показывает, сколько заняла первая загрузка, последнее обновление и среднее время."
+          ]
+        }
       }
     },
     {
@@ -358,20 +652,48 @@
         "👥 O ranking de XP agora também traz os personagens que aparecem nas hunts de party (Party Hunt Analyser), além dos cadastrados no site. Eles entram no snapshot das 09h junto com os demais."
       ],
       "tr": {
-        "en": { "title": "XP ranking with party members", "changes": [
-          "👥 The XP ranking now also includes the characters that appear in party hunts (Party Hunt Analyser), besides the ones registered on the site. They join the 09:00 snapshot with the rest."] },
-        "es": { "title": "Ranking de XP con quienes están en parties", "changes": [
-          "👥 El ranking de XP ahora también incluye los personajes que aparecen en las hunts de party (Party Hunt Analyser), además de los registrados en el sitio. Entran en el snapshot de las 09:00 junto con los demás."] },
-        "ja": { "title": "パーティのメンバーを含むXPランキング", "changes": [
-          "👥 XPランキングに、サイト登録者に加えてパーティ狩り（Party Hunt Analyser）に出てくるキャラクターも含まれるようになりました。09:00のスナップショットに他の人と一緒に入ります。"] },
-        "de": { "title": "XP-Rangliste mit Party-Mitgliedern", "changes": [
-          "👥 Die XP-Rangliste enthält jetzt auch die Charaktere aus Party-Jagden (Party Hunt Analyser), zusätzlich zu den auf der Seite registrierten. Sie kommen mit den übrigen in die Momentaufnahme um 09:00 Uhr."] },
-        "pl": { "title": "Ranking XP z członkami party", "changes": [
-          "👥 Ranking XP obejmuje teraz także postacie z polowań party (Party Hunt Analyser), oprócz zarejestrowanych na stronie. Trafiają do zapisu o 09:00 razem z resztą."] },
-        "fr": { "title": "Classement XP avec les membres des parties", "changes": [
-          "👥 Le classement XP inclut désormais aussi les personnages qui apparaissent dans les chasses en party (Party Hunt Analyser), en plus de ceux inscrits sur le site. Ils entrent dans l'instantané de 09h00 avec les autres."] },
-        "ru": { "title": "Рейтинг XP с участниками пати", "changes": [
-          "👥 В рейтинг XP теперь попадают и персонажи из охоты в пати (Party Hunt Analyser), помимо зарегистрированных на сайте. Они попадают в снимок в 09:00 вместе с остальными."] }
+        "en": {
+          "title": "XP ranking with party members",
+          "changes": [
+            "👥 The XP ranking now also includes the characters that appear in party hunts (Party Hunt Analyser), besides the ones registered on the site. They join the 09:00 snapshot with the rest."
+          ]
+        },
+        "es": {
+          "title": "Ranking de XP con quienes están en parties",
+          "changes": [
+            "👥 El ranking de XP ahora también incluye los personajes que aparecen en las hunts de party (Party Hunt Analyser), además de los registrados en el sitio. Entran en el snapshot de las 09:00 junto con los demás."
+          ]
+        },
+        "ja": {
+          "title": "パーティのメンバーを含むXPランキング",
+          "changes": [
+            "👥 XPランキングに、サイト登録者に加えてパーティ狩り（Party Hunt Analyser）に出てくるキャラクターも含まれるようになりました。09:00のスナップショットに他の人と一緒に入ります。"
+          ]
+        },
+        "de": {
+          "title": "XP-Rangliste mit Party-Mitgliedern",
+          "changes": [
+            "👥 Die XP-Rangliste enthält jetzt auch die Charaktere aus Party-Jagden (Party Hunt Analyser), zusätzlich zu den auf der Seite registrierten. Sie kommen mit den übrigen in die Momentaufnahme um 09:00 Uhr."
+          ]
+        },
+        "pl": {
+          "title": "Ranking XP z członkami party",
+          "changes": [
+            "👥 Ranking XP obejmuje teraz także postacie z polowań party (Party Hunt Analyser), oprócz zarejestrowanych na stronie. Trafiają do zapisu o 09:00 razem z resztą."
+          ]
+        },
+        "fr": {
+          "title": "Classement XP avec les membres des parties",
+          "changes": [
+            "👥 Le classement XP inclut désormais aussi les personnages qui apparaissent dans les chasses en party (Party Hunt Analyser), en plus de ceux inscrits sur le site. Ils entrent dans l'instantané de 09h00 avec les autres."
+          ]
+        },
+        "ru": {
+          "title": "Рейтинг XP с участниками пати",
+          "changes": [
+            "👥 В рейтинг XP теперь попадают и персонажи из охоты в пати (Party Hunt Analyser), помимо зарегистрированных на сайте. Они попадают в снимок в 09:00 вместе с остальными."
+          ]
+        }
       }
     },
     {
@@ -383,27 +705,55 @@
         "🔄 O primeiro XP de todos os cadastrados pode ser guardado na hora, sem esperar as 09h, para o ranking já ter dados."
       ],
       "tr": {
-        "en": { "title": "XP ranking: layout adjusted for phones", "changes": [
-          "📱 The XP ranking table fits on phone screens, with the gain highlighted and the details under each name.",
-          "🔄 Everyone's first XP can be saved right away, without waiting for 09:00, so the ranking has data."] },
-        "es": { "title": "Ranking de XP: diseño ajustado para el celular", "changes": [
-          "📱 La tabla del ranking de XP cabe en la pantalla del celular, con la ganancia destacada y los detalles debajo de cada nombre.",
-          "🔄 El primer XP de todos puede guardarse al momento, sin esperar a las 09:00, para que el ranking ya tenga datos."] },
-        "ja": { "title": "XPランキング：スマホ向けに調整", "changes": [
-          "📱 XPランキングの表がスマホの画面に収まり、増加量を強調し、各名前の下に詳細を表示します。",
-          "🔄 全員の最初のXPを09:00を待たずにすぐ保存できるので、ランキングにすぐデータが入ります。"] },
-        "de": { "title": "XP-Rangliste: Ansicht für Handys angepasst", "changes": [
-          "📱 Die XP-Rangliste passt auf den Handybildschirm; der Zuwachs ist hervorgehoben und die Details stehen unter jedem Namen.",
-          "🔄 Der erste XP-Stand aller kann sofort gespeichert werden, ohne auf 09:00 zu warten, damit die Rangliste sofort Daten hat."] },
-        "pl": { "title": "Ranking XP: układ dostosowany do telefonu", "changes": [
-          "📱 Tabela rankingu XP mieści się na ekranie telefonu; przyrost jest wyróżniony, a szczegóły są pod każdym imieniem.",
-          "🔄 Pierwsze XP wszystkich można zapisać od razu, bez czekania do 09:00, żeby ranking od razu miał dane."] },
-        "fr": { "title": "Classement XP : mise en page adaptée au téléphone", "changes": [
-          "📱 Le tableau du classement XP tient sur l'écran du téléphone, avec le gain en évidence et les détails sous chaque nom.",
-          "🔄 Le premier XP de chacun peut être enregistré tout de suite, sans attendre 09h00, pour que le classement ait déjà des données."] },
-        "ru": { "title": "Рейтинг XP: вид адаптирован для телефона", "changes": [
-          "📱 Таблица рейтинга XP помещается на экран телефона: прирост выделен, а детали — под каждым именем.",
-          "🔄 Первый XP всех можно сохранить сразу, не дожидаясь 09:00, чтобы в рейтинге сразу были данные."] }
+        "en": {
+          "title": "XP ranking: layout adjusted for phones",
+          "changes": [
+            "📱 The XP ranking table fits on phone screens, with the gain highlighted and the details under each name.",
+            "🔄 Everyone's first XP can be saved right away, without waiting for 09:00, so the ranking has data."
+          ]
+        },
+        "es": {
+          "title": "Ranking de XP: diseño ajustado para el celular",
+          "changes": [
+            "📱 La tabla del ranking de XP cabe en la pantalla del celular, con la ganancia destacada y los detalles debajo de cada nombre.",
+            "🔄 El primer XP de todos puede guardarse al momento, sin esperar a las 09:00, para que el ranking ya tenga datos."
+          ]
+        },
+        "ja": {
+          "title": "XPランキング：スマホ向けに調整",
+          "changes": [
+            "📱 XPランキングの表がスマホの画面に収まり、増加量を強調し、各名前の下に詳細を表示します。",
+            "🔄 全員の最初のXPを09:00を待たずにすぐ保存できるので、ランキングにすぐデータが入ります。"
+          ]
+        },
+        "de": {
+          "title": "XP-Rangliste: Ansicht für Handys angepasst",
+          "changes": [
+            "📱 Die XP-Rangliste passt auf den Handybildschirm; der Zuwachs ist hervorgehoben und die Details stehen unter jedem Namen.",
+            "🔄 Der erste XP-Stand aller kann sofort gespeichert werden, ohne auf 09:00 zu warten, damit die Rangliste sofort Daten hat."
+          ]
+        },
+        "pl": {
+          "title": "Ranking XP: układ dostosowany do telefonu",
+          "changes": [
+            "📱 Tabela rankingu XP mieści się na ekranie telefonu; przyrost jest wyróżniony, a szczegóły są pod każdym imieniem.",
+            "🔄 Pierwsze XP wszystkich można zapisać od razu, bez czekania do 09:00, żeby ranking od razu miał dane."
+          ]
+        },
+        "fr": {
+          "title": "Classement XP : mise en page adaptée au téléphone",
+          "changes": [
+            "📱 Le tableau du classement XP tient sur l'écran du téléphone, avec le gain en évidence et les détails sous chaque nom.",
+            "🔄 Le premier XP de chacun peut être enregistré tout de suite, sans attendre 09h00, pour que le classement ait déjà des données."
+          ]
+        },
+        "ru": {
+          "title": "Рейтинг XP: вид адаптирован для телефона",
+          "changes": [
+            "📱 Таблица рейтинга XP помещается на экран телефона: прирост выделен, а детали — под каждым именем.",
+            "🔄 Первый XP всех можно сохранить сразу, не дожидаясь 09:00, чтобы в рейтинге сразу были данные."
+          ]
+        }
       }
     },
     {
@@ -416,34 +766,62 @@
         "📝 Uma observação no topo do ranking explica isso. A parte com a data de 21/11/2026 some sozinha em 19/02/2027, 90 dias depois."
       ],
       "tr": {
-        "en": { "title": "XP ranking: daily snapshot and clear rules", "changes": [
-          "📊 The XP ranking now shows every character registered on the site, and each account sees its rank next to the other registered ones.",
-          "⏱️ XP is saved every day at 09:00 (Brasília time). The tracker only counts XP from the day each character is registered on the site, and for the 30 and 90 day windows only from 21/11/2026.",
-          "📝 A note at the top of the ranking explains this. The part with the 21/11/2026 date disappears by itself on 19/02/2027, 90 days later."] },
-        "es": { "title": "Ranking de XP: snapshot diario y reglas claras", "changes": [
-          "📊 El ranking de XP ahora muestra todos los personajes registrados en el sitio, y cada cuenta ve su rango junto a los demás registrados.",
-          "⏱️ El XP se guarda todos los días a las 09:00 (hora de Brasilia). El tracker solo cuenta el XP desde el día en que cada personaje se registra en el sitio, y para las ventanas de 30 y 90 días solo desde el 21/11/2026.",
-          "📝 Una nota arriba del ranking lo explica. La parte con la fecha 21/11/2026 desaparece sola el 19/02/2027, 90 días después."] },
-        "ja": { "title": "XPランキング：毎日のスナップショットと明確なルール", "changes": [
-          "📊 XPランキングにはサイトに登録された全キャラクターが表示され、各アカウントは他の登録者と並んで自分の順位を見られます。",
-          "⏱️ XPは毎日 09:00（ブラジリア時間）に保存されます。トラッカーは各キャラクターをサイトに登録した日からのXPだけを数え、30日・90日の期間は2026/11/21からのみ数えます。",
-          "📝 ランキング上部の注記で説明しています。2026/11/21 の日付の部分は、90日後の 2027/02/19 に自動で消えます。"] },
-        "de": { "title": "XP-Rangliste: tägliche Momentaufnahme und klare Regeln", "changes": [
-          "📊 Die XP-Rangliste zeigt jetzt alle auf der Seite registrierten Charaktere, und jedes Konto sieht seinen Rang neben den anderen Registrierten.",
-          "⏱️ XP wird jeden Tag um 09:00 Uhr (Brasília-Zeit) gespeichert. Der Tracker zählt XP nur ab dem Tag, an dem jeder Charakter auf der Seite registriert wurde, und für die 30- und 90-Tage-Zeiträume nur ab dem 21.11.2026.",
-          "📝 Ein Hinweis oben in der Rangliste erklärt das. Der Teil mit dem Datum 21.11.2026 verschwindet am 19.02.2027 von selbst, 90 Tage später."] },
-        "pl": { "title": "Ranking XP: dzienny zapis i jasne zasady", "changes": [
-          "📊 Ranking XP pokazuje teraz wszystkie postacie zarejestrowane na stronie, a każde konto widzi swoje miejsce obok pozostałych zarejestrowanych.",
-          "⏱️ XP zapisuje się codziennie o 09:00 (czas Brasílii). Tracker liczy XP tylko od dnia rejestracji każdej postaci na stronie, a dla okien 30 i 90 dni tylko od 21.11.2026.",
-          "📝 Notatka na górze rankingu to wyjaśnia. Część z datą 21.11.2026 znika sama 19.02.2027, 90 dni później."] },
-        "fr": { "title": "Classement XP : instantané quotidien et règles claires", "changes": [
-          "📊 Le classement XP affiche désormais tous les personnages inscrits sur le site, et chaque compte voit son rang à côté des autres inscrits.",
-          "⏱️ L'XP est enregistrée chaque jour à 09h00 (heure de Brasília). Le tracker ne compte l'XP qu'à partir du jour où chaque personnage est inscrit sur le site, et pour les fenêtres de 30 et 90 jours seulement à partir du 21/11/2026.",
-          "📝 Une note en haut du classement l'explique. La partie avec la date du 21/11/2026 disparaît d'elle-même le 19/02/2027, 90 jours plus tard."] },
-        "ru": { "title": "Рейтинг XP: ежедневный снимок и понятные правила", "changes": [
-          "📊 Рейтинг XP теперь показывает всех персонажей, зарегистрированных на сайте, и каждый аккаунт видит свою позицию рядом с другими зарегистрированными.",
-          "⏱️ XP сохраняется каждый день в 09:00 (время Бразилиа). Трекер считает XP только с дня регистрации каждого персонажа на сайте, а для окон 30 и 90 дней — только с 21.11.2026.",
-          "📝 Заметка вверху рейтинга объясняет это. Часть с датой 21.11.2026 исчезает сама 19.02.2027, через 90 дней."] }
+        "en": {
+          "title": "XP ranking: daily snapshot and clear rules",
+          "changes": [
+            "📊 The XP ranking now shows every character registered on the site, and each account sees its rank next to the other registered ones.",
+            "⏱️ XP is saved every day at 09:00 (Brasília time). The tracker only counts XP from the day each character is registered on the site, and for the 30 and 90 day windows only from 21/11/2026.",
+            "📝 A note at the top of the ranking explains this. The part with the 21/11/2026 date disappears by itself on 19/02/2027, 90 days later."
+          ]
+        },
+        "es": {
+          "title": "Ranking de XP: snapshot diario y reglas claras",
+          "changes": [
+            "📊 El ranking de XP ahora muestra todos los personajes registrados en el sitio, y cada cuenta ve su rango junto a los demás registrados.",
+            "⏱️ El XP se guarda todos los días a las 09:00 (hora de Brasilia). El tracker solo cuenta el XP desde el día en que cada personaje se registra en el sitio, y para las ventanas de 30 y 90 días solo desde el 21/11/2026.",
+            "📝 Una nota arriba del ranking lo explica. La parte con la fecha 21/11/2026 desaparece sola el 19/02/2027, 90 días después."
+          ]
+        },
+        "ja": {
+          "title": "XPランキング：毎日のスナップショットと明確なルール",
+          "changes": [
+            "📊 XPランキングにはサイトに登録された全キャラクターが表示され、各アカウントは他の登録者と並んで自分の順位を見られます。",
+            "⏱️ XPは毎日 09:00（ブラジリア時間）に保存されます。トラッカーは各キャラクターをサイトに登録した日からのXPだけを数え、30日・90日の期間は2026/11/21からのみ数えます。",
+            "📝 ランキング上部の注記で説明しています。2026/11/21 の日付の部分は、90日後の 2027/02/19 に自動で消えます。"
+          ]
+        },
+        "de": {
+          "title": "XP-Rangliste: tägliche Momentaufnahme und klare Regeln",
+          "changes": [
+            "📊 Die XP-Rangliste zeigt jetzt alle auf der Seite registrierten Charaktere, und jedes Konto sieht seinen Rang neben den anderen Registrierten.",
+            "⏱️ XP wird jeden Tag um 09:00 Uhr (Brasília-Zeit) gespeichert. Der Tracker zählt XP nur ab dem Tag, an dem jeder Charakter auf der Seite registriert wurde, und für die 30- und 90-Tage-Zeiträume nur ab dem 21.11.2026.",
+            "📝 Ein Hinweis oben in der Rangliste erklärt das. Der Teil mit dem Datum 21.11.2026 verschwindet am 19.02.2027 von selbst, 90 Tage später."
+          ]
+        },
+        "pl": {
+          "title": "Ranking XP: dzienny zapis i jasne zasady",
+          "changes": [
+            "📊 Ranking XP pokazuje teraz wszystkie postacie zarejestrowane na stronie, a każde konto widzi swoje miejsce obok pozostałych zarejestrowanych.",
+            "⏱️ XP zapisuje się codziennie o 09:00 (czas Brasílii). Tracker liczy XP tylko od dnia rejestracji każdej postaci na stronie, a dla okien 30 i 90 dni tylko od 21.11.2026.",
+            "📝 Notatka na górze rankingu to wyjaśnia. Część z datą 21.11.2026 znika sama 19.02.2027, 90 dni później."
+          ]
+        },
+        "fr": {
+          "title": "Classement XP : instantané quotidien et règles claires",
+          "changes": [
+            "📊 Le classement XP affiche désormais tous les personnages inscrits sur le site, et chaque compte voit son rang à côté des autres inscrits.",
+            "⏱️ L'XP est enregistrée chaque jour à 09h00 (heure de Brasília). Le tracker ne compte l'XP qu'à partir du jour où chaque personnage est inscrit sur le site, et pour les fenêtres de 30 et 90 jours seulement à partir du 21/11/2026.",
+            "📝 Une note en haut du classement l'explique. La partie avec la date du 21/11/2026 disparaît d'elle-même le 19/02/2027, 90 jours plus tard."
+          ]
+        },
+        "ru": {
+          "title": "Рейтинг XP: ежедневный снимок и понятные правила",
+          "changes": [
+            "📊 Рейтинг XP теперь показывает всех персонажей, зарегистрированных на сайте, и каждый аккаунт видит свою позицию рядом с другими зарегистрированными.",
+            "⏱️ XP сохраняется каждый день в 09:00 (время Бразилиа). Трекер считает XP только с дня регистрации каждого персонажа на сайте, а для окон 30 и 90 дней — только с 21.11.2026.",
+            "📝 Заметка вверху рейтинга объясняет это. Часть с датой 21.11.2026 исчезает сама 19.02.2027, через 90 дней."
+          ]
+        }
       }
     },
     {
@@ -456,34 +834,62 @@
         "📝 Minha lista: cada conta monta a sua própria lista de personagens (amigos, metas, rivais) e vê o XP deles em 30 e 90 dias. Só você vê a sua lista."
       ],
       "tr": {
-        "en": { "title": "Sturdy login and XP ranking", "changes": [
-          "🔐 Getting in without depending on TibiaData: whoever already signed in on a device doesn't need to verify again for 30 days, even if TibiaData is down, and a character marked as verified by hand always gets in. When the period ends, verification is asked again.",
-          "📊 TibiaData XP ranking: the XP gained over the last 30 days (and 90 days, in its own tab) for those on the ranking. TibiaData keeps no history, so the app stores one XP point per day; the gain shows the history that already exists and says when it is still short.",
-          "📝 My list: each account builds its own list of characters (friends, goals, rivals) and sees their XP over 30 and 90 days. Only you see your list."] },
-        "es": { "title": "Login resistente y ranking de XP", "changes": [
-          "🔐 Entrar sin depender de TibiaData: quien ya entró desde un aparato no necesita verificarse de nuevo durante 30 días, aunque TibiaData esté caído, y el personaje marcado como verificado a mano siempre entra. Cuando vence el plazo, se vuelve a pedir la verificación.",
-          "📊 Ranking de XP de TibiaData: el XP ganado en los últimos 30 días (y 90 días, en su propia pestaña) de quienes están en el ranking. Como TibiaData no guarda historial, la app guarda un punto de XP por día; la ganancia muestra el historial que ya existe y avisa cuando todavía es corto.",
-          "📝 Mi lista: cada cuenta arma su propia lista de personajes (amigos, metas, rivales) y ve su XP en 30 y 90 días. Solo tú ves tu lista."] },
-        "ja": { "title": "安定したログインとXPランキング", "changes": [
-          "🔐 TibiaData に頼らず入場：一度ログインした端末は、TibiaData が落ちていても30日間は再確認なしで入れます。手動で確認済みにしたキャラクターは常に入れます。期限が過ぎると再び確認を求めます。",
-          "📊 TibiaData の XP ランキング：ランキングに載っている人の、直近30日（と90日のタブ）に得た XP。TibiaData は履歴を保存しないため、アプリが1日1回 XP を記録します。そのため増加量は既にある履歴分で、まだ短い場合はその旨を表示します。",
-          "📝 マイリスト：各アカウントが自分だけのキャラクター一覧（友達・目標・ライバル）を作り、その30日と90日の XP を見られます。リストを見られるのはあなただけです。"] },
-        "de": { "title": "Stabiler Login und XP-Rangliste", "changes": [
-          "🔐 Einloggen ohne Abhängigkeit von TibiaData: Wer sich schon auf einem Gerät angemeldet hat, muss 30 Tage lang nicht erneut prüfen, auch wenn TibiaData ausfällt. Ein von Hand als verifiziert markierter Charakter kommt immer rein. Nach Ablauf der Frist wird wieder geprüft.",
-          "📊 TibiaData-XP-Rangliste: die in den letzten 30 Tagen (und 90 Tagen, im eigenen Tab) gewonnene XP der Spieler auf der Rangliste. TibiaData speichert keine Historie, daher legt die App einen XP-Punkt pro Tag an; der Zuwachs zeigt die vorhandene Historie und weist darauf hin, wenn sie noch kurz ist.",
-          "📝 Meine Liste: jedes Konto stellt seine eigene Liste von Charakteren (Freunde, Ziele, Rivalen) zusammen und sieht deren XP über 30 und 90 Tage. Nur du siehst deine Liste."] },
-        "pl": { "title": "Stabilne logowanie i ranking XP", "changes": [
-          "🔐 Wejście bez zależności od TibiaData: kto już zalogował się na urządzeniu, nie musi weryfikować się ponownie przez 30 dni, nawet gdy TibiaData nie działa, a postać oznaczona ręcznie jako zweryfikowana wchodzi zawsze. Po upływie terminu weryfikacja jest znowu wymagana.",
-          "📊 Ranking XP z TibiaData: XP zdobyte w ostatnich 30 dniach (i 90 dniach, w osobnej zakładce) przez osoby z rankingu. TibiaData nie przechowuje historii, więc aplikacja zapisuje jeden punkt XP dziennie; przyrost pokazuje istniejącą historię i informuje, gdy jest jeszcze krótka.",
-          "📝 Moja lista: każde konto układa własną listę postaci (znajomi, cele, rywale) i widzi ich XP z 30 i 90 dni. Tylko Ty widzisz swoją listę."] },
-        "fr": { "title": "Connexion robuste et classement XP", "changes": [
-          "🔐 Entrer sans dépendre de TibiaData : celui qui s'est déjà connecté sur un appareil n'a pas à se revérifier pendant 30 jours, même si TibiaData est hors ligne, et un personnage marqué vérifié à la main entre toujours. Quand le délai expire, la vérification est de nouveau demandée.",
-          "📊 Classement XP TibiaData : l'XP gagné sur les 30 derniers jours (et 90 jours, dans son onglet) pour ceux du classement. TibiaData ne garde pas d'historique, donc l'application enregistre un point d'XP par jour ; le gain montre l'historique existant et signale quand il est encore court.",
-          "📝 Ma liste : chaque compte constitue sa propre liste de personnages (amis, objectifs, rivaux) et voit leur XP sur 30 et 90 jours. Vous seul voyez votre liste."] },
-        "ru": { "title": "Надёжный вход и рейтинг XP", "changes": [
-          "🔐 Вход без зависимости от TibiaData: тому, кто уже входил с этого устройства, не нужно проходить проверку снова 30 дней, даже если TibiaData недоступен, а персонаж, отмеченный как проверенный вручную, входит всегда. Когда срок истекает, проверка снова запрашивается.",
-          "📊 Рейтинг XP TibiaData: XP, полученный за последние 30 дней (и 90 дней, на отдельной вкладке) у тех, кто в рейтинге. TibiaData не хранит историю, поэтому приложение сохраняет одну точку XP в день; прирост показывает уже имеющуюся историю и сообщает, когда её ещё мало.",
-          "📝 Мой список: каждый аккаунт составляет свой список персонажей (друзья, цели, соперники) и видит их XP за 30 и 90 дней. Свой список видите только вы."] }
+        "en": {
+          "title": "Sturdy login and XP ranking",
+          "changes": [
+            "🔐 Getting in without depending on TibiaData: whoever already signed in on a device doesn't need to verify again for 30 days, even if TibiaData is down, and a character marked as verified by hand always gets in. When the period ends, verification is asked again.",
+            "📊 TibiaData XP ranking: the XP gained over the last 30 days (and 90 days, in its own tab) for those on the ranking. TibiaData keeps no history, so the app stores one XP point per day; the gain shows the history that already exists and says when it is still short.",
+            "📝 My list: each account builds its own list of characters (friends, goals, rivals) and sees their XP over 30 and 90 days. Only you see your list."
+          ]
+        },
+        "es": {
+          "title": "Login resistente y ranking de XP",
+          "changes": [
+            "🔐 Entrar sin depender de TibiaData: quien ya entró desde un aparato no necesita verificarse de nuevo durante 30 días, aunque TibiaData esté caído, y el personaje marcado como verificado a mano siempre entra. Cuando vence el plazo, se vuelve a pedir la verificación.",
+            "📊 Ranking de XP de TibiaData: el XP ganado en los últimos 30 días (y 90 días, en su propia pestaña) de quienes están en el ranking. Como TibiaData no guarda historial, la app guarda un punto de XP por día; la ganancia muestra el historial que ya existe y avisa cuando todavía es corto.",
+            "📝 Mi lista: cada cuenta arma su propia lista de personajes (amigos, metas, rivales) y ve su XP en 30 y 90 días. Solo tú ves tu lista."
+          ]
+        },
+        "ja": {
+          "title": "安定したログインとXPランキング",
+          "changes": [
+            "🔐 TibiaData に頼らず入場：一度ログインした端末は、TibiaData が落ちていても30日間は再確認なしで入れます。手動で確認済みにしたキャラクターは常に入れます。期限が過ぎると再び確認を求めます。",
+            "📊 TibiaData の XP ランキング：ランキングに載っている人の、直近30日（と90日のタブ）に得た XP。TibiaData は履歴を保存しないため、アプリが1日1回 XP を記録します。そのため増加量は既にある履歴分で、まだ短い場合はその旨を表示します。",
+            "📝 マイリスト：各アカウントが自分だけのキャラクター一覧（友達・目標・ライバル）を作り、その30日と90日の XP を見られます。リストを見られるのはあなただけです。"
+          ]
+        },
+        "de": {
+          "title": "Stabiler Login und XP-Rangliste",
+          "changes": [
+            "🔐 Einloggen ohne Abhängigkeit von TibiaData: Wer sich schon auf einem Gerät angemeldet hat, muss 30 Tage lang nicht erneut prüfen, auch wenn TibiaData ausfällt. Ein von Hand als verifiziert markierter Charakter kommt immer rein. Nach Ablauf der Frist wird wieder geprüft.",
+            "📊 TibiaData-XP-Rangliste: die in den letzten 30 Tagen (und 90 Tagen, im eigenen Tab) gewonnene XP der Spieler auf der Rangliste. TibiaData speichert keine Historie, daher legt die App einen XP-Punkt pro Tag an; der Zuwachs zeigt die vorhandene Historie und weist darauf hin, wenn sie noch kurz ist.",
+            "📝 Meine Liste: jedes Konto stellt seine eigene Liste von Charakteren (Freunde, Ziele, Rivalen) zusammen und sieht deren XP über 30 und 90 Tage. Nur du siehst deine Liste."
+          ]
+        },
+        "pl": {
+          "title": "Stabilne logowanie i ranking XP",
+          "changes": [
+            "🔐 Wejście bez zależności od TibiaData: kto już zalogował się na urządzeniu, nie musi weryfikować się ponownie przez 30 dni, nawet gdy TibiaData nie działa, a postać oznaczona ręcznie jako zweryfikowana wchodzi zawsze. Po upływie terminu weryfikacja jest znowu wymagana.",
+            "📊 Ranking XP z TibiaData: XP zdobyte w ostatnich 30 dniach (i 90 dniach, w osobnej zakładce) przez osoby z rankingu. TibiaData nie przechowuje historii, więc aplikacja zapisuje jeden punkt XP dziennie; przyrost pokazuje istniejącą historię i informuje, gdy jest jeszcze krótka.",
+            "📝 Moja lista: każde konto układa własną listę postaci (znajomi, cele, rywale) i widzi ich XP z 30 i 90 dni. Tylko Ty widzisz swoją listę."
+          ]
+        },
+        "fr": {
+          "title": "Connexion robuste et classement XP",
+          "changes": [
+            "🔐 Entrer sans dépendre de TibiaData : celui qui s'est déjà connecté sur un appareil n'a pas à se revérifier pendant 30 jours, même si TibiaData est hors ligne, et un personnage marqué vérifié à la main entre toujours. Quand le délai expire, la vérification est de nouveau demandée.",
+            "📊 Classement XP TibiaData : l'XP gagné sur les 30 derniers jours (et 90 jours, dans son onglet) pour ceux du classement. TibiaData ne garde pas d'historique, donc l'application enregistre un point d'XP par jour ; le gain montre l'historique existant et signale quand il est encore court.",
+            "📝 Ma liste : chaque compte constitue sa propre liste de personnages (amis, objectifs, rivaux) et voit leur XP sur 30 et 90 jours. Vous seul voyez votre liste."
+          ]
+        },
+        "ru": {
+          "title": "Надёжный вход и рейтинг XP",
+          "changes": [
+            "🔐 Вход без зависимости от TibiaData: тому, кто уже входил с этого устройства, не нужно проходить проверку снова 30 дней, даже если TibiaData недоступен, а персонаж, отмеченный как проверенный вручную, входит всегда. Когда срок истекает, проверка снова запрашивается.",
+            "📊 Рейтинг XP TibiaData: XP, полученный за последние 30 дней (и 90 дней, на отдельной вкладке) у тех, кто в рейтинге. TibiaData не хранит историю, поэтому приложение сохраняет одну точку XP в день; прирост показывает уже имеющуюся историю и сообщает, когда её ещё мало.",
+            "📝 Мой список: каждый аккаунт составляет свой список персонажей (друзья, цели, соперники) и видит их XP за 30 и 90 дней. Свой список видите только вы."
+          ]
+        }
       }
     },
     {
@@ -546,20 +952,48 @@
         "🔐 Login com o TibiaData instável: quando o TibiaData está fora do ar, o código de entrada continua sendo gerado (vale por 4 horas). Basta colocar o código no comentário do personagem e tocar em conferir quando ele voltar. O envio de sessões nunca dependeu disso e segue funcionando. Também: personagem que não existe agora é recusado com a mensagem certa, e um TibiaData instável não é mais confundido com personagem inexistente."
       ],
       "tr": {
-        "en": { "title": "Login while TibiaData is unstable", "changes": [
-          "🔐 Login while TibiaData is unstable: when TibiaData is down, the login code is still issued (valid for 4 hours). Just put the code in the character's comment and tap check when it's back. Sending sessions never depended on this and still works. Also, a character that doesn't exist is now refused with the right message, and an unstable TibiaData is no longer mistaken for a missing character."] },
-        "es": { "title": "Login con TibiaData inestable", "changes": [
-          "🔐 Login con TibiaData inestable: cuando TibiaData está caído, el código de entrada sigue generándose (vale 4 horas). Solo pon el código en el comentario del personaje y toca conferir cuando vuelva. El envío de sesiones nunca dependió de esto y sigue funcionando. Además, un personaje que no existe ahora se rechaza con el mensaje correcto, y un TibiaData inestable ya no se confunde con un personaje inexistente."] },
-        "ja": { "title": "TibiaData不安定時のログイン", "changes": [
-          "🔐 TibiaData が不安定な時のログイン：TibiaData が落ちていても入場コードは発行されます（4時間有効）。コードをキャラクターのコメントに入れて、戻ったら確認を押すだけです。セッションの送信はこれに依存せず、引き続き動作します。また、存在しないキャラクターは正しいメッセージで拒否され、不安定な TibiaData が存在しないキャラクターと誤認されることもなくなりました。"] },
-        "de": { "title": "Login bei instabilem TibiaData", "changes": [
-          "🔐 Login bei instabilem TibiaData: Ist TibiaData gerade nicht erreichbar, wird der Login-Code trotzdem erzeugt (4 Stunden gültig). Einfach den Code in den Kommentar des Charakters schreiben und bei Rückkehr von TibiaData auf Prüfen tippen. Das Senden von Sessions hing nie davon ab und funktioniert weiterhin. Außerdem wird ein nicht existierender Charakter jetzt mit der richtigen Meldung abgelehnt, und ein instabiles TibiaData wird nicht mehr mit einem fehlenden Charakter verwechselt."] },
-        "pl": { "title": "Logowanie przy niestabilnym TibiaData", "changes": [
-          "🔐 Logowanie, gdy TibiaData jest niestabilne: gdy TibiaData nie działa, kod logowania nadal jest generowany (ważny 4 godziny). Wystarczy wpisać kod w komentarzu postaci i nacisnąć sprawdź, gdy TibiaData wróci. Wysyłanie sesji nigdy od tego nie zależało i nadal działa. Postać, która nie istnieje, jest teraz odrzucana z właściwym komunikatem, a niestabilne TibiaData nie jest już mylone z nieistniejącą postacią."] },
-        "fr": { "title": "Connexion quand TibiaData est instable", "changes": [
-          "🔐 Connexion quand TibiaData est instable : si TibiaData est hors ligne, le code de connexion est quand même généré (valable 4 heures). Il suffit de mettre le code dans le commentaire du personnage et de appuyer sur vérifier quand il revient. L'envoi des sessions n'en a jamais dépendu et fonctionne toujours. Un personnage inexistant est aussi refusé avec le bon message, et un TibiaData instable n'est plus confondu avec un personnage inexistant."] },
-        "ru": { "title": "Вход при нестабильном TibiaData", "changes": [
-          "🔐 Вход при нестабильном TibiaData: если TibiaData недоступен, код входа всё равно выдаётся (действует 4 часа). Достаточно поместить код в комментарий персонажа и нажать «проверить», когда сервис вернётся. Отправка сессий от этого никогда не зависела и работает как прежде. Несуществующий персонаж теперь отклоняется с правильным сообщением, а нестабильный TibiaData больше не путается с отсутствующим персонажем."] }
+        "en": {
+          "title": "Login while TibiaData is unstable",
+          "changes": [
+            "🔐 Login while TibiaData is unstable: when TibiaData is down, the login code is still issued (valid for 4 hours). Just put the code in the character's comment and tap check when it's back. Sending sessions never depended on this and still works. Also, a character that doesn't exist is now refused with the right message, and an unstable TibiaData is no longer mistaken for a missing character."
+          ]
+        },
+        "es": {
+          "title": "Login con TibiaData inestable",
+          "changes": [
+            "🔐 Login con TibiaData inestable: cuando TibiaData está caído, el código de entrada sigue generándose (vale 4 horas). Solo pon el código en el comentario del personaje y toca conferir cuando vuelva. El envío de sesiones nunca dependió de esto y sigue funcionando. Además, un personaje que no existe ahora se rechaza con el mensaje correcto, y un TibiaData inestable ya no se confunde con un personaje inexistente."
+          ]
+        },
+        "ja": {
+          "title": "TibiaData不安定時のログイン",
+          "changes": [
+            "🔐 TibiaData が不安定な時のログイン：TibiaData が落ちていても入場コードは発行されます（4時間有効）。コードをキャラクターのコメントに入れて、戻ったら確認を押すだけです。セッションの送信はこれに依存せず、引き続き動作します。また、存在しないキャラクターは正しいメッセージで拒否され、不安定な TibiaData が存在しないキャラクターと誤認されることもなくなりました。"
+          ]
+        },
+        "de": {
+          "title": "Login bei instabilem TibiaData",
+          "changes": [
+            "🔐 Login bei instabilem TibiaData: Ist TibiaData gerade nicht erreichbar, wird der Login-Code trotzdem erzeugt (4 Stunden gültig). Einfach den Code in den Kommentar des Charakters schreiben und bei Rückkehr von TibiaData auf Prüfen tippen. Das Senden von Sessions hing nie davon ab und funktioniert weiterhin. Außerdem wird ein nicht existierender Charakter jetzt mit der richtigen Meldung abgelehnt, und ein instabiles TibiaData wird nicht mehr mit einem fehlenden Charakter verwechselt."
+          ]
+        },
+        "pl": {
+          "title": "Logowanie przy niestabilnym TibiaData",
+          "changes": [
+            "🔐 Logowanie, gdy TibiaData jest niestabilne: gdy TibiaData nie działa, kod logowania nadal jest generowany (ważny 4 godziny). Wystarczy wpisać kod w komentarzu postaci i nacisnąć sprawdź, gdy TibiaData wróci. Wysyłanie sesji nigdy od tego nie zależało i nadal działa. Postać, która nie istnieje, jest teraz odrzucana z właściwym komunikatem, a niestabilne TibiaData nie jest już mylone z nieistniejącą postacią."
+          ]
+        },
+        "fr": {
+          "title": "Connexion quand TibiaData est instable",
+          "changes": [
+            "🔐 Connexion quand TibiaData est instable : si TibiaData est hors ligne, le code de connexion est quand même généré (valable 4 heures). Il suffit de mettre le code dans le commentaire du personnage et de appuyer sur vérifier quand il revient. L'envoi des sessions n'en a jamais dépendu et fonctionne toujours. Un personnage inexistant est aussi refusé avec le bon message, et un TibiaData instable n'est plus confondu avec un personnage inexistant."
+          ]
+        },
+        "ru": {
+          "title": "Вход при нестабильном TibiaData",
+          "changes": [
+            "🔐 Вход при нестабильном TibiaData: если TibiaData недоступен, код входа всё равно выдаётся (действует 4 часа). Достаточно поместить код в комментарий персонажа и нажать «проверить», когда сервис вернётся. Отправка сессий от этого никогда не зависела и работает как прежде. Несуществующий персонаж теперь отклоняется с правильным сообщением, а нестабильный TibiaData больше не путается с отсутствующим персонажем."
+          ]
+        }
       }
     },
     {
@@ -574,48 +1008,76 @@
         "🛠️ Manutenção do servidor: atualizações do sistema e do Docker instaladas, e as rotinas automáticas do servidor ficaram mais estáveis."
       ],
       "tr": {
-        "en": { "title": "Registered parties and vault", "changes": [
-          "🛡️ My parties and vault (menu ☰ → Party): register your party lineup for hunts, bosses or both, with main players and substitutes. From then on, loot splits mark who joined as a 🔁 substitute (and in whose place) automatically, with no need to tell it every time.",
-          "🗃️ Party vault: the party's whole item stock in one place, with what each item is worth. Any member can change the price at any time, and the vault shows the total value and the stock's range.",
-          "Each vault item has an origin bag: 🟡 plain yellow for Drop, 🟢 green with $ for Service and 🔴 red with $ for Purchase. In a Service, the client's guaranteed rune stays with the party for half its value, split among the main players (75kk rune → 37.5kk ÷ 5 = 7.5kk each), with each one's \"transfer\" and \"✔ I've paid\". When it sells, the profit is split among the main players and whoever bought an item gets back what they paid.",
-          "👑 Graveborn: a button for when someone buys a Crypt Rune for the craft (asks the price paid) and a 🔨 Craft button that asks which vault items are used. The crafted item shows an approximate price: drops are worth between 0 and the average price, purchases are worth what was paid. The sale price is only asked when you sell, and both are kept for comparison.",
-          "🛠️ Server maintenance: system and Docker updates installed, and the server's automatic routines are more stable."] },
-        "es": { "title": "Parties registradas y cofre", "changes": [
-          "🛡️ Mis parties y cofre (menú ☰ → Party): registra la formación de la party para hunt, para bosses o para ambos, con titulares y suplentes. Desde entonces los lootsplits marcan solos quién entró como 🔁 suplente (y en lugar de quién), sin tener que avisar cada vez.",
-          "🗃️ Cofre de la party: todo el stock de ítems de la party en un solo lugar, con cuánto vale cada ítem. Cualquier miembro cambia el precio cuando quiera, y el cofre muestra el valor total y el rango del stock.",
-          "Cada ítem del cofre tiene su bolsita de origen: 🟡 amarilla y limpia para Drop, 🟢 verde con $ para Service y 🔴 roja con $ para Compra. En el Service, la runa garantizada del cliente se queda con la party por la mitad de su valor, repartida entre los titulares (runa de 75kk → 37,5kk ÷ 5 = 7,5kk cada uno), con el \"transfer\" y el \"✔ Ya pagué\" de cada uno. Al vender, la ganancia se reparte entre los titulares y quien compró un ítem recupera lo que pagó.",
-          "👑 Graveborn: botón para cuando alguien compra una Crypt Rune para el craft (pide el precio pagado) y botón 🔨 Craftear, que pregunta qué ítems del cofre se usan. El ítem crafteado muestra un precio aproximado: los drops valen entre 0 y el precio medio, las compras valen lo pagado. El valor de venta solo se pide al vender, y ambos datos quedan guardados para comparar.",
-          "🛠️ Mantenimiento del servidor: actualizaciones del sistema y de Docker instaladas, y las rutinas automáticas del servidor quedaron más estables."] },
-        "ja": { "title": "パーティ登録と金庫", "changes": [
-          "🛡️ マイパーティと金庫（メニュー ☰ → Party）：狩り・ボス・両方用のパーティ編成をレギュラーと控えで登録できます。以後、ルート分配で 🔁 控えとして入った人（と誰の代わりか）が自動でマークされ、毎回伝える必要はありません。",
-          "🗃️ パーティ金庫：パーティのアイテム在庫を一か所にまとめ、各アイテムの価値も表示。価格はメンバーがいつでも変更でき、在庫の合計額と幅が表示されます。",
-          "金庫の各アイテムには入手元の袋が付きます：🟡 黄色の無地は Drop、🟢 $付きの緑は Service、🔴 $付きの赤は購入。Service では依頼者の確定ルーンを価値の半額でパーティが引き取り、レギュラーで割ります（75kk のルーン → 37.5kk ÷ 5 = 1人 7.5kk）。各自の「transfer」と「✔ 支払い済み」付き。売れたら利益はレギュラーで分け、アイテムを購入した人には支払った分が戻ります。",
-          "👑 Graveborn：誰かがクラフト用に Crypt Rune を買ったときのボタン（支払額を入力）と、金庫のどのアイテムを使うか選ぶ 🔨 クラフトボタン。クラフト品は概算価格を表示：ドロップは 0〜平均価格、購入品は支払額。売値は売ったときだけ入力し、両方とも比較用に残ります。",
-          "🛠️ サーバーのメンテナンス：システムと Docker の更新を適用し、サーバーの自動処理がより安定しました。"] },
-        "de": { "title": "Registrierte Partys und Tresor", "changes": [
-          "🛡️ Meine Partys und Tresor (Menü ☰ → Party): Registriere die Party-Aufstellung für Hunts, Bosse oder beides, mit Stammspielern und Ersatz. Ab dann markieren die Lootsplits automatisch, wer als 🔁 Ersatz dabei war (und für wen), ohne dass man es jedes Mal angeben muss.",
-          "🗃️ Party-Tresor: der gesamte Itembestand der Party an einem Ort, mit dem Wert jedes Items. Jedes Mitglied kann den Preis jederzeit ändern, und der Tresor zeigt den Gesamtwert und die Spanne des Bestands.",
-          "Jedes Item im Tresor hat seinen Herkunftsbeutel: 🟡 gelb und schlicht für Drop, 🟢 grün mit $ für Service und 🔴 rot mit $ für Kauf. Beim Service bleibt die garantierte Rune des Kunden für den halben Wert bei der Party, geteilt unter den Stammspielern (Rune für 75kk → 37,5kk ÷ 5 = 7,5kk pro Person), mit dem „transfer“ und „✔ Schon bezahlt“ für jeden. Beim Verkauf wird der Gewinn unter den Stammspielern geteilt, und wer ein Item gekauft hat, bekommt den Preis zurück.",
-          "👑 Graveborn: ein Knopf, wenn jemand eine Crypt Rune für das Craft kauft (fragt den bezahlten Preis), und ein 🔨 Craften-Knopf, der fragt, welche Tresor-Items verwendet werden. Das gecraftete Item zeigt einen ungefähren Preis: Drops zählen zwischen 0 und dem Durchschnittspreis, Käufe zählen den bezahlten Preis. Der Verkaufspreis wird erst beim Verkauf gefragt, und beides bleibt zum Vergleich gespeichert.",
-          "🛠️ Serverwartung: System- und Docker-Updates installiert, und die automatischen Abläufe des Servers laufen stabiler."] },
-        "pl": { "title": "Zarejestrowane party i skarbiec", "changes": [
-          "🛡️ Moje party i skarbiec (menu ☰ → Party): zarejestruj skład party na hunty, bossy lub oba, z graczami podstawowymi i rezerwowymi. Od tej chwili lootsplity same oznaczają, kto wszedł jako 🔁 rezerwowy (i za kogo), bez podawania tego za każdym razem.",
-          "🗃️ Skarbiec party: cały zapas przedmiotów party w jednym miejscu, z wartością każdego przedmiotu. Każdy członek może zmienić cenę w dowolnej chwili, a skarbiec pokazuje łączną wartość i zakres zapasu.",
-          "Każdy przedmiot w skarbcu ma woreczek pochodzenia: 🟡 żółty i czysty dla Drop, 🟢 zielony z $ dla Service i 🔴 czerwony z $ dla Zakupu. W Service gwarantowana runa klienta zostaje w party za połowę wartości, podzieloną między graczy podstawowych (runa za 75kk → 37,5kk ÷ 5 = 7,5kk na osobę), z \"transfer\" i \"✔ Już zapłaciłem\" dla każdego. Przy sprzedaży zysk dzieli się między graczy podstawowych, a kto kupił przedmiot, odzyskuje to, co zapłacił.",
-          "👑 Graveborn: przycisk, gdy ktoś kupi Crypt Rune do craftu (pyta o zapłaconą cenę), i przycisk 🔨 Craftuj, który pyta, których przedmiotów ze skarbca użyć. Scraftowany przedmiot pokazuje przybliżoną cenę: dropy są warte od 0 do średniej ceny, zakupy tyle, ile zapłacono. Cena sprzedaży jest pytana dopiero przy sprzedaży, a obie informacje zostają do porównania.",
-          "🛠️ Konserwacja serwera: zainstalowano aktualizacje systemu i Dockera, a automatyczne zadania serwera działają stabilniej."] },
-        "fr": { "title": "Parties enregistrées et coffre", "changes": [
-          "🛡️ Mes parties et coffre (menu ☰ → Party) : enregistrez la composition de la party pour la chasse, les boss ou les deux, avec titulaires et remplaçants. Ensuite, les lootsplits marquent tout seuls qui est venu en 🔁 remplaçant (et à la place de qui), sans avoir à le dire à chaque fois.",
-          "🗃️ Coffre de la party : tout le stock d'objets de la party au même endroit, avec la valeur de chaque objet. N'importe quel membre change le prix à tout moment, et le coffre affiche la valeur totale et la fourchette du stock.",
-          "Chaque objet du coffre a son petit sac d'origine : 🟡 jaune et uni pour Drop, 🟢 vert avec $ pour Service et 🔴 rouge avec $ pour Achat. Dans un Service, la rune garantie du client reste à la party pour la moitié de sa valeur, partagée entre les titulaires (rune à 75kk → 37,5kk ÷ 5 = 7,5kk chacun), avec le « transfer » et le « ✔ Déjà payé » de chacun. À la vente, le profit est partagé entre les titulaires et celui qui a acheté un objet récupère ce qu'il a payé.",
-          "👑 Graveborn : un bouton quand quelqu'un achète une Crypt Rune pour le craft (demande le prix payé) et un bouton 🔨 Crafter qui demande quels objets du coffre sont utilisés. L'objet crafté affiche un prix approximatif : les drops valent entre 0 et le prix moyen, les achats valent ce qui a été payé. Le prix de vente n'est demandé qu'à la vente, et les deux restent enregistrés pour comparer.",
-          "🛠️ Maintenance du serveur : mises à jour du système et de Docker installées, et les routines automatiques du serveur sont plus stables."] },
-        "ru": { "title": "Зарегистрированные пати и сейф", "changes": [
-          "🛡️ Мои пати и сейф (меню ☰ → Party): зарегистрируйте состав пати для охоты, боссов или того и другого, с основными и запасными. После этого лутсплиты сами отмечают, кто зашёл как 🔁 замена (и вместо кого), без напоминаний каждый раз.",
-          "🗃️ Сейф пати: весь запас предметов пати в одном месте и сколько стоит каждый предмет. Любой участник меняет цену в любой момент, а сейф показывает общую стоимость и диапазон запаса.",
-          "У каждого предмета в сейфе есть мешочек происхождения: 🟡 жёлтый без знака — Drop, 🟢 зелёный с $ — Service, 🔴 красный с $ — Покупка. В Service гарантированная руна клиента остаётся у пати за половину стоимости, разделённую между основными (руна за 75kk → 37,5kk ÷ 5 = 7,5kk с каждого), с «transfer» и «✔ Уже оплатил» для каждого. При продаже прибыль делится между основными, а купивший предмет получает назад то, что заплатил.",
-          "👑 Graveborn: кнопка на случай, если кто-то купил Crypt Rune для крафта (спрашивает уплаченную цену), и кнопка 🔨 Скрафтить, которая спрашивает, какие предметы из сейфа использовать. Скрафченный предмет показывает примерную цену: дропы стоят от 0 до средней цены, покупки — сколько заплатили. Цена продажи спрашивается только при продаже, и обе цифры сохраняются для сравнения.",
-          "🛠️ Обслуживание сервера: установлены обновления системы и Docker, автоматические задачи сервера работают стабильнее."] }
+        "en": {
+          "title": "Registered parties and vault",
+          "changes": [
+            "🛡️ My parties and vault (menu ☰ → Party): register your party lineup for hunts, bosses or both, with main players and substitutes. From then on, loot splits mark who joined as a 🔁 substitute (and in whose place) automatically, with no need to tell it every time.",
+            "🗃️ Party vault: the party's whole item stock in one place, with what each item is worth. Any member can change the price at any time, and the vault shows the total value and the stock's range.",
+            "Each vault item has an origin bag: 🟡 plain yellow for Drop, 🟢 green with $ for Service and 🔴 red with $ for Purchase. In a Service, the client's guaranteed rune stays with the party for half its value, split among the main players (75kk rune → 37.5kk ÷ 5 = 7.5kk each), with each one's \"transfer\" and \"✔ I've paid\". When it sells, the profit is split among the main players and whoever bought an item gets back what they paid.",
+            "👑 Graveborn: a button for when someone buys a Crypt Rune for the craft (asks the price paid) and a 🔨 Craft button that asks which vault items are used. The crafted item shows an approximate price: drops are worth between 0 and the average price, purchases are worth what was paid. The sale price is only asked when you sell, and both are kept for comparison.",
+            "🛠️ Server maintenance: system and Docker updates installed, and the server's automatic routines are more stable."
+          ]
+        },
+        "es": {
+          "title": "Parties registradas y cofre",
+          "changes": [
+            "🛡️ Mis parties y cofre (menú ☰ → Party): registra la formación de la party para hunt, para bosses o para ambos, con titulares y suplentes. Desde entonces los lootsplits marcan solos quién entró como 🔁 suplente (y en lugar de quién), sin tener que avisar cada vez.",
+            "🗃️ Cofre de la party: todo el stock de ítems de la party en un solo lugar, con cuánto vale cada ítem. Cualquier miembro cambia el precio cuando quiera, y el cofre muestra el valor total y el rango del stock.",
+            "Cada ítem del cofre tiene su bolsita de origen: 🟡 amarilla y limpia para Drop, 🟢 verde con $ para Service y 🔴 roja con $ para Compra. En el Service, la runa garantizada del cliente se queda con la party por la mitad de su valor, repartida entre los titulares (runa de 75kk → 37,5kk ÷ 5 = 7,5kk cada uno), con el \"transfer\" y el \"✔ Ya pagué\" de cada uno. Al vender, la ganancia se reparte entre los titulares y quien compró un ítem recupera lo que pagó.",
+            "👑 Graveborn: botón para cuando alguien compra una Crypt Rune para el craft (pide el precio pagado) y botón 🔨 Craftear, que pregunta qué ítems del cofre se usan. El ítem crafteado muestra un precio aproximado: los drops valen entre 0 y el precio medio, las compras valen lo pagado. El valor de venta solo se pide al vender, y ambos datos quedan guardados para comparar.",
+            "🛠️ Mantenimiento del servidor: actualizaciones del sistema y de Docker instaladas, y las rutinas automáticas del servidor quedaron más estables."
+          ]
+        },
+        "ja": {
+          "title": "パーティ登録と金庫",
+          "changes": [
+            "🛡️ マイパーティと金庫（メニュー ☰ → Party）：狩り・ボス・両方用のパーティ編成をレギュラーと控えで登録できます。以後、ルート分配で 🔁 控えとして入った人（と誰の代わりか）が自動でマークされ、毎回伝える必要はありません。",
+            "🗃️ パーティ金庫：パーティのアイテム在庫を一か所にまとめ、各アイテムの価値も表示。価格はメンバーがいつでも変更でき、在庫の合計額と幅が表示されます。",
+            "金庫の各アイテムには入手元の袋が付きます：🟡 黄色の無地は Drop、🟢 $付きの緑は Service、🔴 $付きの赤は購入。Service では依頼者の確定ルーンを価値の半額でパーティが引き取り、レギュラーで割ります（75kk のルーン → 37.5kk ÷ 5 = 1人 7.5kk）。各自の「transfer」と「✔ 支払い済み」付き。売れたら利益はレギュラーで分け、アイテムを購入した人には支払った分が戻ります。",
+            "👑 Graveborn：誰かがクラフト用に Crypt Rune を買ったときのボタン（支払額を入力）と、金庫のどのアイテムを使うか選ぶ 🔨 クラフトボタン。クラフト品は概算価格を表示：ドロップは 0〜平均価格、購入品は支払額。売値は売ったときだけ入力し、両方とも比較用に残ります。",
+            "🛠️ サーバーのメンテナンス：システムと Docker の更新を適用し、サーバーの自動処理がより安定しました。"
+          ]
+        },
+        "de": {
+          "title": "Registrierte Partys und Tresor",
+          "changes": [
+            "🛡️ Meine Partys und Tresor (Menü ☰ → Party): Registriere die Party-Aufstellung für Hunts, Bosse oder beides, mit Stammspielern und Ersatz. Ab dann markieren die Lootsplits automatisch, wer als 🔁 Ersatz dabei war (und für wen), ohne dass man es jedes Mal angeben muss.",
+            "🗃️ Party-Tresor: der gesamte Itembestand der Party an einem Ort, mit dem Wert jedes Items. Jedes Mitglied kann den Preis jederzeit ändern, und der Tresor zeigt den Gesamtwert und die Spanne des Bestands.",
+            "Jedes Item im Tresor hat seinen Herkunftsbeutel: 🟡 gelb und schlicht für Drop, 🟢 grün mit $ für Service und 🔴 rot mit $ für Kauf. Beim Service bleibt die garantierte Rune des Kunden für den halben Wert bei der Party, geteilt unter den Stammspielern (Rune für 75kk → 37,5kk ÷ 5 = 7,5kk pro Person), mit dem „transfer“ und „✔ Schon bezahlt“ für jeden. Beim Verkauf wird der Gewinn unter den Stammspielern geteilt, und wer ein Item gekauft hat, bekommt den Preis zurück.",
+            "👑 Graveborn: ein Knopf, wenn jemand eine Crypt Rune für das Craft kauft (fragt den bezahlten Preis), und ein 🔨 Craften-Knopf, der fragt, welche Tresor-Items verwendet werden. Das gecraftete Item zeigt einen ungefähren Preis: Drops zählen zwischen 0 und dem Durchschnittspreis, Käufe zählen den bezahlten Preis. Der Verkaufspreis wird erst beim Verkauf gefragt, und beides bleibt zum Vergleich gespeichert.",
+            "🛠️ Serverwartung: System- und Docker-Updates installiert, und die automatischen Abläufe des Servers laufen stabiler."
+          ]
+        },
+        "pl": {
+          "title": "Zarejestrowane party i skarbiec",
+          "changes": [
+            "🛡️ Moje party i skarbiec (menu ☰ → Party): zarejestruj skład party na hunty, bossy lub oba, z graczami podstawowymi i rezerwowymi. Od tej chwili lootsplity same oznaczają, kto wszedł jako 🔁 rezerwowy (i za kogo), bez podawania tego za każdym razem.",
+            "🗃️ Skarbiec party: cały zapas przedmiotów party w jednym miejscu, z wartością każdego przedmiotu. Każdy członek może zmienić cenę w dowolnej chwili, a skarbiec pokazuje łączną wartość i zakres zapasu.",
+            "Każdy przedmiot w skarbcu ma woreczek pochodzenia: 🟡 żółty i czysty dla Drop, 🟢 zielony z $ dla Service i 🔴 czerwony z $ dla Zakupu. W Service gwarantowana runa klienta zostaje w party za połowę wartości, podzieloną między graczy podstawowych (runa za 75kk → 37,5kk ÷ 5 = 7,5kk na osobę), z \"transfer\" i \"✔ Już zapłaciłem\" dla każdego. Przy sprzedaży zysk dzieli się między graczy podstawowych, a kto kupił przedmiot, odzyskuje to, co zapłacił.",
+            "👑 Graveborn: przycisk, gdy ktoś kupi Crypt Rune do craftu (pyta o zapłaconą cenę), i przycisk 🔨 Craftuj, który pyta, których przedmiotów ze skarbca użyć. Scraftowany przedmiot pokazuje przybliżoną cenę: dropy są warte od 0 do średniej ceny, zakupy tyle, ile zapłacono. Cena sprzedaży jest pytana dopiero przy sprzedaży, a obie informacje zostają do porównania.",
+            "🛠️ Konserwacja serwera: zainstalowano aktualizacje systemu i Dockera, a automatyczne zadania serwera działają stabilniej."
+          ]
+        },
+        "fr": {
+          "title": "Parties enregistrées et coffre",
+          "changes": [
+            "🛡️ Mes parties et coffre (menu ☰ → Party) : enregistrez la composition de la party pour la chasse, les boss ou les deux, avec titulaires et remplaçants. Ensuite, les lootsplits marquent tout seuls qui est venu en 🔁 remplaçant (et à la place de qui), sans avoir à le dire à chaque fois.",
+            "🗃️ Coffre de la party : tout le stock d'objets de la party au même endroit, avec la valeur de chaque objet. N'importe quel membre change le prix à tout moment, et le coffre affiche la valeur totale et la fourchette du stock.",
+            "Chaque objet du coffre a son petit sac d'origine : 🟡 jaune et uni pour Drop, 🟢 vert avec $ pour Service et 🔴 rouge avec $ pour Achat. Dans un Service, la rune garantie du client reste à la party pour la moitié de sa valeur, partagée entre les titulaires (rune à 75kk → 37,5kk ÷ 5 = 7,5kk chacun), avec le « transfer » et le « ✔ Déjà payé » de chacun. À la vente, le profit est partagé entre les titulaires et celui qui a acheté un objet récupère ce qu'il a payé.",
+            "👑 Graveborn : un bouton quand quelqu'un achète une Crypt Rune pour le craft (demande le prix payé) et un bouton 🔨 Crafter qui demande quels objets du coffre sont utilisés. L'objet crafté affiche un prix approximatif : les drops valent entre 0 et le prix moyen, les achats valent ce qui a été payé. Le prix de vente n'est demandé qu'à la vente, et les deux restent enregistrés pour comparer.",
+            "🛠️ Maintenance du serveur : mises à jour du système et de Docker installées, et les routines automatiques du serveur sont plus stables."
+          ]
+        },
+        "ru": {
+          "title": "Зарегистрированные пати и сейф",
+          "changes": [
+            "🛡️ Мои пати и сейф (меню ☰ → Party): зарегистрируйте состав пати для охоты, боссов или того и другого, с основными и запасными. После этого лутсплиты сами отмечают, кто зашёл как 🔁 замена (и вместо кого), без напоминаний каждый раз.",
+            "🗃️ Сейф пати: весь запас предметов пати в одном месте и сколько стоит каждый предмет. Любой участник меняет цену в любой момент, а сейф показывает общую стоимость и диапазон запаса.",
+            "У каждого предмета в сейфе есть мешочек происхождения: 🟡 жёлтый без знака — Drop, 🟢 зелёный с $ — Service, 🔴 красный с $ — Покупка. В Service гарантированная руна клиента остаётся у пати за половину стоимости, разделённую между основными (руна за 75kk → 37,5kk ÷ 5 = 7,5kk с каждого), с «transfer» и «✔ Уже оплатил» для каждого. При продаже прибыль делится между основными, а купивший предмет получает назад то, что заплатил.",
+            "👑 Graveborn: кнопка на случай, если кто-то купил Crypt Rune для крафта (спрашивает уплаченную цену), и кнопка 🔨 Скрафтить, которая спрашивает, какие предметы из сейфа использовать. Скрафченный предмет показывает примерную цену: дропы стоят от 0 до средней цены, покупки — сколько заплатили. Цена продажи спрашивается только при продаже, и обе цифры сохраняются для сравнения.",
+            "🛠️ Обслуживание сервера: установлены обновления системы и Docker, автоматические задачи сервера работают стабильнее."
+          ]
+        }
       }
     },
     {
@@ -623,7 +1085,7 @@
       "date": "2026-11-18",
       "title": "Substituições, rotações e cofre",
       "changes": [
-        "🤝 Substituições (novo no menu ☰): alguém vai jogar no seu personagem? Crie um link de envio e mande para a pessoa. Ela cola o Hunt Session Analyser ou o Party Hunt Analyser, sem precisar de conta, e tudo fica salvo no seu personagem, marcado como \"jogado por outra pessoa\". O link só envia, vale por pouco tempo e você pode cancelar quando quiser.",
+        "🤝 Substituições (novo no menu ☰): alguém vai jogar no seu personagem? Crie um link de envio e mande para a pessoa. Ela cola o Hunt Analyser ou o Party Hunt Analyser, sem precisar de conta, e tudo fica salvo no seu personagem, marcado como \"jogado por outra pessoa\". O link só envia, vale por pouco tempo e você pode cancelar quando quiser.",
         "👑 Bosses: cada sessão e lootsplit ganha o nome da rotação (ex.: \"Bastions: Cobra + Falcon Bastion\", \"GT + GD\", \"Last room GT + Ferumbras\") e um 🗃️ Cofre da rotação. Guarde ali os drops para vender depois, até os que caíram para outro membro. Na venda, marque a Taxa do Market (2,5%, com teto de 2.500.000 gp) e o app divide o líquido entre quem estava no dia, com os comandos de transferência. As Crypt Runes podem virar uma arma Crypt: as que faltaram e foram compradas entram como custo. Cada drop tem um código e o dia do drop (#12 · 17/11/2026), e antes de usar o conjunto uma tela mostra quais runas (com data e quem dropou) vão ser usadas, para a PT confirmar.",
         "🎮 Com o nome do personagem de quem vai jogar no link, essa pessoa também pode enviar logada na conta dela do 4rt3mi5: o Lootsplit é reconhecido sozinho e nada vai para o personagem dela. Ela vê em \"Joguei por outra pessoa\" o que jogou por você.",
         "🔁 Personagem certo: o Lootsplit só é salvo com um personagem seu que está na PT. Se você estava em outro personagem seu, o app salva no certo e troca sozinho. No Stacker, a sessão do mesmo horário de um lootsplit vai para o personagem daquela PT, e a mesma sessão não fica mais em dois personagens.",
@@ -634,7 +1096,7 @@
         "en": {
           "title": "Substitutions, rotations and vault",
           "changes": [
-            "🤝 Substitutions (new in the ☰ menu): is someone going to play your character? Create an upload link and send it to them. They paste the Hunt Session Analyser or the Party Hunt Analyser, no account needed, and everything is saved on your character, marked as \"played by someone else\". The link only uploads, works for a short time and you can cancel it whenever you want.",
+            "🤝 Substitutions (new in the ☰ menu): is someone going to play your character? Create an upload link and send it to them. They paste the Hunt Analyser or the Party Hunt Analyser, no account needed, and everything is saved on your character, marked as \"played by someone else\". The link only uploads, works for a short time and you can cancel it whenever you want.",
             "👑 Bosses: every session and lootsplit gets the rotation's name (e.g. \"Bastions: Cobra + Falcon Bastion\", \"GT + GD\", \"Last room GT + Ferumbras\") and a 🗃️ Rotation vault. Keep drops there to sell later, even those that dropped for another member. When selling, tick the Market fee (2.5%, capped at 2,500,000 gp) and the app splits the net among those who were there that day, with the transfer commands. Crypt Runes can become a Crypt weapon: the ones missing and bought count as a cost. Every drop has a code and its drop day (#12 · 17/11/2026), and before using the set a screen shows which runes (with date and who dropped them) will be used, so the party can confirm.",
             "🎮 With the name of the player's character in the link, that person can also upload while logged into their own 4rt3mi5 account: the Lootsplit is recognised on its own and nothing goes to their character. They see what they played for you in \"I played for someone else\".",
             "🔁 The right character: a Lootsplit is only saved with a character of yours that is in the party. If you were on another of your characters, the app saves it on the right one and switches by itself. In the Stacker, a session at the same time as a lootsplit goes to that party's character, and the same session can no longer be on two characters.",
@@ -645,7 +1107,7 @@
         "es": {
           "title": "Sustituciones, rotaciones y cofre",
           "changes": [
-            "🤝 Sustituciones (nuevo en el menú ☰): ¿alguien va a jugar con tu personaje? Crea un enlace de envío y mándaselo. Esa persona pega el Hunt Session Analyser o el Party Hunt Analyser, sin necesidad de cuenta, y todo queda guardado en tu personaje, marcado como \"jugado por otra persona\". El enlace solo envía, vale por poco tiempo y puedes cancelarlo cuando quieras.",
+            "🤝 Sustituciones (nuevo en el menú ☰): ¿alguien va a jugar con tu personaje? Crea un enlace de envío y mándaselo. Esa persona pega el Hunt Analyser o el Party Hunt Analyser, sin necesidad de cuenta, y todo queda guardado en tu personaje, marcado como \"jugado por otra persona\". El enlace solo envía, vale por poco tiempo y puedes cancelarlo cuando quieras.",
             "👑 Bosses: cada sesión y lootsplit recibe el nombre de la rotación (ej.: \"Bastions: Cobra + Falcon Bastion\", \"GT + GD\", \"Last room GT + Ferumbras\") y un 🗃️ Cofre de la rotación. Guarda ahí los drops para vender después, incluso los que cayeron a otro miembro. Al vender, marca la Tasa del Market (2,5%, con tope de 2.500.000 gp) y la app reparte el neto entre quienes estaban ese día, con los comandos de transferencia. Las Crypt Runes pueden convertirse en un arma Crypt: las que faltaron y se compraron cuentan como costo. Cada drop tiene un código y el día del drop (#12 · 17/11/2026), y antes de usar el conjunto una pantalla muestra qué runas (con fecha y quién las dropeó) se usarán, para que la PT confirme.",
             "🎮 Con el nombre del personaje de quien va a jugar en el enlace, esa persona también puede enviar desde su propia cuenta de 4rt3mi5: el Lootsplit se reconoce solo y nada va a su personaje. Ella ve en \"Jugué por otra persona\" lo que jugó por ti.",
             "🔁 El personaje correcto: el Lootsplit solo se guarda con un personaje tuyo que está en la PT. Si estabas con otro personaje tuyo, la app lo guarda en el correcto y cambia sola. En el Stacker, la sesión a la misma hora que un lootsplit va al personaje de esa PT, y la misma sesión ya no queda en dos personajes.",
@@ -656,7 +1118,7 @@
         "ja": {
           "title": "代理プレイ、ローテーション、保管庫",
           "changes": [
-            "🤝 代理プレイ（☰メニューに新登場）：誰かがあなたのキャラクターでプレイしますか？送信リンクを作ってその人に送りましょう。その人がHunt Session AnalyserかParty Hunt Analyserを貼り付けると、アカウントなしで、すべてあなたのキャラクターに「他の人がプレイ」として保存されます。リンクは送信専用で、短い期間だけ有効、いつでもキャンセルできます。",
+            "🤝 代理プレイ（☰メニューに新登場）：誰かがあなたのキャラクターでプレイしますか？送信リンクを作ってその人に送りましょう。その人がHunt AnalyserかParty Hunt Analyserを貼り付けると、アカウントなしで、すべてあなたのキャラクターに「他の人がプレイ」として保存されます。リンクは送信専用で、短い期間だけ有効、いつでもキャンセルできます。",
             "👑 ボス: 各セッションとLootsplitにローテーション名（例: 「Bastions: Cobra + Falcon Bastion」「GT + GD」「Last room GT + Ferumbras」）と🗃️ ローテーションの保管庫が付きます。あとで売るドロップを保管でき、他のメンバーに出たものも登録できます。売却時にMarketの手数料（2.5%、上限2,500,000 gp）にチェックすると、純額をその日にいた人で分け、送金コマンドも表示します。Crypt RuneはCrypt武器にでき、不足分を購入した場合はコストとして計算します。 各ドロップにはコードとドロップ日（#12 · 17/11/2026）が付き、セットを使う前に、使うルーン（日付とドロップした人）を一覧で確認できます。",
             "🎮 リンクにプレイする人のキャラクター名を入れると、その人は自分の4rt3mi5アカウントからも送信できます。Lootsplitは自動で認識され、その人のキャラクターには何も入りません。代わりにプレイした内容は「他の人の代わりにプレイした記録」で確認できます。",
             "🔁 正しいキャラクター：Lootsplitはパーティーにいるあなたのキャラクターでのみ保存されます。別の自分のキャラクターを選んでいた場合は、正しいキャラクターに保存して自動で切り替えます。Stackerでは、Lootsplitと同じ時間のセッションはそのパーティーのキャラクターに入り、同じセッションが2つのキャラクターに入ることはなくなりました。",
@@ -667,7 +1129,7 @@
         "de": {
           "title": "Vertretungen, Rotationen und Tresor",
           "changes": [
-            "🤝 Vertretungen (neu im ☰-Menü): Spielt jemand deinen Charakter? Erstelle einen Upload-Link und schick ihn der Person. Sie fügt den Hunt Session Analyser oder den Party Hunt Analyser ein, ganz ohne Konto, und alles wird bei deinem Charakter gespeichert, markiert als „von jemand anderem gespielt\". Der Link lädt nur hoch, gilt nur kurz und du kannst ihn jederzeit stornieren.",
+            "🤝 Vertretungen (neu im ☰-Menü): Spielt jemand deinen Charakter? Erstelle einen Upload-Link und schick ihn der Person. Sie fügt den Hunt Analyser oder den Party Hunt Analyser ein, ganz ohne Konto, und alles wird bei deinem Charakter gespeichert, markiert als „von jemand anderem gespielt\". Der Link lädt nur hoch, gilt nur kurz und du kannst ihn jederzeit stornieren.",
             "👑 Bosse: Jede Session und jeder Lootsplit bekommt den Namen der Rotation (z. B. „Bastions: Cobra + Falcon Bastion\", „GT + GD\", „Last room GT + Ferumbras\") und einen 🗃️ Rotationstresor. Bewahre dort Drops für den späteren Verkauf auf, auch die, die bei einem anderen Mitglied gedroppt sind. Beim Verkauf hakst du die Market-Gebühr an (2,5 %, höchstens 2.500.000 gp) und die App teilt den Nettobetrag unter allen, die an dem Tag dabei waren, mit den Überweisungsbefehlen. Crypt Runes können zu einer Crypt-Waffe werden: fehlende, gekaufte Runen zählen als Kosten. Jeder Drop hat einen Code und den Drop-Tag (#12 · 17/11/2026), und bevor das Set verwendet wird, zeigt ein Fenster, welche Runen (mit Datum und wer sie gedroppt hat) verwendet werden, damit die Party bestätigen kann.",
             "🎮 Steht der Charakter der spielenden Person im Link, kann sie auch über ihr eigenes 4rt3mi5-Konto hochladen: Der Lootsplit wird selbst erkannt und nichts landet bei ihrem Charakter. Unter „Ich habe für jemanden gespielt\" sieht sie, was sie für dich gespielt hat.",
             "🔁 Der richtige Charakter: Ein Lootsplit wird nur mit einem deiner Charaktere gespeichert, der in der Party ist. Warst du auf einem anderen deiner Charaktere, speichert die App beim richtigen und wechselt selbst. Im Stacker geht eine Session zur gleichen Zeit wie ein Lootsplit an den Charakter dieser Party, und dieselbe Session liegt nicht mehr bei zwei Charakteren.",
@@ -678,7 +1140,7 @@
         "pl": {
           "title": "Zastępstwa, rotacje i skarbiec",
           "changes": [
-            "🤝 Zastępstwa (nowość w menu ☰): ktoś zagra Twoją postacią? Utwórz link do przesyłania i wyślij go tej osobie. Wkleja Hunt Session Analyser albo Party Hunt Analyser, bez zakładania konta, a wszystko zapisuje się na Twojej postaci z oznaczeniem „grane przez inną osobę”. Link służy tylko do przesyłania, działa krótko i możesz go anulować w każdej chwili.",
+            "🤝 Zastępstwa (nowość w menu ☰): ktoś zagra Twoją postacią? Utwórz link do przesyłania i wyślij go tej osobie. Wkleja Hunt Analyser albo Party Hunt Analyser, bez zakładania konta, a wszystko zapisuje się na Twojej postaci z oznaczeniem „grane przez inną osobę”. Link służy tylko do przesyłania, działa krótko i możesz go anulować w każdej chwili.",
             "👑 Bossowie: każda sesja i lootsplit dostaje nazwę rotacji (np. „Bastions: Cobra + Falcon Bastion”, „GT + GD”, „Last room GT + Ferumbras”) i 🗃️ Skarbiec rotacji. Trzymaj tam dropy do późniejszej sprzedaży, także te, które wypadły innemu członkowi. Przy sprzedaży zaznacz Opłatę Market (2,5%, maksymalnie 2 500 000 gp), a aplikacja podzieli kwotę netto między obecnych tego dnia i poda polecenia przelewów. Crypt Runes mogą stać się bronią Crypt: brakujące, kupione runy liczą się jako koszt. Każdy drop ma kod i dzień dropu (#12 · 17/11/2026), a przed użyciem zestawu ekran pokazuje, które runy (z datą i kto je wydropił) zostaną użyte, żeby drużyna mogła potwierdzić.",
             "🎮 Gdy w linku jest postać osoby, która gra, może ona też przesyłać ze swojego konta 4rt3mi5: lootsplit jest rozpoznawany sam i nic nie trafia do jej postaci. W „Grałem za kogoś” widzi, co zagrała za Ciebie.",
             "🔁 Właściwa postać: lootsplit zapisuje się tylko z Twoją postacią, która jest w drużynie. Jeśli byłeś na innej swojej postaci, aplikacja zapisze na właściwej i sama się przełączy. W Stackerze sesja z tej samej pory co lootsplit trafia do postaci z tej drużyny, a ta sama sesja nie trafi już na dwie postacie.",
@@ -689,7 +1151,7 @@
         "fr": {
           "title": "Remplacements, rotations et coffre",
           "changes": [
-            "🤝 Remplacements (nouveau dans le menu ☰) : quelqu'un va jouer ton personnage ? Crée un lien d'envoi et envoie-le-lui. La personne colle le Hunt Session Analyser ou le Party Hunt Analyser, sans compte, et tout est enregistré sur ton personnage, marqué « joué par quelqu'un d'autre ». Le lien sert seulement à envoyer, il est valable peu de temps et tu peux l'annuler quand tu veux.",
+            "🤝 Remplacements (nouveau dans le menu ☰) : quelqu'un va jouer ton personnage ? Crée un lien d'envoi et envoie-le-lui. La personne colle le Hunt Analyser ou le Party Hunt Analyser, sans compte, et tout est enregistré sur ton personnage, marqué « joué par quelqu'un d'autre ». Le lien sert seulement à envoyer, il est valable peu de temps et tu peux l'annuler quand tu veux.",
             "👑 Boss : chaque session et chaque lootsplit reçoit le nom de la rotation (ex. : « Bastions: Cobra + Falcon Bastion », « GT + GD », « Last room GT + Ferumbras ») et un 🗃️ Coffre de la rotation. Gardes-y les drops à vendre plus tard, même ceux tombés pour un autre membre. À la vente, coche la Taxe du Market (2,5 %, plafonnée à 2 500 000 gp) et l'app partage le net entre ceux qui étaient là ce jour-là, avec les commandes de transfert. Les Crypt Runes peuvent devenir une arme Crypt : celles qui manquaient et ont été achetées comptent comme un coût. Chaque drop a un code et son jour (#12 · 17/11/2026), et avant d'utiliser l'ensemble un écran montre quelles runes (avec la date et qui les a drop) seront utilisées, pour que la PT confirme.",
             "🎮 Avec le nom du personnage de celui qui va jouer dans le lien, cette personne peut aussi envoyer depuis son propre compte 4rt3mi5 : le Lootsplit est reconnu tout seul et rien ne va sur son personnage. Elle voit dans « J'ai joué pour quelqu'un » ce qu'elle a joué pour toi.",
             "🔁 Le bon personnage : un Lootsplit n'est enregistré qu'avec un de tes personnages qui est dans la PT. Si tu étais sur un autre de tes personnages, l'app l'enregistre sur le bon et change toute seule. Dans le Stacker, une session à la même heure qu'un lootsplit va sur le personnage de cette PT, et une même session ne peut plus être sur deux personnages.",
@@ -700,7 +1162,7 @@
         "ru": {
           "title": "Замены, ротации и хранилище",
           "changes": [
-            "🤝 Замены (новое в меню ☰): кто-то будет играть вашим персонажем? Создайте ссылку для отправки и пришлите её. Человек вставит Hunt Session Analyser или Party Hunt Analyser без аккаунта, и всё сохранится на вашем персонаже с пометкой «играл другой человек». Ссылка только отправляет, действует недолго, и её можно отменить в любой момент.",
+            "🤝 Замены (новое в меню ☰): кто-то будет играть вашим персонажем? Создайте ссылку для отправки и пришлите её. Человек вставит Hunt Analyser или Party Hunt Analyser без аккаунта, и всё сохранится на вашем персонаже с пометкой «играл другой человек». Ссылка только отправляет, действует недолго, и её можно отменить в любой момент.",
             "👑 Боссы: каждая сессия и lootsplit получают название ротации (напр.: «Bastions: Cobra + Falcon Bastion», «GT + GD», «Last room GT + Ferumbras») и 🗃️ Хранилище ротации. Храните там дроп для продажи позже, даже выпавший другим участникам. При продаже отметьте Комиссию Market (2,5%, не больше 2 500 000 gp), и приложение разделит чистую сумму между теми, кто был в тот день, с командами перевода. Crypt Runes можно превратить в оружие Crypt: недостающие купленные руны учитываются как затраты. У каждого дропа есть код и день (#12 · 17/11/2026), а перед использованием набора экран показывает, какие руны (с датой и тем, у кого выпали) будут использованы, чтобы пати подтвердило.",
             "🎮 Если в ссылке указан персонаж того, кто будет играть, он сможет отправлять и из своего аккаунта 4rt3mi5: lootsplit распознаётся сам, и ничего не попадает на его персонажа. В разделе «Я играл за другого» он видит, что сыграл за вас.",
             "🔁 Правильный персонаж: lootsplit сохраняется только с вашим персонажем, который есть в пати. Если вы были на другом своём персонаже, приложение сохранит на нужном и переключится само. В Stacker сессия в то же время, что и lootsplit, попадает к персонажу из этого пати, а одна сессия больше не может быть у двух персонажей.",
@@ -920,8 +1382,8 @@
       "title": "Solo ou Party e notícias do Tibia",
       "changes": [
         "Ao entrar, escolha se a hunt de hoje é solo ou em party. A barra no rodapé fica sempre visível para trocar a qualquer momento: Solo abre o 📈 Hunt Session Stacker e Party abre o 💰 Lootsplit. O menu ☰ segue essa escolha e ficou mais enxuto. A chave aparece só nas telas que dependem dela, e o menu agora mostra primeiro as Ferramentas do 4rt3mi5 e, embaixo, o que vem do Tibia.",
-        "No Lootsplit, logo depois de colar o Party Hunt Analyser aparece quem transfere para quem, com os comandos prontos para copiar, e uma mensagem pronta para mandar no chat do Tibia a quem não tem o app. Depois vem o próximo passo pelo seu tipo de player: o Hardcore é guiado por um botão dourado até o Input Analyzer, e o que ficar em branco continua salvo.",
-        "🗺️ Hunts agora separa hunts solo de hunts em party, mostra o seu histórico em cada hunt e só compara solo com solo e party com party. Os detalhes (criaturas, itens e dano) aparecem nas hunts em que você caçou; o Player Hardcore vê também o Input Analyzer público.",
+        "No Lootsplit, logo depois de colar o Party Hunt Analyser aparece quem transfere para quem, com os comandos prontos para copiar, e uma mensagem pronta para mandar no chat do Tibia a quem não tem o app. Depois vem o próximo passo pelo seu tipo de player: o Hardcore é guiado por um botão dourado até o Input Analyser, e o que ficar em branco continua salvo.",
+        "🗺️ Hunts agora separa hunts solo de hunts em party, mostra o seu histórico em cada hunt e só compara solo com solo e party com party. Os detalhes (criaturas, itens e dano) aparecem nas hunts em que você caçou; o Player Hardcore vê também o Input Analyser público.",
         "📰 Novidades agora traz o que a CipSoft publica no Latest News do tibia.com (News Ticker, Featured Article e notícias), no idioma original. As notícias ficam guardadas: dá para ler mesmo com o tibia.com fora do ar ou em manutenção.",
         "💬 O que os CMs estão falando? abre o News Archive do tibia.com já filtrado na última semana, com tudo marcado. Mude o período, as categorias e os tipos, ou pesquise uma palavra em todas as notícias desde 2000.",
         "As notas de versão do 4rt3mi5 agora se chamam 🧾 Alterações: estão no menu e num atalho fixo no canto inferior direito, que fica dourado quando sai versão nova."
@@ -931,8 +1393,8 @@
           "title": "Solo or Party and Tibia news",
           "changes": [
             "When you log in, choose whether today's hunt is solo or in a party. The bar at the bottom is always visible so you can switch at any time: Solo opens the 📈 Hunt Session Stacker and Party opens the 💰 Lootsplit. The ☰ menu follows this choice and is leaner. The switch only shows on the screens that depend on it, and the menu now lists the 4rt3mi5 Tools first and, below them, what comes from Tibia.",
-            "In the Lootsplit, right after pasting the Party Hunt Analyser you see who transfers to whom, with the commands ready to copy, plus a ready message to send in the Tibia chat to anyone without the app. Then comes the next step for your player type: Hardcore players are guided by a golden button up to the Input Analyzer, and anything left blank stays saved.",
-            "🗺️ Hunts now splits solo hunts from party hunts, shows your history at each hunt and only compares solo with solo and party with party. Details (creatures, items and damage) appear on hunts where you hunted; Hardcore players also see the public Input Analyzer.",
+            "In the Lootsplit, right after pasting the Party Hunt Analyser you see who transfers to whom, with the commands ready to copy, plus a ready message to send in the Tibia chat to anyone without the app. Then comes the next step for your player type: Hardcore players are guided by a golden button up to the Input Analyser, and anything left blank stays saved.",
+            "🗺️ Hunts now splits solo hunts from party hunts, shows your history at each hunt and only compares solo with solo and party with party. Details (creatures, items and damage) appear on hunts where you hunted; Hardcore players also see the public Input Analyser.",
             "📰 News now brings what CipSoft publishes in the Latest News on tibia.com (News Ticker, Featured Article and news), in the original language. The news is stored, so you can read it even when tibia.com is offline or under maintenance.",
             "💬 What are the CMs saying? opens the tibia.com News Archive already filtered to the last week, with everything checked. Change the period, categories and types, or search for a word in all news since 2000.",
             "The 4rt3mi5 release notes are now called 🧾 Changes: they are in the menu and in a fixed shortcut at the bottom right, which turns gold when a new version comes out."
@@ -942,8 +1404,8 @@
           "title": "Solo o Party y noticias de Tibia",
           "changes": [
             "Al entrar, elige si la hunt de hoy es solo o en party. La barra inferior siempre está visible para cambiar en cualquier momento: Solo abre el 📈 Hunt Session Stacker y Party abre el 💰 Lootsplit. El menú ☰ sigue esa elección y es más limpio. El interruptor solo aparece en las pantallas que dependen de él, y el menú ahora muestra primero las Herramientas de 4rt3mi5 y, debajo, lo que viene de Tibia.",
-            "En el Lootsplit, justo después de pegar el Party Hunt Analyser aparece quién transfiere a quién, con los comandos listos para copiar, y un mensaje listo para enviar en el chat de Tibia a quien no tiene la app. Después viene el siguiente paso según tu tipo de jugador: el Hardcore es guiado por un botón dorado hasta el Input Analyzer, y lo que quede en blanco se guarda.",
-            "🗺️ Hunts ahora separa las hunts solo de las hunts en party, muestra tu historial en cada hunt y solo compara solo con solo y party con party. Los detalles (criaturas, ítems y daño) aparecen en las hunts donde cazaste; el jugador Hardcore también ve el Input Analyzer público.",
+            "En el Lootsplit, justo después de pegar el Party Hunt Analyser aparece quién transfiere a quién, con los comandos listos para copiar, y un mensaje listo para enviar en el chat de Tibia a quien no tiene la app. Después viene el siguiente paso según tu tipo de jugador: el Hardcore es guiado por un botón dorado hasta el Input Analyser, y lo que quede en blanco se guarda.",
+            "🗺️ Hunts ahora separa las hunts solo de las hunts en party, muestra tu historial en cada hunt y solo compara solo con solo y party con party. Los detalles (criaturas, ítems y daño) aparecen en las hunts donde cazaste; el jugador Hardcore también ve el Input Analyser público.",
             "📰 Novedades ahora trae lo que CipSoft publica en Latest News de tibia.com (News Ticker, Featured Article y noticias), en el idioma original. Las noticias quedan guardadas: puedes leerlas aunque tibia.com esté fuera de línea o en mantenimiento.",
             "💬 ¿Qué dicen los CMs? abre el News Archive de tibia.com ya filtrado en la última semana, con todo marcado. Cambia el período, las categorías y los tipos, o busca una palabra en todas las noticias desde 2000.",
             "Las notas de versión de 4rt3mi5 ahora se llaman 🧾 Cambios: están en el menú y en un acceso fijo en la esquina inferior derecha, que se vuelve dorado cuando sale una versión nueva."
@@ -953,8 +1415,8 @@
           "title": "ソロ／パーティーとTibiaニュース",
           "changes": [
             "ログイン時に、今日のハントがソロかパーティーかを選びます。下部のバーは常に表示され、いつでも切り替えられます。ソロは📈 Hunt Session Stacker、パーティーは💰 Lootsplitを開きます。☰メニューもこの選択に連動し、すっきりしました。 スイッチはそれに関係する画面にだけ表示され、メニューは4rt3mi5のツールを先に、その下にTibia関連を並べるようになりました。",
-            "Lootsplitでは、Party Hunt Analyserを貼り付けた直後に誰が誰に送金するかがコピー用コマンド付きで表示され、アプリを持っていない人にTibiaのチャットで送れるメッセージも用意されます。続いてプレイヤータイプに合わせた次のステップが表示され、ハードコアは金色のボタンでInput Analyzerまで案内されます。空欄の項目も保存されます。",
-            "🗺️ Huntsはソロとパーティーのハントを分け、各ハントでのあなたの履歴を表示し、ソロはソロ同士、パーティーはパーティー同士でのみ比較します。詳細（クリーチャー、アイテム、ダメージ）は自分が狩ったハントにだけ表示され、ハードコアは公開のInput Analyzerも見られます。",
+            "Lootsplitでは、Party Hunt Analyserを貼り付けた直後に誰が誰に送金するかがコピー用コマンド付きで表示され、アプリを持っていない人にTibiaのチャットで送れるメッセージも用意されます。続いてプレイヤータイプに合わせた次のステップが表示され、ハードコアは金色のボタンでInput Analyserまで案内されます。空欄の項目も保存されます。",
+            "🗺️ Huntsはソロとパーティーのハントを分け、各ハントでのあなたの履歴を表示し、ソロはソロ同士、パーティーはパーティー同士でのみ比較します。詳細（クリーチャー、アイテム、ダメージ）は自分が狩ったハントにだけ表示され、ハードコアは公開のInput Analyserも見られます。",
             "📰 ニュースでは、CipSoftがtibia.comのLatest Newsで公開した内容（News Ticker、Featured Article、ニュース）を原文のまま表示します。ニュースは保存されるので、tibia.comがオフラインやメンテナンス中でも読めます。",
             "💬「CMは何と言っている？」は、直近1週間・すべてチェック済みで絞り込んだtibia.comのNews Archiveを開きます。期間、カテゴリー、種類を変えたり、2000年以降の全ニュースから単語で検索したりできます。",
             "4rt3mi5のリリースノートは🧾 変更履歴という名前になりました。メニューと右下の固定ショートカットから開け、新バージョンが出ると金色になります。"
@@ -964,8 +1426,8 @@
           "title": "Solo oder Party und Tibia-News",
           "changes": [
             "Beim Einloggen wählst du, ob die heutige Hunt solo oder in einer Party ist. Die Leiste unten ist immer sichtbar, damit du jederzeit wechseln kannst: Solo öffnet den 📈 Hunt Session Stacker und Party den 💰 Lootsplit. Das ☰-Menü folgt dieser Wahl und ist schlanker. Der Schalter erscheint nur auf den Seiten, die davon abhängen, und das Menü zeigt jetzt zuerst die Werkzeuge von 4rt3mi5 und darunter alles von Tibia.",
-            "Im Lootsplit siehst du direkt nach dem Einfügen des Party Hunt Analysers, wer wem überweist, mit kopierfertigen Befehlen, und eine fertige Nachricht für den Tibia-Chat an alle ohne App. Danach kommt der nächste Schritt passend zu deinem Spielertyp: Hardcore-Spieler werden von einem goldenen Button bis zum Input Analyzer geführt, und leere Felder bleiben gespeichert.",
-            "🗺️ Hunts trennt jetzt Solo- und Party-Hunts, zeigt deinen Verlauf in jeder Hunt und vergleicht nur Solo mit Solo und Party mit Party. Details (Kreaturen, Items und Schaden) erscheinen bei Hunts, in denen du gejagt hast; Hardcore-Spieler sehen auch den öffentlichen Input Analyzer.",
+            "Im Lootsplit siehst du direkt nach dem Einfügen des Party Hunt Analysers, wer wem überweist, mit kopierfertigen Befehlen, und eine fertige Nachricht für den Tibia-Chat an alle ohne App. Danach kommt der nächste Schritt passend zu deinem Spielertyp: Hardcore-Spieler werden von einem goldenen Button bis zum Input Analyser geführt, und leere Felder bleiben gespeichert.",
+            "🗺️ Hunts trennt jetzt Solo- und Party-Hunts, zeigt deinen Verlauf in jeder Hunt und vergleicht nur Solo mit Solo und Party mit Party. Details (Kreaturen, Items und Schaden) erscheinen bei Hunts, in denen du gejagt hast; Hardcore-Spieler sehen auch den öffentlichen Input Analyser.",
             "📰 Neuigkeiten zeigt jetzt, was CipSoft in den Latest News auf tibia.com veröffentlicht (News Ticker, Featured Article und News), in der Originalsprache. Die News werden gespeichert, sodass du sie auch lesen kannst, wenn tibia.com offline oder in Wartung ist.",
             "💬 Was sagen die CMs? öffnet das News Archive von tibia.com, bereits auf die letzte Woche gefiltert und mit allem angehakt. Ändere Zeitraum, Kategorien und Typen oder suche ein Wort in allen News seit 2000.",
             "Die Versionshinweise von 4rt3mi5 heißen jetzt 🧾 Änderungen: Du findest sie im Menü und über eine feste Verknüpfung unten rechts, die golden wird, wenn eine neue Version erscheint."
@@ -975,8 +1437,8 @@
           "title": "Solo czy Party i wiadomości z Tibii",
           "changes": [
             "Przy logowaniu wybierz, czy dzisiejszy hunt jest solo, czy w party. Pasek na dole jest zawsze widoczny, więc możesz zmienić w każdej chwili: Solo otwiera 📈 Hunt Session Stacker, a Party otwiera 💰 Lootsplit. Menu ☰ podąża za tym wyborem i jest prostsze. Przełącznik pojawia się tylko na ekranach, które od niego zależą, a menu pokazuje teraz najpierw Narzędzia 4rt3mi5, a pod nimi to, co pochodzi z Tibii.",
-            "W Lootsplit zaraz po wklejeniu Party Hunt Analysera widać, kto komu przelewa, z komendami gotowymi do skopiowania, oraz gotową wiadomość do wysłania na czacie Tibii osobom bez aplikacji. Potem pojawia się kolejny krok zależnie od typu gracza: Hardcore jest prowadzony złotym przyciskiem aż do Input Analyzer, a puste pola zostają zapisane.",
-            "🗺️ Hunts oddziela teraz hunty solo od huntów w party, pokazuje twoją historię w każdym huncie i porównuje tylko solo z solo oraz party z party. Szczegóły (stwory, przedmioty i obrażenia) pojawiają się w huntach, w których polowałeś; gracz Hardcore widzi też publiczny Input Analyzer.",
+            "W Lootsplit zaraz po wklejeniu Party Hunt Analysera widać, kto komu przelewa, z komendami gotowymi do skopiowania, oraz gotową wiadomość do wysłania na czacie Tibii osobom bez aplikacji. Potem pojawia się kolejny krok zależnie od typu gracza: Hardcore jest prowadzony złotym przyciskiem aż do Input Analyser, a puste pola zostają zapisane.",
+            "🗺️ Hunts oddziela teraz hunty solo od huntów w party, pokazuje twoją historię w każdym huncie i porównuje tylko solo z solo oraz party z party. Szczegóły (stwory, przedmioty i obrażenia) pojawiają się w huntach, w których polowałeś; gracz Hardcore widzi też publiczny Input Analyser.",
             "📰 Nowości pokazują teraz to, co CipSoft publikuje w Latest News na tibia.com (News Ticker, Featured Article i wiadomości), w oryginalnym języku. Wiadomości są zapisywane, więc można je czytać nawet gdy tibia.com jest offline lub w trakcie konserwacji.",
             "💬 Co mówią CM-i? otwiera News Archive z tibia.com już przefiltrowane na ostatni tydzień, ze wszystkim zaznaczonym. Zmień okres, kategorie i typy albo wyszukaj słowo we wszystkich wiadomościach od 2000 roku.",
             "Informacje o wersjach 4rt3mi5 nazywają się teraz 🧾 Zmiany: są w menu i w stałym skrócie w prawym dolnym rogu, który robi się złoty, gdy wychodzi nowa wersja."
@@ -986,8 +1448,8 @@
           "title": "Solo ou Party et actualités de Tibia",
           "changes": [
             "À la connexion, choisissez si la hunt du jour est en solo ou en party. La barre du bas reste toujours visible pour changer à tout moment : Solo ouvre le 📈 Hunt Session Stacker et Party ouvre le 💰 Lootsplit. Le menu ☰ suit ce choix et est plus épuré. L'interrupteur n'apparaît que sur les écrans qui en dépendent, et le menu affiche d'abord les Outils de 4rt3mi5 puis, en dessous, ce qui vient de Tibia.",
-            "Dans le Lootsplit, juste après avoir collé le Party Hunt Analyser, vous voyez qui transfère à qui, avec les commandes prêtes à copier, et un message prêt à envoyer dans le chat de Tibia à ceux qui n'ont pas l'appli. Vient ensuite l'étape suivante selon votre type de joueur : le Hardcore est guidé par un bouton doré jusqu'à l'Input Analyzer, et ce qui reste vide est enregistré.",
-            "🗺️ Hunts sépare désormais les hunts solo des hunts en party, affiche votre historique dans chaque hunt et ne compare que solo avec solo et party avec party. Les détails (créatures, objets et dégâts) apparaissent sur les hunts où vous avez chassé ; le joueur Hardcore voit aussi l'Input Analyzer public.",
+            "Dans le Lootsplit, juste après avoir collé le Party Hunt Analyser, vous voyez qui transfère à qui, avec les commandes prêtes à copier, et un message prêt à envoyer dans le chat de Tibia à ceux qui n'ont pas l'appli. Vient ensuite l'étape suivante selon votre type de joueur : le Hardcore est guidé par un bouton doré jusqu'à l'Input Analyser, et ce qui reste vide est enregistré.",
+            "🗺️ Hunts sépare désormais les hunts solo des hunts en party, affiche votre historique dans chaque hunt et ne compare que solo avec solo et party avec party. Les détails (créatures, objets et dégâts) apparaissent sur les hunts où vous avez chassé ; le joueur Hardcore voit aussi l'Input Analyser public.",
             "📰 Actualités affiche maintenant ce que CipSoft publie dans les Latest News de tibia.com (News Ticker, Featured Article et actualités), dans la langue d'origine. Les actualités sont enregistrées : vous pouvez les lire même quand tibia.com est hors ligne ou en maintenance.",
             "💬 Que disent les CM ? ouvre le News Archive de tibia.com déjà filtré sur la dernière semaine, avec tout coché. Changez la période, les catégories et les types, ou recherchez un mot dans toutes les actualités depuis 2000.",
             "Les notes de version de 4rt3mi5 s'appellent désormais 🧾 Modifications : elles sont dans le menu et dans un raccourci fixe en bas à droite, qui devient doré à la sortie d'une nouvelle version."
@@ -997,8 +1459,8 @@
           "title": "Соло или Party и новости Tibia",
           "changes": [
             "При входе выберите, будет ли сегодняшний хант соло или в party. Панель внизу всегда видна, переключаться можно в любой момент: Соло открывает 📈 Hunt Session Stacker, а Party — 💰 Lootsplit. Меню ☰ следует этому выбору и стало компактнее. Переключатель показывается только на экранах, которые от него зависят, а в меню сначала идут Инструменты 4rt3mi5, а ниже — то, что приходит из Tibia.",
-            "В Lootsplit сразу после вставки Party Hunt Analyser видно, кто кому переводит, с готовыми для копирования командами, и готовое сообщение для чата Tibia тем, у кого нет приложения. Затем идёт следующий шаг по вашему типу игрока: Хардкор-игрока золотая кнопка ведёт до Input Analyzer, а незаполненное сохраняется.",
-            "🗺️ Hunts теперь разделяет соло-ханты и ханты в party, показывает вашу историю на каждом ханте и сравнивает только соло с соло и party с party. Подробности (существа, предметы и урон) видны на хантах, где вы охотились; Хардкор-игрок видит также публичный Input Analyzer.",
+            "В Lootsplit сразу после вставки Party Hunt Analyser видно, кто кому переводит, с готовыми для копирования командами, и готовое сообщение для чата Tibia тем, у кого нет приложения. Затем идёт следующий шаг по вашему типу игрока: Хардкор-игрока золотая кнопка ведёт до Input Analyser, а незаполненное сохраняется.",
+            "🗺️ Hunts теперь разделяет соло-ханты и ханты в party, показывает вашу историю на каждом ханте и сравнивает только соло с соло и party с party. Подробности (существа, предметы и урон) видны на хантах, где вы охотились; Хардкор-игрок видит также публичный Input Analyser.",
             "📰 Новости теперь показывают то, что CipSoft публикует в Latest News на tibia.com (News Ticker, Featured Article и новости), на языке оригинала. Новости сохраняются, поэтому их можно читать, даже когда tibia.com недоступен или на обслуживании.",
             "💬 «Что говорят CM?» открывает News Archive с tibia.com, уже отфильтрованный за последнюю неделю, со всеми отмеченными пунктами. Измените период, категории и типы или найдите слово во всех новостях с 2000 года.",
             "Заметки о версиях 4rt3mi5 теперь называются 🧾 Изменения: они есть в меню и в закреплённой кнопке в правом нижнем углу, которая становится золотой при выходе новой версии."
@@ -1095,10 +1557,10 @@
       "date": "2026-11-16",
       "title": "Menu Solo e Party, tipo de player e chave sem prazo",
       "changes": [
-        "☰ Menu novo: Solo (📈 Hunt Session Stacker e 👑 Boss) e Party (💰 Lootsplit e 👑 Boss). No Stacker, a janela para colar o Hunt Session Analyzer já abre sozinha.",
-        "💾 Salve primeiro e diga a hunt depois: a sessão fica salva mesmo sem o local, com o aviso \"hunt sem local\" para escolher quando quiser (depois de escolhido, o local pode ser trocado 2 vezes). No lootsplit não há perguntas: a divisão aparece na hora, e o local, a sua sessão e o Input Analyzer ficam como opções no próprio card.",
+        "☰ Menu novo: Solo (📈 Hunt Session Stacker e 👑 Boss) e Party (💰 Lootsplit e 👑 Boss). No Stacker, a janela para colar o Hunt Analyser já abre sozinha.",
+        "💾 Salve primeiro e diga a hunt depois: a sessão fica salva mesmo sem o local, com o aviso \"hunt sem local\" para escolher quando quiser (depois de escolhido, o local pode ser trocado 2 vezes). No lootsplit não há perguntas: a divisão aparece na hora, e o local, a sua sessão e o Input Analyser ficam como opções no próprio card.",
         "🎮 Ao criar a conta, diga que tipo de player você é: Hardcore, Comum ou Novato. Dá para trocar quando quiser em ⚙️ Configurações, e o tipo decide o que o app pergunta e o que você compartilha.",
-        "🛡️ Junte o Input Analyzer: quanto você apanhou, o elemento e as criaturas que mais bateram. No lootsplit, cada um da PT junta a sua sessão e o seu Input Analyzer, e a PT toda vê. Se a sessão de alguém não bater com o Party Hunt Analyser, aparece um aviso discreto.",
+        "🛡️ Junte o Input Analyser: quanto você apanhou, o elemento e as criaturas que mais bateram. No lootsplit, cada um da PT junta a sua sessão e o seu Input Analyser, e a PT toda vê. Se a sessão de alguém não bater com o Party Hunt Analyser, aparece um aviso discreto.",
         "📊 Comparar minhas hunts: veja em qual hunt você fez mais XP e mais lucro no mesmo tempo. A comparação de 🗺️ Hunts mostra o dano que cada lugar dá. 🔒 A quantidade de criaturas e de loot agora fica só com o dono.",
         "🔑 A chave de acesso não vence mais: nada de renovar. 🌐 Mais idiomas: alemão, polonês, francês e russo. O app sempre abre em português, e as Novidades aparecem no idioma que você escolher, inclusive as das versões antigas."
       ],
@@ -1106,10 +1568,10 @@
         "en": {
           "title": "Solo and Party menu, player type and keys that never expire",
           "changes": [
-            "☰ New menu: Solo (📈 Hunt Session Stacker and 👑 Boss) and Party (💰 Lootsplit and 👑 Boss). In the Stacker, the window to paste the Hunt Session Analyzer opens by itself.",
-            "💾 Save first and say the hunt later: the session is saved even without a spot, with a \"hunt with no spot\" tag so you can pick it whenever you want (once picked, the spot can be changed 2 times). The lootsplit asks no questions: the split shows up right away, and the spot, your session and the Input Analyzer are options on the card itself.",
+            "☰ New menu: Solo (📈 Hunt Session Stacker and 👑 Boss) and Party (💰 Lootsplit and 👑 Boss). In the Stacker, the window to paste the Hunt Analyser opens by itself.",
+            "💾 Save first and say the hunt later: the session is saved even without a spot, with a \"hunt with no spot\" tag so you can pick it whenever you want (once picked, the spot can be changed 2 times). The lootsplit asks no questions: the split shows up right away, and the spot, your session and the Input Analyser are options on the card itself.",
             "🎮 When you create your account, say what type of player you are: Hardcore, Regular or Beginner. You can change it anytime in ⚙️ Settings, and the type decides what the app asks and what you share.",
-            "🛡️ Add the Input Analyzer: how much damage you took, and the element and creatures that hit you the most. In the lootsplit, each party member adds their session and Input Analyzer, and the whole party sees them. If someone's session doesn't match the Party Hunt Analyser, a discreet notice shows up.",
+            "🛡️ Add the Input Analyser: how much damage you took, and the element and creatures that hit you the most. In the lootsplit, each party member adds their session and Input Analyser, and the whole party sees them. If someone's session doesn't match the Party Hunt Analyser, a discreet notice shows up.",
             "📊 Compare my hunts: see at which hunt you made more XP and more profit in the same time. The 🗺️ Hunts comparison shows the damage each place deals. 🔒 The number of creatures and loot now stays with the owner only.",
             "🔑 Your access key no longer expires: no more renewing. 🌐 More languages: German, Polish, French and Russian. The app always opens in Portuguese, and What's new shows up in the language you choose, including older versions."
           ]
@@ -1117,10 +1579,10 @@
         "es": {
           "title": "Menú Solo y Party, tipo de jugador y claves que no vencen",
           "changes": [
-            "☰ Menú nuevo: Solo (📈 Hunt Session Stacker y 👑 Boss) y Party (💰 Lootsplit y 👑 Boss). En el Stacker, la ventana para pegar el Hunt Session Analyzer se abre sola.",
-            "💾 Guarda primero y di la hunt después: la sesión queda guardada aunque no tenga lugar, con el aviso \"hunt sin lugar\" para elegirlo cuando quieras (una vez elegido, el lugar se puede cambiar 2 veces). El lootsplit no hace preguntas: el reparto aparece al instante, y el lugar, tu sesión y el Input Analyzer son opciones en la propia tarjeta.",
+            "☰ Menú nuevo: Solo (📈 Hunt Session Stacker y 👑 Boss) y Party (💰 Lootsplit y 👑 Boss). En el Stacker, la ventana para pegar el Hunt Analyser se abre sola.",
+            "💾 Guarda primero y di la hunt después: la sesión queda guardada aunque no tenga lugar, con el aviso \"hunt sin lugar\" para elegirlo cuando quieras (una vez elegido, el lugar se puede cambiar 2 veces). El lootsplit no hace preguntas: el reparto aparece al instante, y el lugar, tu sesión y el Input Analyser son opciones en la propia tarjeta.",
             "🎮 Al crear tu cuenta, di qué tipo de jugador eres: Hardcore, Común o Novato. Puedes cambiarlo cuando quieras en ⚙️ Configuración, y el tipo decide qué pregunta la app y qué compartes.",
-            "🛡️ Agrega el Input Analyzer: cuánto daño recibiste, y el elemento y las criaturas que más te pegaron. En el lootsplit, cada miembro de la party agrega su sesión y su Input Analyzer, y toda la party los ve. Si la sesión de alguien no coincide con el Party Hunt Analyser, aparece un aviso discreto.",
+            "🛡️ Agrega el Input Analyser: cuánto daño recibiste, y el elemento y las criaturas que más te pegaron. En el lootsplit, cada miembro de la party agrega su sesión y su Input Analyser, y toda la party los ve. Si la sesión de alguien no coincide con el Party Hunt Analyser, aparece un aviso discreto.",
             "📊 Comparar mis hunts: mira en qué hunt hiciste más XP y más ganancia en el mismo tiempo. La comparación de 🗺️ Hunts muestra el daño que hace cada lugar. 🔒 La cantidad de criaturas y de loot ahora queda solo para el dueño.",
             "🔑 Tu clave de acceso ya no vence: no hay que renovarla. 🌐 Más idiomas: alemán, polaco, francés y ruso. La app siempre se abre en portugués, y las Novedades aparecen en el idioma que elijas, incluso las de versiones anteriores."
           ]
@@ -1128,10 +1590,10 @@
         "ja": {
           "title": "ソロ・パーティメニュー、プレイヤータイプ、期限のないキー",
           "changes": [
-            "☰ 新メニュー：ソロ（📈 Hunt Session Stackerと👑 ボス）とパーティ（💰 Lootsplitと👑 ボス）。Stackerでは、Hunt Session Analyzerを貼り付ける画面が自動で開きます。",
-            "💾 先に保存して、狩場はあとで：セッションは場所なしでも保存され、「場所未設定」からいつでも選べます（選んだ後は2回まで変更可能）。lootsplitでは質問はありません：分配がすぐに表示され、狩場、自分のセッション、Input Analyzerはカードからあとで追加できます。",
+            "☰ 新メニュー：ソロ（📈 Hunt Session Stackerと👑 ボス）とパーティ（💰 Lootsplitと👑 ボス）。Stackerでは、Hunt Analyserを貼り付ける画面が自動で開きます。",
+            "💾 先に保存して、狩場はあとで：セッションは場所なしでも保存され、「場所未設定」からいつでも選べます（選んだ後は2回まで変更可能）。lootsplitでは質問はありません：分配がすぐに表示され、狩場、自分のセッション、Input Analyserはカードからあとで追加できます。",
             "🎮 アカウント作成時に、プレイヤータイプ（ハードコア、一般、初心者）を選びます。⚙️ 設定でいつでも変更でき、タイプによってアプリが何を聞くか、何を共有するかが決まります。",
-            "🛡️ Input Analyzerを追加：受けたダメージ量、一番多かった属性とクリーチャー。lootsplitでは、PTの各メンバーが自分のセッションとInput Analyzerを追加し、PT全員が見られます。誰かのセッションがParty Hunt Analyserと一致しない場合は、控えめなお知らせが出ます。",
+            "🛡️ Input Analyserを追加：受けたダメージ量、一番多かった属性とクリーチャー。lootsplitでは、PTの各メンバーが自分のセッションとInput Analyserを追加し、PT全員が見られます。誰かのセッションがParty Hunt Analyserと一致しない場合は、控えめなお知らせが出ます。",
             "📊 自分の狩りを比較：同じ時間でどの狩場が一番XPと利益が多かったかが分かります。🗺️ Huntsの比較では各狩場で受けるダメージも表示。🔒 クリーチャーとlootの数は持ち主だけが見られるようになりました。",
             "🔑 アクセスキーの有効期限がなくなりました：更新は不要です。🌐 言語を追加：ドイツ語、ポーランド語、フランス語、ロシア語。アプリは常にポルトガル語で開き、お知らせは過去のバージョンも含めて選んだ言語で表示されます。"
           ]
@@ -1139,10 +1601,10 @@
         "de": {
           "title": "Solo- und Party-Menü, Spielertyp und Schlüssel ohne Ablauf",
           "changes": [
-            "☰ Neues Menü: Solo (📈 Hunt Session Stacker und 👑 Boss) und Party (💰 Lootsplit und 👑 Boss). Im Stacker öffnet sich das Fenster zum Einfügen des Hunt Session Analyzers von selbst.",
-            "💾 Erst speichern, die Hunt später angeben: Die Session wird auch ohne Ort gespeichert, mit dem Hinweis \"Hunt ohne Ort\", um ihn jederzeit zu wählen (danach kann der Ort 2-mal geändert werden). Der Lootsplit stellt keine Fragen: Die Teilung erscheint sofort, und Ort, deine Session und der Input Analyzer sind Optionen direkt auf der Karte.",
+            "☰ Neues Menü: Solo (📈 Hunt Session Stacker und 👑 Boss) und Party (💰 Lootsplit und 👑 Boss). Im Stacker öffnet sich das Fenster zum Einfügen des Hunt Analysers von selbst.",
+            "💾 Erst speichern, die Hunt später angeben: Die Session wird auch ohne Ort gespeichert, mit dem Hinweis \"Hunt ohne Ort\", um ihn jederzeit zu wählen (danach kann der Ort 2-mal geändert werden). Der Lootsplit stellt keine Fragen: Die Teilung erscheint sofort, und Ort, deine Session und der Input Analyser sind Optionen direkt auf der Karte.",
             "🎮 Gib beim Erstellen des Kontos an, welcher Spielertyp du bist: Hardcore, Normal oder Anfänger. Du kannst das jederzeit unter ⚙️ Einstellungen ändern, und der Typ bestimmt, was die App fragt und was du teilst.",
-            "🛡️ Füge den Input Analyzer hinzu: wie viel Schaden du bekommen hast und welches Element und welche Kreaturen am meisten getroffen haben. Im Lootsplit fügt jedes Party-Mitglied seine Session und seinen Input Analyzer hinzu, und die ganze Party sieht sie. Passt die Session von jemandem nicht zum Party Hunt Analyser, erscheint ein dezenter Hinweis.",
+            "🛡️ Füge den Input Analyser hinzu: wie viel Schaden du bekommen hast und welches Element und welche Kreaturen am meisten getroffen haben. Im Lootsplit fügt jedes Party-Mitglied seine Session und seinen Input Analyser hinzu, und die ganze Party sieht sie. Passt die Session von jemandem nicht zum Party Hunt Analyser, erscheint ein dezenter Hinweis.",
             "📊 Meine Hunts vergleichen: Sieh, in welcher Hunt du in der gleichen Zeit mehr XP und mehr Profit gemacht hast. Der Vergleich unter 🗺️ Hunts zeigt den Schaden jedes Orts. 🔒 Die Anzahl an Kreaturen und Loot sieht jetzt nur noch der Besitzer.",
             "🔑 Dein Zugangsschlüssel läuft nicht mehr ab: kein Verlängern mehr. 🌐 Mehr Sprachen: Deutsch, Polnisch, Französisch und Russisch. Die App öffnet sich immer auf Portugiesisch, und die Neuigkeiten erscheinen in der gewählten Sprache, auch die älteren Versionen."
           ]
@@ -1150,10 +1612,10 @@
         "pl": {
           "title": "Menu Solo i Party, typ gracza i klucze bez daty ważności",
           "changes": [
-            "☰ Nowe menu: Solo (📈 Hunt Session Stacker i 👑 Boss) oraz Party (💰 Lootsplit i 👑 Boss). W Stackerze okno do wklejenia Hunt Session Analyzera otwiera się samo.",
-            "💾 Najpierw zapisz, hunt podaj później: sesja zapisuje się nawet bez miejsca, z oznaczeniem \"hunt bez miejsca\", żeby wybrać je, kiedy zechcesz (po wyborze miejsce można zmienić 2 razy). Lootsplit nie zadaje pytań: podział pojawia się od razu, a miejsce, twoja sesja i Input Analyzer to opcje na samej karcie.",
+            "☰ Nowe menu: Solo (📈 Hunt Session Stacker i 👑 Boss) oraz Party (💰 Lootsplit i 👑 Boss). W Stackerze okno do wklejenia Hunt Analysera otwiera się samo.",
+            "💾 Najpierw zapisz, hunt podaj później: sesja zapisuje się nawet bez miejsca, z oznaczeniem \"hunt bez miejsca\", żeby wybrać je, kiedy zechcesz (po wyborze miejsce można zmienić 2 razy). Lootsplit nie zadaje pytań: podział pojawia się od razu, a miejsce, twoja sesja i Input Analyser to opcje na samej karcie.",
             "🎮 Przy tworzeniu konta powiedz, jakim typem gracza jesteś: Hardcore, Zwykły lub Początkujący. Możesz to zmienić w każdej chwili w ⚙️ Ustawieniach, a typ decyduje, o co pyta aplikacja i czym się dzielisz.",
-            "🛡️ Dodaj Input Analyzer: ile obrażeń otrzymałeś oraz element i potwory, które biły najmocniej. W lootsplicie każdy członek drużyny dodaje swoją sesję i Input Analyzer, a cała drużyna je widzi. Jeśli czyjaś sesja nie zgadza się z Party Hunt Analyserem, pojawia się dyskretna informacja.",
+            "🛡️ Dodaj Input Analyser: ile obrażeń otrzymałeś oraz element i potwory, które biły najmocniej. W lootsplicie każdy członek drużyny dodaje swoją sesję i Input Analyser, a cała drużyna je widzi. Jeśli czyjaś sesja nie zgadza się z Party Hunt Analyserem, pojawia się dyskretna informacja.",
             "📊 Porównaj moje hunty: zobacz, na którym huncie w tym samym czasie zdobyłeś najwięcej XP i zysku. Porównanie w 🗺️ Huntach pokazuje obrażenia na każdym miejscu. 🔒 Liczba potworów i lootu jest teraz widoczna tylko dla właściciela.",
             "🔑 Twój klucz dostępu już nie wygasa: koniec z odnawianiem. 🌐 Więcej języków: niemiecki, polski, francuski i rosyjski. Aplikacja zawsze otwiera się po portugalsku, a Nowości pojawiają się w wybranym języku, także te ze starszych wersji."
           ]
@@ -1161,10 +1623,10 @@
         "fr": {
           "title": "Menu Solo et Groupe, type de joueur et clés sans expiration",
           "changes": [
-            "☰ Nouveau menu : Solo (📈 Hunt Session Stacker et 👑 Boss) et Groupe (💰 Lootsplit et 👑 Boss). Dans le Stacker, la fenêtre pour coller le Hunt Session Analyzer s'ouvre toute seule.",
-            "💾 Enregistrez d'abord, indiquez la hunt ensuite : la session est enregistrée même sans lieu, avec la mention \"hunt sans lieu\" pour le choisir quand vous voulez (une fois choisi, le lieu peut être changé 2 fois). Le lootsplit ne pose aucune question : le partage s'affiche tout de suite, et le lieu, votre session et l'Input Analyzer sont des options sur la carte elle-même.",
+            "☰ Nouveau menu : Solo (📈 Hunt Session Stacker et 👑 Boss) et Groupe (💰 Lootsplit et 👑 Boss). Dans le Stacker, la fenêtre pour coller le Hunt Analyser s'ouvre toute seule.",
+            "💾 Enregistrez d'abord, indiquez la hunt ensuite : la session est enregistrée même sans lieu, avec la mention \"hunt sans lieu\" pour le choisir quand vous voulez (une fois choisi, le lieu peut être changé 2 fois). Le lootsplit ne pose aucune question : le partage s'affiche tout de suite, et le lieu, votre session et l'Input Analyser sont des options sur la carte elle-même.",
             "🎮 En créant votre compte, indiquez quel type de joueur vous êtes : Hardcore, Classique ou Débutant. Vous pouvez le changer quand vous voulez dans ⚙️ Paramètres, et le type décide de ce que l'app demande et de ce que vous partagez.",
-            "🛡️ Ajoutez l'Input Analyzer : combien de dégâts vous avez reçus, l'élément et les créatures qui ont le plus frappé. Dans le lootsplit, chaque membre du groupe ajoute sa session et son Input Analyzer, et tout le groupe les voit. Si la session de quelqu'un ne correspond pas au Party Hunt Analyser, une petite alerte discrète apparaît.",
+            "🛡️ Ajoutez l'Input Analyser : combien de dégâts vous avez reçus, l'élément et les créatures qui ont le plus frappé. Dans le lootsplit, chaque membre du groupe ajoute sa session et son Input Analyser, et tout le groupe les voit. Si la session de quelqu'un ne correspond pas au Party Hunt Analyser, une petite alerte discrète apparaît.",
             "📊 Comparer mes hunts : voyez dans quelle hunt vous avez fait le plus d'XP et de profit pour le même temps. La comparaison des 🗺️ Hunts montre les dégâts de chaque lieu. 🔒 Le nombre de créatures et de loot n'est maintenant visible que par le propriétaire.",
             "🔑 Votre clé d'accès n'expire plus : plus besoin de la renouveler. 🌐 Plus de langues : allemand, polonais, français et russe. L'app s'ouvre toujours en portugais, et les Nouveautés s'affichent dans la langue choisie, y compris celles des anciennes versions."
           ]
@@ -1172,10 +1634,10 @@
         "ru": {
           "title": "Меню Соло и Пати, тип игрока и бессрочные ключи",
           "changes": [
-            "☰ Новое меню: Соло (📈 Hunt Session Stacker и 👑 Босс) и Пати (💰 Lootsplit и 👑 Босс). В Stacker окно для вставки Hunt Session Analyzer открывается само.",
-            "💾 Сначала сохраните, хант укажите потом: сессия сохраняется даже без места, с пометкой «хант без места», чтобы выбрать его, когда захотите (после выбора место можно изменить 2 раза). Лутсплит ничего не спрашивает: раздел появляется сразу, а место, ваша сессия и Input Analyzer — это опции прямо в карточке.",
+            "☰ Новое меню: Соло (📈 Hunt Session Stacker и 👑 Босс) и Пати (💰 Lootsplit и 👑 Босс). В Stacker окно для вставки Hunt Analyser открывается само.",
+            "💾 Сначала сохраните, хант укажите потом: сессия сохраняется даже без места, с пометкой «хант без места», чтобы выбрать его, когда захотите (после выбора место можно изменить 2 раза). Лутсплит ничего не спрашивает: раздел появляется сразу, а место, ваша сессия и Input Analyser — это опции прямо в карточке.",
             "🎮 При создании аккаунта укажите, какой вы игрок: Хардкорный, Обычный или Новичок. Изменить это можно в любой момент в ⚙️ Настройках, а тип определяет, что спрашивает приложение и чем вы делитесь.",
-            "🛡️ Добавьте Input Analyzer: сколько урона вы получили, стихию и существ, которые били сильнее всего. В лутсплите каждый участник пати добавляет свою сессию и Input Analyzer, и вся пати их видит. Если чья-то сессия не совпадает с Party Hunt Analyser, появляется неброское уведомление.",
+            "🛡️ Добавьте Input Analyser: сколько урона вы получили, стихию и существ, которые били сильнее всего. В лутсплите каждый участник пати добавляет свою сессию и Input Analyser, и вся пати их видит. Если чья-то сессия не совпадает с Party Hunt Analyser, появляется неброское уведомление.",
             "📊 Сравнить мои ханты: посмотрите, на каком ханте за то же время вы получили больше XP и прибыли. Сравнение в 🗺️ Хантах показывает урон на каждом месте. 🔒 Количество существ и лута теперь видит только владелец.",
             "🔑 Ваш ключ доступа больше не истекает: продлевать не нужно. 🌐 Новые языки: немецкий, польский, французский и русский. Приложение всегда открывается на португальском, а Новости показываются на выбранном языке, включая старые версии."
           ]
@@ -1748,7 +2210,7 @@
       "title": "Uma chave por conta",
       "changes": [
         "🔑 A loja agora é o seu cadastro: você gera a sua chave gratuita uma vez só. Toda chave começa com 7 dias.",
-        "👥 Uma chave por conta, com até 50 personagens. Cada personagem só pode estar em uma chave: verifique pelo comentário do tibia.com ou peça ao adm para validar.",
+        "👥 Uma chave por conta, com até 50 personagens. Cada personagem só pode estar em uma chave: verifique pelo comentário do tibia.com ou peça ao administrador para validar.",
         "🔄 O item \"Renove 7 dias grátis da sua chave\" aparece no menu ☰ quando faltam menos de 3 dias. A renovação continua grátis."
       ],
       "tr": {
@@ -2027,7 +2489,7 @@
       "date": "2026-11-14",
       "title": "Rotação de bosses",
       "changes": [
-        "👑 Nova Rotação de bosses, com Solo e Party: cole o Hunt Session Analyser da luta e veja lucro, bosses mortos, loot de cada boss e itens, como no Stacker.",
+        "👑 Nova Rotação de bosses, com Solo e Party: cole o Hunt Analyser da luta e veja lucro, bosses mortos, loot de cada boss e itens, como no Stacker.",
         "Em Party, o app pergunta se você quer fazer o lootsplit. Se sim, cole o Party Hunt Analyser: a divisão aparece na aba de bosses de todos da PT. Se não, a sessão fica guardada só para você.",
         "Quando alguém da PT envia a própria sessão do mesmo boss, ela se junta sozinha ao lootsplit da party.",
         "Matou um boss no meio de uma hunt comum do 📈 Hunt Session Stacker? Ele entra na aba de bosses, com o loot estimado dele somado ao lucro de bosses.",
@@ -2038,7 +2500,7 @@
         "en": {
           "title": "Boss rotation",
           "changes": [
-            "👑 New Boss rotation, with Solo and Party: paste the fight's Hunt Session Analyser and see profit, bosses killed, each boss's loot and items, like in the Stacker.",
+            "👑 New Boss rotation, with Solo and Party: paste the fight's Hunt Analyser and see profit, bosses killed, each boss's loot and items, like in the Stacker.",
             "In Party, the app asks if you want to do the lootsplit. If yes, paste the Party Hunt Analyser: the split shows up in the bosses tab of everyone in the party. If not, the session is kept just for you.",
             "When someone in the party sends their own session of the same boss, it joins the party's lootsplit by itself.",
             "Killed a boss in the middle of a regular hunt in the 📈 Hunt Session Stacker? It goes to the bosses tab, with its estimated loot added to boss profit.",
@@ -2049,7 +2511,7 @@
         "es": {
           "title": "Rotación de bosses",
           "changes": [
-            "👑 Nueva Rotación de bosses, con Solo y Party: pega el Hunt Session Analyser de la pelea y ve la ganancia, los bosses muertos, el loot de cada boss y los ítems, como en el Stacker.",
+            "👑 Nueva Rotación de bosses, con Solo y Party: pega el Hunt Analyser de la pelea y ve la ganancia, los bosses muertos, el loot de cada boss y los ítems, como en el Stacker.",
             "En Party, la app pregunta si quieres hacer el lootsplit. Si sí, pega el Party Hunt Analyser: el reparto aparece en la pestaña de bosses de todos los de la PT. Si no, la sesión queda guardada solo para ti.",
             "Cuando alguien de la PT envía su propia sesión del mismo boss, se une sola al lootsplit de la party.",
             "¿Mataste un boss en medio de una hunt común del 📈 Hunt Session Stacker? Entra en la pestaña de bosses, con su loot estimado sumado a la ganancia de bosses.",
@@ -2060,7 +2522,7 @@
         "ja": {
           "title": "ボスローテーション",
           "changes": [
-            "👑 ソロとパーティのボスローテーションを追加：戦闘のHunt Session Analyserを貼り付けると、Stackerと同じように利益、倒したボス、ボスごとのloot、アイテムが見られます。",
+            "👑 ソロとパーティのボスローテーションを追加：戦闘のHunt Analyserを貼り付けると、Stackerと同じように利益、倒したボス、ボスごとのloot、アイテムが見られます。",
             "パーティでは、lootsplitをするか聞かれます。する場合はParty Hunt Analyserを貼り付けると、PT全員のボスタブに分配が表示されます。しない場合、セッションはあなただけのものとして保存されます。",
             "PTの誰かが同じボスの自分のセッションを送ると、自動でパーティのlootsplitに合流します。",
             "📈 Hunt Session Stackerの通常の狩りの途中でボスを倒した？ボスタブに入り、推定lootがボスの利益に加算されます。",
@@ -2071,7 +2533,7 @@
         "de": {
           "title": "Boss-Rotation",
           "changes": [
-            "👑 Neue Boss-Rotation, mit Solo und Party: Füge den Hunt Session Analyser des Kampfes ein und sieh Profit, getötete Bosse, den Loot jedes Bosses und die Items, wie im Stacker.",
+            "👑 Neue Boss-Rotation, mit Solo und Party: Füge den Hunt Analyser des Kampfes ein und sieh Profit, getötete Bosse, den Loot jedes Bosses und die Items, wie im Stacker.",
             "In der Party fragt die App, ob du den Lootsplit machen willst. Wenn ja, füge den Party Hunt Analyser ein: Die Teilung erscheint im Boss-Tab aller in der Party. Wenn nicht, wird die Session nur für dich gespeichert.",
             "Wenn jemand aus der Party seine eigene Session vom selben Boss sendet, wird sie automatisch dem Party-Lootsplit hinzugefügt.",
             "Mitten in einer normalen Hunt im 📈 Hunt Session Stacker einen Boss getötet? Er kommt in den Boss-Tab, und sein geschätzter Loot zählt zum Boss-Profit.",
@@ -2082,7 +2544,7 @@
         "pl": {
           "title": "Rotacja bossów",
           "changes": [
-            "👑 Nowa Rotacja bossów, z Solo i Party: wklej Hunt Session Analyser z walki i zobacz zysk, zabitych bossów, loot każdego bossa i przedmioty, jak w Stackerze.",
+            "👑 Nowa Rotacja bossów, z Solo i Party: wklej Hunt Analyser z walki i zobacz zysk, zabitych bossów, loot każdego bossa i przedmioty, jak w Stackerze.",
             "W Party aplikacja pyta, czy chcesz zrobić lootsplit. Jeśli tak, wklej Party Hunt Analyser: podział pojawi się w zakładce bossów wszystkich z drużyny. Jeśli nie, sesja zostanie zapisana tylko dla ciebie.",
             "Gdy ktoś z drużyny wyśle własną sesję z tego samego bossa, sama dołączy do lootsplitu drużyny.",
             "Zabiłeś bossa w trakcie zwykłego huntu w 📈 Hunt Session Stacker? Trafia do zakładki bossów, a jego szacowany loot dolicza się do zysku z bossów.",
@@ -2093,7 +2555,7 @@
         "fr": {
           "title": "Rotation des boss",
           "changes": [
-            "👑 Nouvelle Rotation des boss, avec Solo et Groupe : collez le Hunt Session Analyser du combat et voyez le profit, les boss tués, le loot de chaque boss et les objets, comme dans le Stacker.",
+            "👑 Nouvelle Rotation des boss, avec Solo et Groupe : collez le Hunt Analyser du combat et voyez le profit, les boss tués, le loot de chaque boss et les objets, comme dans le Stacker.",
             "En Groupe, l'app demande si vous voulez faire le lootsplit. Si oui, collez le Party Hunt Analyser : le partage apparaît dans l'onglet boss de tout le groupe. Sinon, la session est gardée seulement pour vous.",
             "Quand quelqu'un du groupe envoie sa propre session du même boss, elle rejoint toute seule le lootsplit du groupe.",
             "Vous avez tué un boss au milieu d'une hunt normale du 📈 Hunt Session Stacker ? Il va dans l'onglet boss, avec son loot estimé ajouté au profit des boss.",
@@ -2104,7 +2566,7 @@
         "ru": {
           "title": "Ротация боссов",
           "changes": [
-            "👑 Новая Ротация боссов, с Соло и Пати: вставьте Hunt Session Analyser боя и смотрите прибыль, убитых боссов, лут каждого босса и предметы, как в Stacker.",
+            "👑 Новая Ротация боссов, с Соло и Пати: вставьте Hunt Analyser боя и смотрите прибыль, убитых боссов, лут каждого босса и предметы, как в Stacker.",
             "В Пати приложение спрашивает, хотите ли вы сделать лутсплит. Если да, вставьте Party Hunt Analyser: раздел появится во вкладке боссов у всей пати. Если нет, сессия сохранится только для вас.",
             "Когда кто-то из пати отправляет свою сессию того же босса, она сама присоединяется к лутсплиту пати.",
             "Убили босса посреди обычного ханта в 📈 Hunt Session Stacker? Он попадёт во вкладку боссов, а его оценочный лут добавится к прибыли с боссов.",

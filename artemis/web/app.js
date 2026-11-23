@@ -930,16 +930,16 @@ async function loadSavedLang() {
 // O que cada tipo é (aparece ao passar o mouse e na escolha da criação da conta).
 const PTYPES = {
   hardcore: { ic: "🔥", label: "Player Hardcore",
-    desc: "Acesso free. Você quer compartilhar todas as informações possíveis para melhorar o seu estilo de jogo, as hunts, os locais de caça, o profit e a XP: do Hunt Session Analyzer ao lootsplit, o local de hunt, o Input Analyzer, a Wheel of Destiny, quando fez o último imbuimento e quanto gastou nos imbuimentos." },
+    desc: "Acesso free. Você quer compartilhar todas as informações possíveis para melhorar o seu estilo de jogo, as hunts, os locais de caça, o profit e a XP: do Hunt Analyser ao lootsplit, o local de hunt, o Input Analyser, a Wheel of Destiny, quando fez o último imbuimento e quanto gastou nos imbuimentos." },
   comum: { ic: "⚔️", label: "Player Comum",
-    desc: "Acesso free. Você não se considera mais um novato e quer compartilhar, às vezes, algumas informações mais precisas, como o local de hunt e o Input Analyzer." },
+    desc: "Acesso free. Você não se considera mais um novato e quer compartilhar, às vezes, algumas informações mais precisas, como o local de hunt e o Input Analyser." },
   novato: { ic: "🌱", label: "Player Novato",
     desc: "Acesso free. Você quer apenas usar a ferramenta: ainda não sabe muito bem o que tudo faz, mas está aprendendo." },
 };
 // O que o app faz para cada tipo (dica embaixo da escolha em ⚙️ Configurações).
 const PTYPE_INFO = {
-  hardcore: "🔥 Depois de salvar uma sessão, o app pergunta a hunt e o Input Analyzer. No lootsplit, você junta o seu Hunt Session Analyzer e o Input Analyzer para a PT ver.",
-  comum: "⚔️ Depois de salvar uma sessão, o app pergunta em qual hunt foi. Quando quiser, você junta o Input Analyzer e, no lootsplit, a sua sessão.",
+  hardcore: "🔥 Depois de salvar uma sessão, o app pergunta a hunt e o Input Analyser. No lootsplit, você junta o seu Hunt Analyser e o Input Analyser para a PT ver.",
+  comum: "⚔️ Depois de salvar uma sessão, o app pergunta em qual hunt foi. Quando quiser, você junta o Input Analyser e, no lootsplit, a sua sessão.",
   novato: "🌱 O app só salva, sem perguntas. Quando quiser, toque em \"hunt sem local\" para dizer onde foi.",
 };
 const ptype = () => (S.me && S.me.player_type) || "comum";
@@ -1902,8 +1902,8 @@ function lootNextStep(h) {
   const own = (list) => (list || []).some((x) => x.name.toLowerCase() === (S.nick || "").toLowerCase());
   const has = { place: !!h.place, session: own(h.member_sessions), input: own(h.inputs) };
   const order = ["place", "session", ...(isHardcore(t) ? ["input"] : [])];
-  const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Session Analyzer", input: "🛡️ Input Analyzer" };
-  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Session Analyzer ✔", input: "🛡️ Input Analyzer ✔" };
+  const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Analyser", input: "🛡️ Input Analyser" };
+  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Analyser ✔", input: "🛡️ Input Analyser ✔" };
   const canPlace = h.can_delete;  // só quem enviou o lootsplit escolhe o local
   const pending = order.filter((s) => !has[s] && (s !== "place" || canPlace));
   const next = pending[0];
@@ -1914,8 +1914,8 @@ function lootNextStep(h) {
     return `<button class="btn2${gold}" data-loot-step="${s}" data-hunt="${h.id}" type="button">${label[s]}</button>`;
   };
   const intro = isHardcore(t)
-    ? (next ? "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Session Analyzer e por fim o Input Analyzer." : "🔥 Tudo preenchido ✔")
-    : (pending.length ? "⚔️ Quer completar? Diga em qual hunt foi e junte o seu Hunt Session Analyzer." : "⚔️ Tudo preenchido ✔");
+    ? (next ? "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser e por fim o Input Analyser." : "🔥 Tudo preenchido ✔")
+    : (pending.length ? "⚔️ Quer completar? Diga em qual hunt foi e junte o seu Hunt Analyser." : "⚔️ Tudo preenchido ✔");
   return `<div class="card"><b>${intro}</b><div class="nextstep">${order.map(btn).join("")}</div>
     ${pending.length ? `<div class="hint">Não precisa ser agora: o que você não preencher fica salvo e dá para completar depois.</div>` : ""}</div>`;
 }
@@ -1958,7 +1958,7 @@ $("#lootBtn").addEventListener("click", async () => {
     celebrateRewards(r.rewards);
     if (r.created) checkAchievements();
     // 0.20.0: no lootsplit o que importa primeiro é quem paga quem. Nada de perguntas aqui: o local da hunt,
-    // a sessão e o Input Analyzer ficam como opções no próprio card, para preencher depois.
+    // a sessão e o Input Analyser ficam como opções no próprio card, para preencher depois.
     S.lastLoot = r.hunt.id;
   } catch (err) {
     if (err.status === 0) {
@@ -2112,11 +2112,13 @@ function periodBlock(p) {
 async function loadStack(opts = {}) {
   const el = $("#stackResult");
   if (!opts.quiet) el.innerHTML = skeleton("stack");
+  paintLive();
   let d;
   try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=${S.period}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   S.prices = d.prices || {};
   S.stack = d;
+  paintLive();
   if (!d.sessions.length) {
     el.innerHTML = emptyState("stack");
     return d;
@@ -2155,7 +2157,7 @@ function byPlaceBlock(b) {
     <div class="hint">Média por hora das suas sessões de 10 min ou mais em cada hunt. Melhor XP/h = a sua melhor sessão ali. Só para você se informar.</div></details>`;
 }
 
-/* ---------- 0.26.1: 🥇 Rankings — Usuários do Artemis (XP 30/90), Geral (top 1000 por métrica) e ficha do jogador ---------- */
+/* ---------- 0.26.1: 🥇 Rankings — Usuários do 4rt3mi5 (XP 30/90), Geral (top 1000 por métrica) e ficha do jogador ---------- */
 S.rtab = "artemis";
 S.xp = { days: 30 };
 S.geral = { metric: "level", page: 1 };
@@ -2181,10 +2183,11 @@ async function loadXp() {
   document.querySelectorAll("[data-xdays]").forEach((b) => b.classList.toggle("on", +b.dataset.xdays === S.xp.days));
   body.innerHTML = skeleton("stack");
   let d;
-  try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=board`); }
+  try { d = await api("GET", `/api/xp-ranking?days=${S.xp.days}&scope=board&world=${encodeURIComponent(S.rworld)}`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   $("#xpNoteDated").classList.toggle("hidden", !d.note_visible);
-  if (!d.rows.length) { body.innerHTML = `<p class="muted">Nenhum personagem acompanhado ainda.</p>`; return; }
+  paintWorldSelect($("#xpWorld"), d.worlds || []);
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">${d.world ? esc(tf("Nenhum personagem acompanhado em {0} ainda.", d.world)) : "Nenhum personagem acompanhado ainda."}</p>`; return; }
   const medal = ["🥇", "🥈", "🥉"], W = "white-space:normal";
   body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">Ganho ${d.days} dias</th></tr>
     ${d.rows.map((r, i) => `<tr><td style="${W}">${r.gain == null ? "–" : (medal[i] || i + 1)}</td>
@@ -2197,6 +2200,24 @@ async function loadXp() {
     <div class="hint">Ganho = XP de hoje menos o XP do início da contagem: 21/11/2026 ou o cadastro do personagem, o que for depois. Quando não há highscore do personagem (fora do top 1000), o ganho vem das sessões solo enviadas.</div>`;
 }
 
+/** 0.30.0: lista de mundos do filtro (o do seu personagem vem primeiro). */
+// 0.30.1: o mesmo filtro de mundo nas três abas (Usuários do 4rt3mi5, Geral e Amigos); o padrão é "Todos os mundos"
+S.rworld = "";
+function paintWorldSelect(sel, worlds) {
+  const mine = S.char && S.char.world;
+  const key = worlds.join("|") + "|" + (mine || "");
+  if (sel.dataset.key !== key) {
+    const ordered = mine && worlds.includes(mine) ? [mine, ...worlds.filter((w) => w !== mine)] : worlds;
+    sel.innerHTML = `<option value="">${esc(I18N.t("Todos os mundos"))}</option>` + ordered.map((w) =>
+      `<option value="${esc(w)}" data-i18n-skip>${w === mine ? "📍 " : ""}${esc(w)}</option>`).join("");
+    sel.dataset.key = key;
+  }
+  sel.value = worlds.includes(S.rworld) ? S.rworld : "";
+}
+const paintGeralWorlds = (worlds) => paintWorldSelect($("#geralWorld"), worlds);
+for (const [id, reload] of [["#geralWorld", () => { S.geral.page = 1; loadGeral(); }], ["#xpWorld", () => loadXp()], ["#amigosWorld", () => loadAmigos()]]) {
+  $(id).addEventListener("change", (e) => { S.rworld = e.target.value; reload(); });
+}
 async function loadGeral() {
   const sel = $("#geralMetric");
   if (!sel.options.length) sel.innerHTML = Object.entries(GERAL_LABELS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join("");
@@ -2204,9 +2225,13 @@ async function loadGeral() {
   const body = $("#geralBody");
   body.innerHTML = skeleton("stack");
   let d;
-  try { d = await api("GET", `/api/rank/geral?metric=${S.geral.metric}&page=${S.geral.page}`); }
+  try { d = await api("GET", `/api/rank/geral?metric=${S.geral.metric}&page=${S.geral.page}&world=${encodeURIComponent(S.rworld)}`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  paintGeralWorlds(d.worlds || []);
   $("#geralDay").textContent = d.day ? `Varredura de ${brData(d.day)} · 100 por página` : "Ainda não há varredura.";
+  $("#geralNote").textContent = !d.world ? "" : d.source === "mundo"
+    ? tf("Top {0} de {1}.", d.total, d.world)
+    : tf("Mostrando só os de {0} que estão no top 1000 geral ({1}). O top completo do mundo chega na próxima varredura.", d.world, d.total);
   $("#geralPage").textContent = `Página ${d.page} de ${d.pages}`;
   $("#geralPrev").disabled = d.page <= 1;
   $("#geralNext").disabled = d.page >= d.pages;
@@ -2312,7 +2337,7 @@ async function loadSubs() {
   S.subs = d;
   const chars = (S.me && S.me.chars) || [];
   $("#subsCreate").innerHTML = !chars.length ? `<p class="muted">Vincule um personagem em 👤 Meus personagens primeiro.</p>`
-    : `<p class="muted" style="margin:0 0 10px">Crie um link e mande para quem vai jogar. A pessoa cola o Hunt Session Analyser
+    : `<p class="muted" style="margin:0 0 10px">Crie um link e mande para quem vai jogar. A pessoa cola o Hunt Analyser
         ou o Party Hunt Analyser e tudo fica salvo no seu personagem, sem ela precisar de conta.</p>
       <form class="subs-form" id="subsForm">
         <label><span>Personagem</span><select name="character">${chars.map((c) => `<option${c.name === S.nick ? " selected" : ""}>${esc(c.name)}</option>`).join("")}</select></label>
@@ -2364,7 +2389,7 @@ document.addEventListener("submit", async (e) => {
     const r = await api("POST", "/api/links", body);
     const url = linkUrl(r.token), until = when(r.link.expires_at);
     // a mensagem vai copiada (fora da tela): já sai no idioma escolhido
-    const msg = I18N.t(`Link para enviar as hunts de ${r.link.character} no 4rt3mi5 (vale até ${until}): ${url} — abra, cole o Hunt Session Analyser ou o Party Hunt Analyser e toque em Enviar.`);
+    const msg = I18N.t(`Link para enviar as hunts de ${r.link.character} no 4rt3mi5 (vale até ${until}): ${url} — abra, cole o Hunt Analyser ou o Party Hunt Analyser e toque em Enviar.`);
     $("#subsNew").innerHTML = `<div class="card" style="border-color:var(--gold)"><b>🔗 Link criado</b>
       <div class="subs-link" data-i18n-skip>${esc(url)}</div>
       <div class="row" style="gap:8px; justify-content:flex-start">
@@ -2402,7 +2427,7 @@ document.addEventListener("click", async (e) => {
   const b = e.target.closest("#grantSave");
   if (!b) return;
   const raw = $("#grantText").value.trim();
-  if (!raw) { $("#grantErr").textContent = "Cole o Hunt Session Analyser primeiro."; return; }
+  if (!raw) { $("#grantErr").textContent = "Cole o Hunt Analyser primeiro."; return; }
   b.disabled = true; $("#grantErr").textContent = "";
   try {
     const boss = b.dataset.kind === "boss";
@@ -2448,7 +2473,7 @@ document.addEventListener("click", (e) => {
 /** Sessão recém-enviada x sua média na mesma hunt. */
 function compareBanner(c) {
   if (!c) return "";
-  if (!c.sessions) return `<div class="card">📊 Primeira sessão sua em <b>${esc(c.place)}</b> (com 10 min ou mais):
+  if (!c.sessions) return `<div class="card">📊 Sua primeira sessão em <b>${esc(c.place)}</b> (com 10 min ou mais):
     ${fmt(c.xp_h)} XP/h e ${fmt(c.gold_h)} gp/h de balance. As próximas vão ser comparadas com ela.</div>`;
   const line = (label, v, avg, pct) => {
     const cls = pct == null ? "muted" : pct >= 0 ? "pos" : "neg";
@@ -2473,9 +2498,9 @@ function showBossTab(tab) {
   $("#bossTitle").textContent = party ? "Lootsplit de bosses" : "Boss Session Stacker";
   $("#bossIntro").textContent = party
     ? "👥 Cole o Party Hunt Analyser da luta: o app divide o loot e o lootsplit aparece para todos da PT."
-    : "🧍 Cole o Hunt Session Analyser da luta solo. 🔒 Só você vê as suas sessões de boss.";
+    : "🧍 Cole o Hunt Analyser da luta solo. 🔒 Só você vê as suas sessões de boss.";
   $("#bossModeNote").innerHTML = "";
-  $("#bossLabel").textContent = party ? "Cole aqui o Party Hunt Analyser do boss" : "Cole aqui o Hunt Session Analyser do boss (solo)";
+  $("#bossLabel").textContent = party ? "Cole aqui o Party Hunt Analyser do boss" : "Cole aqui o Hunt Analyser do boss (solo)";
   $("#bossText").placeholder = party ? "Session data: From ... to ...\nSession: 00:25h\nLoot Type: Leader\n..."
     : "Session data: From ... to ...\nSession: 00:25h\nRaw XP Gain: ...\nKilled Monsters:\n  1x Grand Master Oberon";
   $("#bossBtn").textContent = party ? "Calcular e enviar" : "Salvar sessão de boss";
@@ -3261,7 +3286,7 @@ function renderBoss() {
   const solo = d.sessions.filter((s) => s.mode !== "party");
   if (!solo.length && !d.from_hunts.length) {
     el.innerHTML = `<div class="card"><b>👑 Nenhuma sessão de boss solo ainda</b>
-      <p class="muted">Depois de matar um boss sozinho, abra o Hunt Session Analyser no Tibia, copie e cole aqui. A sessão fica só sua.</p></div>`;
+      <p class="muted">Depois de matar um boss sozinho, abra o Hunt Analyser no Tibia, copie e cole aqui. A sessão fica só sua.</p></div>`;
     return;
   }
   const bal = solo.reduce((a, s) => a + s.balance, 0), secs = solo.reduce((a, s) => a + s.duration_seconds, 0);
@@ -3333,7 +3358,7 @@ async function bossPartySplit(raw) {
         ${r.linked > 1 ? `<div class="hint">${r.linked} sessões da PT foram juntadas.</div>` : ""}
         ${r.switched_from ? `<div class="hint">🔁 ${esc(`Salvo em ${r.saved_as}, que estava na PT (você estava em ${r.switched_from}).`)}</div>` : ""}</div>
       ${quickTransfers(r.hunt)}${partyMessages(r.hunt)}
-      <details class="card"><summary class="link">＋ Juntar o meu Hunt Session Analyser desta luta (opcional) ▾</summary>
+      <details class="card"><summary class="link">＋ Juntar o meu Hunt Analyser desta luta (opcional) ▾</summary>
         <p class="muted" style="margin:6px 0 0">Assim os bosses, itens e criaturas da luta entram no seu histórico de bosses.</p>
         <textarea id="bossMineText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Killed Monsters:&#10;  1x ..."></textarea>
         <button class="btn2 paste-btn" data-paste-into="bossMineText" data-paste-err="bossMineErr" type="button">📋 Colar da área de transferência</button>
@@ -3352,7 +3377,7 @@ async function bossPartySplit(raw) {
 document.addEventListener("click", async (e) => {
   if (!e.target.closest("#bossMineBtn")) return;
   const raw = $("#bossMineText").value.trim(), btn = $("#bossMineBtn");
-  if (!raw) { $("#bossMineErr").textContent = "Cole o Hunt Session Analyser primeiro."; return; }
+  if (!raw) { $("#bossMineErr").textContent = "Cole o Hunt Analyser primeiro."; return; }
   btn.disabled = true; $("#bossMineErr").textContent = "";
   try {
     const r = await api("POST", "/api/bosses/session", { raw_text: raw, nickname: S.nick, mode: "party" });
@@ -3565,7 +3590,7 @@ function paintHuntsHead() {
   const party = huntMode() === "party";
   $("#huntsTitle").textContent = party ? "Hunts em party" : "Hunts solo";
   $("#huntsIntro").textContent = party
-    ? "Lootsplits com a hunt escolhida (10 min ou mais). Gold/h = lucro de cada um por hora; XP/h vem dos Hunt Session Analyzers juntados ao lootsplit. Party só é comparada com party."
+    ? "Lootsplits com a hunt escolhida (10 min ou mais). Gold/h = lucro de cada um por hora; XP/h vem dos Hunt Analysers juntados ao lootsplit. Party só é comparada com party."
     : "Sessões do Hunt Session Stacker com a hunt escolhida (10 min ou mais). Gold/h = balance por hora. Solo só é comparada com solo.";
   $("#huntsAllTitle").textContent = party ? "Todas as hunts em party" : "Todas as hunts solo";
 }
@@ -3668,7 +3693,7 @@ function renderCompare() {
       ["Seu dano recebido: elemento", rows.map((r) => dmgTypes(r.my_damage))],
       ["Seu dano recebido: criaturas", rows.map((r) => dmgMobs(r.my_damage))],
     ] : [];
-    // 🔥 Player Hardcore: Input Analyzers públicos daquela hunt
+    // 🔥 Player Hardcore: Input Analysers públicos daquela hunt
     const pub = hard ? [
       ["Elemento que mais bate (todos)", rows.map((r) => dmgTypes(r.damage))],
       ["Criaturas que mais batem (todos)", rows.map((r) => dmgMobs(r.damage))],
@@ -3678,11 +3703,11 @@ function renderCompare() {
     el.innerHTML = `<div class="card table-wrap"><table class="cmp"><tr><th></th>${rows.map((r) => `<th>${esc(r.place.name)}<br><span class="muted">${esc(r.place.city || "")}</span></th>`).join("")}</tr>
       ${basic.map(tr).join("")}
       ${rich.length ? sep(`⭐ Suas hunts (${esc(S.nick)})`) + rich.map(tr).join("") : ""}
-      ${pub.length ? sep("🔥 Input Analyzer público") + pub.map(tr).join("") : ""}</table></div>
+      ${pub.length ? sep("🔥 Input Analyser público") + pub.map(tr).join("") : ""}</table></div>
       <div class="hint">${party ? "Comparando só hunts em party." : "Comparando só hunts solo."} Em dourado, a melhor de cada linha.</div>
-      <div class="hint">${anyMine ? `Os detalhes (criaturas, itens e dano) aparecem só nas hunts em que ${esc(S.nick)} caçou${party ? " e juntou o Hunt Session Analyzer" : ""}.`
+      <div class="hint">${anyMine ? `Os detalhes (criaturas, itens e dano) aparecem só nas hunts em que ${esc(S.nick)} caçou${party ? " e juntou o Hunt Analyser" : ""}.`
         : `Os detalhes (criaturas, itens e dano) aparecem nas hunts em que ${esc(S.nick)} já caçou. Aqui você vê o básico.`}</div>
-      ${hard ? `<div class="hint">🔥 Input Analyzer público = % do dano recebido nos Input Analyzers que os jogadores compartilharam ali.</div>` : ""}`;
+      ${hard ? `<div class="hint">🔥 Input Analyser público = % do dano recebido nos Input Analysers que os jogadores compartilharam ali.</div>` : ""}`;
   }).catch((err) => { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; });
 }
 document.addEventListener("click", (e) => {
@@ -3788,7 +3813,7 @@ document.addEventListener("submit", async (e) => {
   } catch (err) { if (err.status !== 401) alert(err.message); }
 });
 /* ---------- 0.20.0: salvar primeiro, perguntar depois (Stacker e Lootsplit) ---------- */
-// Hardcore: hunt + (party: sessão) + Input Analyzer · Comum: hunt (+ party: sessão) · Novato: só salva.
+// Hardcore: hunt + (party: sessão) + Input Analyser · Comum: hunt (+ party: sessão) · Novato: só salva.
 const pctTxt = (p) => Number(p || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }) + "%";
 const INPUT_LOCK_TIP = "Assim que adicionar, não há como editar.";
 const PLACE_LOCKED_MSG = "Para alterar novamente entre em contato com o administrador.";
@@ -3796,8 +3821,8 @@ const Flow = { kind: null, id: null, steps: [], banner: "", after: null, compare
 const flowBase = () => (Flow.kind === "hunt" ? `/api/hunt/${Flow.id}` : `/api/stacker/session/${Flow.id}`);
 
 function openStackFlow(text = "", autoSave = false) {
-  openModal(`<h3>📈 Hunt Session Analyzer</h3>
-    <label class="muted" for="flowText">Cole aqui o Hunt Session Analyzer (sessão individual)</label>
+  openModal(`<h3>📈 Hunt Analyser</h3>
+    <label class="muted" for="flowText">Cole aqui o Hunt Analyser (sessão individual)</label>
     <textarea id="flowText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 01:30h&#10;Raw XP Gain: ...&#10;XP Gain: ...">${esc(text)}</textarea>
     <button class="btn2 paste-btn" data-paste-into="flowText" data-paste-err="flowErr" type="button">📋 Colar da área de transferência</button>
     <div class="actions"><button class="btn" id="flowSave" type="button">Salvar</button><button class="btn2" data-close-modal type="button">Cancelar</button></div>
@@ -3806,9 +3831,109 @@ function openStackFlow(text = "", autoSave = false) {
 }
 $("#stackOpen").addEventListener("click", () => openStackFlow());
 
+/* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------
+   O site não lê o jogo: a pessoa cola o Hunt Analyser de tempos em tempos e o site compara o ritmo com a meta
+   e com a média dela. Nada é salvo no servidor; a sessão fica só neste aparelho até ela decidir salvar no Stacker. */
+const LIVE_REMIND_MIN = 30;
+const liveKey = () => "live:" + (S.nick || "");
+async function liveLoad() { try { return JSON.parse((await kv.get(liveKey())) || "null"); } catch { return null; } }
+async function liveStore(v) { await kv.set(liveKey(), v ? JSON.stringify(v) : null); }
+function liveAverage() {
+  const ss = ((S.stack && S.stack.sessions) || []).filter((s) => s.xp && s.duration_seconds >= 600 && !s.other_player);
+  return ss.length ? Math.round(ss.reduce((a, s) => a + (s.xp * 3600) / s.duration_seconds, 0) / ss.length) : null;
+}
+async function paintLive() {
+  const box = $("#liveBox");
+  if (!box) return;
+  const live = await liveLoad();
+  if (!live) {
+    box.innerHTML = `<div class="card"><b>⏱️ Sessão ao vivo</b>
+      <p class="muted" style="margin:4px 0 8px">Acompanhe a hunt enquanto joga: cole o Hunt Analyser de tempos em tempos e veja se está no ritmo da sua meta.</p>
+      <label class="muted" for="liveGoal">Meta de XP/h (opcional)</label>
+      <input id="liveGoal" inputmode="numeric" autocomplete="off" placeholder="800000" style="margin-top:6px">
+      <button class="btn2" data-live="start" style="margin-top:10px" type="button">▶ Começar sessão ao vivo</button></div>`;
+    return;
+  }
+  const snaps = live.snaps || [], L = snaps[snaps.length - 1], P = snaps[snaps.length - 2];
+  const lines = [];
+  let bar = "";
+  if (L) {
+    const pace = Math.round((L.xp * 3600) / L.secs), avg = liveAverage();
+    lines.push(`<div class="big gold" style="font-size:26px;font-weight:800" data-i18n-skip>${fmt(pace)} XP/h</div>`);
+    lines.push(`<div class="muted" data-i18n-skip>${esc(tf("Ritmo da hunt até agora, em {0} de sessão.", dur(L.secs)))}</div>`);
+    if (P && L.secs > P.secs) {
+      const recent = Math.round(((L.xp - P.xp) * 3600) / (L.secs - P.secs));
+      lines.push(`<div data-i18n-skip>${esc(tf("Desde a atualização anterior: {0} XP/h.", fmt(recent)))}</div>`);
+    }
+    if (live.goal) {
+      const pct = Math.round((pace / live.goal) * 100);
+      bar = `<div class="gbar" style="margin:8px 0"><div style="width:${Math.min(100, pct)}%"></div></div>`;
+      lines.push(`<div data-i18n-skip>${esc(tf(pace >= live.goal ? "Meta de {0} XP/h batida 🎯 ({1}%)." : "Meta de {0} XP/h: você está em {1}%.", fmt(live.goal), pct))}</div>`);
+    }
+    if (avg) lines.push(`<div class="muted" data-i18n-skip>${esc(tf("Sua média nas sessões salvas: {0} XP/h ({1}).", fmt(avg),
+      pace >= avg ? tf("{0}% acima", Math.round((pace / avg - 1) * 100)) : tf("{0}% abaixo", Math.round((1 - pace / avg) * 100))))}</div>`);
+    const min = Math.floor((Date.now() - new Date(L.at).getTime()) / 60000);
+    if (min >= LIVE_REMIND_MIN) lines.push(`<div class="banner" data-i18n-skip>${esc(tf("⏰ Última atualização há {0} min. Cole uma nova para o ritmo ficar certo.", min))}</div>`);
+  } else lines.push(`<div class="muted">Cole o Hunt Analyser atual para ver o ritmo.</div>`);
+  box.innerHTML = `<div class="card"><div class="row"><b>⏱️ Sessão ao vivo</b><span class="muted" data-i18n-skip>${live.goal ? esc(tf("Meta: {0} XP/h", fmt(live.goal))) : ""}</span></div>
+    <div style="margin-top:6px">${lines.join("")}${bar}</div>
+    <div class="row" style="justify-content:flex-start; gap:8px; margin-top:8px"><button class="btn2" data-live="paste" type="button">📋 Colar atualização</button>
+      <button class="link" data-live="finish" type="button">⏹ Finalizar</button></div>
+    <div class="hint">Nada disso é salvo no servidor. Ao finalizar, você escolhe se salva a sessão no Stacker.</div></div>`;
+}
+setInterval(() => { if (S.page === "stack") paintLive(); }, 60000);
+
+function openLivePaste() {
+  openModal(`<h3>⏱️ Atualizar sessão ao vivo</h3>
+    <label class="muted" for="liveText">Cole aqui o Hunt Analyser atual</label>
+    <textarea id="liveText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Session: 00:40h&#10;XP Gain: ..."></textarea>
+    <button class="btn2 paste-btn" data-paste-into="liveText" data-paste-err="liveErr" type="button">📋 Colar da área de transferência</button>
+    <div class="actions"><button class="btn" data-live="snap" type="button">Atualizar</button><button class="btn2" data-close-modal type="button">Cancelar</button></div>
+    <div class="err" id="liveErr"></div>`);
+  setTimeout(() => $("#liveText") && $("#liveText").focus(), 50);
+}
+async function liveSnap(btn) {
+  const raw = $("#liveText").value.trim(), err = $("#liveErr");
+  if (!raw) { err.textContent = I18N.t("Cole o Hunt Analyser primeiro."); return; }
+  btn.disabled = true; err.textContent = "";
+  try {
+    const p = await api("POST", "/api/stacker/preview", { raw_text: raw });
+    const xp = p.xp != null ? p.xp : p.raw_xp;
+    if (!p.duration_seconds || xp == null) { err.textContent = I18N.t("Não achei o XP nesse texto."); return; }
+    const live = (await liveLoad()) || { goal: null, snaps: [] }, last = live.snaps[live.snaps.length - 1];
+    if (last && live.started && live.started !== p.started_at) { err.textContent = I18N.t("Essa atualização é de outra hunt. Finalize a sessão ao vivo para começar outra."); return; }
+    if (last && p.duration_seconds <= last.secs) { err.textContent = I18N.t("Essa atualização não é mais nova que a anterior."); return; }
+    live.started = p.started_at;
+    live.snaps.push({ at: new Date().toISOString(), secs: p.duration_seconds, xp });
+    live.snaps = live.snaps.slice(-40);
+    live.raw = raw.length <= 100000 ? raw : null;
+    await liveStore(live);
+    closeModal(); paintLive();
+  } catch (e) { if (e.status !== 401) err.textContent = e.message; }
+  finally { btn.disabled = false; }
+}
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-live]");
+  if (!b) return;
+  e.preventDefault();
+  const act = b.dataset.live;
+  if (act === "start") {
+    const g = parseInt(($("#liveGoal").value || "").replace(/\D/g, ""), 10);
+    await liveStore({ goal: g > 0 ? g : null, snaps: [] });
+    await paintLive(); openLivePaste();
+  } else if (act === "paste") openLivePaste();
+  else if (act === "snap") liveSnap(b);
+  else if (act === "finish") {
+    const live = await liveLoad();
+    await liveStore(null);
+    await paintLive();
+    if (live && live.raw && confirm(I18N.t("Salvar esta sessão no Stacker?"))) openStackFlow(live.raw);
+  }
+});
+
 async function saveStackSession() {
   const raw = $("#flowText").value.trim();
-  if (!raw) { $("#flowErr").textContent = "Cole o Hunt Session Analyzer primeiro."; return; }
+  if (!raw) { $("#flowErr").textContent = "Cole o Hunt Analyser primeiro."; return; }
   const btn = $("#flowSave"); btn.disabled = true; $("#flowErr").textContent = "";
   const before = S.stack;
   try {
@@ -3867,7 +3992,7 @@ function nextFlowStep() {
     : Flow.chained ? `<button class="btn2" data-flow="end" type="button">Fechar</button>`
     : `<button class="btn2" data-close-modal type="button">Cancelar</button>`;
   if (step === "place") {
-    openModal(`${head}<div class="flow-step"><b>${Flow.direct ? "Em qual hunt foi?" : "Deseja salvar qual a hunt você caçou?"}</b>
+    openModal(`${head}<div class="flow-step"><b>${Flow.direct ? "Em qual hunt foi?" : "Deseja salvar em qual hunt você caçou?"}</b>
       <div id="flowPlaceBox" class="${Flow.direct ? "" : "hidden"}" style="margin-top:8px"></div>
       <div class="row2">${Flow.direct ? `<button class="btn" data-flow="place-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="place-yes" type="button">Sim</button>${skip}`}</div>
@@ -3875,14 +4000,14 @@ function nextFlowStep() {
       <div class="err" id="flowErr"></div></div>`);
     if (Flow.direct) showFlowPicker();
   } else if (step === "session") {
-    openModal(`${head}<div class="flow-step"><b>Deseja juntar o seu Hunt Session Analyzer a este lootsplit?</b>
+    openModal(`${head}<div class="flow-step"><b>Deseja juntar o seu Hunt Analyser a este lootsplit?</b>
       <p class="muted" style="margin:4px 0 0">Todos da PT veem XP, balance, dano e cura da sua sessão. A quantidade de criaturas e de itens fica só com você.</p>
       ${flowTextBox("Session data: From ... to ...&#10;XP Gain: ...", Flow.direct)}
       <div class="row2">${Flow.direct ? `<button class="btn" data-flow="session-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="text-yes" type="button">Sim</button>${skip}`}</div>
       <div class="err" id="flowErr"></div></div>`);
   } else if (step === "input") {
-    openModal(`${head}<div class="flow-step"><b>Deseja compartilhar o Input Analyzer?</b>
+    openModal(`${head}<div class="flow-step"><b>Deseja compartilhar o Input Analyser?</b>
       <p class="muted" style="margin:4px 0 0">Fica salvo quanto você apanhou, o elemento e as criaturas que mais bateram.
         <b title="${INPUT_LOCK_TIP}">${INPUT_LOCK_TIP}</b></p>
       ${flowTextBox("Received Damage&#10;Total: ...&#10;Max-DPS: ...&#10;Damage Types&#10;...", Flow.direct)}
@@ -3964,7 +4089,7 @@ function refreshAfterFlow(kind) {
   }
 }
 
-/** Linha "📍 local" + "Input Analyzer" de uma sessão / lootsplit. */
+/** Linha "📍 local" + "Input Analyser" de uma sessão / lootsplit. */
 function placeTag(kind, x) {
   const owner = x.can_delete;
   if (!x.place) return owner ? `<button class="tagbtn warn" data-add="${kind}:${x.id}:place" title="Toque para dizer em qual hunt foi">📍 hunt sem local</button>`
@@ -3975,9 +4100,9 @@ function placeTag(kind, x) {
 }
 function inputTag(kind, x) {
   if (!canShare() || x.input) return "";
-  return `<button class="tagbtn warn" data-add="${kind}:${x.id}:input" title="${INPUT_LOCK_TIP}">🛡️ Input Analyzer vazio · ＋ adicionar</button>`;
+  return `<button class="tagbtn warn" data-add="${kind}:${x.id}:input" title="${INPUT_LOCK_TIP}">🛡️ Input Analyser vazio · ＋ adicionar</button>`;
 }
-/** Dano recebido (Input Analyzer): total, elemento e criatura que mais bateram; detalhes abrindo. */
+/** Dano recebido (Input Analyser): total, elemento e criatura que mais bateram; detalhes abrindo. */
 function inputBlock(i, who = "") {
   if (!i) return "";
   const row = (r) => `<div class="row"><span>${esc(r.name)}</span><span class="muted">${fmt(r.value)} · ${pctTxt(r.pct)}</span></div>`;
@@ -4008,7 +4133,7 @@ function discrepancyNote(list) {
 function partyShared(h) {
   if (!h.id || !h.in_party) return "";
   const sessions = (h.member_sessions || []).map((s) => `<div class="member-shared"><b>${vdot(s.name)}${esc(s.name)}</b>${s.other_player ? `<span class="who other">${s.played_by ? "🤝 " + esc(s.played_by) : "🤝 outra pessoa"}</span>` : ""}
-      <span class="muted" style="font-size:13px"> · Hunt Session Analyzer · ${dur(s.duration_seconds)}</span>
+      <span class="muted" style="font-size:13px"> · Hunt Analyser · ${dur(s.duration_seconds)}</span>
       ${statGrid([["XP", fmt(s.xp)], ["XP/h", fmt(s.xp_h)], ["Balance", fmt(s.balance) + " gp", s.balance >= 0 ? "pos" : "neg"],
         ["Balance/h", fmt(s.balance_h) + " gp"], ["Damage", fmt(s.damage)], ["Healing", fmt(s.healing)]])}
       ${discrepancyNote(s.discrepancy)}
@@ -4019,8 +4144,8 @@ function partyShared(h) {
   const t = ptype();
   const hasMine = (list) => (list || []).some((x) => x.name.toLowerCase() === (S.nick || "").toLowerCase());
   const btns = me && t !== "novato" ? [
-    !hasMine(h.member_sessions) ? `<button class="tagbtn" data-add="hunt:${h.id}:session">＋ Meu Hunt Session Analyzer</button>` : "",
-    canShare(t) && !hasMine(h.inputs) ? `<button class="tagbtn" data-add="hunt:${h.id}:input" title="${INPUT_LOCK_TIP}">＋ Meu Input Analyzer</button>` : "",
+    !hasMine(h.member_sessions) ? `<button class="tagbtn" data-add="hunt:${h.id}:session">＋ Meu Hunt Analyser</button>` : "",
+    canShare(t) && !hasMine(h.inputs) ? `<button class="tagbtn" data-add="hunt:${h.id}:input" title="${INPUT_LOCK_TIP}">＋ Meu Input Analyser</button>` : "",
   ].join("") : "";
   if (!sessions && !inputs && !btns) return "";
   return `<h2>📎 Compartilhado pela PT</h2>${sessions}${inputs}${btns ? `<div class="tagline-row">${btns}</div>` : ""}`;
@@ -4399,7 +4524,7 @@ function emptyState(kind) {
     <h3>Comece seu histórico de caçadas</h3>
     <p class="muted" style="margin:0">Cada sessão vira XP/h, lucro real, recordes, metas, lista de venda e ranking das hunts.</p>
     <ol><li>No Tibia, abra o <b>Hunt Analyser</b> e clique em <b>Copy to clipboard</b>.</li>
-      <li>Toque em ＋ Colar Hunt Session Analyzer e em Salvar (ou aperte Ctrl+V em qualquer tela).</li>
+      <li>Toque em ＋ Colar Hunt Analyser e em Salvar (ou aperte Ctrl+V em qualquer tela).</li>
       <li>Diga em qual hunt foi agora ou depois, tocando em "hunt sem local".</li></ol>
     <button class="btn" data-open-stack>📋 Colar minha primeira sessão</button></div>`;
 }
@@ -4914,7 +5039,7 @@ function detectPaste(t) {
 }
 function pasteSummary(t) {
   const s = (t.match(/Session:\s*([\d:]+h?)/i) || [])[1], d = (t.match(/From\s+(\d{4}-\d{2}-\d{2})/i) || [])[1];
-  return [s && "Sessão de " + s, d && "em " + dayLabel(d)].filter(Boolean).join(" ") || "Texto do analyser";
+  return [s && "Sessão de " + s, d && "em " + dayLabel(d)].filter(Boolean).join(" ") || "Texto do Analyser";
 }
 async function offerPaste(kind, t) {
   S.pasteText = t;
@@ -4989,7 +5114,7 @@ function showInstallDialog() {
       <li>Um ícone do 4rt3mi5 (o anel dourado com a flecha) aparece na tela inicial do celular, ou no menu Iniciar do PC.</li>
       <li>Tocando no ícone, o 4rt3mi5 abre em tela cheia, sem a barra do navegador.</li>
       <li>É só um atalho para este site: nada mais é instalado, nenhuma permissão é pedida e você remove quando quiser, como qualquer ícone.</li>
-      ${isIOS() ? "<li>No iPhone e no iPad quem cria o ícone é o Safari: vamos mostrar os 2 toques necessários.</li>"
+      ${isIOS() ? "<li>No iPhone e no iPad, quem cria o ícone é o Safari: vamos mostrar os 2 toques necessários.</li>"
                 : "<li>O navegador ainda mostra uma confirmação dele antes de criar o ícone.</li>"}
     </ul>
     <p class="muted" style="font-size:13px; margin:6px 0 0">Tocando em "Agora não", nada é criado. Dá para fazer depois em ☰ → 📲 Adicionar à tela inicial.</p>
@@ -5305,9 +5430,10 @@ async function loadAmigos() {
   document.querySelectorAll("[data-adays]").forEach((b) => b.classList.toggle("on", +b.dataset.adays === S.vip.days));
   body.innerHTML = skeleton("stack");
   let d;
-  try { d = await api("GET", `/api/rank/amigos?days=${S.vip.days}&sort=${S.vip.sort}`); }
+  try { d = await api("GET", `/api/rank/amigos?days=${S.vip.days}&sort=${S.vip.sort}&world=${encodeURIComponent(S.rworld)}`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
-  if (!d.rows.length) { body.innerHTML = `<p class="muted">Nenhum personagem ainda.</p>`; return; }
+  paintWorldSelect($("#amigosWorld"), d.worlds || []);
+  if (!d.rows.length) { body.innerHTML = `<p class="muted">${d.world ? esc(tf("Nenhum personagem de {0} aqui ainda.", d.world)) : "Nenhum personagem ainda."}</p>`; return; }
   const W = "white-space:normal";
   body.innerHTML = `<div class="table-wrap"><table style="table-layout:fixed;width:100%"><tr><th style="width:44px;${W}">#</th><th style="${W};text-align:left">Personagem</th><th style="text-align:right;width:112px;${W}">XP ${d.days} dias</th></tr>
     ${d.rows.map((r, i) => `<tr><td style="${W}">${i + 1}</td>

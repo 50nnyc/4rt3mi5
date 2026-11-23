@@ -97,7 +97,7 @@
   $("#sendBtn").addEventListener("click", async () => {
     const raw = $("#raw").value.trim();
     $("#err").textContent = "";
-    if (!raw) { $("#err").textContent = "Cole o analyser primeiro."; return; }
+    if (!raw) { $("#err").textContent = "Cole o Analyser primeiro."; return; }
     if (!(window.crypto && crypto.subtle)) { $("#err").textContent = "Abra este link num navegador atualizado (com https)."; return; }
     const btn = $("#sendBtn");
     btn.disabled = true;

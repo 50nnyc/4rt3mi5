@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS boss_hunt_players (
     name     TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_boss_hunt_players ON boss_hunt_players(name_key);
-CREATE TABLE IF NOT EXISTS boss_sessions (    -- Hunt Session Analyser enviado na Rotação de bosses
+CREATE TABLE IF NOT EXISTS boss_sessions (    -- Hunt Analyser enviado na Rotação de bosses
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     fingerprint      TEXT UNIQUE NOT NULL,
     name_key         TEXT NOT NULL,
@@ -416,6 +416,18 @@ CREATE TABLE IF NOT EXISTS rank_top (
     day        TEXT NOT NULL,
     PRIMARY KEY (metric, pos)
 );
+-- 0.30.0: top de cada mundo por métrica (filtro por mundo na aba Geral)
+CREATE TABLE IF NOT EXISTS rank_world_top (
+    metric     TEXT NOT NULL,
+    world      TEXT NOT NULL,
+    pos        INTEGER NOT NULL,
+    value      INTEGER,
+    name       TEXT NOT NULL,
+    level      INTEGER,
+    vocation   TEXT,
+    day        TEXT NOT NULL,
+    PRIMARY KEY (metric, world, pos)
+);
 -- 0.25.0: ranking pessoal de cada conta (só ela vê): amigos, metas, rivais
 CREATE TABLE IF NOT EXISTS custom_ranking (
     owner_key TEXT NOT NULL,
@@ -451,7 +463,7 @@ CREATE TABLE IF NOT EXISTS damage_inputs (
     UNIQUE (kind, ref_id, name_key)
 );
 CREATE INDEX IF NOT EXISTS ix_damage_inputs ON damage_inputs(kind, ref_id);
--- 0.20.0: Hunt Session Analyser que cada membro da PT junta ao lootsplit
+-- 0.20.0: Hunt Analyser que cada membro da PT junta ao lootsplit
 CREATE TABLE IF NOT EXISTS party_sessions (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     hunt_id      INTEGER NOT NULL REFERENCES hunts(id) ON DELETE CASCADE,
@@ -2095,6 +2107,41 @@ class Store:
             "SELECT pos, name, world, level, vocation, value FROM rank_top WHERE metric = ? "
             "ORDER BY pos LIMIT ? OFFSET ?", (metric, limit, offset))]
 
+    # ---- 0.30.0: top por mundo
+    def rank_world_top_replace(self, day: str, rows: list[tuple]) -> None:
+        """rows: (métrica, mundo, pos, valor, nome, level, vocação). Varredura sem nada não apaga o que já existe."""
+        if not rows:
+            return
+        with self._lock:
+            self._conn.execute("DELETE FROM rank_world_top")
+            self._conn.executemany("INSERT INTO rank_world_top VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                                   [(m, w, p, v, n, lv, voc, day) for m, w, p, v, n, lv, voc in rows])
+            self._conn.commit()
+
+    def rank_worlds(self) -> list[str]:
+        """Mundos que aparecem no ranking (do guardado por mundo e, na falta dele, do top geral)."""
+        rows = self._conn.execute("SELECT DISTINCT world FROM rank_world_top WHERE world IS NOT NULL ORDER BY world").fetchall()
+        if not rows:
+            rows = self._conn.execute("SELECT DISTINCT world FROM rank_top WHERE world IS NOT NULL ORDER BY world").fetchall()
+        return [r[0] for r in rows]
+
+    def rank_world_page(self, metric: str, world: str, offset: int, limit: int) -> tuple[list[dict], int, str]:
+        """(linhas, total, origem). Origem 'mundo' = top guardado do mundo; 'geral' = os do mundo dentro do top 1000."""
+        total = self._conn.execute("SELECT COUNT(*) FROM rank_world_top WHERE metric = ? AND world = ?",
+                                   (metric, world)).fetchone()[0]
+        if total:
+            rows = [dict(r) for r in self._conn.execute(
+                "SELECT pos, name, world, level, vocation, value FROM rank_world_top WHERE metric = ? AND world = ? "
+                "ORDER BY pos LIMIT ? OFFSET ?", (metric, world, limit, offset))]
+            return rows, total, "mundo"
+        total = self._conn.execute("SELECT COUNT(*) FROM rank_top WHERE metric = ? AND world = ?", (metric, world)).fetchone()[0]
+        rows = [dict(r) for r in self._conn.execute(
+            "SELECT name, world, level, vocation, value FROM rank_top WHERE metric = ? AND world = ? "
+            "ORDER BY pos LIMIT ? OFFSET ?", (metric, world, limit, offset))]
+        for i, r in enumerate(rows, start=offset + 1):
+            r["pos"] = i
+        return rows, total, "geral"
+
     def rank_top_day(self) -> str | None:
         r = self._conn.execute("SELECT MAX(day) FROM rank_top").fetchone()
         return r[0] if r else None
@@ -2239,7 +2286,7 @@ class Store:
                           place_ids: list[int] | None = None, name: str | None = None, min_seconds: int = 600,
                           vocation: str | None = None) -> list[dict]:
         """Mesmo formato do place_stats, só com lootsplits. Gold/h = lucro de cada um por hora;
-        XP/h vem dos Hunt Session Analyzers que os membros juntaram ao lootsplit."""
+        XP/h vem dos Hunt Analysers que os membros juntaram ao lootsplit."""
         hunts = self._party_hunts_at(place_ids, name)
         if not hunts:
             return []

@@ -14,6 +14,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 PAGES = 20          # 20 páginas x 50 = top 1000
 WORKERS = 6         # consultas em paralelo (medido: ~276 ms cada)
 TOP = 1000          # tamanho do ranking geral por métrica
+PAGE_SIZE = 50      # jogadores por página do highscore
+PER_WORLD = 200     # 0.30.0: quantos de cada mundo ficam guardados para o filtro por mundo
 _LIMITE_TRIM = 3000 # acima disso o acumulado é aparado para o top (economiza memória)
 
 
@@ -44,6 +46,8 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
     found: dict[str, dict] = {}   # name_key -> {name, world, level, vocation, values}
     tops: dict[str, list] = {}    # métrica -> [(valor, nome, mundo, level, vocação)] (aparado no caminho)
 
+    wtops: dict[tuple[str, str], dict[int, tuple]] = {}  # 0.30.0: (métrica, mundo) -> {posição no mundo: item}
+
     def trabalho(t):
         w, c, p = t
         return t, fetch_page(w, c, p)
@@ -57,7 +61,14 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
             except Exception:
                 errors += 1
                 continue
-            for r in rows:
+            for i, r in enumerate(rows):
+                # 0.30.0: top de cada mundo (só as primeiras páginas: o suficiente para o filtro por mundo)
+                pos = (_p - 1) * PAGE_SIZE + i + 1
+                if pos <= PER_WORLD:
+                    metrica = "level" if c == "experience" else c
+                    valor = r.get("level") if c == "experience" else r.get("value")
+                    if valor is not None:
+                        wtops.setdefault((metrica, w), {})[pos] = (valor, r["name"], r.get("level"), r.get("vocation"))
                 # 0.26.1: top global por métrica (todos os jogadores, não só os acompanhados)
                 item = (r.get("value"), r["name"], w, r.get("level"), r.get("vocation"))
                 if item[0] is not None and c != "experience":  # XP total não é métrica de ranking (ver 0.26.2)
@@ -76,6 +87,7 @@ def run_scan(store, *, day: str, tracked: dict[str, str], fetch_page, fetch_worl
 
     store.rank_top_replace(day, {m: sorted(v, key=lambda t: (-(t[0] or 0), t[1].lower()))[:TOP]
                                  for m, v in tops.items()})
+    store.rank_world_top_replace(day, [(m, w, pos, *item) for (m, w), d in wtops.items() for pos, item in sorted(d.items())])
 
     updates, changes, world_changes = [], [], 0
     previos = store.rank_load_many(list(found))

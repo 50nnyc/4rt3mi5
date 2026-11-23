@@ -1,4 +1,4 @@
-"""0.20.0: tipo de player, Input Analyzer, local da hunt com 2 trocas, dados da PT e privacidade."""
+"""0.20.0: tipo de player, Input Analyser, local da hunt com 2 trocas, dados da PT e privacidade."""
 import unittest
 from unittest import mock
 
@@ -254,7 +254,7 @@ class RevampServerTests(unittest.TestCase):
         hid = hunt["id"]
         r = self.client.post(f"/api/hunt/{hid}/place", json={"place_id": pl["Naga Caves"]}, headers=h).json()
         self.assertEqual(r["place"]["name"], "Naga Caves")
-        # outro membro da PT (Jioe, Player Hardcore) junta a sessão e o Input Analyzer dele
+        # outro membro da PT (Jioe, Player Hardcore) junta a sessão e o Input Analyser dele
         hj = self.account("Rvjioe")
         self.assertEqual(self.client.post(f"/api/hunt/{hid}/place", json={"place_id": pl["Elvenbane"]}, headers=hj).status_code, 403)
         self.client.post("/api/prefs/player-type", json={"player_type": "hardcore"}, headers=hj)
@@ -278,7 +278,7 @@ class RevampServerTests(unittest.TestCase):
         outsider = self.client.get("/api/hunts/Rvhilay", headers=self.account("Fora Da Pt")).json()["hunts"][0]
         self.assertEqual((outsider["inputs"], outsider["member_sessions"], outsider["in_party"]), ([], [], False))
         # comparação de hunts mostra o dano recebido ali, sem "(other)" como criatura
-        # 0.22.0: party compara só com party; Input Analyzer público só para o Player Hardcore
+        # 0.22.0: party compara só com party; Input Analyser público só para o Player Hardcore
         url = f"/api/places/compare?ids={pl['Naga Caves']}&mode=party"
         cmp_ = self.client.get(url + "&nick=Rvjioe", headers=hj).json()[0]
         self.assertEqual(cmp_["damage"]["mobs"][0]["name"], "the moonsnow magnolia")
