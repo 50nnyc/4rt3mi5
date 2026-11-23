@@ -1,6 +1,30 @@
 {
   "releases": [
     {
+      "version": "0.27.2",
+      "date": "2026-11-23",
+      "title": "Correção na aba Amigos",
+      "changes": [
+        "🔧 A aba Amigos em Rankings não aparece mais em outras telas, como a de Novidades do Tibia."
+      ],
+      "tr": {
+        "en": { "title": "Friends tab fix", "changes": [
+          "🔧 The Friends tab in Rankings no longer shows up on other screens, such as the Tibia News page."] },
+        "es": { "title": "Corrección en la pestaña Amigos", "changes": [
+          "🔧 La pestaña Amigos en Rankings ya no aparece en otras pantallas, como la de Noticias de Tibia."] },
+        "ja": { "title": "フレンドタブの修正", "changes": [
+          "🔧 ランキングのフレンドタブが、Tibiaニュースなど他の画面に表示されなくなりました。"] },
+        "de": { "title": "Korrektur im Freunde-Tab", "changes": [
+          "🔧 Der Freunde-Tab in den Ranglisten erscheint nicht mehr auf anderen Seiten, etwa der Tibia-Nachrichtenseite."] },
+        "pl": { "title": "Poprawka zakładki Znajomi", "changes": [
+          "🔧 Zakładka Znajomi w Rankingach nie pojawia się już na innych ekranach, na przykład na stronie newsów Tibia."] },
+        "fr": { "title": "Correction de l'onglet Amis", "changes": [
+          "🔧 L'onglet Amis des Classements n'apparaît plus sur d'autres écrans, comme la page des actualités Tibia."] },
+        "ru": { "title": "Исправление вкладки «Друзья»", "changes": [
+          "🔧 Вкладка «Друзья» в рейтингах больше не появляется на других экранах, например на странице новостей Tibia."] }
+      }
+    },
+    {
       "version": "0.27.1",
       "date": "2026-11-22",
       "title": "XP de solo e convite no WhatsApp",
