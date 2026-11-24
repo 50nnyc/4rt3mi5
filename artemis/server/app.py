@@ -43,6 +43,7 @@ from artemis.core import samesession as same_core
 from artemis.core import captcha
 from artemis.core import rotations as rot
 from artemis.core import damage as damage_core
+from artemis.core import imbuing
 from artemis.core import party as party_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
@@ -1047,7 +1048,7 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
 TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings",
-               "download", "subs", "parties"}  # 0.21.0; 0.23.0: 🤝 Substituições; 0.24.0: 🛡️ parties
+               "download", "subs", "parties", "gear"}  # 0.21.0; 0.23.0: 🤝 Substituições; 0.24.0: 🛡️ parties; 0.32.0: ⚔️
 
 
 class TrackIn(BaseModel):
@@ -2099,7 +2100,7 @@ def streak(access: dict = Depends(require_session)):
 @app.get("/api/achievements/{name}")
 def achievements(name: str, access: dict = Depends(require_session)):
     """Conquistas do personagem (qualquer um pode ver) + a sequência de dias do código de quem está vendo."""
-    sessions, _ = _enriched_sessions(name, access)
+    sessions, _ = _enriched_sessions(name, access, "solo")  # as party entram pela lista de hunts
     hunts = store.hunts_for_player(name)
     granted = grant_rewards(access["key"])
     items = ach.evaluate(name, sessions, hunts, store.sold_count(name), store.pause_days(store.char_owner(name) or ""))
@@ -2285,10 +2286,47 @@ def _sell_list(name: str, sessions: list[dict], prices: dict) -> list[dict]:
     return sorted(out, key=lambda it: (not it["reached"], -it["value"], -it["count"]))
 
 
-def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
-    """Sessões do Stacker com hunt, criaturas, itens, valor do loot e lucro líquido; e os preços usados."""
-    sessions = [_public(s, access) for s in store.solo_for_player(name)]
+def _party_rows(name: str, skip_hashes: set) -> list[dict]:
+    """0.32.0: o Hunt Analyser que o personagem juntou a cada Party Hunt Analyser, no mesmo formato das sessões solo.
+    Fica de fora a sessão que o jogador também enviou como solo (mesma impressão digital): não conta duas vezes."""
+    nk = name_key(name)
+    hunts = store.hunts_for_player(name)
+    members = store.party_sessions_for([h["id"] for h in hunts])
+    rows = []
+    for h in hunts:
+        for ps in members.get(h["id"], []):
+            if name_key(ps["name"]) != nk:
+                continue
+            ch = session_content_hash(ps)
+            if ch and ch in skip_hashes:
+                continue
+            row = {k: ps.get(k, 0) for k in ("duration_seconds", "raw_xp", "xp", "supplies", "balance", "damage",
+                                              "damage_h", "healing", "healing_h")}
+            row.update(id=-h["id"], hunt_id=h["id"], source="party", started_at=ps.get("started_at") or h["started_at"],
+                       ended_at=ps.get("ended_at"), session_label=ps.get("session_label"), place_id=h.get("place_id"),
+                       other_player=1 if ps.get("other_player") else 0, played_by=ps.get("played_by"),
+                       can_delete=False, profit_each=h.get("profit_each"), players_count=h.get("players_count"),
+                       _kills=ps.get("kills") or [], _loot=ps.get("loot") or [])
+            rows.append(row)
+    return rows
+
+
+def _enriched_sessions(name: str, access: dict, source: str = "all") -> tuple[list[dict], dict]:
+    """Sessões do Stacker com hunt, criaturas, itens, valor do loot e lucro líquido; e os preços usados.
+    0.32.0: `source` = "all" (solo + party), "solo" ou "party"."""
+    solo_raw = store.solo_for_player(name)
+    hashes = {s.get("content_hash") for s in solo_raw if s.get("content_hash")}
+    sessions = [_public(s, access) for s in solo_raw]
+    for s in sessions:
+        s["source"] = "solo"
+    party = _party_rows(name, hashes) if source != "solo" else []
+    if source == "party":
+        sessions = []
     kills, loot = store.solo_details([s["id"] for s in sessions])
+    for s in party:
+        kills[s["id"]] = [tuple(k) for k in s.pop("_kills")]
+        loot[s["id"]] = [tuple(i) for i in s.pop("_loot")]
+    sessions = sorted(sessions + party, key=lambda s: (s["started_at"], s["id"]), reverse=True)
     keys = {store.resolve_item(k) for rows in loot.values() for k, _ in rows}
     keys |= set(store.sell_watch(name))
     prices = store.price_info(list(keys), access["key"])
@@ -2304,10 +2342,26 @@ def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
         s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
         s["loot_value"] = sum(it["value"] for it in items)
         s["net_profit"] = s["loot_value"] - s["supplies"]  # lucro líquido real: loot pelos preços de NPC - supplies
+        if s["source"] == "party" and s.get("profit_each") is not None:
+            s["net_profit"] = s["profit_each"]  # na party vale o rateio do lootsplit
+    # 0.32.0: imbuements e gastos invisíveis do set usado em cada sessão (descontam do lucro líquido)
+    refs = [("solo", s["id"]) if s["source"] == "solo" else ("hunt", s["hunt_id"]) for s in sessions]
+    gear = store.session_gear_for(name, refs)
+    for s, ref in zip(sessions, refs):
+        g = gear.get(ref)
+        s["gear"] = {"set_id": g["set_id"], "set_name": g["set_name"], "pause_minutes": g["pause_minutes"],
+                     "hours": g["hours"], "cost": g["cost"]} if g else None
+        s["gear_cost"] = g["cost"] if g else 0
+        s["net_profit"] -= s["gear_cost"]
     # 0.20.0: Input Analyser de cada sessão (só aparece para quem enviou)
-    inputs = store.inputs_for("solo", [s["id"] for s in sessions if s["can_delete"]])
+    inputs = store.inputs_for("solo", [s["id"] for s in sessions if s["source"] == "solo" and s["can_delete"]])
+    nk = name_key(name)
+    h_inputs = store.inputs_for("hunt", [s["hunt_id"] for s in sessions if s["source"] == "party"])
     for s in sessions:
-        got = inputs.get(s["id"]) or []
+        if s["source"] == "party":
+            got = [i for i in h_inputs.get(s["hunt_id"], []) if name_key(i["name"]) == nk]
+        else:
+            got = inputs.get(s["id"]) or []
         s["input"] = _input_view(got[0]) if got else None
         s["place_locked"] = s.get("place_edits", 0) >= PLACE_EDIT_LIMIT
     return sessions, prices
@@ -2315,7 +2369,8 @@ def _enriched_sessions(name: str, access: dict) -> tuple[list[dict], dict]:
 
 # 0.20.0: quantidade de criaturas mortas e de itens coletados é do dono do personagem; os outros veem só o geral
 _OWNER_ONLY_SESSION = ("kills", "loot", "loot_value", "net_profit", "input", "place_edits", "place_locked",
-                       "played_by", "via", "content_hash", "other_player")  # 0.23.0: quem jogou fica só com o dono
+                       "played_by", "via", "content_hash", "other_player", "profit_each", "players_count",
+                       "hunt_id", "gear", "gear_cost")  # 0.23.0: quem jogou fica só com o dono
 
 
 def _generic_only(data: dict) -> dict:
@@ -2323,7 +2378,7 @@ def _generic_only(data: dict) -> dict:
         for k in _OWNER_ONLY_SESSION:
             s.pop(k, None)
     p = data["period"]
-    p.update(items=[], kills=[], loot_value=0, net_profit=0, net_profit_per_hour=0, unpriced=0)
+    p.update(items=[], kills=[], loot_value=0, net_profit=0, net_profit_per_hour=0, unpriced=0, gear_cost=0)
     data.update(prices={}, goals=[], sell=[], alerts=[], by_place=None,
                 records=[r for r in data["records"] if r["label"] not in ("Maior lucro líquido/h", "Maior loot numa sessão")])
     return data
@@ -2356,9 +2411,10 @@ def _by_place(sessions: list[dict]) -> dict | None:
 
 
 @app.get("/api/stacker/{name}")
-def stacker(name: str, period: int = 7, access: dict = Depends(require_session)):
+def stacker(name: str, period: int = 7, source: str = "all", access: dict = Depends(require_session)):
     period = period if period in PERIOD_DAYS else 7
-    sessions, prices = _enriched_sessions(name, access)
+    source = source if source in ("all", "solo", "party") else "all"
+    sessions, prices = _enriched_sessions(name, access, source)
     cutoff = (datetime.now() - timedelta(days=period)).isoformat()
     in_period = [s for s in sessions if s["started_at"] >= cutoff]
     p_items = _sum_counts((it["key"], it["count"]) for s in in_period for it in s["loot"])
@@ -2367,14 +2423,16 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
     p_items.sort(key=lambda it: (-it["value"], -it["count"]))
     totals = _totals(in_period)
     loot_value = sum(it["value"] for it in p_items)
+    gear_cost = sum(s["gear_cost"] for s in in_period)  # 0.32.0: imbuements, anéis e amuletos
     period_data = {
         "days": period,
         "totals": totals,
         "items": p_items,
         "kills": _sum_counts((k["key"], k["count"]) for s in in_period for k in s["kills"]),
         "loot_value": loot_value,
-        "net_profit": loot_value - totals["supplies"],
-        "net_profit_per_hour": _per_hour(loot_value - totals["supplies"], totals["duration_seconds"]),
+        "gear_cost": gear_cost,
+        "net_profit": loot_value - totals["supplies"] - gear_cost,
+        "net_profit_per_hour": _per_hour(loot_value - totals["supplies"] - gear_cost, totals["duration_seconds"]),
         "unpriced": sum(1 for it in p_items if not prices[it["key"]]["unit_price"]),
     }
     day = sessions[0]["started_at"][:10] if sessions else None
@@ -2394,6 +2452,10 @@ def stacker(name: str, period: int = 7, access: dict = Depends(require_session))
         "sell": sell,
         "alerts": [it for it in sell if it["reached"]],
         "by_place": _by_place(sessions),
+        "source": source,
+        "counts": {"solo": sum(1 for s in sessions if s["source"] == "solo"),
+                   "party": sum(1 for s in sessions if s["source"] == "party")},
+        "input_total": sum((s["input"] or {}).get("total") or 0 for s in sessions),
     }
     return data if owner else _generic_only(data)
 
@@ -2803,7 +2865,7 @@ def rank_player(name: str, _: dict = Depends(require_session)):
 
 
 # ------------------------------------------------------------------ 0.27.0: VIP List
-VIP_SCOPES = ["xp", "skills", "hunts", "hunt_details"]
+VIP_SCOPES = ["xp", "skills", "hunts", "hunt_details", "gear"]  # 0.32.0: gear = sets e peças (Player Hardcore)
 # xp = gráficos de XP diária/mensal/trimestral · skills = níveis de skill, achievements e charm points
 # hunts = lista de hunts (local e data) · hunt_details = balance, parte de cada um, duração e XP das sessões solo
 
@@ -2875,8 +2937,30 @@ def _vip_basic(name: str) -> dict:
     }
 
 
+def _gear_public(name: str) -> dict:
+    """Sets e peças que o jogador libera na VIP List (sem hunts e sem o lucro delas)."""
+    items = store.gear_list(name)
+    by_id = {i["id"]: i for i in items}
+    out_items = []
+    for it in items:
+        out_items.append({"name": it["name"], "kind": imbuing.GEAR_KINDS.get(it["kind"], it["kind"]), "slots": it["slots"],
+                          "charges": [{"label": ("Recarga com silver token" if c["imbuement"].startswith("charge:")
+                                                 else f"{imbuing.CATALOG[c['imbuement']]['name'].split(' (')[0]} {imbuing.TIERS[c['tier'] - 1]}"),
+                                       "cost": c["total_cost"], "hours": c["hours_total"]} for c in it["charges"]]})
+    sets = []
+    for s in store.set_list(name):
+        place = store.place(s["place_id"]) if s["place_id"] else None
+        sets.append({"name": s["name"], "place": place["name"] if place else None,
+                     "items": [by_id[g]["name"] for g in s["gear_ids"] if g in by_id],
+                     "hourly": sum(round(c["total_cost"] / (c["hours_total"] or imbuing.HOURS))
+                                   for g in s["gear_ids"] if g in by_id for c in by_id[g]["charges"])})
+    return {"items": out_items, "sets": sets}
+
+
 def _vip_details(name: str, eff: list[str]) -> dict:
     out = {}
+    if "gear" in eff:
+        out["gear"] = _gear_public(name)
     if "xp" in eff:
         out["xp"] = _xp_charts(name)
     if "skills" in eff:
@@ -3038,6 +3122,12 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
         other = _overlapping_char(session.started_at, session.ended_at, access)
         if other and name_key(other) != name_key(name):
             switched, name = name, other
+    mine = None if link else store.live_same_start(name, session.started_at)
+    if mine and mine["live"] and mine["uploader_key"] == owner_key:  # 0.32.0: é a continuação da sessão ao vivo
+        row, _ = store.live_update(mine["id"], name, session.to_dict(), body.raw_text)
+        row.pop("raw_text", None)
+        return {"created": False, "session": _public(row, access), "rewards": [], "rare": [], "compare": None,
+                "saved_as": name, "live_updated": True}
     _check_duplicate("solo_sessions", session.to_dict(), name, owner_key)
     if body.place_id is not None and store.place(body.place_id) is None:
         raise HTTPException(404, "Hunt não encontrada.")
@@ -3087,9 +3177,487 @@ def _compare_with_average(name: str, row: dict) -> dict | None:
     return out
 
 
+# ------------------------------------------------------------------ 0.32.0: imbuements e gastos invisíveis (só Hardcore)
+GEAR_ONLY_HARDCORE = "Imbuements e gastos invisíveis são só para o Player Hardcore. Troque o tipo em ⚙️ Configurações."
+IMB_ITEMS = sorted({m["item"] for c in imbuing.CATALOG.values() for m in c["materials"]} | set(imbuing.DEFAULT_TOKEN_PRICES))
+_IMB_DEFAULTS = {**imbuing.DEFAULT_ITEM_PRICES, **imbuing.DEFAULT_TOKEN_PRICES}
+
+
+def _gear_guard(name: str, access: dict) -> None:
+    require_owner(name, access)
+    _require_type(access, _hardcore_types(), GEAR_ONLY_HARDCORE)
+
+
+def _world_of(name: str) -> str | None:
+    try:
+        ch = lookup_character(name)
+    except HTTPException:
+        return None
+    return getattr(ch, "world", None) if ch else None
+
+
+def _imb_prices(access: dict, name: str) -> dict[str, dict]:
+    """Preço de cada item: o que o jogador informou, senão a média do mundo dele, senão a média de todos, senão o padrão."""
+    world = _world_of(name)
+    mine = store.imb_prices_mine(access["key"])
+    in_world = store.imb_prices_all(world) if world else {}
+    everyone = store.imb_prices_all()
+    rows = {}
+    for item in IMB_ITEMS:
+        avg_w, avg_all = imbuing.average_price(in_world.get(item, [])), imbuing.average_price(everyone.get(item, []))
+        default = _IMB_DEFAULTS.get(item)
+        eff = mine.get(item) or avg_w or avg_all or default
+        src = "mine" if mine.get(item) else "world" if avg_w else "all" if avg_all else "default" if default else None
+        rows[item] = {"item": item, "mine": mine.get(item), "avg_world": avg_w, "avg_all": avg_all, "default": default,
+                      "effective": eff, "source": src, "players": len(in_world.get(item, []))}
+    return rows
+
+
+def _eff(rows: dict[str, dict]) -> dict[str, int]:
+    return {k: v["effective"] for k, v in rows.items() if v["effective"]}
+
+
+def _charge_view(c: dict) -> dict:
+    total = c["hours_total"] or imbuing.HOURS
+    c["hourly"] = round(imbuing.hourly(c["total_cost"], total))
+    within = c["hours_used"] % total  # 21 h de uso = 1 ciclo inteiro + 1 h do próximo (5%)
+    c["cycles"] = int(c["hours_used"] // total)
+    c["hours_left"] = round(total - within, 2)
+    c["fraction"] = round(within / total * 100, 1)
+    return c
+
+
+def _gear_payload(name: str, access: dict) -> dict:
+    prices = _imb_prices(access, name)
+    items = store.gear_list(name)
+    for it in items:
+        it["kind_name"] = imbuing.GEAR_KINDS.get(it["kind"], it["kind"])
+        it["charges"] = [_charge_view(c) for c in it["charges"]]
+        it["hourly"] = sum(c["hourly"] for c in it["charges"])
+    sets = store.set_list(name)
+    by_id = {i["id"]: i for i in items}
+    for s in sets:
+        s["items"] = [by_id[g]["name"] for g in s["gear_ids"] if g in by_id]
+        s["hourly"] = sum(by_id[g]["hourly"] for g in s["gear_ids"] if g in by_id)
+        s["slots"] = sum(len(by_id[g]["charges"]) for g in s["gear_ids"] if g in by_id)
+    return {"items": items, "sets": sets, "prices": prices}
+
+
+@app.get("/api/gear/catalog")
+def gear_catalog(_: dict = Depends(require_session)):
+    return {"imbuements": list(imbuing.CATALOG.values()), "kinds": imbuing.GEAR_KINDS, "tiers": imbuing.TIERS,
+            "fees": imbuing.SHRINE_FEE, "hours": imbuing.HOURS, "accessories": list(imbuing.ACCESSORIES.values()),
+            "allowed": {k: imbuing.allowed_imbuements(k) for k in imbuing.GEAR_KINDS}, "items": IMB_ITEMS,
+            "max_slots": imbuing.MAX_SLOTS}
+
+
+@app.get("/api/gear/{name}")
+def gear_get(name: str, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    return _gear_payload(name, access)
+
+
+class GearPriceIn(BaseModel):
+    item: Annotated[str, Field(max_length=60)]
+    price: int | None = Field(default=None, ge=0, le=2_000_000_000)
+
+
+@app.post("/api/gear/{name}/price")
+def gear_price(name: str, body: GearPriceIn, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    if body.item not in IMB_ITEMS:
+        raise HTTPException(422, "Item desconhecido.")
+    store.imb_price_set(access["key"], body.item, body.price, _world_of(name))
+    return {"prices": _imb_prices(access, name)}
+
+
+class GearItemIn(BaseModel):
+    name: Annotated[str, Field(min_length=1, max_length=60)]
+    kind: Literal[tuple(imbuing.GEAR_KINDS)]  # type: ignore[valid-type]
+    slots: int = Field(default=2, ge=0, le=imbuing.MAX_SLOTS)
+    native: list[str] = Field(default_factory=list, max_length=12)  # efeitos que o item já traz (bloqueiam o imbuement)
+    catalog: str | None = None  # anel/amuleto recarregável do catálogo
+
+
+def _clean_native(native: list[str]) -> list[str]:
+    return [n for n in dict.fromkeys(native) if n in imbuing.CATALOG]
+
+
+@app.post("/api/gear/{name}/item")
+def gear_item_add(name: str, body: GearItemIn, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    if len(store.gear_list(name)) >= 80:
+        raise HTTPException(422, "Limite de itens atingido.")
+    catalog = None
+    if body.kind in ("ring", "amulet"):
+        acc = imbuing.ACCESSORIES.get(body.catalog or "")
+        if not acc or acc["kind"] != body.kind:
+            raise HTTPException(422, "Escolha o anel ou amuleto da lista.")
+        catalog = acc["key"]
+        body.name = acc["name"]
+    store.gear_add(name, " ".join(body.name.split()), body.kind, body.slots, _clean_native(body.native), catalog)
+    return _gear_payload(name, access)
+
+
+def _my_item(name: str, gear_id: int) -> dict:
+    it = store.gear_item(gear_id)
+    if not it or it["name_key"] != name_key(name):
+        raise HTTPException(404, "Item não encontrado.")
+    return it
+
+
+@app.put("/api/gear/{name}/item/{gear_id}")
+def gear_item_edit(name: str, gear_id: int, body: GearItemIn, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    it = _my_item(name, gear_id)
+    store.gear_update(gear_id, it["name"] if it["catalog"] else " ".join(body.name.split()), body.slots, _clean_native(body.native))
+    return _gear_payload(name, access)
+
+
+@app.delete("/api/gear/{name}/item/{gear_id}")
+def gear_item_delete(name: str, gear_id: int, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    _my_item(name, gear_id)
+    store.gear_delete(gear_id)
+    return _gear_payload(name, access)
+
+
+class ImbueIn(BaseModel):
+    imbuement: str
+    tier: int = Field(ge=1, le=3)
+
+
+def _new_charge(name: str, access: dict, it: dict, imbuement: str, tier: int) -> dict:
+    prices = _imb_prices(access, name)
+    eff = _eff(prices)
+    plan = imbuing.best_plan(imbuement, tier, eff, eff.get("gold token"))
+    if plan["total"] is None:
+        raise HTTPException(422, "Faltam preços: " + ", ".join(plan["missing"]) + ".")
+    return store.charge_add(it["id"], imbuement, tier, plan, plan["total"], imbuing.HOURS)
+
+
+@app.post("/api/gear/{name}/item/{gear_id}/imbue")
+def gear_imbue(name: str, gear_id: int, body: ImbueIn, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    it = _my_item(name, gear_id)
+    if it["catalog"]:
+        raise HTTPException(422, "Anel e amuleto não levam imbuement.")
+    mine = next(g for g in store.gear_list(name) if g["id"] == gear_id)
+    current = [ch["imbuement"] for ch in mine["charges"]]
+    err = imbuing.check_imbue(it["kind"], it["slots"], json.loads(it["native"] or "[]"), current, body.imbuement, body.tier)
+    if err:
+        raise HTTPException(422, err)
+    _new_charge(name, access, it, body.imbuement, body.tier)
+    return _gear_payload(name, access)
+
+
+@app.post("/api/gear/{name}/item/{gear_id}/recharge")
+def gear_recharge(name: str, gear_id: int, access: dict = Depends(require_session)):
+    """Anel/amuleto: nova recarga com silver tokens (custo pelo preço informado)."""
+    _gear_guard(name, access)
+    it = _my_item(name, gear_id)
+    acc = imbuing.ACCESSORIES.get(it["catalog"] or "")
+    if not acc:
+        raise HTTPException(422, "Esse item não é recarregável.")
+    if next(g for g in store.gear_list(name) if g["id"] == gear_id)["charges"]:  # só lista as recargas ativas
+        raise HTTPException(409, "A recarga atual ainda está ativa. Reinicie o contador para trocar.")
+    silver = _eff(_imb_prices(access, name)).get("silver token")
+    if not silver:
+        raise HTTPException(422, "Informe o preço do silver token.")
+    cost = imbuing.accessory_charge_cost(acc["key"], silver)
+    store.charge_add(gear_id, "charge:" + acc["key"], 0, {"silver_tokens": acc["silver_tokens"], "silver_price": silver},
+                     cost, imbuing.accessory_hours(acc["key"]))
+    return _gear_payload(name, access)
+
+
+def _my_charge(name: str, charge_id: int) -> tuple[dict, dict]:
+    c = store.charge_get(charge_id)
+    it = store.gear_item(c["gear_id"]) if c else None
+    if not c or not it or it["name_key"] != name_key(name) or c["ended_at"]:
+        raise HTTPException(404, "Imbuement não encontrado.")
+    return c, it
+
+
+def _charge_label(it: dict, c: dict) -> str:
+    if c["imbuement"].startswith("charge:"):
+        return f"{it['name']} (recarga)"
+    return f"{it['name']} · {imbuing.CATALOG[c['imbuement']]['name'].split(' (')[0]} {imbuing.TIERS[c['tier'] - 1]}"
+
+
+class HoursIn(BaseModel):
+    hours: float = Field(ge=0, le=100)
+
+
+@app.post("/api/gear/{name}/charge/{charge_id}/hours")
+def gear_charge_hours(name: str, charge_id: int, body: HoursIn, access: dict = Depends(require_session)):
+    """"Usei e não informei": soma horas de uso a esse imbuement (entram no custo, fora de qualquer hunt)."""
+    _gear_guard(name, access)
+    c, it = _my_charge(name, charge_id)
+    if body.hours > 0:
+        store.charge_add_hours(charge_id, body.hours)
+        store.usage_add(name, "manual", 0, charge_id, _charge_label(it, c), body.hours,
+                        imbuing.use_cost(c["total_cost"], body.hours, c["hours_total"]), datetime.now(BRT).date().isoformat())
+    return _gear_payload(name, access)
+
+
+@app.post("/api/gear/{name}/charge/{charge_id}/restart")
+def gear_charge_restart(name: str, charge_id: int, body: HoursIn, access: dict = Depends(require_session)):
+    """Reinicia o contador (o imbuement foi refeito): as horas que sobraram se perdem, as horas extras entram no custo
+    e o novo ciclo já usa os preços de hoje."""
+    _gear_guard(name, access)
+    c, it = _my_charge(name, charge_id)
+    if body.hours > 0:
+        store.usage_add(name, "manual", 0, charge_id, _charge_label(it, c), body.hours,
+                        imbuing.use_cost(c["total_cost"], body.hours, c["hours_total"]), datetime.now(BRT).date().isoformat())
+    store.charge_end(charge_id)
+    if c["imbuement"].startswith("charge:"):
+        acc = imbuing.ACCESSORIES[c["imbuement"][7:]]
+        silver = _eff(_imb_prices(access, name)).get("silver token") or c["plan"].get("silver_price") or 0
+        store.charge_add(it["id"], c["imbuement"], 0, {"silver_tokens": acc["silver_tokens"], "silver_price": silver},
+                         imbuing.accessory_charge_cost(acc["key"], silver), c["hours_total"])
+    else:
+        _new_charge(name, access, it, c["imbuement"], c["tier"])
+    return _gear_payload(name, access)
+
+
+@app.delete("/api/gear/{name}/charge/{charge_id}")
+def gear_charge_remove(name: str, charge_id: int, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    _my_charge(name, charge_id)
+    store.charge_end(charge_id)
+    return _gear_payload(name, access)
+
+
+@app.get("/api/gear/{name}/plan")
+def gear_plan(name: str, imbuement: str, tier: int = 3, access: dict = Depends(require_session)):
+    """Quanto custa montar o imbuement e o jeito mais barato (market x gold token)."""
+    _gear_guard(name, access)
+    if imbuement not in imbuing.CATALOG or tier not in (1, 2, 3):
+        raise HTTPException(422, "Imbuement inválido.")
+    eff = _eff(_imb_prices(access, name))
+    return imbuing.best_plan(imbuement, tier, eff, eff.get("gold token"))
+
+
+class SetIn(BaseModel):
+    id: int | None = Field(default=None, ge=1)
+    name: Annotated[str, Field(min_length=1, max_length=40)]
+    place_id: int | None = Field(default=None, ge=1)
+    gear_ids: list[int] = Field(default_factory=list, max_length=20)
+
+
+@app.post("/api/gear/{name}/set")
+def gear_set_save(name: str, body: SetIn, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    mine = {i["id"] for i in store.gear_list(name)}
+    if any(g not in mine for g in body.gear_ids):
+        raise HTTPException(422, "Item que não é seu.")
+    if body.id and not any(s["id"] == body.id for s in store.set_list(name)):
+        raise HTTPException(404, "Set não encontrado.")
+    if body.place_id is not None and store.place(body.place_id) is None:
+        raise HTTPException(404, "Hunt não encontrada.")
+    if not body.id and len(store.set_list(name)) >= 40:
+        raise HTTPException(422, "Limite de sets atingido.")
+    store.set_save(name, body.id, " ".join(body.name.split()), body.place_id, body.gear_ids)
+    return _gear_payload(name, access)
+
+
+@app.delete("/api/gear/{name}/set/{set_id}")
+def gear_set_delete(name: str, set_id: int, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    if not any(s["id"] == set_id for s in store.set_list(name)):
+        raise HTTPException(404, "Set não encontrado.")
+    store.set_delete(set_id)
+    return _gear_payload(name, access)
+
+
+class AssignIn(BaseModel):
+    kind: Literal["solo", "hunt", "boss"]
+    ref_id: int = Field(ge=1)
+    set_id: int | None = Field(default=None, ge=1)
+    pause_minutes: int = Field(default=0, ge=0, le=1440)
+
+
+def _session_seconds(name: str, kind: str, ref_id: int) -> tuple[int, str]:
+    """(segundos jogados, dia) da sessão do personagem; 404 se não for dele."""
+    nk = name_key(name)
+    if kind == "solo":
+        row = store.solo_session(ref_id)
+    elif kind == "boss":
+        row = store.boss_session(ref_id)
+    else:
+        row = None
+        mine = next((h for h in store.hunts_for_player(name) if h["id"] == ref_id), None)
+        if mine:
+            mem = next((m for m in store.party_sessions_for([ref_id])[ref_id] if name_key(m["name"]) == nk), None)
+            row = mem or mine
+    if not row or (kind != "hunt" and row["name_key"] != nk):
+        raise HTTPException(404, "Sessão não encontrada.")
+    return int(row.get("duration_seconds") or 0), str(row["started_at"])[:10]
+
+
+def _apply_gear(name: str, kind: str, ref_id: int, set_id: int | None, pause: int) -> dict:
+    """Debita dos imbuements do set o tempo da hunt (menos a pausa): custo proporcional às 20 horas de cada um."""
+    seconds, day = _session_seconds(name, kind, ref_id)
+    store.release_session_gear(name, kind, ref_id)
+    if not set_id:
+        return {"cost": 0, "hours": 0}
+    st = store.set_get(set_id)
+    if not st or st["name_key"] != name_key(name):
+        raise HTTPException(404, "Set não encontrado.")
+    hours = max(0.0, seconds / 3600 - pause / 60)
+    items = {i["id"]: i for i in store.gear_list(name)}
+    total = 0
+    for gid in st["gear_ids"]:
+        it = items.get(gid)
+        for c in (it or {}).get("charges", []):
+            cost = imbuing.use_cost(c["total_cost"], hours, c["hours_total"])
+            store.usage_add(name, kind, ref_id, c["id"], _charge_label(it, c), hours, cost, day)
+            store.charge_add_hours(c["id"], hours)
+            total += cost
+    store.session_gear_save(name, kind, ref_id, set_id, st["name"], pause, hours, total)
+    return {"cost": total, "hours": round(hours, 2)}
+
+
+@app.post("/api/gear/{name}/assign")
+def gear_assign(name: str, body: AssignIn, access: dict = Depends(require_session)):
+    """Liga um set a uma hunt (solo, party ou boss). O custo entra no lucro líquido só do jogador."""
+    _gear_guard(name, access)
+    out = _apply_gear(name, body.kind, body.ref_id, body.set_id, body.pause_minutes)
+    return {**out, **_gear_payload(name, access)}
+
+
+@app.get("/api/gear/{name}/suggest")
+def gear_suggest(name: str, place_id: int, access: dict = Depends(require_session)):
+    _gear_guard(name, access)
+    return {"set": store.last_set_for_place(name, place_id)}
+
+
+@app.get("/api/gear/{name}/report")
+def gear_report(name: str, weeks: int = 8, access: dict = Depends(require_session)):
+    """Relatório semanal: horas e custo de cada item, mais o que já foi pago e ainda não foi usado."""
+    _gear_guard(name, access)
+    weeks = max(1, min(weeks, 52))
+    today = datetime.now(BRT).date()
+    start = today - timedelta(days=today.weekday() + 7 * (weeks - 1))
+    rows = store.usage_report(name, start.isoformat())
+    out: dict[str, dict] = {}
+    for r in rows:
+        d = datetime.fromisoformat(r["day"]).date()
+        wk = (d - timedelta(days=d.weekday())).isoformat()
+        w = out.setdefault(wk, {"week": wk, "cost": 0, "hunt_hours": 0.0, "items": {}, "_sessions": {}})
+        w["cost"] += r["cost"]
+        it = w["items"].setdefault(r["label"], {"label": r["label"], "hours": 0.0, "cost": 0})
+        it["hours"] += r["hours"]
+        it["cost"] += r["cost"]
+        if r["kind"] != "manual":
+            w["_sessions"][(r["kind"], r["ref_id"])] = r["hours"]
+    for w in out.values():
+        w["hunt_hours"] = round(sum(w.pop("_sessions").values()), 2)
+        w["items"] = sorted(({**i, "hours": round(i["hours"], 2)} for i in w["items"].values()), key=lambda i: -i["cost"])
+    pending = []
+    for it in store.gear_list(name):
+        for c in it["charges"]:
+            c = _charge_view(c)
+            pending.append({"label": _charge_label(it, c), "hours_used": round(c["hours_used"], 2), "hours_total": c["hours_total"],
+                            "fraction": c["fraction"], "paid": c["total_cost"],
+                            "unused_value": round(c["total_cost"] * (1 - c["fraction"] / 100)), "cycles": c["cycles"]})
+    return {"weeks": sorted(out.values(), key=lambda w: w["week"], reverse=True), "pending": pending}
+
+
+# ------------------------------------------------------------------ 0.32.0: hunt session ao vivo (só Hardcore)
+LIVE_ONLY_HARDCORE = "A sessão ao vivo é só para o Player Hardcore. Troque o tipo em ⚙️ Configurações."
+LIVE_RESET = ("O Hunt Analyser parece ter sido reiniciado (o horário de início mudou). Se for uma hunt nova, "
+              "confirme para abrir outra sessão ao vivo; a anterior fica salva do jeito que estava.")
+
+
+class LiveIn(UploadIn):
+    confirm: bool = False  # confirma que é uma hunt nova depois de o analisador ter sido reiniciado
+
+
+def _live_view(row: dict | None) -> dict | None:
+    """A sessão ao vivo com o ritmo de cada intervalo (diferença entre um envio e o seguinte)."""
+    if not row:
+        return None
+    pts = store.live_points(row["id"])
+    out, prev = [], None
+    for p in pts:
+        secs = p["duration_seconds"] - (prev["duration_seconds"] if prev else 0)
+        item = {"ended_at": p["ended_at"], "duration_seconds": p["duration_seconds"], "xp": p["xp"], "balance": p["balance"],
+                "interval_seconds": secs if prev else p["duration_seconds"]}
+        d_xp = p["xp"] - (prev["xp"] if prev else 0)
+        d_bal = p["balance"] - (prev["balance"] if prev else 0)
+        item["xp_h"] = _per_hour(d_xp, secs) if secs > 0 else 0
+        item["balance_h"] = _per_hour(d_bal, secs) if secs > 0 else 0
+        out.append(item)
+        prev = p
+    row = _public(dict(row), {"key": None})
+    for k in ("raw_text",):
+        row.pop(k, None)
+    return {"session": row, "points": out}
+
+
+@app.post("/api/live")
+def live_upload(body: LiveIn, access: dict = Depends(require_session)):
+    """Cola o Hunt Analyser da hunt em andamento quantas vezes quiser. Cada colagem é acumulada: vale a mais
+    completa e o que já foi enviado nunca se perde, mesmo que um intervalo fique sem envio."""
+    _require_type(access, _hardcore_types(), LIVE_ONLY_HARDCORE)
+    try:
+        session = parse_solo_session(body.raw_text)
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+    name = require_uploader(body.nickname, access)
+    data = session.to_dict()
+    mine = store.live_same_start(name, session.started_at)
+    if mine is None:
+        open_row = store.live_open(name)
+        if open_row and not body.confirm:
+            raise HTTPException(409, {"message": LIVE_RESET, "reason": "live_reset"})
+        if open_row:
+            store.live_close(open_row["id"])
+        if body.place_id is not None and store.place(body.place_id) is None:
+            raise HTTPException(404, "Hunt não encontrada.")
+        try:
+            ch = lookup_character(name)
+            level = ch.level if ch else None
+        except HTTPException:
+            level = None
+        row, created = store.live_start(name, session.fingerprint(name), data, access["key"], body.raw_text,
+                                        body.place_id, level)
+        advanced = True
+    else:
+        if mine["uploader_key"] != access["key"]:
+            raise HTTPException(403, "Só quem abriu a sessão ao vivo continua enviando.")
+        row, advanced = store.live_update(mine["id"], name, data, body.raw_text)
+        created = False
+    view = _live_view(row)
+    return {"created": created, "advanced": advanced, "live": view}
+
+
+@app.get("/api/live/{name}")
+def live_get(name: str, access: dict = Depends(require_session)):
+    """A sessão ao vivo aberta do personagem (só o dono vê)."""
+    require_owner(name, access)
+    _require_type(access, _hardcore_types(), LIVE_ONLY_HARDCORE)
+    return {"live": _live_view(store.live_open(name))}
+
+
+@app.post("/api/live/{session_id}/close")
+def live_close(session_id: int, access: dict = Depends(require_session)):
+    exists, owner = store.uploader_of("solo_sessions", session_id)
+    if not exists:
+        raise HTTPException(404, "Não encontrado.")
+    if owner != access["key"]:
+        raise HTTPException(403, "Só quem enviou pode encerrar.")
+    store.live_close(session_id)
+    return {"closed": session_id}
+
+
 @app.delete("/api/stacker/session/{session_id}")
 def delete_solo(session_id: int, access: dict = Depends(require_session)):
+    row = store.solo_session(session_id)
     _delete_own("solo_sessions", session_id, access)
+    if row:  # 0.32.0: as horas dos imbuements usadas nessa sessão voltam
+        store.release_session_gear(row["name"], "solo", session_id)
     return {"deleted": session_id}
 
 
@@ -3265,12 +3833,17 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
         if source == "hunt":
             pb["from_hunts"] += count
 
+    boss_gear = store.session_gear_for(name, [("boss", s["id"]) for s in sessions])  # 0.32.0: gastos invisíveis
     for s in sessions:
         s["kills"] = [{"key": c, "count": n} for c, n in kills[s["id"]]]
         resolved = [(store.resolve_item(k), n) for k, n in loot[s["id"]]]
         s["loot"] = _valued(resolved, prices)
         s["loot_value"] = sum(it["value"] for it in s["loot"])
-        s["net_profit"] = s["loot_value"] - s["supplies"]
+        g = boss_gear.get(("boss", s["id"]))
+        s["gear"] = {"set_id": g["set_id"], "set_name": g["set_name"], "pause_minutes": g["pause_minutes"],
+                     "hours": g["hours"], "cost": g["cost"]} if g else None
+        s["gear_cost"] = g["cost"] if g else 0
+        s["net_profit"] = s["loot_value"] - s["supplies"] - s["gear_cost"]
         s["bosses"] = boss_core.bosses_in(kills[s["id"]])
         split = boss_core.attribute_loot(kills[s["id"]], resolved, whole_session=True)
         rest = sum(n * prices[k]["unit_price"] for k, n in split.pop("_outros", []))

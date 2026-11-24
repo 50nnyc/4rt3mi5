@@ -1,6 +1,98 @@
 {
   "releases": [
     {
+      "version": "0.32.0",
+      "date": "2026-11-24",
+      "title": "Equipamentos e sessão ao vivo",
+      "summary": "Painel único solo + party, sessão ao vivo e gastos invisíveis de imbuements, anéis e amuletos no lucro.",
+      "changes": [
+        "📊 Painel único do personagem: o Hunt Session Stacker agora soma as suas sessões solo e as da party (o Hunt Analyser juntado ao lootsplit), com o filtro Tudo / Solo / Party. O que você já tinha enviado entra sozinho, sem contar a mesma sessão duas vezes.",
+        "⏱️ Sessão ao vivo para o Player Hardcore: cada Hunt Analyser que você cola fica salvo e acumulado. Pulou um horário? O próximo envio já traz tudo. Escolha lembrar a cada 15, 30 ou 60 minutos. Se o analisador for reiniciado, o site pergunta antes de abrir outra sessão.",
+        "⚔️ Equipamentos (Player Hardcore): cadastre armas, armaduras, escudos, elmos, botas, anéis e amuletos com os imbuements que usa. O site mostra o jeito mais barato de montar cada imbuement (itens do market ou gold token, até misturando os dois) e o custo por hora de uso das 20 horas.",
+        "🎒 Monte sets por hunt (ex.: Crypts), ligue-os às suas hunts e bosses e informe as pausas. O gasto invisível entra sozinho no lucro líquido, só no seu. Anéis e amuletos recarregáveis com silver token também entram na conta.",
+        "📅 Relatório semanal com as horas e o gasto de cada item, mais o que já foi pago e ainda não foi usado. Os preços vêm da média dos jogadores do seu mundo, e você pode informar os seus. Sets e peças podem ser compartilhados pela VIP List."
+      ],
+      "tr": {
+        "en": {
+          "title": "Equipment and live sessions",
+          "summary": "One dashboard for solo + party, live session and hidden costs in your profit.",
+          "changes": [
+            "📊 One dashboard per character: the Hunt Session Stacker now adds your solo sessions and your party sessions (the Hunt Analyser attached to the lootsplit), with an All / Solo / Party filter. What you already sent is included, without counting the same session twice.",
+            "⏱️ Live session for Hardcore players: every Hunt Analyser you paste is saved and accumulated. Skipped a time? The next paste brings everything. Choose a reminder every 15, 30 or 60 minutes. If the analyser is reset, the site asks before opening another session.",
+            "⚔️ Equipment (Hardcore players): add weapons, armors, shields, helmets, boots, rings and amulets with the imbuements you use. The site shows the cheapest way to build each imbuement (market items or gold tokens, even mixing both) and the cost per hour of use over the 20 hours.",
+            "🎒 Build sets per hunt (e.g. Crypts), link them to your hunts and bosses and enter pauses. The hidden cost is deducted from net profit automatically, for you only. Rings and amulets recharged with silver tokens are counted too.",
+            "📅 Weekly report with the hours and cost of each item, plus what was already paid and not yet used. Prices come from the average of players in your world, and you can enter your own. Sets and pieces can be shared through the VIP List."
+          ]
+        },
+        "es": {
+          "title": "Equipamiento y sesión en vivo",
+          "summary": "Un panel solo + party, sesión en vivo y gastos ocultos en la ganancia.",
+          "changes": [
+            "📊 Un panel por personaje: el Hunt Session Stacker ahora suma tus sesiones solo y las de la party (el Hunt Analyser unido al lootsplit), con el filtro Todo / Solo / Party. Lo que ya enviaste entra solo, sin contar la misma sesión dos veces.",
+            "⏱️ Sesión en vivo para el Player Hardcore: cada Hunt Analyser que pegas queda guardado y acumulado. ¿Te saltaste un horario? El siguiente envío ya trae todo. Elige recordar cada 15, 30 o 60 minutos. Si el analizador se reinicia, el sitio pregunta antes de abrir otra sesión.",
+            "⚔️ Equipamiento (Player Hardcore): registra armas, armaduras, escudos, cascos, botas, anillos y amuletos con los imbuements que usas. El sitio muestra la forma más barata de montar cada imbuement (ítems del market o gold token, incluso mezclando ambos) y el costo por hora de uso de las 20 horas.",
+            "🎒 Arma sets por hunt (ej.: Crypts), vincúlalos a tus hunts y bosses e informa las pausas. El gasto invisible entra solo en la ganancia neta, solo la tuya. Los anillos y amuletos recargables con silver token también cuentan.",
+            "📅 Informe semanal con las horas y el gasto de cada ítem, más lo que ya se pagó y aún no se usó. Los precios vienen del promedio de los jugadores de tu mundo y puedes informar los tuyos. Sets y piezas se pueden compartir por la VIP List."
+          ]
+        },
+        "ja": {
+          "title": "装備とライブセッション",
+          "summary": "ソロ＋パーティの統合パネル、ライブセッション、見えないコストを利益に反映。",
+          "changes": [
+            "📊 キャラクターごとの統合ダッシュボード：Hunt Session Stacker が、ソロのセッションとパーティのセッション（lootsplit に紐づけた Hunt Analyser）を合算し、すべて／ソロ／パーティで絞り込めます。送信済みのデータも自動で反映され、同じセッションは二重に数えません。",
+            "⏱️ ハードコアプレイヤー向けライブセッション：貼り付けた Hunt Analyser は累積して保存されます。時間を飛ばしても、次の送信で全体が揃います。15・30・60分ごとのリマインドを選べます。アナライザーをリセットした場合は、新しいセッションを開く前に確認します。",
+            "⚔️ 装備（ハードコアプレイヤー）：使用中の武器・鎧・盾・ヘルメット・ブーツ・リング・アミュレットと、そのインビューメントを登録できます。各インビューメントを最も安く作る方法（マーケットのアイテムかゴールドトークン、両方の併用も可）と、20時間に基づく1時間あたりのコストを表示します。",
+            "🎒 狩り場ごとのセットを作り、狩りやボスに紐づけ、休憩時間を入力できます。見えないコストは自動で純利益から差し引かれ、あなた自身にだけ反映されます。シルバートークンで再チャージするリングとアミュレットも計算に含まれます。",
+            "📅 各アイテムの時間とコスト、支払い済みでまだ使っていない分を示す週次レポート。価格は同じワールドのプレイヤーの平均を使い、自分の価格も入力できます。セットと装備は VIP List で共有できます。"
+          ]
+        },
+        "de": {
+          "title": "Ausrüstung und Live-Session",
+          "summary": "Ein Dashboard für Solo + Party, Live-Session und versteckte Kosten im Gewinn.",
+          "changes": [
+            "📊 Ein Dashboard pro Charakter: Der Hunt Session Stacker addiert jetzt deine Solo-Sessions und die der Party (der mit dem Lootsplit verbundene Hunt Analyser), mit dem Filter Alle / Solo / Party. Bereits Gesendetes wird übernommen, ohne dieselbe Session doppelt zu zählen.",
+            "⏱️ Live-Session für Hardcore-Spieler: Jeder eingefügte Hunt Analyser wird gespeichert und akkumuliert. Einen Zeitpunkt ausgelassen? Die nächste Eingabe enthält alles. Wähle eine Erinnerung alle 15, 30 oder 60 Minuten. Wird der Analyser zurückgesetzt, fragt die Seite nach, bevor eine neue Session beginnt.",
+            "⚔️ Ausrüstung (Hardcore-Spieler): Trage Waffen, Rüstungen, Schilde, Helme, Stiefel, Ringe und Amulette mit den verwendeten Imbuements ein. Die Seite zeigt den günstigsten Weg für jedes Imbuement (Market-Items oder Gold Token, auch gemischt) und die Kosten pro Nutzungsstunde der 20 Stunden.",
+            "🎒 Erstelle Sets pro Hunt (z. B. Crypts), verknüpfe sie mit deinen Hunts und Bossen und gib Pausen an. Die versteckten Kosten werden automatisch vom Nettogewinn abgezogen, nur bei dir. Mit Silver Tokens aufgeladene Ringe und Amulette zählen ebenfalls.",
+            "📅 Wochenbericht mit Stunden und Kosten jedes Items sowie dem, was bezahlt, aber noch nicht genutzt wurde. Die Preise stammen vom Durchschnitt der Spieler deiner Welt, eigene Preise sind möglich. Sets und Teile lassen sich über die VIP List teilen."
+          ]
+        },
+        "pl": {
+          "title": "Wyposażenie i sesja na żywo",
+          "summary": "Jeden panel solo + party, sesja na żywo i ukryte koszty w zysku.",
+          "changes": [
+            "📊 Jeden panel postaci: Hunt Session Stacker sumuje teraz twoje sesje solo i party (Hunt Analyser połączony z lootsplitem), z filtrem Wszystko / Solo / Party. Wcześniej wysłane dane wchodzą same, bez podwójnego liczenia tej samej sesji.",
+            "⏱️ Sesja na żywo dla graczy Hardcore: każdy wklejony Hunt Analyser jest zapisywany i kumulowany. Pominąłeś godzinę? Następne wklejenie zawiera wszystko. Wybierz przypomnienie co 15, 30 lub 60 minut. Jeśli analyser zostanie zresetowany, strona zapyta przed otwarciem nowej sesji.",
+            "⚔️ Wyposażenie (gracze Hardcore): dodaj bronie, zbroje, tarcze, hełmy, buty, pierścienie i amulety z używanymi imbuementami. Strona pokazuje najtańszy sposób zrobienia każdego imbuementu (przedmioty z marketu lub gold token, także łącznie) oraz koszt za godzinę użycia z 20 godzin.",
+            "🎒 Twórz sety na huntach (np. Crypts), łącz je z huntami i bossami oraz podawaj przerwy. Ukryty koszt sam odlicza się od zysku netto, tylko u ciebie. Pierścienie i amulety ładowane silver tokenami też są liczone.",
+            "📅 Raport tygodniowy z godzinami i kosztem każdego przedmiotu oraz tym, co zapłacono, a jeszcze nie użyto. Ceny pochodzą ze średniej graczy z twojego świata, możesz wpisać własne. Sety i elementy można udostępnić przez VIP List."
+          ]
+        },
+        "fr": {
+          "title": "Équipement et session en direct",
+          "summary": "Un tableau solo + party, session en direct et coûts cachés dans le bénéfice.",
+          "changes": [
+            "📊 Un tableau de bord par personnage : le Hunt Session Stacker additionne désormais vos sessions solo et celles de la party (le Hunt Analyser lié au lootsplit), avec le filtre Tout / Solo / Party. Ce que vous aviez déjà envoyé est inclus, sans compter deux fois la même session.",
+            "⏱️ Session en direct pour les joueurs Hardcore : chaque Hunt Analyser collé est enregistré et cumulé. Un créneau sauté ? L'envoi suivant apporte tout. Choisissez un rappel toutes les 15, 30 ou 60 minutes. Si l'analyseur est réinitialisé, le site demande avant d'ouvrir une autre session.",
+            "⚔️ Équipement (joueurs Hardcore) : enregistrez armes, armures, boucliers, casques, bottes, anneaux et amulettes avec les imbuements utilisés. Le site montre la façon la moins chère de monter chaque imbuement (objets du market ou gold tokens, même en mélangeant) et le coût par heure d'utilisation sur les 20 heures.",
+            "🎒 Créez des sets par hunt (ex. Crypts), liez-les à vos hunts et à vos boss et indiquez les pauses. Le coût invisible se déduit automatiquement du bénéfice net, pour vous seulement. Les anneaux et amulettes rechargés avec des silver tokens comptent aussi.",
+            "📅 Rapport hebdomadaire avec les heures et le coût de chaque objet, plus ce qui est payé mais pas encore utilisé. Les prix viennent de la moyenne des joueurs de votre monde, et vous pouvez saisir les vôtres. Sets et pièces peuvent être partagés via la VIP List."
+          ]
+        },
+        "ru": {
+          "title": "Экипировка и живая сессия",
+          "summary": "Единая панель соло + пати, живая сессия и скрытые расходы в прибыли.",
+          "changes": [
+            "📊 Единая панель персонажа: Hunt Session Stacker теперь суммирует ваши соло-сессии и сессии пати (Hunt Analyser, привязанный к lootsplit), с фильтром Все / Соло / Пати. Уже отправленное учитывается само, одна и та же сессия не считается дважды.",
+            "⏱️ Живая сессия для Hardcore-игроков: каждый вставленный Hunt Analyser сохраняется и накапливается. Пропустили время? Следующая вставка содержит всё. Выберите напоминание каждые 15, 30 или 60 минут. Если анализатор сброшен, сайт спросит перед открытием новой сессии.",
+            "⚔️ Экипировка (Hardcore-игроки): добавьте оружие, броню, щиты, шлемы, ботинки, кольца и амулеты с используемыми имбуементами. Сайт покажет самый дешёвый способ сделать каждый имбуемент (предметы с маркета или gold token, в том числе вперемешку) и стоимость часа использования из 20 часов.",
+            "🎒 Создавайте наборы под охоту (например, Crypts), привязывайте их к охотам и боссам и указывайте паузы. Скрытые расходы сами вычитаются из чистой прибыли, только у вас. Кольца и амулеты, заряжаемые silver token, тоже учитываются.",
+            "📅 Недельный отчёт с часами и расходами по каждому предмету, а также с тем, что уже оплачено, но ещё не использовано. Цены берутся из среднего по игрокам вашего мира, свои можно ввести самому. Наборами и предметами можно делиться через VIP List."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.31.2",
       "date": "2026-11-24",
       "title": "Aviso de Input Analyser baixo",

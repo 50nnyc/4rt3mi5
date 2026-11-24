@@ -1423,5 +1423,8 @@
   "📍 Ver as hunts sem local": "📍 Zobacz hunty bez miejsca",
   "Esse Input Analyser está com valores muito baixos para essa hunt.": "Ten Input Analyser ma bardzo niskie wartości jak na ten hunt.",
   "Dica: talvez o seu Input Analyser esteja em \"Recent values\". Troque para \"Session values\", copie de novo e cole aqui. Se os valores estão corretos, confirme para salvar assim mesmo.": "Wskazówka: być może twój Input Analyser jest ustawiony na \"Recent values\". Przełącz na \"Session values\", skopiuj ponownie i wklej tutaj. Jeśli wartości są poprawne, potwierdź, aby zapisać mimo to.",
-  "Os valores estão certos, salvar assim": "Wartości są poprawne, zapisz tak"
+  "Os valores estão certos, salvar assim": "Wartości są poprawne, zapisz tak",
+  "Equipamentos": "Wyposażenie",
+  "Equipamentos e gastos invisíveis": "Wyposażenie i ukryte koszty",
+  "Imbuements, anéis e amuletos entram no lucro líquido das suas hunts.": "Imbuementy, pierścienie i amulety są odliczane od zysku netto z twoich huntów."
 }

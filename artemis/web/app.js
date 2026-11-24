@@ -969,6 +969,7 @@ function ptypeButtons(current) {
   }).join("");
 }
 function paintPlayerType() {
+  $("#gearItem").classList.toggle("hidden", !isHardcore());  // 0.32.0: Equipamentos só para o Hardcore
   $("#playerTypes").innerHTML = ptypeButtons(ptype());
   $("#playerTypeHint").textContent = PTYPE_INFO[isHardcore() ? "hardcore" : ptype()] || "";
 }
@@ -1062,6 +1063,8 @@ function go(page, opts = {}) {
   $("#pageBoss").classList.toggle("hidden", page !== "boss");
   $("#pageLoot").classList.toggle("hidden", page !== "loot");
   $("#pageStack").classList.toggle("hidden", page !== "stack");
+  $("#pageGear").classList.toggle("hidden", page !== "gear");
+  $("#gearItem").classList.toggle("hidden", !isHardcore());
   $("#pageChars").classList.toggle("hidden", page !== "chars");
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
   $("#pageNews").classList.toggle("hidden", page !== "news");
@@ -1088,6 +1091,7 @@ function go(page, opts = {}) {
   window.scrollTo(0, 0);
   if (page === "home") loadHome();
   if (page === "stack") loadStack();
+  if (page === "gear") loadGear();
   if (page === "boss") { showBossTab(S.mode); loadBoss(); }
   if (page === "hunts") loadHunts();
   if (page === "loot") loadLootList();
@@ -2132,15 +2136,17 @@ function soloStats(t) {
   ]);
 }
 function soloItem(s) {
+  const party = s.source === "party";  // 0.32.0: sessões da party aparecem junto com as solo
   const owner = s.net_profit !== undefined;  // 0.20.0: quem não é o dono recebe só o geral
   return `<details class="card"><summary>
-      <div class="row"><b>${when(s.started_at)}</b><span class="gold">${kk(s.xp)} XP</span></div>
+      <div class="row"><b>${when(s.started_at)}${party ? ` <span class="chip" style="font-weight:400">🤝 Party${s.players_count ? " · " + s.players_count : ""}</span>` : ""}</b><span class="gold">${kk(s.xp)} XP</span></div>
       <div class="row muted"><span>${dur(s.duration_seconds)}${s.loot_value ? " · loot ≈ " + kk(s.loot_value) : ""}</span>
         <span class="${s.balance >= 0 ? "pos" : "neg"}">balance ${kk(s.balance)}</span></div>
       ${owner ? `<div class="muted" style="font-size:13px">lucro líquido real <b class="${s.net_profit >= 0 ? "pos" : "neg"}">${kk(s.net_profit)}</b></div>` : ""}
       ${s.other_player ? `<div><span class="who other" style="margin-left:0">${s.played_by ? esc(`🤝 Jogada por ${s.played_by}`) : "🤝 Jogada por outra pessoa"}</span></div>` : ""}
     </summary>
-    <div class="tagline-row" style="font-size:14px">${placeTag("solo", s)} ${s.can_delete ? inputTag("solo", s) : ""}</div>
+    ${party ? `<div class="tagline-row" style="font-size:14px">${s.place ? "📍 " + esc(s.place.name) : ""} <span class="muted">Mudanças desta sessão são feitas na aba 🤝 Loot split.</span></div>`
+      : `<div class="tagline-row" style="font-size:14px">${placeTag("solo", s)} ${s.can_delete ? inputTag("solo", s) : ""}</div>`}
     ${inputBlock(s.input)}
     <div style="margin-top:10px">${statGrid([
       ["XP", fmt(s.xp)], ["Raw XP", fmt(s.raw_xp)], ["Balance", fmt(s.balance) + " gp"], ["Supplies", fmt(s.supplies) + " gp"],
@@ -2148,8 +2154,9 @@ function soloItem(s) {
     ])}</div>
     ${s.loot && s.loot.length ? `<h2>Itens coletados</h2>${itemList(s.loot, 999)}` : ""}
     ${s.kills && s.kills.length ? `<h2>Criaturas mortas</h2>${killChips(s.kills)}` : ""}
-    ${owner ? `<div style="margin-top:10px">${shareButton("solo", s)}</div>` : ""}
-    ${owner ? playerMarkBox("stacker", s) : ""}
+    ${owner ? gearBox(s, party ? "hunt" : "solo", party ? s.hunt_id : s.id) : ""}
+    ${owner && !party ? `<div style="margin-top:10px">${shareButton("solo", s)}</div>` : ""}
+    ${owner && !party ? playerMarkBox("stacker", s) : ""}
     ${s.can_delete ? `<div style="margin-top:10px"><button class="danger-link" data-del-solo="${s.id}">🗑 Apagar esta sessão</button></div>` : ""}</details>`;
 }
 /** 0.23.0: o dono marca que outra pessoa jogou a sessão (sai dos rankings, recordes e comparações). */
@@ -2253,21 +2260,40 @@ function periodBlock(p) {
     </div>`;
 }
 
+/** 0.32.0: painel único do personagem: tudo, só solo ou só party. */
+S.source = "all";
+function sourceSeg(d) {
+  const c = d.counts || { solo: 0, party: 0 };
+  const opts = [["all", "Tudo", c.solo + c.party], ["solo", "Solo", c.solo], ["party", "🤝 Party", c.party]];
+  return `<div class="seg" role="tablist" aria-label="Origem">${opts.map(([k, t, n]) =>
+    `<button data-source="${k}" class="${(d.source || "all") === k ? "on" : ""}" role="tab" aria-selected="${(d.source || "all") === k}">${t} (${n})</button>`).join("")}</div>
+    ${d.input_total ? `<div class="hint">Dano recebido somado (Input Analyser): <b>${fmt(d.input_total)}</b></div>` : ""}`;
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-source]");
+  if (!b || S.page === "bosses") return;
+  S.source = b.dataset.source;
+  loadStack({ quiet: true });
+});
+
 async function loadStack(opts = {}) {
   const el = $("#stackResult");
   if (!opts.quiet) el.innerHTML = skeleton("stack");
   paintLive();
   let d;
-  try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=${S.period}`); }
+  try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=${S.period}&source=${S.source || "all"}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
   S.prices = d.prices || {};
   S.stack = d;
+  if (isHardcore() && d.is_owner) { try { G.data = await api("GET", gearUrl()); } catch {} }  // sets para ligar às hunts
   paintLive();
-  if (!d.sessions.length) {
+  if (!d.sessions.length && (S.source || "all") === "all") {
     el.innerHTML = emptyState("stack");
     return d;
   }
   el.innerHTML = `
+    ${sourceSeg(d)}
+    ${d.sessions.length ? "" : `<p class="muted">Nenhuma sessão nesta origem ainda.</p>`}
     ${alertsBlock(d)}
     ${goalsBlock(d)}
     ${weeklyBlock(d.sessions)}
@@ -2689,6 +2715,7 @@ function bossSessionItem(s) {
     ${s.loot.length ? `<h2>Itens coletados</h2>${itemList(s.loot, 999)}` : ""}
     ${s.kills.length ? `<h2>Criaturas mortas</h2>${killChips(s.kills)}` : ""}
     ${s.vault ? vaultBlock(s.vault) : ""}
+    ${gearBox(s, "boss", s.id)}
     ${playerMarkBox("boss", s)}
     ${s.can_delete ? `<div style="margin-top:10px"><button class="danger-link" data-del-boss-session="${s.id}">🗑 Apagar esta sessão de boss</button></div>` : ""}</details>`;
 }
@@ -3401,6 +3428,7 @@ async function loadBoss(opts = {}) {
   $("#bossForm").classList.remove("hidden");
   S.prices = { ...S.prices, ...(d.prices || {}) };
   S.boss = d;
+  if (isHardcore()) { try { G.data = await api("GET", gearUrl()); } catch {} }  // sets para ligar às sessões
   renderBoss();
   return d;
 }
@@ -3977,6 +4005,262 @@ function openStackFlow(text = "", autoSave = false) {
 }
 $("#stackOpen").addEventListener("click", () => openStackFlow());
 
+/* ---------- 0.32.0: ⚔️ Equipamentos e gastos invisíveis (Player Hardcore) ----------
+   Itens com imbuements, anéis e amuletos recarregáveis, sets por hunt e o custo por hora de uso,
+   que entra sozinho no lucro líquido. Preços informados pelo jogador (ou a média do mundo). */
+const G = { data: null, cat: null, places: null };
+const gearUrl = (p = "") => `/api/gear/${encodeURIComponent(S.nick)}${p}`;
+const gpx = (n) => fmt(Math.round(n || 0)) + " gp";
+const hrs = (h) => String(Math.round((h || 0) * 100) / 100).replace(".", ",") + " h";
+const imbName = (k) => ((G.cat.imbuements.find((i) => i.key === k) || {}).name || k);
+const SRC_LABEL = { mine: "seu preço", world: "média do mundo", all: "média geral", default: "preço padrão" };
+
+async function loadGear(opts = {}) {
+  const el = $("#gearResult");
+  if (!opts.quiet) el.innerHTML = skeleton("stack");
+  try {
+    if (!G.cat) G.cat = await api("GET", "/api/gear/catalog");
+    if (!G.places) G.places = await api("GET", "/api/places").catch(() => []);
+    G.data = await api("GET", gearUrl());
+  } catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  paintGear();
+}
+
+function chargeRow(c) {
+  const acc = c.imbuement.startsWith("charge:");
+  const nm = acc ? "Recarga com silver token" : `${esc(imbName(c.imbuement))} · ${["Basic", "Intricate", "Powerful"][c.tier - 1]}`;
+  const how = !acc && c.plan && c.plan.advice ? `<div class="hint">💡 ${esc(c.plan.advice)}</div>` : "";
+  return `<div class="card" style="margin:8px 0; padding:10px">
+    <div class="row"><b>${nm}</b><span class="muted">${gpx(c.total_cost)} por ${hrs(c.hours_total)} · ${gpx(c.hourly)}/h</span></div>
+    <div class="gbar" style="margin:6px 0"><div style="width:${c.fraction}%"></div></div>
+    <div class="muted" style="font-size:13px">Usado ${hrs(c.hours_used % c.hours_total)} de ${hrs(c.hours_total)} (${String(c.fraction).replace(".", ",")}%)
+      · faltam ${hrs(c.hours_left)}${c.cycles ? ` · ${c.cycles} ${c.cycles === 1 ? "ciclo completo" : "ciclos completos"}` : ""}</div>
+    ${how}
+    <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px; flex-wrap:wrap">
+      <button class="link" data-gear="hours:${c.id}" type="button">Usei e não informei</button>
+      <button class="link" data-gear="restart:${c.id}" type="button">🔄 Reiniciar contador</button>
+      <button class="danger-link" data-gear="rmcharge:${c.id}" type="button">Tirar</button></div></div>`;
+}
+
+function imbueForm(it) {
+  if (it.catalog) {
+    return it.charges.length ? "" : `<button class="btn2" data-gear="recharge:${it.id}" type="button">⚡ Registrar recarga (silver tokens)</button>`;
+  }
+  const allowed = G.cat.allowed[it.kind] || {};
+  const have = new Set(it.charges.map((c) => c.imbuement));
+  const opts = Object.keys(allowed).filter((k) => !have.has(k) && !it.native.includes(k));
+  if (it.charges.length >= it.slots || !opts.length) return it.charges.length >= it.slots ? `<div class="hint">Todos os ${it.slots} slots em uso.</div>` : "";
+  return `<div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap" data-imbue-form="${it.id}">
+    <select data-imb-key aria-label="Imbuement">${opts.map((k) => `<option value="${k}">${esc(imbName(k))}</option>`).join("")}</select>
+    <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}">${["Basic", "Intricate", "Powerful"][t - 1]}</option>`).join("")}</select>
+    <button class="btn2" data-gear="imbue:${it.id}" type="button">＋ Imbuement</button></div>
+    <div class="hint" data-imb-plan></div>`;
+}
+
+function itemCard(it) {
+  const used = it.charges.length;
+  return `<details class="card" ${used ? "" : "open"}><summary><div class="row"><b>${esc(it.name)}</b>
+      <span class="muted">${esc(it.kind_name)}${it.catalog ? "" : ` · ${used}/${it.slots} slots`} · ${gpx(it.hourly)}/h</span></div></summary>
+    ${it.charges.map(chargeRow).join("")}
+    ${imbueForm(it)}
+    ${it.native && it.native.length ? `<div class="hint">Já traz de fábrica: ${it.native.map((k) => esc(imbName(k))).join(", ")}.</div>` : ""}
+    <div style="margin-top:8px"><button class="danger-link" data-gear="rmitem:${it.id}" type="button">🗑 Apagar este item</button></div></details>`;
+}
+
+function newItemForm() {
+  const kinds = Object.entries(G.cat.kinds);
+  return `<details class="card"><summary class="row"><b>＋ Novo item</b><span class="muted">▾</span></summary>
+    <div id="gearNew" style="margin-top:8px">
+      <label class="muted" for="gnKind">Tipo</label>
+      <select id="gnKind" data-gn-kind>${kinds.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select>
+      <div id="gnBody"></div>
+      <button class="btn2" data-gear="newitem" type="button" style="margin-top:8px">Salvar item</button>
+      <div class="err" id="gnErr"></div></div></details>`;
+}
+function paintNewBody() {
+  const kind = $("#gnKind").value, box = $("#gnBody");
+  if (kind === "ring" || kind === "amulet") {
+    box.innerHTML = `<label class="muted" for="gnCat">Qual?</label><select id="gnCat">${G.cat.accessories.filter((a) => a.kind === kind)
+      .map((a) => `<option value="${a.key}">${esc(a.name)} · ${a.minutes} min · ${a.silver_tokens} silver tokens</option>`).join("")}</select>`;
+    return;
+  }
+  const allowed = Object.keys(G.cat.allowed[kind] || {});
+  box.innerHTML = `<label class="muted" for="gnName">Nome do item</label><input id="gnName" maxlength="60" autocomplete="off" placeholder="Ex.: Soulmantle">
+    <label class="muted" for="gnSlots">Slots de imbuement</label>
+    <select id="gnSlots">${[1, 2, 3].map((n) => `<option value="${n}"${n === 2 ? " selected" : ""}>${n}</option>`).join("")}</select>
+    ${allowed.length ? `<div class="muted" style="margin-top:8px">O item já traz de fábrica (não aceita esses imbuements):</div>
+      <div class="chips">${allowed.map((k) => `<label class="check-row"><input type="checkbox" data-gn-native value="${k}"> ${esc(imbName(k).split(" (")[0])}</label>`).join("")}</div>` : ""}`;
+}
+
+function setsBlock() {
+  const items = G.data.items;
+  const places = (G.places || []).map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const list = G.data.sets.map((s) => `<div class="card" style="margin:8px 0; padding:10px">
+      <div class="row"><b>${esc(s.name)}</b><span class="muted">${s.slots} imbuements · ${gpx(s.hourly)}/h</span></div>
+      <div class="muted" style="font-size:13px">${s.place_id ? "📍 " + esc(((G.places || []).find((p) => p.id === s.place_id) || {}).name || "") + " · " : ""}${s.items.map(esc).join(", ") || "sem itens"}</div>
+      <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px">
+        <button class="link" data-gear="editset:${s.id}" type="button">Editar</button>
+        <button class="danger-link" data-gear="rmset:${s.id}" type="button">Apagar</button></div></div>`).join("");
+  return `${list || `<p class="muted">Nenhum set ainda. Monte um por hunt (ex.: "Crypts") e escolha-o nas suas sessões.</p>`}
+    <details class="card" id="setForm"><summary class="row"><b>＋ Novo set</b><span class="muted">▾</span></summary>
+      <input id="gsName" maxlength="40" autocomplete="off" placeholder="Nome do set (ex.: Crypts)" style="margin-top:8px">
+      <label class="muted" for="gsPlace">Hunt (opcional)</label>
+      <select id="gsPlace"><option value="">Qualquer hunt</option>${places}</select>
+      <div class="chips" style="margin-top:8px">${items.map((i) => `<label class="check-row"><input type="checkbox" data-gs-item value="${i.id}"> ${esc(i.name)}</label>`).join("") || `<span class="muted">Cadastre os itens primeiro.</span>`}</div>
+      <input type="hidden" id="gsId">
+      <button class="btn2" data-gear="saveset" type="button" style="margin-top:8px">Salvar set</button><div class="err" id="gsErr"></div></details>`;
+}
+
+function pricesBlock() {
+  const P = G.data.prices;
+  const row = (item) => {
+    const p = P[item];
+    return `<tr><td>${esc(item)}</td><td><input data-gprice="${esc(item)}" inputmode="numeric" value="${p.mine || ""}" placeholder="${p.effective || ""}" style="width:110px; padding:4px 6px" aria-label="${esc(item)}"></td>
+      <td class="muted" style="font-size:12px">${p.effective ? gpx(p.effective) + " · " + SRC_LABEL[p.source] : "sem preço"}</td></tr>`;
+  };
+  const tokens = ["gold token", "silver token"];
+  const groups = G.cat.imbuements.map((i) => `<details><summary class="link">${esc(i.name)}</summary><div class="table-wrap"><table>
+      ${i.materials.map((m, n) => `<tr><td colspan="3" class="muted" style="font-size:12px">${["Basic", "Intricate", "Powerful"][n]}: ${m.qty}x</td></tr>${row(m.item)}`).join("")}</table></div></details>`).join("");
+  return `<div class="hint">O seu preço vale só para você. Sem preço seu, vale a média dos jogadores do seu mundo (descartando valores muito acima da média), e antes disso o preço padrão.</div>
+    <div class="table-wrap"><table>${tokens.map(row).join("")}</table></div>${groups}`;
+}
+
+function calcBlock() {
+  const strike = G.cat.imbuements.map((i) => `<option value="${i.key}">${esc(i.name)}</option>`).join("");
+  return `<div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap">
+      <select id="gcKey">${strike}</select>
+      <select id="gcTier"><option value="1">Basic</option><option value="2">Intricate</option><option value="3" selected>Powerful</option></select>
+      <button class="btn2" data-gear="calc" type="button">Calcular</button></div><div id="gcOut"></div>`;
+}
+function planHtml(p) {
+  if (p.total === null) return `<div class="err">Faltam preços: ${p.missing.map(esc).join(", ")}.</div>`;
+  const rows = p.options.map((o) => `<tr class="${o === p.best || (p.best && o.token_levels === p.best.token_levels) ? "gold" : ""}"><td>${o.token_levels
+    ? `${o.tokens} gold tokens (níveis 1 a ${o.token_levels})${o.token_levels < p.tier ? " + itens do market dos níveis seguintes" : ""}` : "Tudo no market"}</td><td>${gpx(o.cost)}</td></tr>`).join("");
+  return `<p style="margin:8px 0"><b>${esc(p.advice)}</b></p>
+    <div class="table-wrap"><table><tr><th>Opção</th><th>Custo</th></tr>${rows}</table></div>
+    <div class="muted">Taxa do shrine: ${gpx(p.fee)} · <b>total ${gpx(p.total)}</b> por ${hrs(G.cat.hours)}${p.saved ? ` · economia de ${gpx(p.saved)} em relação à pior opção` : ""}</div>`;
+}
+
+function paintGear() {
+  const d = G.data, el = $("#gearResult");
+  const total = d.items.reduce((a, i) => a + i.hourly, 0);
+  el.innerHTML = `<div class="card"><b>⚔️ Gasto invisível por hora de hunt</b>
+      <div class="big gold">${gpx(total)}/h</div><div class="hint">Soma de todos os imbuements, anéis e amuletos em uso. Cada hunt usa só os itens do set escolhido.</div></div>
+    <h2>Itens</h2>${d.items.map(itemCard).join("") || `<p class="muted">Nenhum item ainda. Cadastre as peças que você usa nas hunts.</p>`}${newItemForm()}
+    <h2>Sets</h2>${setsBlock()}
+    <details class="card"><summary class="row"><b>🧮 Calculadora de imbuement</b><span class="muted">▾</span></summary>${calcBlock()}</details>
+    <details class="card"><summary class="row"><b>💰 Preços dos itens</b><span class="muted">▾</span></summary>${pricesBlock()}</details>
+    <details class="card" id="gearReport"><summary class="row"><b>📊 Relatório semanal</b><span class="muted">▾</span></summary><div id="gearReportBody"><p class="muted">Abra para carregar.</p></div></details>`;
+  paintNewBody();
+}
+
+async function gearCall(method, path, body) {
+  try { G.data = await api(method, gearUrl(path), body); paintGear(); return true; }
+  catch (e) { if (e.status !== 401) alert(e.message); return false; }
+}
+const askHours = (msg) => {
+  const v = prompt(msg, "1");
+  if (v === null) return null;
+  const h = parseFloat(String(v).replace(",", "."));
+  return h > 0 ? h : 0;
+};
+
+document.addEventListener("change", async (e) => {
+  if (e.target.matches("[data-gn-kind]")) return paintNewBody();
+  const pr = e.target.closest("[data-gprice]");
+  if (pr) {
+    const v = parseInt(pr.value.replace(/\D/g, ""), 10);
+    try { const r = await api("POST", gearUrl("/price"), { item: pr.dataset.gprice, price: v > 0 ? v : null }); G.data.prices = r.prices; paintGear(); }
+    catch (err) { alert(err.message); }
+    return;
+  }
+  const f = e.target.closest("[data-imbue-form]");
+  if (f && (e.target.matches("[data-imb-key]") || e.target.matches("[data-imb-tier]"))) {
+    const out = f.parentElement.querySelector("[data-imb-plan]");
+    try {
+      const p = await api("GET", gearUrl(`/plan?imbuement=${f.querySelector("[data-imb-key]").value}&tier=${f.querySelector("[data-imb-tier]").value}`));
+      out.textContent = p.total === null ? "Faltam preços: " + p.missing.join(", ") : `💡 ${p.advice} Total ${gpx(p.total)}.`;
+    } catch (err) { out.textContent = err.message; }
+  }
+});
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-gear]");
+  if (!b) return;
+  e.preventDefault();
+  const [act, id] = b.dataset.gear.split(":");
+  if (act === "newitem") {
+    const kind = $("#gnKind").value, acc = kind === "ring" || kind === "amulet";
+    const body = acc ? { name: "-", kind, catalog: $("#gnCat").value }
+      : { name: ($("#gnName").value || "").trim(), kind, slots: +$("#gnSlots").value, native: [...document.querySelectorAll("[data-gn-native]:checked")].map((x) => x.value) };
+    if (!body.name) { $("#gnErr").textContent = "Dê um nome ao item."; return; }
+    await gearCall("POST", "/item", body);
+  } else if (act === "rmitem") { if (confirm("Apagar este item e os imbuements dele?")) await gearCall("DELETE", `/item/${id}`); }
+  else if (act === "imbue") {
+    const f = b.closest("[data-imbue-form]");
+    await gearCall("POST", `/item/${id}/imbue`, { imbuement: f.querySelector("[data-imb-key]").value, tier: +f.querySelector("[data-imb-tier]").value });
+  } else if (act === "recharge") await gearCall("POST", `/item/${id}/recharge`);
+  else if (act === "rmcharge") { if (confirm("Tirar este imbuement do item?")) await gearCall("DELETE", `/charge/${id}`); }
+  else if (act === "hours") {
+    const h = askHours("Quantas horas você usou esse imbuement sem registrar numa hunt?");
+    if (h) await gearCall("POST", `/charge/${id}/hours`, { hours: h });
+  } else if (act === "restart") {
+    let h = 0;
+    if (confirm("Usou mais algum tempo do imbuement antes de refazer?\n\nOK = informar as horas · Cancelar = só reiniciar")) h = askHours("Quantas horas a mais?") || 0;
+    await gearCall("POST", `/charge/${id}/restart`, { hours: h });
+  } else if (act === "calc") {
+    try { $("#gcOut").innerHTML = planHtml(await api("GET", gearUrl(`/plan?imbuement=${$("#gcKey").value}&tier=${$("#gcTier").value}`))); }
+    catch (err) { $("#gcOut").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
+  } else if (act === "saveset") {
+    const name = ($("#gsName").value || "").trim();
+    if (!name) { $("#gsErr").textContent = "Dê um nome ao set."; return; }
+    await gearCall("POST", "/set", { id: +$("#gsId").value || null, name, place_id: +$("#gsPlace").value || null,
+      gear_ids: [...document.querySelectorAll("[data-gs-item]:checked")].map((x) => +x.value) });
+  } else if (act === "rmset") { if (confirm("Apagar este set?")) await gearCall("DELETE", `/set/${id}`); }
+  else if (act === "editset") {
+    const s = G.data.sets.find((x) => x.id === +id), f = $("#setForm");
+    f.open = true; $("#gsName").value = s.name; $("#gsId").value = s.id; $("#gsPlace").value = s.place_id || "";
+    document.querySelectorAll("[data-gs-item]").forEach((x) => { x.checked = s.gear_ids.includes(+x.value); });
+    f.scrollIntoView({ behavior: "smooth" });
+  } else if (act === "gsave") {  // liga um set a uma sessão da lista de hunts
+    const box = b.closest("[data-gbox]"), [kind, ref] = box.dataset.gbox.split(":");
+    try {
+      const r = await api("POST", gearUrl("/assign"), { kind, ref_id: +ref, set_id: +box.querySelector("[data-gset]").value || null,
+        pause_minutes: Math.max(0, parseInt(box.querySelector("[data-gpause]").value, 10) || 0) });
+      G.data = { items: r.items, sets: r.sets, prices: r.prices };
+      S.page === "boss" ? loadBoss({ quiet: true }) : loadStack({ quiet: true });
+    } catch (err) { if (err.status !== 401) alert(err.message); }
+  }
+});
+document.addEventListener("toggle", async (e) => {
+  if (e.target.id !== "gearReport" || !e.target.open) return;
+  try {
+    const r = await api("GET", gearUrl("/report?weeks=8"));
+    const wk = r.weeks.map((w) => `<div class="card" style="margin:8px 0; padding:10px"><div class="row"><b>Semana de ${brData(w.week)}</b>
+        <span class="muted">${hrs(w.hunt_hours)} de hunt · <b>${gpx(w.cost)}</b></span></div>
+        ${w.items.map((i) => `<div class="row muted" style="font-size:13px"><span>${esc(i.label)}</span><span>${hrs(i.hours)} · ${gpx(i.cost)}</span></div>`).join("")}</div>`).join("");
+    const pend = r.pending.map((p) => `<div class="row muted" style="font-size:13px"><span>${esc(p.label)}</span>
+        <span>${String(p.fraction).replace(".", ",")}% usado · falta usar ≈ ${gpx(p.unused_value)}</span></div>`).join("");
+    $("#gearReportBody").innerHTML = `${wk || `<p class="muted">Nenhum gasto registrado ainda. Escolha um set nas suas hunts.</p>`}
+      ${pend ? `<h2>Pago e ainda não usado</h2>${pend}` : ""}`;
+  } catch (err) { $("#gearReportBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
+}, true);
+
+/** Na lista de hunts: qual set foi usado e quanto tempo de pausa (o custo entra no lucro líquido). */
+function gearBox(s, kind, ref) {
+  if (!isHardcore() || s.net_profit === undefined || !G.data || !G.data.sets.length) {
+    return s.gear && s.gear.cost ? `<div class="hint">⚔️ Gastos invisíveis: −${gpx(s.gear.cost)} (${esc(s.gear.set_name || "set")}, ${hrs(s.gear.hours)})</div>` : "";
+  }
+  const cur = s.gear ? s.gear.set_id : null;
+  const suggest = !cur && s.place ? (G.data.sets.find((x) => x.place_id === s.place.id) || {}).id : null;
+  const sel = cur || suggest || "";
+  return `<div class="tagline-row" style="margin-top:10px" data-gbox="${kind}:${ref}">
+    <label class="muted">⚔️ Set usado <select data-gset><option value="">Nenhum</option>${G.data.sets.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
+    <label class="muted">Pausa (min) <input data-gpause type="number" min="0" max="1440" value="${s.gear ? s.gear.pause_minutes : 0}" style="width:70px; padding:4px 6px"></label>
+    <button class="btn2" data-gear="gsave" type="button">Salvar</button>
+    ${s.gear && s.gear.cost ? `<span class="muted">−${gpx(s.gear.cost)} (${hrs(s.gear.hours)})</span>` : suggest ? `<span class="muted">sugerido para esta hunt</span>` : ""}</div>`;
+}
+
 /* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------
    O site não lê o jogo: a pessoa cola o Hunt Analyser de tempos em tempos e o site compara o ritmo com a meta
    e com a média dela. Nada é salvo no servidor; a sessão fica só neste aparelho até ela decidir salvar no Stacker. */
@@ -3997,6 +4281,9 @@ async function paintLive() {
       <p class="muted" style="margin:4px 0 8px">Acompanhe a hunt enquanto joga: cole o Hunt Analyser de tempos em tempos e veja se está no ritmo da sua meta.</p>
       <label class="muted" for="liveGoal">Meta de XP/h (opcional)</label>
       <input id="liveGoal" inputmode="numeric" autocomplete="off" placeholder="800000" style="margin-top:6px">
+      <label class="muted" for="liveRemind" style="display:block; margin-top:8px">Lembrar de atualizar a cada</label>
+      <select id="liveRemind" style="margin-top:6px"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">1 hora</option></select>
+      ${isHardcore() ? `<div class="hint">🔥 Cada atualização fica salva no servidor, acumulada: se pular um horário, a próxima atualização já traz tudo.</div>` : ""}
       <button class="btn2" data-live="start" style="margin-top:10px" type="button">▶ Começar sessão ao vivo</button></div>`;
     return;
   }
@@ -4019,7 +4306,7 @@ async function paintLive() {
     if (avg) lines.push(`<div class="muted" data-i18n-skip>${esc(tf("Sua média nas sessões salvas: {0} XP/h ({1}).", fmt(avg),
       pace >= avg ? tf("{0}% acima", Math.round((pace / avg - 1) * 100)) : tf("{0}% abaixo", Math.round((1 - pace / avg) * 100))))}</div>`);
     const min = Math.floor((Date.now() - new Date(L.at).getTime()) / 60000);
-    if (min >= LIVE_REMIND_MIN) lines.push(`<div class="banner" data-i18n-skip>${esc(tf("⏰ Última atualização há {0} min. Cole uma nova para o ritmo ficar certo.", min))}</div>`);
+    if (min >= (live.remind || LIVE_REMIND_MIN)) lines.push(`<div class="banner" data-i18n-skip>${esc(tf("⏰ Última atualização há {0} min. Cole uma nova para o ritmo ficar certo.", min))}</div>`);
   } else lines.push(`<div class="muted">Cole o Hunt Analyser atual para ver o ritmo.</div>`);
   box.innerHTML = `<div class="card"><div class="row"><b>⏱️ Sessão ao vivo</b><span class="muted" data-i18n-skip>${live.goal ? esc(tf("Meta: {0} XP/h", fmt(live.goal))) : ""}</span></div>
     <div style="margin-top:6px">${lines.join("")}${bar}</div>
@@ -4049,6 +4336,15 @@ async function liveSnap(btn) {
     const live = (await liveLoad()) || { goal: null, snaps: [] }, last = live.snaps[live.snaps.length - 1];
     if (last && live.started && live.started !== p.started_at) { err.textContent = I18N.t("Essa atualização é de outra hunt. Finalize a sessão ao vivo para começar outra."); return; }
     if (last && p.duration_seconds <= last.secs) { err.textContent = I18N.t("Essa atualização não é mais nova que a anterior."); return; }
+    if (isHardcore()) {  // 0.32.0: o Player Hardcore também guarda cada atualização no servidor (acumulada)
+      const send = (confirmNew) => api("POST", "/api/live", { raw_text: raw, nickname: S.nick, confirm: confirmNew });
+      try { live.server = await send(false); }
+      catch (e) {
+        if (e.reason !== "live_reset" || !confirm(e.message)) throw e;
+        live.server = await send(true);
+      }
+      live.serverId = live.server.live.session.id;
+    }
     live.started = p.started_at;
     live.snaps.push({ at: new Date().toISOString(), secs: p.duration_seconds, xp });
     live.snaps = live.snaps.slice(-40);
@@ -4065,7 +4361,7 @@ document.addEventListener("click", async (e) => {
   const act = b.dataset.live;
   if (act === "start") {
     const g = parseInt(($("#liveGoal").value || "").replace(/\D/g, ""), 10);
-    await liveStore({ goal: g > 0 ? g : null, snaps: [] });
+    await liveStore({ goal: g > 0 ? g : null, remind: +($("#liveRemind") || {}).value || 30, snaps: [] });
     await paintLive(); openLivePaste();
   } else if (act === "paste") openLivePaste();
   else if (act === "snap") liveSnap(b);
@@ -4073,7 +4369,10 @@ document.addEventListener("click", async (e) => {
     const live = await liveLoad();
     await liveStore(null);
     await paintLive();
-    if (live && live.raw && confirm(I18N.t("Salvar esta sessão no Stacker?"))) openStackFlow(live.raw);
+    if (live && live.serverId) {  // 0.32.0: já está salva no Stacker, só encerra
+      try { await api("POST", `/api/live/${live.serverId}/close`); } catch {}
+      loadStack({ quiet: true });
+    } else if (live && live.raw && confirm(I18N.t("Salvar esta sessão no Stacker?"))) openStackFlow(live.raw);
   }
 });
 
@@ -5447,7 +5746,8 @@ boot();
 
 /* ---------- 0.27.0: ⭐ VIP List (quem eu acompanho, o que cada um liberou e os convites que recebi) e aba Amigos ---------- */
 const VIP_LABEL = { xp: "Gráficos de XP (diária, mensal, trimestral)", skills: "Skills, achievements e charm points",
-  hunts: "Lista de hunts (local e data)", hunt_details: "Detalhes de cada hunt (balance, sua parte e XP solo)" };
+  hunts: "Lista de hunts (local e data)", hunt_details: "Detalhes de cada hunt (balance, sua parte e XP solo)",
+  gear: "Sets, peças e imbuements (com os custos)" };
 const brDateTime = (s) => (s ? `${s.slice(0, 10).split("-").reverse().join("/")} ${s.slice(11, 16)}` : "");
 const SKILL_LABEL = { magiclevel: "Magic Level", shielding: "Shielding", distancefighting: "Distance", clubfighting: "Club",
   swordfighting: "Sword", axefighting: "Axe", fistfighting: "Fist", fishing: "Fishing", achievements: "Achievements",
@@ -5631,6 +5931,13 @@ async function openVipView(nome) {
       ? `<div class="table-wrap"><table><tr><th>Quando</th><th style="text-align:right">XP</th><th style="text-align:right">Balance</th></tr>
           ${t.solo_sessions.map((s) => `<tr><td style="white-space:normal">${brDateTime(s.started_at)}</td><td style="text-align:right">${fmt(s.xp)}</td><td style="text-align:right">${fmt(s.balance)}</td></tr>`).join("")}</table></div>`
       : `<p class="muted">Nenhuma sessão solo nos últimos 30 dias.</p>`);
+  }
+  if (t.gear) {
+    html += `<h3 style="margin-top:16px">Sets e peças</h3>` + (t.gear.sets.length
+      ? t.gear.sets.map((s) => `<div class="card" style="margin:6px 0; padding:10px"><div class="row"><b>${esc(s.name)}</b><span class="muted">${s.place ? "📍 " + esc(s.place) + " · " : ""}${fmt(s.hourly)} gp/h</span></div>
+          <div class="muted" style="font-size:13px">${s.items.map(esc).join(", ")}</div></div>`).join("") : `<p class="muted">Nenhum set.</p>`)
+      + t.gear.items.map((i) => `<div class="card" style="margin:6px 0; padding:10px"><b>${esc(i.name)}</b> <span class="muted">${esc(i.kind)}</span>
+          ${i.charges.map((c) => `<div class="muted" style="font-size:13px">${esc(c.label)} · ${fmt(c.cost)} gp por ${String(c.hours).replace(".", ",")} h</div>`).join("")}</div>`).join("");
   }
   if (!Object.keys(t).length) {
     html += `<p class="muted" style="margin-top:14px">Ainda não há detalhes liberados por ${esc(nome)}.</p>`;
