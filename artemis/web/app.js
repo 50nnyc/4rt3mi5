@@ -821,7 +821,16 @@ async function setMode(m, { nav = true } = {}) {
   if (S.page === "home") { if (changed) loadHome(); return; }
   if (S.page !== modePage()) go(modePage());
 }
-$("#modeBar").addEventListener("click", (e) => { const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode); });
+/** 0.31.1: a bolinha de acertos pendentes (menu e rodapé) leva direto às hunts a acertar, com a primeira aberta. */
+async function goPending() {
+  HL.filter = "pend"; HL.q = ""; HL.shown = HL_STEP; HL.openFirst = true;
+  if (S.mode !== "party") await setMode("party", { nav: false });
+  if (S.page === "loot") loadLootList(); else go("loot");
+}
+$("#modeBar").addEventListener("click", (e) => {
+  if (e.target.closest("#partyBadge") && !$("#partyBadge").classList.contains("hidden")) return goPending();
+  const b = e.target.closest("button[data-mode]"); if (b) setMode(b.dataset.mode);
+});
 // 0.22.0: a chave Solo/Party só aparece nas telas que dependem dela
 const MODE_PAGES = new Set(["home", "stack", "loot", "boss", "hunts"]);
 
@@ -896,6 +905,7 @@ $("#burger").addEventListener("click", openDrawer);
 $("#scrim").addEventListener("click", closeDrawer);
 document.querySelectorAll("#drawer [data-page]").forEach((b) => b.addEventListener("click", async () => {
   closeDrawer();
+  if (b.dataset.page === "loot" && !$("#lootBadge").classList.contains("hidden")) return goPending();  // tem acerto pendente: já abre nele
   // 0.22.2: item de um galho (Solo/Party) também escolhe o modo
   if (b.dataset.mode && b.dataset.mode !== S.mode) {
     await setMode(b.dataset.mode, { nav: false });
@@ -1758,7 +1768,8 @@ async function loadHome() {
   const pendingCard = owe || due ? `<div class="card"><b>💸 Acertos pendentes</b>
     ${owe ? `<div class="neg" style="margin-top:4px">Você ainda deve ${fmt(owe)} gp em ${oweN} ${oweN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
     ${due ? `<div class="pos" style="margin-top:4px">Falta receber ${fmt(due)} gp de ${dueN} ${dueN === 1 ? "lootsplit" : "lootsplits"}.</div>` : ""}
-    <div class="hint">Depois de transferir no banco, toque em "✔ Já paguei" na hunt. Quem recebe também pode marcar "✔ Recebi".</div></div>` : "";
+    <div class="hint">Depois de transferir no banco, toque em "✔ Já paguei" na hunt. Quem recebe também pode marcar "✔ Recebi".</div>
+    <button class="btn2" style="margin-top:8px" data-page-link="loot" data-hl-go="pend">💸 Ir acertar agora</button></div>` : "";
   const [news, streak, notices, , ach, boosted] = await Promise.all([headline, api("GET", "/api/streak").catch(() => null), subsNotices(),
     refreshChangesFab().catch(() => {}), achievementsFor(S.nick), api("GET", "/api/tibia/boosted").catch(() => null)]);
   if (S.mode !== mode || S.page !== "home") return;
@@ -2004,11 +2015,18 @@ const HL_FILTERS = [["all", "Todas"], ["pend", "⏳ A acertar"], ["noplace", "�
 function dupPairs(hunts) { return hunts.filter((h) => (h.similar || []).some((s) => s.id > h.id)).length; }
 /** Aviso no Início e na lista quando existem lootsplits que parecem ser a mesma sessão. */
 function dupNotice(hunts) {
-  const n = dupPairs(hunts);
-  if (!n) return "";
+  const byId = new Map(hunts.map((h) => [h.id, h]));
+  const pairs = [];
+  hunts.forEach((h) => (h.similar || []).forEach((s) => { if (s.id > h.id && byId.has(s.id)) pairs.push([h, byId.get(s.id)]); }));
+  if (!pairs.length) return "";
+  const n = pairs.length;
+  const line = (h) => `<div class="row" style="font-size:14px"><span data-i18n-skip>${esc(when(h.started_at))} · ${dur(h.duration_seconds)} · ${kk(h.balance)} gp</span>
+    <span class="muted" data-i18n-skip>${esc(h.submitted_by || "")}</span></div>`;
+  // 0.31.1: o "Unir as duas" fica no próprio aviso, sem precisar abrir nenhuma hunt
   return `<div class="banner bad"><b>${tf(n === 1 ? "👯 {0} possível duplicata entre as suas hunts." : "👯 {0} possíveis duplicatas entre as suas hunts.", n)}</b>
     <div class="hint">A mesma sessão da PT foi enviada por mais de uma pessoa. Una as duas para ficar só a mais completa.</div>
-    <button class="btn2" style="margin-top:8px" data-page-link="loot" data-hl-go="dups">Revisar</button></div>`;
+    ${pairs.map(([a, b]) => `<div class="card" style="margin:8px 0 0">${line(a)}${line(b)}
+      <div class="row" style="justify-content:flex-start; margin-top:8px"><button class="btn2" data-merge="${a.id}:${b.id}">Unir as duas</button></div></div>`).join("")}</div>`;
 }
 function hlHaystack(h) {
   const d = new Date(h.started_at);
@@ -2049,6 +2067,11 @@ function paintHuntList() {
   if (list.length > shown.length) html += `<button class="btn2" data-hl-more style="width:100%; margin-top:6px">${tf("Mostrar mais ({0})", list.length - shown.length)}</button>`;
   rows.innerHTML = html;
   paintVocations(rows);
+  if (HL.openFirst) {  // vindo de um aviso: já abre a hunt para tratar e leva a tela até ela
+    HL.openFirst = false;
+    const first = rows.querySelector("details");
+    if (first) { first.open = true; setTimeout(() => first.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }), 150); }
+  }
 }
 async function loadLootList() {
   const el = $("#huntList");
@@ -2069,8 +2092,7 @@ async function loadLootList() {
   }
   const top = el.querySelector("[data-hl-top]");
   if (top) top.remove();
-  const n = dupPairs(HL.all);
-  if (n && HL.filter !== "dups") el.querySelector("h2").insertAdjacentHTML("afterend", `<div data-hl-top>${dupNotice(HL.all)}</div>`);
+  if (dupPairs(HL.all)) el.querySelector("h2").insertAdjacentHTML("afterend", `<div data-hl-top>${dupNotice(HL.all)}</div>`);
   paintHuntList();
   if (typing) $("#huntSearch").focus();
 }
@@ -2083,7 +2105,7 @@ document.addEventListener("click", async (e) => {
   if (f) { HL.filter = f.dataset.hlFilter; HL.shown = HL_STEP; return paintHuntList(); }
   if (e.target.closest("[data-hl-more]")) { HL.shown += HL_STEP; return paintHuntList(); }
   const go = e.target.closest("[data-hl-go]");
-  if (go) { HL.filter = go.dataset.hlGo; HL.shown = HL_STEP; return; }  // a navegação (data-page-link) abre a lista já filtrada
+  if (go) { HL.filter = go.dataset.hlGo; HL.shown = HL_STEP; HL.q = ""; HL.openFirst = true; return; }  // a navegação (data-page-link) abre a lista já filtrada, com a primeira hunt aberta
   const m = e.target.closest("[data-merge]");
   if (!m) return;
   e.preventDefault();
@@ -2581,6 +2603,7 @@ async function subsNotices() {
     out += `<div class="banner bad"><b>⚠️ ${esc(names.length === 1 ? `Alguém tentou vincular ${names[0]} em outra conta do 4rt3mi5.` : `Alguém tentou vincular ${names.join(", ")} em outra conta do 4rt3mi5.`)}</b>
       <div class="hint">O personagem continua só seu: ninguém mais consegue usá-lo aqui. Se você passou a conta do Tibia para alguém,
         apague do comentário do personagem qualquer código 4RT3MI5 e troque a senha do Tibia.</div>
+      <button class="link" data-page-link="chars" style="display:block; margin-top:6px">Ver em 👤 Meus personagens</button>
       <button class="btn2" style="margin-top:8px" data-claims-ok="${esc(fresh.map((c) => c.at).sort().pop())}">Entendi</button></div>`;
   }
   return out;
@@ -3726,7 +3749,8 @@ async function loadMyHunts() {
   const title = `<h2>${party ? "👥 Minhas hunts em party" : "🧍 Minhas hunts solo"}</h2>`;
   if (!d.rows.length) {
     el.innerHTML = `${title}<div class="card muted">${party
-      ? `Nenhum lootsplit seu com a hunt escolhida ainda. Depois de colar o Party Hunt Analyser em 💰 Lootsplit, toque em "📍 Inserir a hunt".`
+      ? `Nenhum lootsplit seu com a hunt escolhida ainda. Depois de colar o Party Hunt Analyser em 💰 Lootsplit, toque em "📍 Inserir a hunt".
+        <button class="btn2" style="display:block; margin-top:8px" data-page-link="loot" data-hl-go="noplace">📍 Ver as hunts sem local</button>`
       : `Nenhuma sessão sua com a hunt escolhida ainda. Salve pelo 📈 Hunt Session Stacker e diga em qual hunt foi.`}</div>`;
     return;
   }

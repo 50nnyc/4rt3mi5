@@ -1,6 +1,82 @@
 {
   "releases": [
     {
+      "version": "0.31.1",
+      "date": "2026-11-23",
+      "title": "Unir duplicadas e ir direto ao ponto",
+      "summary": "O botão de unir fica no próprio aviso, e o aviso de pagamento leva direto à hunt.",
+      "changes": [
+        "👯 O aviso de duplicata agora mostra as duas hunts lado a lado e traz o botão \"Unir as duas\" ali mesmo, sem precisar abrir nada.",
+        "💸 O aviso de acertos pendentes ganhou o botão \"Ir acertar agora\": ele abre o Lootsplit só com as hunts a acertar, já com a primeira aberta.",
+        "🔔 Os avisos agora levam ao lugar de tratar: a bolinha de acertos pendentes (no menu e no rodapé) abre o Lootsplit direto na primeira hunt a acertar, e os outros avisos ganharam botão para a tela certa."
+      ],
+      "tr": {
+        "en": {
+          "title": "Merge duplicates and go straight to the point",
+          "summary": "The merge button is in the notice itself, and the payment notice takes you straight to the hunt.",
+          "changes": [
+            "👯 The duplicate notice now shows the two hunts side by side with the \"Merge the two\" button right there, no need to open anything.",
+            "💸 The pending payments notice has a \"Go settle up\" button: it opens Lootsplit with only the hunts to settle, with the first one already open.",
+            "🔔 Notices now take you to where you can handle them: the pending payments dot (in the menu and the footer) opens Lootsplit straight on the first hunt to settle, and the other notices got a button to the right screen."
+          ]
+        },
+        "es": {
+          "title": "Unir duplicadas e ir directo al grano",
+          "summary": "El botón de unir está en el propio aviso, y el aviso de pago lleva directo a la hunt.",
+          "changes": [
+            "👯 El aviso de duplicado ahora muestra las dos hunts lado a lado y trae el botón \"Unir las dos\" ahí mismo, sin abrir nada.",
+            "💸 El aviso de pagos pendientes tiene el botón \"Ir a saldar\": abre el Lootsplit solo con las hunts por saldar, con la primera ya abierta.",
+            "🔔 Los avisos ahora llevan al lugar donde se resuelven: la burbuja de pagos pendientes (en el menú y en el pie) abre el Lootsplit directo en la primera hunt por saldar, y los demás avisos tienen un botón a la pantalla correcta."
+          ]
+        },
+        "ja": {
+          "title": "重複の統合と、目的の場所へ直行",
+          "summary": "統合ボタンがお知らせの中に入り、支払いのお知らせから直接その狩りへ移動できます。",
+          "changes": [
+            "👯 重複のお知らせに2件の狩りが並んで表示され、その場に「2件を統合」ボタンが付きました。何も開く必要はありません。",
+            "💸 未精算のお知らせに「精算に行く」ボタンが付きました。精算が必要な狩りだけのLootsplitが開き、最初の1件がすでに開いた状態になります。",
+            "🔔 お知らせから、対応する場所へ直接移動できるようになりました。未精算のバッジ（メニューとフッター）をタップすると、最初の未精算の狩りが開いた状態でLootsplitが表示され、ほかのお知らせにも該当画面へのボタンが付きました。"
+          ]
+        },
+        "de": {
+          "title": "Duplikate zusammenführen und direkt ans Ziel",
+          "summary": "Der Button zum Zusammenführen sitzt direkt im Hinweis, und der Zahlungshinweis führt direkt zur Hunt.",
+          "changes": [
+            "👯 Der Duplikat-Hinweis zeigt jetzt beide Hunts nebeneinander und hat den Button \"Beide zusammenführen\" direkt dabei, ohne etwas zu öffnen.",
+            "💸 Der Hinweis auf offene Zahlungen hat den Button \"Jetzt begleichen\": Er öffnet Lootsplit nur mit den offenen Hunts, die erste ist schon aufgeklappt.",
+            "🔔 Hinweise führen jetzt direkt dorthin, wo du sie erledigst: Der Punkt für offene Zahlungen (im Menü und in der Fußleiste) öffnet Lootsplit direkt bei der ersten Hunt zum Begleichen, und die anderen Hinweise haben einen Button zur richtigen Seite."
+          ]
+        },
+        "pl": {
+          "title": "Łączenie duplikatów i szybkie dojście do celu",
+          "summary": "Przycisk łączenia jest w samym powiadomieniu, a powiadomienie o płatności prowadzi prosto do hunta.",
+          "changes": [
+            "👯 Powiadomienie o duplikacie pokazuje teraz oba hunty obok siebie i ma przycisk \"Połącz obie\" od razu na miejscu, bez otwierania czegokolwiek.",
+            "💸 Powiadomienie o zaległych rozliczeniach ma przycisk \"Przejdź do rozliczenia\": otwiera Lootsplit tylko z huntami do rozliczenia, z pierwszym już otwartym.",
+            "🔔 Powiadomienia prowadzą teraz tam, gdzie można się nimi zająć: kropka zaległych rozliczeń (w menu i na dole) otwiera Lootsplit od razu na pierwszym hunt do rozliczenia, a pozostałe powiadomienia mają przycisk do właściwego ekranu."
+          ]
+        },
+        "fr": {
+          "title": "Fusionner les doublons et aller droit au but",
+          "summary": "Le bouton de fusion est dans l'avis lui-même, et l'avis de paiement mène directement à la hunt.",
+          "changes": [
+            "👯 L'avis de doublon montre maintenant les deux hunts côte à côte, avec le bouton \"Fusionner les deux\" sur place, sans rien ouvrir.",
+            "💸 L'avis de paiements en attente a un bouton \"Aller régler\" : il ouvre le Lootsplit avec seulement les hunts à régler, la première déjà ouverte.",
+            "🔔 Les avis mènent maintenant à l'endroit où les traiter : la pastille des paiements en attente (dans le menu et en bas) ouvre le Lootsplit directement sur la première hunt à régler, et les autres avis ont un bouton vers le bon écran."
+          ]
+        },
+        "ru": {
+          "title": "Объединение дублей и переход сразу к делу",
+          "summary": "Кнопка объединения находится прямо в уведомлении, а уведомление об оплате ведёт прямо к охоте.",
+          "changes": [
+            "👯 Уведомление о дубле теперь показывает обе охоты рядом и содержит кнопку «Объединить обе» прямо на месте, ничего открывать не нужно.",
+            "💸 В уведомлении о неоплаченных расчётах появилась кнопка «Перейти к расчёту»: она открывает Lootsplit только с охотами к расчёту, первая уже раскрыта.",
+            "🔔 Уведомления теперь ведут туда, где их можно обработать: значок неоплаченных расчётов (в меню и внизу) открывает Lootsplit сразу на первой охоте к расчёту, а у остальных уведомлений появилась кнопка на нужный экран."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.31.0",
       "date": "2026-11-23",
       "title": "Hunts sem duplicata e fáceis de achar",
