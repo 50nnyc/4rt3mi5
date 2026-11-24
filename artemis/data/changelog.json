@@ -1,6 +1,58 @@
 {
   "releases": [
     {
+      "version": "0.32.3",
+      "date": "2026-11-24",
+      "title": "Ajustes na planilha",
+      "changes": [
+        "📊 A planilha agora mostra o tipo de equipamento e os elementos de fábrica no seu idioma, e os números dentro de textos usam o mesmo separador decimal das células. Testada abrindo no Google Sheets."
+      ],
+      "tr": {
+        "en": {
+          "title": "Spreadsheet fixes",
+          "changes": [
+            "📊 The spreadsheet now shows equipment type and factory elements in your language, and the numbers inside text use the same decimal separator as the cells. Tested opening it in Google Sheets."
+          ]
+        },
+        "es": {
+          "title": "Ajustes en la hoja de cálculo",
+          "changes": [
+            "📊 La hoja de cálculo ahora muestra el tipo de equipamiento y los elementos de fábrica en tu idioma, y los números dentro de textos usan el mismo separador decimal que las celdas. Probada abriéndola en Google Sheets."
+          ]
+        },
+        "ja": {
+          "title": "スプレッドシートの修正",
+          "changes": [
+            "📊 スプレッドシートで装備の種類と初期属性があなたの言語で表示され、文章内の数字もセルと同じ小数点の表記になりました。Google スプレッドシートで開いて動作を確認済みです。"
+          ]
+        },
+        "de": {
+          "title": "Tabellen-Korrekturen",
+          "changes": [
+            "📊 Die Tabelle zeigt Ausrüstungstyp und Werkselemente jetzt in deiner Sprache, und Zahlen in Texten nutzen dasselbe Dezimaltrennzeichen wie die Zellen. Das Öffnen in Google Tabellen wurde getestet."
+          ]
+        },
+        "pl": {
+          "title": "Poprawki arkusza",
+          "changes": [
+            "📊 Arkusz pokazuje teraz typ wyposażenia i fabryczne żywioły w twoim języku, a liczby w tekstach używają tego samego separatora dziesiętnego co komórki. Sprawdzono otwieranie w Arkuszach Google."
+          ]
+        },
+        "fr": {
+          "title": "Corrections du tableur",
+          "changes": [
+            "📊 Le tableur affiche maintenant le type d'équipement et les éléments d'usine dans votre langue, et les nombres dans les textes utilisent le même séparateur décimal que les cellules. L'ouverture dans Google Sheets a été testée."
+          ]
+        },
+        "ru": {
+          "title": "Исправления таблицы",
+          "changes": [
+            "📊 В таблице теперь тип экипировки и заводские стихии показаны на вашем языке, а числа внутри текста используют тот же десятичный разделитель, что и ячейки. Открытие в Google Таблицах проверено."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.2",
       "date": "2026-11-24",
       "title": "Party, Tibia Coin e planilha",

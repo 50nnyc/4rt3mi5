@@ -187,7 +187,7 @@ class ExportarExcelTests(unittest.TestCase):
         self.assertEqual(r.status_code, 200, r.text)
         z = zipfile.ZipFile(io.BytesIO(r.content))
         self.assertIn("Equipamentos", z.read("xl/workbook.xml").decode())
-        self.assertIn("fire", z.read("xl/worksheets/sheet1.xml").decode())
+        self.assertIn("Fogo", z.read("xl/worksheets/sheet1.xml").decode())  # elemento no idioma do site (aqui, português)
 
 
 if __name__ == "__main__":

@@ -3710,13 +3710,19 @@ EXPORT_SECTIONS = {
     "gear_items": "Equipamentos e imbuements", "gear_weekly": "Imbuements por semana",
 }
 _GEAR_SECTIONS = ("gear_items", "gear_weekly")
+_ELEM_PT = {"physical": "Físico", "holy": "Sagrado", "earth": "Terra", "energy": "Energia", "death": "Morte", "ice": "Gelo", "fire": "Fogo"}
 
 
 def _mins(seconds) -> float:
     return round((seconds or 0) / 60, 1)
 
 
-def _export_sheets(name: str, access: dict, sections: list[str]) -> list[tuple[str, list[str], list[list]]]:
+def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None = None, lang: str = "") -> list[tuple[str, list[str], list[list]]]:
+    tr = tr or {}
+
+    def num(v) -> str:  # número dentro de texto: vírgula decimal, como as células (en/ja usam ponto)
+        s = f"{v:g}" if isinstance(v, (int, float)) else str(v)
+        return s if lang in ("en", "ja") else s.replace(".", ",")
     out: list[tuple[str, list[str], list[list]]] = []
     hardcore = store.player_type(access["key"]) in _hardcore_types()
     need = {"sessions", "days", "places", "loot"} & set(sections)
@@ -3796,17 +3802,18 @@ def _export_sheets(name: str, access: dict, sections: list[str]) -> list[tuple[s
             for it in items:
                 active = [(_charge_label(it, c), _charge_view(c)) for c in it["charges"]]
                 lf = life.get(it["id"], {})
-                rows.append([it["name"], imbuing.GEAR_KINDS.get(it["kind"], it["kind"]), it["slots"], ", ".join(it["elements"]),
+                rows.append([it["name"], tr.get(imbuing.GEAR_KINDS.get(it["kind"], it["kind"]), imbuing.GEAR_KINDS.get(it["kind"], it["kind"])), it["slots"],
+                             ", ".join(tr.get(_ELEM_PT[e], _ELEM_PT[e]) for e in it["elements"]),
                              "; ".join(lbl.split(" · ")[-1] for lbl, _ in active),
                              sum(c["total_cost"] for _, c in active), sum(round(c["hours_used"], 2) for _, c in active),
                              round(sum(lf.values()), 2),
-                             "; ".join(f"{_life_label(k)}: {round(h, 2)} h" for k, h in sorted(lf.items(), key=lambda kv: -kv[1]) if h > 0)])
+                             "; ".join(f"{_life_label(k)}: {num(round(h, 2))} h" for k, h in sorted(lf.items(), key=lambda kv: -kv[1]) if h > 0)])
             out.append(("Equipamentos", ["Item", "Tipo", "Slots", "Elementos de fábrica", "Imbuements ativos", "Pago (gp)", "Horas usadas",
                                          "Horas acumuladas", "Acumulado por imbuement"], rows))
         elif sec == "gear_weekly" and hardcore:
             rep = gear_report(name, 52, access)
             out.append(("Imbuements por semana", ["Semana (segunda)", "Horas de hunt", "Custo (gp)", "Itens"],
-                        [[w["week"], w["hunt_hours"], w["cost"], "; ".join(f"{i['label']} ({i['hours']} h, {i['cost']} gp)" for i in w["items"])]
+                        [[w["week"], w["hunt_hours"], w["cost"], "; ".join(f"{i['label']} ({num(i['hours'])} h, {format(round(i['cost']), ',').replace(',', ',' if lang in ('en', 'ja') else '.')} gp)" for i in w["items"])]
                          for w in reversed(rep["weeks"])]))
     return out
 
@@ -3840,7 +3847,7 @@ def export_xlsx(name: str, sections: str = "", lang: str = "", access: dict = De
     require_owner(name, access)
     chosen = [s for s in dict.fromkeys(x.strip() for x in sections.split(",")) if s in EXPORT_SECTIONS] or list(EXPORT_SECTIONS)
     d = _ui_dict(lang)
-    sheets = [(d.get(n, n), [d.get(h, h) for h in heads], rows) for n, heads, rows in _export_sheets(name, access, chosen)]
+    sheets = [(d.get(n, n), [d.get(h, h) for h in heads], rows) for n, heads, rows in _export_sheets(name, access, chosen, d, lang)]
     data = xlsx_core.build(sheets)
     fname = re.sub(r"[^A-Za-z0-9_-]+", "_", name) + "-" + datetime.now(BRT).date().isoformat() + ".xlsx"
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
