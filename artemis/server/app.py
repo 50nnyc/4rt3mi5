@@ -39,6 +39,7 @@ from pydantic import BaseModel, Field
 from artemis import APP_NAME, __version__
 from artemis.core import achievements as ach
 from artemis.core import bosses as boss_core
+from artemis.core import samesession as same_core
 from artemis.core import captcha
 from artemis.core import rotations as rot
 from artemis.core import damage as damage_core
@@ -1428,6 +1429,23 @@ def _overlapping_char(started_at: str, ended_at: str, access: dict, boss: bool =
 
 
 # ------------------------------------------------------------------ lootsplit
+def _save_party_hunt(report: dict, raw: str, name: str, owner_key: str | None, via: str | None = None) -> tuple[dict, bool, dict | None]:
+    """0.31.0: um lootsplit por sessão da PT, não importa quem enviou.
+    Devolve (hunt, created, aviso). aviso = None (novo) ou {"kind": "same" | "updated", "by", "at"}:
+    a sessão já estava salva por outra pessoa; se o texto novo é mais completo, o registro é atualizado no lugar."""
+    same = store.similar_hunts(report)
+    if not same:
+        hunt, created = store.add_hunt(report, raw, name, owner_key, via=via)
+        return hunt, created, None
+    base = min(same, key=lambda h: h["id"])  # a mais antiga fica como a "oficial"
+    note = {"kind": "same", "by": base.get("submitted_by"), "at": base.get("created_at"), "id": base["id"]}
+    if same_core.is_more_complete(report, base):
+        upd = store.update_hunt_report(base["id"], report, raw)
+        if upd is not None:
+            return upd, False, {**note, "kind": "updated"}
+    return store.hunt(base["id"]), False, note
+
+
 def _parse_party(raw: str) -> dict:
     try:
         return report_from_text(raw)
@@ -1597,9 +1615,55 @@ def _hunts_out(hunts: list[dict], access: dict, kind: str = "hunt") -> list[dict
     return out
 
 
+def _mark_similar(hunts: list[dict]) -> None:
+    """0.31.0: cada lootsplit leva a lista dos outros que parecem ser a mesma sessão (para o aviso "possível duplicada")."""
+    ordered = sorted(hunts, key=lambda h: h["started_at"])
+    for i, a in enumerate(ordered):
+        a.setdefault("similar", [])
+        t0 = datetime.fromisoformat(a["started_at"])
+        for b in ordered[i + 1:]:
+            if (datetime.fromisoformat(b["started_at"]) - t0).total_seconds() > 12 * 3600:
+                break
+            b.setdefault("similar", [])
+            if same_core.same_session(a, b):
+                for x, y in ((a, b), (b, a)):
+                    x["similar"].append({"id": y["id"], "started_at": y["started_at"], "duration_seconds": y["duration_seconds"],
+                                         "players_count": y["players_count"], "balance": y["balance"], "by": y.get("submitted_by")})
+
+
 @app.get("/api/hunts/{name}")
 def player_hunts(name: str, access: dict = Depends(require_session)):
-    return {"hunts": _hunts_out(store.hunts_for_player(name), access)}
+    raw = store.hunts_for_player(name)
+    by = {h["id"]: h.get("submitted_by") for h in raw}
+    out = _hunts_out(raw, access)
+    for h in out:
+        h["submitted_by"] = by.get(h["id"])
+    _mark_similar(out)
+    return {"hunts": out}
+
+
+class MergeIn(BaseModel):
+    other_id: int = Field(ge=1)
+
+
+@app.post("/api/hunt/{hunt_id}/merge")
+def merge_hunt(hunt_id: int, body: MergeIn, access: dict = Depends(require_session)):
+    """0.31.0: junta duas cópias do mesmo lootsplit. Fica a mais completa; local, Input Analysers, sessões, marcações,
+    pagamentos e link público da outra passam para ela. Só quem estava na PT.
+    (Ver _hunts_out: quem não é do lootsplit nem recebe o nome de quem enviou.)"""
+    a, b = store.hunt(hunt_id), store.hunt(body.other_id)
+    if a is None or b is None:
+        raise HTTPException(404, "Lootsplit não encontrado (talvez tenha sido apagado).")
+    mine = {name_key(c["name"]) for c in store.key_chars(access["key"])}
+    if not all(any(name_key(p["name"]) in mine for p in h["players"]) for h in (a, b)):
+        raise HTTPException(403, "Só quem estava na PT, nos dois lootsplits, pode juntá-los.")
+    if hunt_id == body.other_id or not same_core.same_session(a, b):
+        raise HTTPException(422, "Esses lootsplits não parecem ser da mesma sessão.")
+    keep, drop = sorted((a, b), key=lambda h: (tuple(-v for v in same_core.completeness(h)), h["id"]))
+    merged = store.merge_hunts(keep["id"], drop["id"])
+    if merged is None:
+        raise HTTPException(404, "Lootsplit não encontrado (talvez tenha sido apagado).")
+    return {"kept": keep["id"], "removed": drop["id"], "hunt": _hunts_out([merged], access)[0]}
 
 
 @app.delete("/api/hunt/{hunt_id}")
@@ -1851,21 +1915,21 @@ def lootsplit_upload(body: UploadIn, access: dict = Depends(require_session)):
     got = _party_char(report["players"], body.nickname, access)
     if got:
         name, switched = got
-        hunt, created = store.add_hunt(report, body.raw_text, name, access["key"])
+        hunt, created, same = _save_party_hunt(report, body.raw_text, name, access["key"])
         return {"created": created, "hunt": _hunts_out([hunt], access)[0], "rewards": grant_rewards(access["key"]),
-                "saved_as": name, "switched_from": switched}
+                "saved_as": name, "switched_from": switched, "same": same}
     grant = _grant_for([p["name"] for p in report["players"]], access, "party")
     if grant is None:
         raise HTTPException(403, {"message": NOT_IN_PARTY_UPLOAD, "hint": NOT_IN_PARTY_HINT})
     link, me = grant
     _in_link_window(link, report["started_at"])
     _spend_link(link)
-    hunt, created = store.add_hunt(report, body.raw_text, link["name"], link["owner_key"], via="operator")
+    hunt, created, same = _save_party_hunt(report, body.raw_text, link["name"], link["owner_key"], via="operator")
     tagged = store.set_tag("hunt", hunt["id"], link["name"], "other", True, me, access["key"])
     if not (created or tagged):
         store.refund_link(link["id"])
     return {"created": created, "hunt": _hunts_out([store.hunt(hunt["id"])], access)[0], "rewards": [],
-            "saved_as": link["name"], "for_owner": True}
+            "saved_as": link["name"], "for_owner": True, "same": same}
 
 
 # ------------------------------------------------------------------ 0.20.0: local da hunt, Input Analyser e sessões da PT
@@ -4181,7 +4245,7 @@ def link_send(body: LinkSendIn, request: Request):
         else:
             need("party", "o lootsplit da PT")
             _spend_link(link)
-            hunt, created = store.add_hunt(report, text, char, owner, via="link")
+            hunt, created, _same = _save_party_hunt(report, text, char, owner, via="link")
             saved = "lootsplit"
         tagged = store.set_tag("boss" if body.kind == "boss" else "hunt", hunt["id"], char, "other", True,
                                link["operator"], None)

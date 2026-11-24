@@ -1560,6 +1560,76 @@ class Store:
             self._conn.commit()
             return self._hunt(self._conn.execute("SELECT * FROM hunts WHERE id = ?", (hunt_id,)).fetchone()), True
 
+    # ---- 0.31.0: a mesma sessão enviada por mais de um membro
+    def similar_hunts(self, report: dict, exclude_id: int | None = None) -> list[dict]:
+        """Lootsplits já salvos que são a mesma sessão do relatório (mesma PT, mesmo período)."""
+        from ..core.samesession import same_session
+        try:
+            t = datetime.fromisoformat(report["started_at"]).replace(tzinfo=None)
+        except (KeyError, TypeError, ValueError):
+            return []
+        lo, hi = (t - timedelta(hours=12)).isoformat(), (t + timedelta(hours=12)).isoformat()  # horário do jogo, sem fuso
+        keys = [name_key(p["name"]) for p in report.get("players", [])]
+        if not keys:
+            return []
+        marks = ",".join("?" * len(keys))
+        rows = self._conn.execute(
+            f"SELECT DISTINCT h.* FROM hunts h JOIN hunt_players p ON p.hunt_id = h.id "
+            f"WHERE p.name_key IN ({marks}) AND h.started_at BETWEEN ? AND ? ORDER BY h.id LIMIT 100", (*keys, lo, hi)).fetchall()
+        out = []
+        for r in rows:
+            if exclude_id and r["id"] == exclude_id:
+                continue
+            if same_session(report, json.loads(r["report_json"])):
+                out.append(self._hunt(r))
+        return out
+
+    def update_hunt_report(self, hunt_id: int, report: dict, raw_text: str) -> dict | None:
+        """Troca o conteúdo de um lootsplit por uma versão mais completa, no mesmo registro (id, local, regras,
+        Input Analysers e link público continuam). Pagamentos de valor que mudou deixam de valer sozinhos."""
+        with self._lock:
+            if self._conn.execute("SELECT 1 FROM hunts WHERE fingerprint = ? AND id != ?", (report["fingerprint"], hunt_id)).fetchone():
+                return None
+            self._conn.execute("UPDATE hunts SET fingerprint = ?, started_at = ?, raw_text = ?, report_json = ? WHERE id = ?",
+                               (report["fingerprint"], report["started_at"], raw_text, json.dumps(report), hunt_id))
+            have = {r[0] for r in self._conn.execute("SELECT name_key FROM hunt_players WHERE hunt_id = ?", (hunt_id,))}
+            self._conn.executemany("INSERT INTO hunt_players (hunt_id, name_key, name) VALUES (?, ?, ?)",
+                                   [(hunt_id, name_key(p["name"]), p["name"]) for p in report["players"] if name_key(p["name"]) not in have])
+            self._conn.commit()
+            row = self._conn.execute("SELECT * FROM hunts WHERE id = ?", (hunt_id,)).fetchone()
+            return self._hunt(row) if row else None
+
+    def merge_hunts(self, keep_id: int, drop_id: int) -> dict | None:
+        """Junta duas cópias do mesmo lootsplit: tudo que a que sai tinha e a que fica não tem passa para a que fica."""
+        with self._lock:
+            keep = self._conn.execute("SELECT * FROM hunts WHERE id = ?", (keep_id,)).fetchone()
+            drop = self._conn.execute("SELECT * FROM hunts WHERE id = ?", (drop_id,)).fetchone()
+            if keep is None or drop is None or keep_id == drop_id:
+                return None
+            c = self._conn
+            if keep["place_id"] is None and drop["place_id"] is not None:
+                c.execute("UPDATE hunts SET place_id = ?, place_edits = ? WHERE id = ?", (drop["place_id"], drop["place_edits"], keep_id))
+            for table, cols, where in (
+                ("damage_inputs", "ref_id", "kind = 'hunt' AND ref_id"),
+                ("party_sessions", "hunt_id", "hunt_id"),
+            ):
+                c.execute(f"UPDATE OR IGNORE {table} SET {cols} = ? WHERE {where} = ?", (keep_id, drop_id))
+            c.execute("UPDATE OR IGNORE hunt_tags SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
+            c.execute("UPDATE OR IGNORE hunt_payments SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
+            c.execute("UPDATE OR IGNORE hunt_rules SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
+            c.execute("UPDATE split_links SET hunt_id = ? WHERE hunt_id = ? AND NOT EXISTS (SELECT 1 FROM split_links WHERE hunt_id = ?)",
+                      (keep_id, drop_id, keep_id))
+            have = {r[0] for r in c.execute("SELECT name_key FROM hunt_players WHERE hunt_id = ?", (keep_id,))}
+            for r in c.execute("SELECT name_key, name FROM hunt_players WHERE hunt_id = ?", (drop_id,)).fetchall():
+                if r[0] not in have:
+                    c.execute("INSERT INTO hunt_players (hunt_id, name_key, name) VALUES (?, ?, ?)", (keep_id, r[0], r[1]))
+            c.execute("DELETE FROM damage_inputs WHERE kind = 'hunt' AND ref_id = ?", (drop_id,))
+            c.execute("DELETE FROM party_sessions WHERE hunt_id = ?", (drop_id,))
+            c.execute("DELETE FROM hunts WHERE id = ?", (drop_id,))
+            self._forget_split("hunt", drop_id)
+            c.commit()
+            return self._hunt(c.execute("SELECT * FROM hunts WHERE id = ?", (keep_id,)).fetchone())
+
     def hunts_for_player(self, name: str, limit: int = 500) -> list[dict]:
         rows = self._conn.execute(
             "SELECT h.* FROM hunts h JOIN hunt_players p ON p.hunt_id = h.id "

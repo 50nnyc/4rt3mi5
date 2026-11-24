@@ -1,6 +1,82 @@
 {
   "releases": [
     {
+      "version": "0.31.0",
+      "date": "2026-11-23",
+      "title": "Hunts sem duplicata e fáceis de achar",
+      "summary": "A mesma sessão da PT não é mais salva duas vezes, e as suas hunts ganham busca e filtros.",
+      "changes": [
+        "👯 Chega de hunt duplicada: se outro membro da PT já enviou o mesmo Party Hunt Analyser, o 4rt3mi5 reconhece a sessão e usa a que já existe, mesmo que o horário final seja um pouco diferente. Quem envia depois só completa o que é seu: Hunt Analyser e Input Analyser. Se a nova versão for mais completa, a hunt é atualizada.",
+        "🔗 Já tem hunts duplicadas? O Início e o Lootsplit avisam, e o botão \"Unir as duas\" deixa só a mais completa, levando o local, os Input Analysers, as marcações e os pagamentos.",
+        "📚 Lootsplit: nova lista \"Minhas hunts em party\" com busca por data, local ou jogador, filtros (a acertar, sem local, duplicadas), meses e \"Mostrar mais\". O Início mostra as últimas e leva até ela."
+      ],
+      "tr": {
+        "en": {
+          "title": "Hunts without duplicates, and easy to find",
+          "summary": "The same party session no longer gets saved twice, and your hunts have search and filters.",
+          "changes": [
+            "👯 No more duplicate hunts: if another party member already sent the same Party Hunt Analyser, 4rt3mi5 recognizes the session and uses the existing one, even if the end time is slightly different. Whoever sends it later only completes their own part: Hunt Analyser and Input Analyser. If the new version is more complete, the hunt is updated.",
+            "🔗 Already have duplicate hunts? Home and Lootsplit warn you, and the \"Merge the two\" button keeps only the most complete one, moving over the place, Input Analysers, marks and payments.",
+            "📚 Lootsplit: a new \"My party hunts\" list with search by date, place or player, filters (to settle, no place, duplicates), months and \"Show more\". Home shows the latest ones and links to it."
+          ]
+        },
+        "es": {
+          "title": "Hunts sin duplicados y fáciles de encontrar",
+          "summary": "La misma sesión de la party ya no se guarda dos veces y tus hunts tienen búsqueda y filtros.",
+          "changes": [
+            "👯 Se acabaron las hunts duplicadas: si otro miembro de la PT ya envió el mismo Party Hunt Analyser, 4rt3mi5 reconoce la sesión y usa la que ya existe, aunque la hora final sea un poco distinta. Quien envía después solo completa lo suyo: Hunt Analyser e Input Analyser. Si la versión nueva es más completa, la hunt se actualiza.",
+            "🔗 ¿Ya tienes hunts duplicadas? El Inicio y el Lootsplit te avisan, y el botón \"Unir las dos\" deja solo la más completa, pasando el lugar, los Input Analysers, las marcas y los pagos.",
+            "📚 Lootsplit: nueva lista \"Mis hunts en party\" con búsqueda por fecha, lugar o jugador, filtros (por saldar, sin lugar, duplicadas), meses y \"Mostrar más\". El Inicio muestra las últimas y lleva a ella."
+          ]
+        },
+        "ja": {
+          "title": "重複なしで見つけやすい狩り一覧",
+          "summary": "同じパーティのセッションが二重に保存されなくなり、狩りを検索・絞り込みできます。",
+          "changes": [
+            "👯 重複した狩りはもうありません。ほかのパーティメンバーがすでに同じParty Hunt Analyserを送っていれば、4rt3mi5がセッションを見分けて既存のものを使います（終了時刻が少し違っていても）。後から送った人は自分の分（Hunt AnalyserとInput Analyser）を足すだけです。新しい版のほうが完全なら、狩りは更新されます。",
+            "🔗 すでに重複した狩りがありますか？ホームとLootsplitでお知らせし、「2件を統合」ボタンで最も完全な1件だけを残し、場所・Input Analyser・マーク・支払いを引き継ぎます。",
+            "📚 Lootsplit：新しい「パーティの狩り一覧」で、日付・場所・プレイヤーの検索、絞り込み（未精算、場所なし、重複）、月ごとの表示、「もっと見る」が使えます。ホームには最新の分が表示され、一覧へ移動できます。"
+          ]
+        },
+        "de": {
+          "title": "Hunts ohne Duplikate und leicht zu finden",
+          "summary": "Dieselbe Party-Session wird nicht mehr doppelt gespeichert, und deine Hunts haben Suche und Filter.",
+          "changes": [
+            "👯 Schluss mit doppelten Hunts: Hat ein anderes Party-Mitglied denselben Party Hunt Analyser schon gesendet, erkennt 4rt3mi5 die Session und nutzt die vorhandene, auch wenn die Endzeit leicht abweicht. Wer später sendet, ergänzt nur seinen Teil: Hunt Analyser und Input Analyser. Ist die neue Version vollständiger, wird die Hunt aktualisiert.",
+            "🔗 Schon doppelte Hunts? Start und Lootsplit warnen dich, und der Button \"Beide zusammenführen\" behält nur die vollständigste und übernimmt Ort, Input Analysers, Markierungen und Zahlungen.",
+            "📚 Lootsplit: neue Liste \"Meine Party-Hunts\" mit Suche nach Datum, Ort oder Spieler, Filtern (offen, ohne Ort, Duplikate), Monaten und \"Mehr anzeigen\". Der Start zeigt die neuesten und führt dorthin."
+          ]
+        },
+        "pl": {
+          "title": "Hunty bez duplikatów i łatwe do znalezienia",
+          "summary": "Ta sama sesja drużyny nie zapisuje się już dwa razy, a twoje hunty mają wyszukiwarkę i filtry.",
+          "changes": [
+            "👯 Koniec z podwójnymi huntami: jeśli inny członek drużyny wysłał już ten sam Party Hunt Analyser, 4rt3mi5 rozpoznaje sesję i używa istniejącej, nawet gdy godzina końca jest nieco inna. Kto wyśle później, uzupełnia tylko swoją część: Hunt Analyser i Input Analyser. Jeśli nowa wersja jest pełniejsza, hunt zostaje zaktualizowany.",
+            "🔗 Masz już zduplikowane hunty? Start i Lootsplit ostrzegają, a przycisk \"Połącz obie\" zostawia tylko najpełniejszą, przenosząc miejsce, Input Analysers, oznaczenia i płatności.",
+            "📚 Lootsplit: nowa lista \"Moje hunty w drużynie\" z wyszukiwaniem po dacie, miejscu lub graczu, filtrami (do rozliczenia, bez miejsca, duplikaty), miesiącami i \"Pokaż więcej\". Start pokazuje ostatnie i prowadzi do niej."
+          ]
+        },
+        "fr": {
+          "title": "Hunts sans doublons et faciles à trouver",
+          "summary": "La même session de party n'est plus enregistrée deux fois, et vos hunts ont une recherche et des filtres.",
+          "changes": [
+            "👯 Fini les hunts en double : si un autre membre de la party a déjà envoyé le même Party Hunt Analyser, 4rt3mi5 reconnaît la session et utilise celle qui existe, même si l'heure de fin diffère un peu. Celui qui envoie ensuite complète seulement sa partie : Hunt Analyser et Input Analyser. Si la nouvelle version est plus complète, la hunt est mise à jour.",
+            "🔗 Vous avez déjà des hunts en double ? L'accueil et le Lootsplit vous avertissent, et le bouton \"Fusionner les deux\" ne garde que la plus complète en reportant le lieu, les Input Analysers, les marques et les paiements.",
+            "📚 Lootsplit : nouvelle liste \"Mes hunts en party\" avec recherche par date, lieu ou joueur, filtres (à régler, sans lieu, doublons), mois et \"Afficher plus\". L'accueil montre les dernières et y mène."
+          ]
+        },
+        "ru": {
+          "title": "Охоты без дубликатов, которые легко найти",
+          "summary": "Одна и та же сессия пати больше не сохраняется дважды, а у ваших охот есть поиск и фильтры.",
+          "changes": [
+            "👯 Больше никаких дублей охот: если другой участник пати уже отправил тот же Party Hunt Analyser, 4rt3mi5 узнаёт сессию и использует существующую, даже если время окончания немного отличается. Кто отправляет позже, добавляет только своё: Hunt Analyser и Input Analyser. Если новая версия полнее, охота обновляется.",
+            "🔗 Уже есть дубли? Главная и Lootsplit предупредят вас, а кнопка «Объединить обе» оставит только самую полную, перенеся место, Input Analysers, отметки и платежи.",
+            "📚 Lootsplit: новый список «Мои охоты в пати» с поиском по дате, месту или игроку, фильтрами (к расчёту, без места, дубликаты), месяцами и «Показать ещё». Главная показывает последние и ведёт к списку."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.30.0",
       "date": "2026-11-23",
       "title": "Sessão ao vivo e ranking por mundo",

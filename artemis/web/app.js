@@ -1080,6 +1080,7 @@ function go(page, opts = {}) {
   if (page === "stack") loadStack();
   if (page === "boss") { showBossTab(S.mode); loadBoss(); }
   if (page === "hunts") loadHunts();
+  if (page === "loot") loadLootList();
   if (page === "chars") loadChars();
   if (page === "settings") { paintPlayerType(); api("GET", "/api/me").then((m) => { S.me = m; paintPlayerType(); }).catch(() => {}); }
 }
@@ -1203,7 +1204,7 @@ async function afterHuntChange(h) {
   h.kind = h.kind || (S.page === "boss" ? "boss" : undefined);
   if (S.page === "home") return loadHome();
   if (S.page === "boss") return loadBoss({ quiet: true });
-  if (S.page === "loot") renderLoot(h);
+  if (S.page === "loot") { renderLoot(h); loadLootList(); }
 }
 document.addEventListener("change", (e) => {
   const sel = e.target.closest("[data-rule-mode]");
@@ -1344,7 +1345,7 @@ function huntCard(h, name, title) {
   const cls = h.profit_each >= 0 ? "gold" : "neg";
   return `<div class="card">
     <div class="muted">${esc(title)} · ${when(h.started_at)} · ${dur(h.duration_seconds)} · ${h.players_count} jogadores</div>
-    ${claimBanner(h)}
+    ${dupBox(h)}${claimBanner(h)}
     ${huntPlaceRow(h)}
     <div style="margin-top:10px" class="muted">Rendeu para cada um</div>
     <div class="big ${cls}" data-count="${h.profit_each}" data-suffix=" gp">${fmt(h.profit_each)} gp</div>
@@ -1416,13 +1417,25 @@ function settleTag(v) {
   if (v.totalGet > 0) return v.pendingGet ? `<span class="pos">recebe ${kk(v.pendingGet)}</span>` : `<span class="pos">✔ recebido</span>`;
   return `<span class="muted">sem acerto</span>`;
 }
+/** 0.31.0: aviso e botão quando este lootsplit parece ser a mesma sessão de outro (enviado por outro membro). */
+function dupBox(h) {
+  const s = (h.similar || [])[0];
+  if (!s || !h.id) return "";
+  const msg = s.by ? tf("👯 Parece ser a mesma sessão de {0}, enviada por {1}.", when(s.started_at), s.by)
+                   : tf("👯 Parece ser a mesma sessão de {0}.", when(s.started_at));
+  return `<div class="banner bad"><b data-i18n-skip>${esc(msg)}</b>
+    <div class="hint">Unir deixa só a mais completa e leva para ela o local, os Input Analysers, as marcações e os pagamentos.</div>
+    <button class="btn2" style="margin-top:8px" data-merge="${h.id}:${s.id}">Unir as duas</button></div>`;
+}
 function historyItem(h, name) {
   const v = view(h, name);
-  return `<details class="card"><summary>
+  const dup = (h.similar || []).length ? ` <span class="dupbadge">possível duplicata</span>` : "";
+  return `<details class="card" data-hid="${h.id}"><summary>
       <div class="row"><b>${when(h.started_at)}</b>${settleTag(v)}</div>
       <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores${h.pending ? ` · ⏳ ${h.pending} a pagar` : ""}</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
-    </summary>${claimBanner(h)}${huntPlaceRow(h)}${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, name)} ${shareButton("hunt", h)}${partyShared(h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${rulesBox(h)}${tagsBox(h)}${deleteButton(h)}</details>`;
+      <div class="muted hl-place">${h.place ? `📍 <span data-i18n-skip>${esc(h.place.name)}</span>` : `<span class="muted">📍 sem local</span>`}${dup}</div>
+    </summary>${dupBox(h)}${claimBanner(h)}${huntPlaceRow(h)}${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, name)} ${shareButton("hunt", h)}${partyShared(h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${rulesBox(h)}${tagsBox(h)}${deleteButton(h)}</details>`;
 }
 /** 0.20.0: local do lootsplit (quem enviou define; os outros só veem). */
 function huntPlaceRow(h) {
@@ -1753,6 +1766,7 @@ async function loadHome() {
   el.innerHTML = `${expiryNotice(streak)}${notices}
     ${headlineCard(news)}
     ${pendingCard}
+    ${dupNotice(hunts)}
     ${boostedCard(boosted)}
     ${achHomeCard(ach)}
     <h2>👥 Última hunt em party</h2>
@@ -1767,8 +1781,9 @@ async function loadHome() {
       label: h.place ? h.place.name : new Date(h.started_at).toLocaleDateString("pt-BR") })))}
     ${goalCard("party", hunts.map((h) => h.profit_each_per_hour))}
     <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
-    <h2>Todas as hunts (${hunts.length})</h2>
-    ${hunts.length > 1 ? hunts.slice(1).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}` : ""}`;
+    <h2>Hunts anteriores (${hunts.length - 1})</h2>
+    ${hunts.length > 1 ? hunts.slice(1, 6).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}
+    ${hunts.length > 6 ? `<button class="btn2" data-page-link="loot" style="width:100%; margin-top:4px">🔎 Ver e buscar todas as hunts</button>` : ""}` : ""}`;
   countUp(el);
   if (hunts.length) {
     renderPtRank();
@@ -1947,6 +1962,12 @@ $("#lootBtn").addEventListener("click", async () => {
     S.lootBanner = r.for_owner ? `Salvo para ${r.saved_as} (o dono do personagem), marcado como jogado por você ✔`
       : r.created ? "Lootsplit salvo ✔ Todos da PT já podem ver no app." : "Esse lootsplit já estava salvo ✔";
     S.lootNote = "";
+    // 0.31.0: a sessão já tinha sido enviada por outro membro: não duplica, e quem enviou depois só completa o que é seu
+    if (r.same && !r.created && !isMine(r.same.by)) {
+      S.lootBanner = r.same.kind === "updated"
+        ? tf("Essa sessão já tinha sido enviada por {0}. Atualizei com a sua versão, que estava mais completa ✔", r.same.by)
+        : tf("Essa sessão já tinha sido enviada por {0}. Você já está nela ✔ Falta só o seu Hunt Analyser e o seu Input Analyser, logo abaixo.", r.same.by);
+    }
     if (r.switched_from) {  // 0.23.0: salvo no personagem seu que estava na PT
       await switchActiveChar(r.saved_as);
       S.lootNote = `Salvo em ${r.saved_as}, que estava na PT (você estava em ${r.switched_from}).`;
@@ -1957,6 +1978,7 @@ $("#lootBtn").addEventListener("click", async () => {
     $("#lootText").value = "";
     celebrateRewards(r.rewards);
     if (r.created) checkAchievements();
+    loadLootList();
     // 0.20.0: no lootsplit o que importa primeiro é quem paga quem. Nada de perguntas aqui: o local da hunt,
     // a sessão e o Input Analyser ficam como opções no próprio card, para preencher depois.
     S.lastLoot = r.hunt.id;
@@ -1973,6 +1995,106 @@ $("#lootBtn").addEventListener("click", async () => {
       $("#lootErr").textContent = err.message;
     }
   } finally { btn.disabled = false; }
+});
+
+/* ---------- 📚 Minhas hunts em party: busca, filtros, meses e "mostrar mais" (0.31.0) ---------- */
+const HL = { all: [], filter: "all", q: "", shown: 12 };
+const HL_STEP = 12;
+const HL_FILTERS = [["all", "Todas"], ["pend", "⏳ A acertar"], ["noplace", "📍 Sem local"], ["dups", "👯 Duplicadas"]];
+function dupPairs(hunts) { return hunts.filter((h) => (h.similar || []).some((s) => s.id > h.id)).length; }
+/** Aviso no Início e na lista quando existem lootsplits que parecem ser a mesma sessão. */
+function dupNotice(hunts) {
+  const n = dupPairs(hunts);
+  if (!n) return "";
+  return `<div class="banner bad"><b>${tf(n === 1 ? "👯 {0} possível duplicata entre as suas hunts." : "👯 {0} possíveis duplicatas entre as suas hunts.", n)}</b>
+    <div class="hint">A mesma sessão da PT foi enviada por mais de uma pessoa. Una as duas para ficar só a mais completa.</div>
+    <button class="btn2" style="margin-top:8px" data-page-link="loot" data-hl-go="dups">Revisar</button></div>`;
+}
+function hlHaystack(h) {
+  const d = new Date(h.started_at);
+  return plain([when(h.started_at), d.toLocaleDateString("pt-BR"), d.toLocaleDateString("pt-BR", { weekday: "long", month: "long" }),
+    h.place ? h.place.name : "sem local", (h.players || []).map((p) => p.name).join(" "), h.submitted_by || ""].join(" "));
+}
+function hlMatch(h) {
+  const v = view(h, S.nick);
+  if (HL.filter === "pend" && !(v.pendingPay || v.pendingGet)) return false;
+  if (HL.filter === "noplace" && h.place) return false;
+  if (HL.filter === "dups" && !(h.similar || []).length) return false;
+  const words = plain(HL.q).split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = h._hay || (h._hay = hlHaystack(h));
+  return words.every((w) => hay.includes(w));
+}
+function paintHuntList() {
+  const rows = $("#hlRows"), chips = $("#hlChips");
+  if (!rows) return;
+  const count = (f) => { const keep = HL.filter; HL.filter = f; const n = HL.all.filter((h) => hlMatch(h)).length; HL.filter = keep; return n; };
+  chips.innerHTML = HL_FILTERS.map(([k, t]) => {
+    const n = count(k);
+    return k !== "all" && !n && HL.filter !== k ? "" : `<button type="button" data-hl-filter="${k}" class="${HL.filter === k ? "on" : ""}">${t} <span class="muted">${n}</span></button>`;
+  }).join("");
+  const list = HL.all.filter(hlMatch);
+  if (!list.length) {
+    rows.innerHTML = `<p class="muted">${HL.q || HL.filter !== "all" ? "Nenhuma hunt com esse filtro. Limpe a busca ou escolha “Todas”." : "Nenhuma hunt ainda."}</p>`;
+    return;
+  }
+  const shown = list.slice(0, HL.shown);
+  let month = "", html = "";
+  for (const h of shown) {
+    let m = new Date(h.started_at).toLocaleDateString(I18N.locale, { month: "long", year: "numeric" });
+    m = m.charAt(0).toUpperCase() + m.slice(1);
+    if (m !== month) { month = m; html += `<div class="hl-month" data-i18n-skip>${esc(m)}</div>`; }
+    html += historyItem(h, S.nick);
+  }
+  if (list.length > shown.length) html += `<button class="btn2" data-hl-more style="width:100%; margin-top:6px">${tf("Mostrar mais ({0})", list.length - shown.length)}</button>`;
+  rows.innerHTML = html;
+  paintVocations(rows);
+}
+async function loadLootList() {
+  const el = $("#huntList");
+  if (!el || !S.nick) return;
+  let d;
+  try { d = await api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`); }
+  catch (err) { if (err.status !== 401) el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  HL.all = d.hunts;
+  S.homeHunts = d.hunts;
+  if (HL.filter === "dups" && !dupPairs(HL.all)) HL.filter = "all";  // acabaram as duplicadas: volta para a lista inteira
+  if (!HL.all.length) { el.innerHTML = ""; return; }
+  const typing = document.activeElement && document.activeElement.id === "huntSearch";
+  if (!$("#huntSearch")) {
+    el.innerHTML = `<h2>📚 Minhas hunts em party</h2>
+      <div class="hl-tools"><input id="huntSearch" type="search" autocomplete="off" spellcheck="false" aria-label="Buscar hunts"
+        placeholder="Buscar por data, local ou jogador" value="${esc(HL.q)}"><div class="hl-chips" id="hlChips"></div></div>
+      <div id="hlRows"></div>`;
+  }
+  const top = el.querySelector("[data-hl-top]");
+  if (top) top.remove();
+  const n = dupPairs(HL.all);
+  if (n && HL.filter !== "dups") el.querySelector("h2").insertAdjacentHTML("afterend", `<div data-hl-top>${dupNotice(HL.all)}</div>`);
+  paintHuntList();
+  if (typing) $("#huntSearch").focus();
+}
+document.addEventListener("input", (e) => {
+  if (e.target.id !== "huntSearch") return;
+  HL.q = e.target.value; HL.shown = HL_STEP; paintHuntList();
+});
+document.addEventListener("click", async (e) => {
+  const f = e.target.closest("[data-hl-filter]");
+  if (f) { HL.filter = f.dataset.hlFilter; HL.shown = HL_STEP; return paintHuntList(); }
+  if (e.target.closest("[data-hl-more]")) { HL.shown += HL_STEP; return paintHuntList(); }
+  const go = e.target.closest("[data-hl-go]");
+  if (go) { HL.filter = go.dataset.hlGo; HL.shown = HL_STEP; return; }  // a navegação (data-page-link) abre a lista já filtrada
+  const m = e.target.closest("[data-merge]");
+  if (!m) return;
+  e.preventDefault();
+  if (!confirm(tf("Unir as duas? Fica só a mais completa e nada do que já foi salvo se perde."))) return;
+  const [a, b] = m.dataset.merge.split(":");
+  m.disabled = true;
+  try {
+    await api("POST", `/api/hunt/${a}/merge`, { other_id: +b });
+    if (S.page === "loot") { $("#lootResult").innerHTML = `<div class="banner ok">Hunts unidas ✔ Ficou só a mais completa.</div>`; loadLootList(); }
+    else loadHome();
+  } catch (err) { if (err.status !== 401) alert(err.message); m.disabled = false; }
 });
 
 /* ---------- hunt session stacker ---------- */
@@ -4171,7 +4293,7 @@ document.addEventListener("click", async (e) => {
   try {
     if (isHunt) {
       await api("DELETE", `/api/hunt/${t.dataset.delHunt}`);
-      if (S.page === "loot") $("#lootResult").innerHTML = `<div class="banner ok">Hunt apagada.</div>`;
+      if (S.page === "loot") { $("#lootResult").innerHTML = `<div class="banner ok">Hunt apagada.</div>`; loadLootList(); }
       else loadHome();
     } else {
       await api("DELETE", `/api/stacker/session/${t.dataset.delSolo}`);
