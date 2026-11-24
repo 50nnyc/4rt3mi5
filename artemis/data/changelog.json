@@ -1,6 +1,74 @@
 {
   "releases": [
     {
+      "version": "0.32.6",
+      "date": "2026-11-24",
+      "title": "Set confirmado a cada hunt",
+      "changes": [
+        "⚔️ Ao terminar a hunt, o Hardcore agora responde em sequência: a hunt, o Hunt Analyser, o Input Analyser e, por fim, o set de imbuements usado. Vale para o lootsplit da party e para o Hunt Analyser solo.",
+        "🧠 O app lembra o set de cada hunt e pergunta se é o mesmo na próxima vez. Se você confirmar, ele passa a usar o set sozinho nessa hunt, e o botão ⚔️ Set usado continua nas sessões para trocar quando quiser.",
+        "➕ Sem o set certo? O passo tem um botão que leva direto à aba Sets para criar um novo, com um atalho para voltar à hunt."
+      ],
+      "tr": {
+        "en": {
+          "title": "Set confirmed after each hunt",
+          "changes": [
+            "⚔️ When the hunt ends, Hardcore players now answer in sequence: the hunt, the Hunt Analyser, the Input Analyser and, finally, the imbuement set used. It works for the party lootsplit and for the solo Hunt Analyser.",
+            "🧠 The app remembers each hunt's set and asks if it is the same next time. If you confirm, it uses that set by itself on that hunt, and the ⚔️ Set used button stays on the sessions so you can change it any time.",
+            "➕ Don't have the right set? The step has a button that takes you straight to the Sets tab to create a new one, with a shortcut back to the hunt."
+          ]
+        },
+        "es": {
+          "title": "Set confirmado tras cada hunt",
+          "changes": [
+            "⚔️ Al terminar la hunt, el Hardcore ahora responde en secuencia: la hunt, el Hunt Analyser, el Input Analyser y, por último, el set de imbuements usado. Vale para el lootsplit de la party y para el Hunt Analyser solo.",
+            "🧠 La app recuerda el set de cada hunt y pregunta si es el mismo la próxima vez. Si confirmas, lo usa solo en esa hunt, y el botón ⚔️ Set usado sigue en las sesiones para cambiarlo cuando quieras.",
+            "➕ ¿No tienes el set correcto? El paso tiene un botón que te lleva directo a la pestaña Sets para crear uno nuevo, con un atajo para volver a la hunt."
+          ]
+        },
+        "ja": {
+          "title": "ハント後のセット確認",
+          "changes": [
+            "⚔️ ハントが終わると、ハードコアのプレイヤーは順番に答えます：ハント、Hunt Analyser、Input Analyser、そして最後に使ったインビューメントのセットです。パーティのlootsplitにもソロのHunt Analyserにも対応しています。",
+            "🧠 アプリはハントごとのセットを覚え、次回は同じかどうか尋ねます。確認すると、そのハントでは自動でそのセットを使い、セッションの「⚔️ 使用したセット」ボタンでいつでも変更できます。",
+            "➕ 合うセットがありませんか？このステップのボタンから「セット」タブに移動して新しく作れ、ハントに戻るショートカットもあります。"
+          ]
+        },
+        "de": {
+          "title": "Set-Bestätigung nach jeder Hunt",
+          "changes": [
+            "⚔️ Nach der Hunt beantworten Hardcore-Spieler jetzt der Reihe nach: die Hunt, den Hunt Analyser, den Input Analyser und zuletzt das genutzte Imbuement-Set. Das gilt für den Party-Lootsplit und für den Solo-Hunt-Analyser.",
+            "🧠 Die App merkt sich das Set jeder Hunt und fragt beim nächsten Mal, ob es dasselbe ist. Bestätigst du, nutzt sie das Set in dieser Hunt von selbst, und der Button ⚔️ Genutztes Set bleibt in den Sessions, um es jederzeit zu ändern.",
+            "➕ Kein passendes Set? Der Schritt hat einen Button, der dich direkt zum Tab Sets bringt, um ein neues zu erstellen, mit einer Abkürzung zurück zur Hunt."
+          ]
+        },
+        "pl": {
+          "title": "Potwierdzenie setu po każdym hunt",
+          "changes": [
+            "⚔️ Po zakończeniu huntu gracz Hardcore odpowiada teraz po kolei: hunt, Hunt Analyser, Input Analyser i na końcu użyty set imbuementów. Działa dla lootsplitu w party i dla Hunt Analysera solo.",
+            "🧠 Aplikacja pamięta set każdego huntu i następnym razem pyta, czy to ten sam. Jeśli potwierdzisz, sama użyje tego setu na tym hunt, a przycisk ⚔️ Użyty set zostaje w sesjach, by zmienić go w każdej chwili.",
+            "➕ Nie masz odpowiedniego setu? Krok ma przycisk, który prowadzi prosto do karty Sety, aby utworzyć nowy, ze skrótem powrotu do huntu."
+          ]
+        },
+        "fr": {
+          "title": "Set confirmé après chaque hunt",
+          "changes": [
+            "⚔️ À la fin de la hunt, le joueur Hardcore répond maintenant en séquence : la hunt, le Hunt Analyser, l'Input Analyser et enfin le set d'imbuements utilisé. Cela vaut pour le lootsplit de la party et pour le Hunt Analyser solo.",
+            "🧠 L'appli mémorise le set de chaque hunt et demande si c'est le même la fois suivante. Si vous confirmez, elle l'utilise toute seule sur cette hunt, et le bouton ⚔️ Set utilisé reste dans les sessions pour le changer quand vous voulez.",
+            "➕ Pas le bon set ? L'étape a un bouton qui mène directement à l'onglet Sets pour en créer un nouveau, avec un raccourci pour revenir à la hunt."
+          ]
+        },
+        "ru": {
+          "title": "Подтверждение сета после ханта",
+          "changes": [
+            "⚔️ После ханта игрок Hardcore теперь отвечает по порядку: хант, Hunt Analyser, Input Analyser и в конце использованный сет имбуементов. Это работает для лутсплита в пати и для соло Hunt Analyser.",
+            "🧠 Приложение запоминает сет каждого ханта и в следующий раз спрашивает, тот ли это. Если подтвердите, оно само применит этот сет в этом ханте, а кнопка ⚔️ Использованный сет остаётся в сессиях, чтобы сменить его в любой момент.",
+            "➕ Нет нужного сета? В этом шаге есть кнопка, которая ведёт прямо на вкладку «Сеты» для создания нового, с ярлыком возврата к ханту."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.5",
       "date": "2026-11-24",
       "title": "Configurações por assunto",

@@ -1608,6 +1608,8 @@ def _hunts_out(hunts: list[dict], access: dict, kind: str = "hunt") -> list[dict
         if in_party and kind == "hunt" and hid:
             for p in raw["players"]:
                 g = store.session_gear_one(p["name"], "hunt", hid) if name_key(p["name"]) in mine else None
+                if g and "my_set" not in h:  # 0.32.6: já passou pela pergunta do set (mesmo "sem set")
+                    h["my_set"] = {"set_id": g["set_id"], "set_name": g["set_name"], "auto": bool(g["auto"])}
                 if g and g["cost"]:
                     h["my_gear"].append({"name": p["name"], "set_name": g["set_name"], "hours": round(g["hours"], 2),
                                          "cost": g["cost"], "auto": bool(g["auto"])})
@@ -2361,7 +2363,7 @@ def _enriched_sessions(name: str, access: dict, source: str = "all") -> tuple[li
     for s, ref in zip(sessions, refs):
         g = gear.get(ref)
         s["gear"] = {"set_id": g["set_id"], "set_name": g["set_name"], "pause_minutes": g["pause_minutes"],
-                     "hours": g["hours"], "cost": g["cost"]} if g else None
+                     "hours": g["hours"], "cost": g["cost"], "auto": bool(g["auto"])} if g else None
         s["gear_cost"] = g["cost"] if g else 0
         s["net_profit"] -= s["gear_cost"]
     # 0.20.0: Input Analyser de cada sessão (só aparece para quem enviou)
@@ -3556,6 +3558,7 @@ class AssignIn(BaseModel):
     ref_id: int = Field(ge=1)
     set_id: int | None = Field(default=None, ge=1)
     pause_minutes: int = Field(default=0, ge=0, le=1440)
+    confirm: bool = False  # 0.32.6: "é esse mesmo": nas próximas vezes nessa hunt o set entra sozinho
 
 
 def _session_seconds(name: str, kind: str, ref_id: int) -> tuple[int, str]:
@@ -3589,12 +3592,36 @@ def _auto_gear_party(hunt_id: int) -> None:
         cur = store.session_gear_one(p["name"], "hunt", hunt_id)
         if cur and not cur["auto"]:
             continue  # o próprio jogador já escolheu (ou tirou) o set
-        st = store.last_set_for_place(p["name"], h["place_id"])
+        st = _auto_set(p["name"], h["place_id"])
         if st and (not cur or cur["set_id"] != st["id"] or cur["auto"]):
             try:
                 _apply_gear(p["name"], "hunt", hunt_id, st["id"], cur["pause_minutes"] if cur else 0, auto=True)
             except HTTPException:
                 continue
+
+
+def _pref_set(name: str, place_id: int | None) -> tuple[dict | None, bool]:
+    """0.32.6: o set que o jogador usou nessa hunt (e se já confirmou "é esse mesmo"); sem preferência, o último set ligado ao local."""
+    if not place_id:
+        return None, False
+    pref = store.pref_get(name, place_id)
+    st = store.set_get(pref["set_id"]) if pref else None
+    if st and st["name_key"] == name_key(name):
+        return st, pref["confirmed"]
+    return store.last_set_for_place(name, place_id), False
+
+
+def _auto_set(name: str, place_id: int | None) -> dict | None:
+    """Set que entra sozinho: o que o jogador confirmou para a hunt, ou o que ele ligou ao local ao montar o set."""
+    st, confirmed = _pref_set(name, place_id)
+    if st and (confirmed or st.get("place_id") == place_id):
+        return st
+    return None
+
+
+def _place_of(kind: str, ref_id: int) -> int | None:
+    row = store.solo_session(ref_id) if kind == "solo" else store.hunt(ref_id) if kind == "hunt" else None
+    return (row or {}).get("place_id")
 
 
 def _auto_gear_solo(name: str, session_id: int) -> None:
@@ -3609,7 +3636,7 @@ def _auto_gear_solo(name: str, session_id: int) -> None:
     cur = store.session_gear_one(name, "solo", session_id)
     if cur and not cur["auto"]:
         return
-    st = store.last_set_for_place(name, row["place_id"])
+    st = _auto_set(name, row["place_id"])
     if st and (not cur or cur["set_id"] != st["id"] or cur["auto"]):
         try:
             _apply_gear(name, "solo", session_id, st["id"], cur["pause_minutes"] if cur else 0, auto=True)
@@ -3647,13 +3674,25 @@ def gear_assign(name: str, body: AssignIn, access: dict = Depends(require_sessio
     """Liga um set a uma hunt (solo, party ou boss). O custo entra no lucro líquido só do jogador."""
     _gear_guard(name, access)
     out = _apply_gear(name, body.kind, body.ref_id, body.set_id, body.pause_minutes)
+    place_id = _place_of(body.kind, body.ref_id)
+    if place_id:  # 0.32.6: lembra o set dessa hunt; só vale sozinho depois que o jogador confirma
+        if body.set_id:
+            old = store.pref_get(name, place_id)
+            keep = bool(old and old["set_id"] == body.set_id and old["confirmed"])
+            store.pref_set(name, place_id, body.set_id, body.confirm or keep)
+        else:
+            store.pref_clear(name, place_id)
     return {**out, **_gear_payload(name, access)}
 
 
 @app.get("/api/gear/{name}/suggest")
-def gear_suggest(name: str, place_id: int, access: dict = Depends(require_session)):
+def gear_suggest(name: str, place_id: int = 0, kind: str = "", ref_id: int = 0, access: dict = Depends(require_session)):
+    """Qual set sugerir para a hunt (o que ele usou da última vez), se já confirmou, e o que está aplicado na sessão agora."""
     _gear_guard(name, access)
-    return {"set": store.last_set_for_place(name, place_id)}
+    st, confirmed = _pref_set(name, place_id)
+    cur = store.session_gear_one(name, kind, ref_id) if kind in ("solo", "hunt", "boss") and ref_id else None
+    return {"set": st, "confirmed": confirmed,
+            "current": {"set_id": cur["set_id"], "pause_minutes": cur["pause_minutes"], "auto": bool(cur["auto"])} if cur else None}
 
 
 @app.get("/api/gear/{name}/report")
@@ -4200,7 +4239,7 @@ def bosses_overview(name: str, access: dict = Depends(require_session)):
         s["loot_value"] = sum(it["value"] for it in s["loot"])
         g = boss_gear.get(("boss", s["id"]))
         s["gear"] = {"set_id": g["set_id"], "set_name": g["set_name"], "pause_minutes": g["pause_minutes"],
-                     "hours": g["hours"], "cost": g["cost"]} if g else None
+                     "hours": g["hours"], "cost": g["cost"], "auto": bool(g["auto"])} if g else None
         s["gear_cost"] = g["cost"] if g else 0
         s["net_profit"] = s["loot_value"] - s["supplies"] - s["gear_cost"]
         s["bosses"] = boss_core.bosses_in(kills[s["id"]])

@@ -1821,5 +1821,22 @@
   "Cadastrar": "Add",
   "Ver itens": "View items",
   "Montar set": "Build set",
-  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Then pick the set in your sessions: the cost counts toward the profit by itself."
+  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Then pick the set in your sessions: the cost counts toward the profit by itself.",
+  "sem set": "no set",
+  "Set de imbuements": "Imbuement set",
+  "⚔️ Set de imbuements": "⚔️ Imbuement set",
+  "Set usado": "Set used",
+  "É este o set que você usou nesta hunt?": "Is this the set you used on this hunt?",
+  "Qual set você usou nesta hunt?": "Which set did you use on this hunt?",
+  "Você ainda não tem um set de imbuements.": "You don't have an imbuement set yet.",
+  "Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.": "If you confirm, next time on this hunt I'll use this set by myself. You can change it any time with the ⚔️ Set used button on the session.",
+  "Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.": "Create a set with the pieces you use so the imbuement cost counts toward your profit.",
+  "✅ Sim, é este": "✅ Yes, this one",
+  "Outro set": "Another set",
+  "➕ Criar um novo set": "➕ Create a new set",
+  "Crie o set e volte para escolhê-lo na sua hunt.": "Create the set and come back to pick it on your hunt.",
+  "Voltar para a hunt": "Back to the hunt",
+  "Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser.": "Set applied automatically (the one you confirmed for this hunt). Change it any time.",
+  "Usar sempre este set nesta hunt": "Always use this set on this hunt",
+  "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements.": "🔥 Complete your hunt: follow the golden button. First the hunt, then the Hunt Analyser, the Input Analyser and finally the imbuement set."
 }

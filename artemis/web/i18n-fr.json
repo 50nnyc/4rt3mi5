@@ -1821,5 +1821,22 @@
   "Cadastrar": "Ajouter",
   "Ver itens": "Voir les objets",
   "Montar set": "Composer un set",
-  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Choisissez ensuite le set dans vos sessions : le coût est compté tout seul dans le profit."
+  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Choisissez ensuite le set dans vos sessions : le coût est compté tout seul dans le profit.",
+  "sem set": "sans set",
+  "Set de imbuements": "Set d'imbuements",
+  "⚔️ Set de imbuements": "⚔️ Set d'imbuements",
+  "Set usado": "Set utilisé",
+  "É este o set que você usou nesta hunt?": "Est-ce le set que vous avez utilisé pendant cette hunt ?",
+  "Qual set você usou nesta hunt?": "Quel set avez-vous utilisé pendant cette hunt ?",
+  "Você ainda não tem um set de imbuements.": "Vous n'avez pas encore de set d'imbuements.",
+  "Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.": "Si vous confirmez, la prochaine fois sur cette hunt j'utiliserai ce set tout seul. Vous pouvez le changer à tout moment avec le bouton ⚔️ Set utilisé de la session.",
+  "Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.": "Créez un set avec les pièces que vous utilisez pour que le coût des imbuements soit compté dans le profit.",
+  "✅ Sim, é este": "✅ Oui, celui-ci",
+  "Outro set": "Un autre set",
+  "➕ Criar um novo set": "➕ Créer un nouveau set",
+  "Crie o set e volte para escolhê-lo na sua hunt.": "Créez le set puis revenez le choisir pour votre hunt.",
+  "Voltar para a hunt": "Retour à la hunt",
+  "Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser.": "Set appliqué automatiquement (celui que vous avez confirmé pour cette hunt). Changez-le quand vous voulez.",
+  "Usar sempre este set nesta hunt": "Toujours utiliser ce set sur cette hunt",
+  "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements.": "🔥 Complétez votre hunt : suivez le bouton doré. D'abord la hunt, puis le Hunt Analyser, l'Input Analyser et enfin le set d'imbuements."
 }

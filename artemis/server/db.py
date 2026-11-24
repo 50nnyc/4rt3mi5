@@ -846,6 +846,10 @@ class Store:
         CREATE TABLE IF NOT EXISTS gear_set_items (
             set_id INTEGER NOT NULL REFERENCES gear_sets(id) ON DELETE CASCADE,
             gear_id INTEGER NOT NULL REFERENCES gear_items(id) ON DELETE CASCADE, PRIMARY KEY (set_id, gear_id));
+        CREATE TABLE IF NOT EXISTS gear_place_pref (
+            name_key TEXT NOT NULL, place_id INTEGER NOT NULL REFERENCES hunt_places(id) ON DELETE CASCADE,
+            set_id INTEGER NOT NULL REFERENCES gear_sets(id) ON DELETE CASCADE, confirmed INTEGER NOT NULL DEFAULT 0,
+            updated_at TEXT NOT NULL, PRIMARY KEY (name_key, place_id));
         CREATE TABLE IF NOT EXISTS session_gear (
             kind TEXT NOT NULL, ref_id INTEGER NOT NULL, name_key TEXT NOT NULL,
             set_id INTEGER REFERENCES gear_sets(id) ON DELETE SET NULL, set_name TEXT, pause_minutes INTEGER NOT NULL DEFAULT 0,
@@ -2824,6 +2828,23 @@ class Store:
     def usage_report(self, name: str, since_day: str) -> list[dict]:
         return [dict(r) for r in self._conn.execute(
             "SELECT * FROM gear_usage WHERE name_key = ? AND day >= ? ORDER BY day, id", (name_key(name), since_day))]
+
+    # 0.32.6: o set que o jogador usou em cada hunt (local). `confirmed`: ele disse "é esse mesmo", então passa a valer sozinho.
+    def pref_get(self, name: str, place_id: int) -> dict | None:
+        row = self._conn.execute("SELECT set_id, confirmed FROM gear_place_pref WHERE name_key = ? AND place_id = ?",
+                                 (name_key(name), place_id)).fetchone()
+        return {"set_id": row[0], "confirmed": bool(row[1])} if row else None
+
+    def pref_set(self, name: str, place_id: int, set_id: int, confirmed: bool) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO gear_place_pref VALUES (?, ?, ?, ?, ?)",
+                               (name_key(name), place_id, set_id, 1 if confirmed else 0, _iso(utcnow())))
+            self._conn.commit()
+
+    def pref_clear(self, name: str, place_id: int) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM gear_place_pref WHERE name_key = ? AND place_id = ?", (name_key(name), place_id))
+            self._conn.commit()
 
     def last_set_for_place(self, name: str, place_id: int) -> dict | None:
         row = self._conn.execute("SELECT id FROM gear_sets WHERE name_key = ? AND place_id = ? ORDER BY id DESC LIMIT 1",

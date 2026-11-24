@@ -1821,5 +1821,22 @@
   "Cadastrar": "Registrar",
   "Ver itens": "Ver ítems",
   "Montar set": "Armar set",
-  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Luego elige el set en tus sesiones: el costo entra solo en la ganancia."
+  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Luego elige el set en tus sesiones: el costo entra solo en la ganancia.",
+  "sem set": "sin set",
+  "Set de imbuements": "Set de imbuements",
+  "⚔️ Set de imbuements": "⚔️ Set de imbuements",
+  "Set usado": "Set usado",
+  "É este o set que você usou nesta hunt?": "¿Es este el set que usaste en esta hunt?",
+  "Qual set você usou nesta hunt?": "¿Qué set usaste en esta hunt?",
+  "Você ainda não tem um set de imbuements.": "Todavía no tienes un set de imbuements.",
+  "Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.": "Si confirmas, la próxima vez en esta hunt usaré este set solo. Puedes cambiarlo cuando quieras con el botón ⚔️ Set usado de la sesión.",
+  "Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.": "Crea un set con las piezas que usas para que el costo de los imbuements entre en la ganancia.",
+  "✅ Sim, é este": "✅ Sí, es este",
+  "Outro set": "Otro set",
+  "➕ Criar um novo set": "➕ Crear un set nuevo",
+  "Crie o set e volte para escolhê-lo na sua hunt.": "Crea el set y vuelve para elegirlo en tu hunt.",
+  "Voltar para a hunt": "Volver a la hunt",
+  "Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser.": "Set aplicado solo (el que confirmaste para esta hunt). Cámbialo cuando quieras.",
+  "Usar sempre este set nesta hunt": "Usar siempre este set en esta hunt",
+  "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements.": "🔥 Completa tu hunt: sigue el botón dorado. Primero la hunt, luego el Hunt Analyser, el Input Analyser y por último el set de imbuements."
 }

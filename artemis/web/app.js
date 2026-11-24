@@ -1975,10 +1975,11 @@ function lootNextStep(h) {
   if (t === "novato") return `<div class="card"><b>🌱 Pronto!</b><p class="muted" style="margin:4px 0 0">O lootsplit da sua PT ficou salvo.
     Pode fechar e seguir a vida: ele fica no 🏠 Início e em 🗺️ Hunts (Party) quando quiser ver de novo.</p></div>`;
   const own = (list) => (list || []).some((x) => x.name.toLowerCase() === (S.nick || "").toLowerCase());
-  const has = { place: !!h.place, session: own(h.member_sessions), input: own(h.inputs) };
-  const order = ["place", "session", ...(isHardcore(t) ? ["input"] : [])];
-  const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Analyser", input: "🛡️ Input Analyser" };
-  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Analyser ✔", input: "🛡️ Input Analyser ✔" };
+  const has = { place: !!h.place, session: own(h.member_sessions), input: own(h.inputs), set: !!h.my_set };
+  const order = ["place", "session", ...(isHardcore(t) ? ["input", "set"] : [])];
+  const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Analyser", input: "🛡️ Input Analyser", set: "⚔️ Set de imbuements" };
+  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Analyser ✔", input: "🛡️ Input Analyser ✔",
+    set: h.my_set ? `⚔️ ${esc(h.my_set.set_name || T("sem set"))} ✔` : "" };
   const canPlace = h.can_delete;  // só quem enviou o lootsplit escolhe o local
   const pending = order.filter((s) => !has[s] && (s !== "place" || canPlace));
   const next = pending[0];
@@ -1989,13 +1990,14 @@ function lootNextStep(h) {
     return `<button class="btn2${gold}" data-loot-step="${s}" data-hunt="${h.id}" type="button">${label[s]}</button>`;
   };
   const intro = isHardcore(t)
-    ? (next ? "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser e por fim o Input Analyser." : "🔥 Tudo preenchido ✔")
+    ? (next ? "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements." : "🔥 Tudo preenchido ✔")
     : (pending.length ? "⚔️ Quer completar? Diga em qual hunt foi e junte o seu Hunt Analyser." : "⚔️ Tudo preenchido ✔");
   return `<div class="card"><b>${intro}</b><div class="nextstep">${order.map(btn).join("")}</div>
     ${pending.length ? `<div class="hint">Não precisa ser agora: o que você não preencher fica salvo e dá para completar depois.</div>` : ""}</div>`;
 }
 function renderLoot(h) {
   S.lastLoot = h.id;
+  S.lastHunts = [h];
   const el = $("#lootResult");
   el.innerHTML = `${S.lootBanner ? `<div class="banner ok"><div>${esc(S.lootBanner)}</div>${S.lootNote ? `<div class="hint">🔁 ${esc(S.lootNote)}</div>` : ""}</div>` : ""}
     ${quickTransfers(h)}${partyMessages(h)}${lootNextStep(h)}
@@ -2011,8 +2013,21 @@ document.addEventListener("click", (e) => {
   const id = +b.dataset.hunt, first = b.dataset.lootStep;
   const btns = [...document.querySelectorAll(`[data-loot-step][data-hunt="${id}"]`)].map((x) => x.dataset.lootStep);
   const steps = isHardcore() ? btns.slice(btns.indexOf(first)) : [first];
-  startFlow("hunt", id, { chain: steps, after: () => refreshAfterFlow("hunt") });
+  const hh = (S.lastHunts || []).find((x) => x.id === id);
+  startFlow("hunt", id, { chain: steps, placeId: hh && hh.place ? hh.place.id : 0, after: () => refreshAfterFlow("hunt") });
 });
+/** 0.32.6: Hardcore acabou de colar o lootsplit: pergunta a hunt, o Hunt Analyser, o Input Analyser e o set, em sequência. */
+function autoLootFlow(h) {
+  if (!isHardcore() || !h.id || !h.in_party) return;
+  const own = (list) => (list || []).some((x) => x.name.toLowerCase() === (S.nick || "").toLowerCase());
+  const steps = [];
+  if (!h.place && h.can_delete) steps.push("place");
+  if (!own(h.member_sessions)) steps.push("session");
+  if (!own(h.inputs)) steps.push("input");
+  if (!h.my_set) steps.push("set");
+  if (!steps.length) return;
+  startFlow("hunt", h.id, { chain: steps, placeId: h.place ? h.place.id : 0, after: () => refreshAfterFlow("hunt") });
+}
 $("#lootBtn").addEventListener("click", async () => {
   const raw = $("#lootText").value.trim();
   if (!raw) return;
@@ -2033,6 +2048,8 @@ $("#lootBtn").addEventListener("click", async () => {
       S.lootNote = `Salvo em ${r.saved_as}, que estava na PT (você estava em ${r.switched_from}).`;
     }
     renderLoot(r.hunt);
+    S.lastHunts = [r.hunt];
+    autoLootFlow(r.hunt);
     $("#lootResult").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" });  // direto para quem paga quem
     ensureVocations(r.hunt.players.map((p) => p.name)).then((c) => c && paintVocations($("#lootResult")));
     $("#lootText").value = "";
@@ -4414,7 +4431,9 @@ function paintGear() {
   // 0.32.4: guarda quais cartões estavam abertos (cada ação repinta a tela e fechava tudo) e a posição da rolagem
   const keyOf = (x) => x.dataset.k || ((x.querySelector("summary") || {}).textContent || "").trim().slice(0, 24);
   const wasOpen = new Set([...el.querySelectorAll("details[open]")].map(keyOf)), seen = G.seen || new Set(), scroll = window.scrollY;
-  const msg = G.msg ? `<div class="err" role="alert">${esc(G.msg)}${/Preços dos itens|prices/i.test(G.msg) ? ` <button class="link" data-gear="tab:precos" type="button">💰 ${esc(T("Informar preços"))}</button>` : ""}</div>` : "";
+  const back = G.back ? `<div class="banner ok"><div>${esc(T("Crie o set e volte para escolhê-lo na sua hunt."))}</div>
+    <button class="btn2" data-gear="back" type="button" style="margin-top:6px">↩ ${esc(T("Voltar para a hunt"))}</button></div>` : "";
+  const msg = back + (G.msg ? `<div class="err" role="alert">${esc(G.msg)}${/Preços dos itens|prices/i.test(G.msg) ? ` <button class="link" data-gear="tab:precos" type="button">💰 ${esc(T("Informar preços"))}</button>` : ""}</div>` : "");
   // 0.32.5: a tela virou abas (itens, sets, preços e relatório), cada uma com o que se usa junto
   const tab = GEAR_TABS.some((t) => t.key === G.tab) ? G.tab : "itens";
   const badge = { itens: d.items.length, sets: d.sets.length };
@@ -4513,6 +4532,7 @@ document.addEventListener("click", async (e) => {
     try { kv.set("geartab", id); } catch {}  // 0.32.5: lembra a última aba
     return;
   }
+  if (act === "back") { const b0 = G.back; G.back = null; go(b0 ? b0.page : "stack"); return; }
   if (act === "firstitem") {  // 0.32.5: guia de primeiros passos: abre o formulário do primeiro item
     G.tab = "itens"; paintGear();
     const f = $("#gearResult details:not([data-k])"); if (f) { f.open = true; f.scrollIntoView({ behavior: "smooth", block: "center" }); const n = $("#gnName"); if (n) n.focus(); }
@@ -4566,7 +4586,8 @@ document.addEventListener("click", async (e) => {
     const box = b.closest("[data-gbox]"), [kind, ref] = box.dataset.gbox.split(":");
     try {
       const r = await api("POST", gearUrl("/assign"), { kind, ref_id: +ref, set_id: +box.querySelector("[data-gset]").value || null,
-        pause_minutes: Math.max(0, parseInt(box.querySelector("[data-gpause]").value, 10) || 0) });
+        pause_minutes: Math.max(0, parseInt(box.querySelector("[data-gpause]").value, 10) || 0),
+        confirm: !!(box.querySelector("[data-gconfirm]") || {}).checked });
       G.data = { items: r.items, sets: r.sets, prices: r.prices };
       S.page === "boss" ? loadBoss({ quiet: true }) : loadStack({ quiet: true });
     } catch (err) { if (err.status !== 401) alert(err.message); }
@@ -4602,9 +4623,11 @@ function gearBox(s, kind, ref) {
   return `<div class="tagline-row" style="margin-top:10px" data-gbox="${kind}:${ref}">
     <label class="muted">⚔️ Set usado <select data-gset><option value="">Nenhum</option>${G.data.sets.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
     <label class="muted">Pausa (min) <input data-gpause type="number" min="0" max="1440" value="${s.gear ? s.gear.pause_minutes : 0}" style="width:70px; padding:4px 6px"></label>
+    ${s.place ? `<label class="muted"><input type="checkbox" data-gconfirm${s.gear && s.gear.auto ? " checked" : ""}> ${esc(T("Usar sempre este set nesta hunt"))}</label>` : ""}
     <button class="btn2" data-gear="gsave" type="button">Salvar</button>
     <button class="link" data-gear-open="sets" type="button">🧩 ${T("Gerenciar sets")}</button>
-    ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}</div>`;
+    ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}
+    ${s.gear && s.gear.auto ? `<div class="hint" style="flex-basis:100%">🔁 ${esc(T("Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser."))}</div>` : ""}</div>`;
 }
 
 /* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------
@@ -4742,7 +4765,7 @@ async function saveStackSession() {
     startFlow("solo", r.session.id, {
       note: r.switched_from ? `Salva em ${r.saved_as}: ele tem um lootsplit no mesmo horário.` : "",
       banner: r.created ? `Sessão salva ✔${resumo}` : "Essa sessão já estava salva ✔",
-      hasPlace: !!(s.place || s.place_id), hasInput: !!s.input,
+      hasPlace: !!(s.place || s.place_id), hasInput: !!s.input, placeId: (s.place && s.place.id) || s.place_id || 0, hasSet: !!s.gear,
       after: () => loadStack({ quiet: true }).then(() => {
         $("#stackResult").insertAdjacentHTML("afterbegin", `<div class="banner ok">${r.created ? `Sessão adicionada ✔${esc(resumo)}` : "Essa sessão já estava salva ✔"}</div>${compareBanner(Flow.compare || r.compare)}`);
       }),
@@ -4756,7 +4779,7 @@ async function saveStackSession() {
 }
 
 /** Perguntas depois de salvar, de acordo com o tipo de player. */
-function startFlow(kind, id, { banner = "", note = "", hasPlace = false, hasInput = false, hasSession = false, only = null, chain = null, after = null } = {}) {
+function startFlow(kind, id, { banner = "", note = "", hasPlace = false, hasInput = false, hasSession = false, only = null, chain = null, after = null, placeId = 0, hasSet = false } = {}) {
   const t = ptype();
   let steps = [];
   if (chain) { steps = [...chain]; only = chain[0]; }  // 0.22.0: sequência guiada, cada passo já aberto
@@ -4765,8 +4788,9 @@ function startFlow(kind, id, { banner = "", note = "", hasPlace = false, hasInpu
     if (!hasPlace) steps.push("place");
     if (kind === "hunt" && !hasSession) steps.push("session");
     if (isHardcore(t) && !hasInput) steps.push("input");
+    if (isHardcore(t) && !hasSet) steps.push("set");  // 0.32.6: por fim, confirma o set de imbuements usado
   }
-  Object.assign(Flow, { kind, id, steps, banner, note, after, compare: null, direct: !!only, chained: !!chain });
+  Object.assign(Flow, { kind, id, steps, banner, note, after, compare: null, direct: !!only, chained: !!chain, placeId });
   nextFlowStep();
 }
 function nextFlowStep() {
@@ -4806,8 +4830,64 @@ function nextFlowStep() {
       <div class="row2">${Flow.direct ? `<button class="btn" data-flow="input-save" type="button">Salvar</button>${cancel}`
         : `<button class="btn" data-flow="text-yes" type="button">Sim</button>${skip}`}</div>
       <div class="err" id="flowErr"></div></div>`);
+  } else if (step === "set") {
+    Flow.current = step;
+    flowSetStep(head);
+    return;
   }
   Flow.current = step;
+}
+/** 0.32.6: último passo (Hardcore): confirma o set de imbuements da hunt. Lembra o set de cada hunt e, depois de confirmado,
+ *  passa a usá-lo sozinho; o botão ⚔️ Set usado na sessão continua lá para trocar. */
+async function flowSetStep(head) {
+  openModal(`${head}<div class="flow-step"><b>⚔️ ${T("Set de imbuements")}</b><p class="muted">${T("Carregando…")}</p></div>`);
+  let d, sug;
+  try {
+    d = await api("GET", gearUrl()); G.data = d;
+    sug = await api("GET", gearUrl(`/suggest?place_id=${Flow.placeId || 0}&kind=${Flow.kind}&ref_id=${Flow.id}`));
+  } catch { return nextFlowStep(); }
+  if (Flow.current !== "set") return;  // fechou enquanto carregava
+  if (sug.set && sug.confirmed) {  // já confirmado nessa hunt: usa sozinho
+    if (!sug.current || sug.current.set_id !== sug.set.id) {
+      try { await api("POST", gearUrl("/assign"), { kind: Flow.kind, ref_id: Flow.id, set_id: sug.set.id, pause_minutes: sug.current ? sug.current.pause_minutes : 0, confirm: true }); } catch {}
+    }
+    return nextFlowStep();
+  }
+  const known = sug.set ? d.sets.find((x) => x.id === sug.set.id) : null;
+  const pre = known ? known.id : (sug.current && sug.current.set_id) || "";
+  const pause = sug.current ? sug.current.pause_minutes : 0;
+  const options = `<option value="">${T("Nenhum")}</option>${d.sets.map((x) => `<option value="${x.id}"${x.id === pre ? " selected" : ""}>${esc(x.name)}</option>`).join("")}`;
+  const pick = `<div id="flowSetPick" class="${known ? "hidden" : ""}" style="margin-top:8px">
+      <label class="muted" for="flowSetSel">${T("Set usado")}</label><select id="flowSetSel">${options}</select>
+      <div class="row2"><button class="btn" data-flow="set-save" type="button">${T("Salvar")}</button></div></div>`;
+  const pauseBox = `<label class="muted" for="flowSetPause" style="display:block; margin-top:8px">${T("Pausa (min)")}
+      <input id="flowSetPause" type="number" min="0" max="1440" value="${pause}" style="width:90px"></label>`;
+  openModal(`${head}<div class="flow-step">
+    <b>${known ? T("É este o set que você usou nesta hunt?") : (d.sets.length ? T("Qual set você usou nesta hunt?") : T("Você ainda não tem um set de imbuements."))}</b>
+    ${known ? `<div class="card" style="margin:8px 0"><div class="row"><b data-i18n-skip>${esc(known.name)}</b><span class="muted" data-i18n-skip>${esc(gpx(known.hourly))}/h</span></div>
+      <div class="muted" style="font-size:13px" data-i18n-skip>${known.items.map(esc).join(", ")}</div></div>
+      <div class="hint">${T("Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.")}</div>` : ""}
+    ${d.sets.length ? pauseBox + pick : `<p class="muted">${T("Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.")}</p>`}
+    <div class="row2" style="margin-top:8px">${known ? `<button class="btn" data-flow="set-yes" data-set="${known.id}" type="button">${T("✅ Sim, é este")}</button>
+      <button class="btn2" data-flow="set-other" type="button">${T("Outro set")}</button>` : ""}
+      <button class="btn2" data-flow="set-new" type="button">${T("➕ Criar um novo set")}</button>
+      <button class="btn2" data-flow="skip" type="button">${T("Agora não")}</button></div>
+    <div class="err" id="flowErr"></div></div>`);
+}
+async function flowSetAct(act, f) {
+  const err = $("#flowErr");
+  if (act === "set-other") { $("#flowSetPick").classList.remove("hidden"); f.classList.add("hidden"); return; }
+  if (act === "set-new") {  // leva até a aba de sets; o botão ↩ de lá traz de volta
+    G.back = { page: S.page };
+    Flow.steps = []; Flow.after = null; closeModal(); openGear("sets"); return;
+  }
+  const pause = Math.max(0, parseInt(($("#flowSetPause") || {}).value, 10) || 0);
+  const setId = act === "set-yes" ? +f.dataset.set : +(($("#flowSetSel") || {}).value) || null;
+  f.disabled = true;
+  try {
+    await api("POST", gearUrl("/assign"), { kind: Flow.kind, ref_id: Flow.id, set_id: setId, pause_minutes: pause, confirm: act === "set-yes" });
+    nextFlowStep();
+  } catch (ex) { f.disabled = false; if (ex.status !== 401 && err) err.textContent = ex.message; }
 }
 function flowTextBox(placeholder, open) {
   return `<div id="flowTextBox" class="${open ? "" : "hidden"}" style="margin-top:8px">
@@ -4830,6 +4910,7 @@ document.addEventListener("click", async (e) => {
   const act = f.dataset.flow, err = $("#flowErr");
   if (act === "skip") return nextFlowStep();
   if (act === "end") { Flow.steps = []; return nextFlowStep(); }  // fecha a sequência e mostra o que ficou salvo
+  if (act.startsWith("set-")) return flowSetAct(act, f);
   if (act === "place-yes") {
     await showFlowPicker();
     f.closest(".row2").innerHTML = `<button class="btn" data-flow="place-save" type="button">Salvar</button><button class="btn2" data-flow="skip" type="button">Não</button>`;
@@ -4848,6 +4929,7 @@ document.addEventListener("click", async (e) => {
       const r = await api("POST", `${flowBase()}/place`, { place_id: placeId });
       kv.set("last_place", String(placeId));
       Flow.compare = r.compare || null;
+      Flow.placeId = placeId;  // o passo do set usa a hunt escolhida
     } else {
       const raw = ($("#flowStepText") || {}).value?.trim();
       if (!raw) { err.textContent = "Cole o texto primeiro."; f.disabled = false; return; }

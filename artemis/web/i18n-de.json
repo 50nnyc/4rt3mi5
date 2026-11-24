@@ -1821,5 +1821,22 @@
   "Cadastrar": "Anlegen",
   "Ver itens": "Items ansehen",
   "Montar set": "Set bauen",
-  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Danach wähle das Set in deinen Sessions: Die Kosten fließen von selbst in den Gewinn ein."
+  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Danach wähle das Set in deinen Sessions: Die Kosten fließen von selbst in den Gewinn ein.",
+  "sem set": "ohne Set",
+  "Set de imbuements": "Imbuement-Set",
+  "⚔️ Set de imbuements": "⚔️ Imbuement-Set",
+  "Set usado": "Genutztes Set",
+  "É este o set que você usou nesta hunt?": "Ist das das Set, das du in dieser Hunt genutzt hast?",
+  "Qual set você usou nesta hunt?": "Welches Set hast du in dieser Hunt genutzt?",
+  "Você ainda não tem um set de imbuements.": "Du hast noch kein Imbuement-Set.",
+  "Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.": "Wenn du bestätigst, nutze ich dieses Set beim nächsten Mal in dieser Hunt von selbst. Du kannst es jederzeit über den Button ⚔️ Genutztes Set in der Session ändern.",
+  "Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.": "Erstelle ein Set mit den Teilen, die du nutzt, damit die Imbuement-Kosten in den Gewinn einfließen.",
+  "✅ Sim, é este": "✅ Ja, dieses",
+  "Outro set": "Anderes Set",
+  "➕ Criar um novo set": "➕ Neues Set erstellen",
+  "Crie o set e volte para escolhê-lo na sua hunt.": "Erstelle das Set und kehre zurück, um es für deine Hunt zu wählen.",
+  "Voltar para a hunt": "Zurück zur Hunt",
+  "Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser.": "Set automatisch angewendet (das, das du für diese Hunt bestätigt hast). Ändere es jederzeit.",
+  "Usar sempre este set nesta hunt": "Dieses Set immer in dieser Hunt nutzen",
+  "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements.": "🔥 Vervollständige deine Hunt: Folge dem goldenen Button. Erst die Hunt, dann der Hunt Analyser, der Input Analyser und zuletzt das Imbuement-Set."
 }

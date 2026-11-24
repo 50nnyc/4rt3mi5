@@ -1821,5 +1821,22 @@
   "Cadastrar": "Dodaj",
   "Ver itens": "Zobacz przedmioty",
   "Montar set": "Stwórz set",
-  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Potem wybierz set w sesjach: koszt sam wejdzie do zysku."
+  "Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.": "Potem wybierz set w sesjach: koszt sam wejdzie do zysku.",
+  "sem set": "bez setu",
+  "Set de imbuements": "Set imbuementów",
+  "⚔️ Set de imbuements": "⚔️ Set imbuementów",
+  "Set usado": "Użyty set",
+  "É este o set que você usou nesta hunt?": "Czy to set, którego użyłeś na tym hunt?",
+  "Qual set você usou nesta hunt?": "Którego setu użyłeś na tym hunt?",
+  "Você ainda não tem um set de imbuements.": "Nie masz jeszcze setu imbuementów.",
+  "Se confirmar, nas próximas vezes nesta hunt eu uso este set sozinho. Dá para trocar quando quiser, no botão ⚔️ Set usado da sessão.": "Jeśli potwierdzisz, następnym razem na tym hunt użyję tego setu sam. Możesz go zmienić w każdej chwili przyciskiem ⚔️ Użyty set w sesji.",
+  "Crie um set com as peças que você usa para o custo dos imbuements entrar no lucro.": "Utwórz set z używanych części, aby koszt imbuementów wszedł do zysku.",
+  "✅ Sim, é este": "✅ Tak, ten",
+  "Outro set": "Inny set",
+  "➕ Criar um novo set": "➕ Utwórz nowy set",
+  "Crie o set e volte para escolhê-lo na sua hunt.": "Utwórz set i wróć, aby wybrać go na swoim hunt.",
+  "Voltar para a hunt": "Wróć do hunt",
+  "Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser.": "Set zastosowany automatycznie (ten potwierdzony dla tego hunt). Zmień go w dowolnej chwili.",
+  "Usar sempre este set nesta hunt": "Zawsze używaj tego setu na tym hunt",
+  "🔥 Complete a sua hunt: siga o botão dourado. Primeiro a hunt, depois o Hunt Analyser, o Input Analyser e por fim o set de imbuements.": "🔥 Uzupełnij swój hunt: idź za złotym przyciskiem. Najpierw hunt, potem Hunt Analyser, Input Analyser i na końcu set imbuementów."
 }
