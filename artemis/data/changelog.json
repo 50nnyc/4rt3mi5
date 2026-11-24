@@ -1,6 +1,114 @@
 {
   "releases": [
     {
+      "version": "0.32.2",
+      "date": "2026-11-24",
+      "title": "Party, Tibia Coin e planilha",
+      "summary": "Imbuements na party, relatório semanal da party, valor da Tibia Coin e exportação para Excel.",
+      "changes": [
+        "⚔️ Nas hunts em party que outra pessoa compartilhou, quem tem set para o local da hunt já paga os imbuements sozinho: o tempo sai do contador, o custo sai do seu saldo e aparece no relatório.",
+        "📅 Novo relatório semanal da party no Início: hunts, horas, o seu rateio, o custo dos imbuements e com quem você mais jogou.",
+        "🧩 Efeito de fábrica dos itens: ao escolher um item conhecido, o site preenche os slots e os elementos, e não aceita imbuement do mesmo elemento. Apagar uma hunt ou sessão devolve as horas dos imbuements (bosses não devolvem).",
+        "🪙 Valor da Tibia Coin por personagem: preencha uma vez e veja quanto valem 1, 25 e 250 Tibia Coin em gold coins. No cofre dos bosses e no preço dos itens, o valor também aparece em Tibia Coin, e dá para digitar nos dois.",
+        "📥 Exportar para Excel: baixe a planilha com os números por trás dos gráficos (sessões, dias, hunts, party, XP, bosses e equipamentos) para guardar e acompanhar o seu personagem.",
+        "🌍 Textos revisados nos 7 idiomas: Equipamentos, sessão ao vivo e telas que ainda apareciam em português. Ao trocar de idioma, a tela aberta já se atualiza.",
+        "⏱️ Os imbuements agora contam as horas para cima, com aviso a cada 20 h para refazer. Cada equipamento guarda também o total de horas por tipo de imbuement, que só cresce e aparece no card, no relatório semanal e na planilha."
+      ],
+      "tr": {
+        "en": {
+          "title": "Party, Tibia Coin and spreadsheet",
+          "summary": "Party imbuement costs, party weekly report, Tibia Coin values and Excel export.",
+          "changes": [
+            "⚔️ In party hunts that someone else shared, anyone with a set for the hunt location now pays for the imbuements automatically: the time comes off the counter, the cost comes off your balance and shows in the report.",
+            "📅 New weekly party report on Home: hunts, hours, your share, the imbuement cost and who you played with most.",
+            "🧩 Factory effect of items: when you pick a known item, the site fills in the slots and elements, and it does not accept an imbuement of the same element. Deleting a hunt or session gives the imbuement hours back (bosses do not).",
+            "🪙 Tibia Coin value per character: fill it in once and see what 1, 25 and 250 Tibia Coin are worth in gold coins. In the boss vault and in item prices the value also shows in Tibia Coin, and you can type in either.",
+            "📥 Export to Excel: download the spreadsheet with the numbers behind the charts (sessions, days, hunts, party, XP, bosses and equipment) to keep and follow your character.",
+            "🌍 Texts reviewed in all 7 languages: Equipment, the live session and screens that were still in Portuguese. When you change language, the open screen updates right away.",
+            "⏱️ Imbuements now count hours upward, with a notice every 20 h to redo them. Each equipment also keeps the total hours per imbuement type, which only grows and shows on the card, the weekly report and the spreadsheet."
+          ]
+        },
+        "es": {
+          "title": "Party, Tibia Coin y hoja de cálculo",
+          "summary": "Costo de imbuements en party, informe semanal de la party, valor de la Tibia Coin y exportación a Excel.",
+          "changes": [
+            "⚔️ En las hunts en party que otra persona compartió, quien tiene un set para el lugar de la hunt ya paga los imbuements automáticamente: el tiempo sale del contador, el costo sale de tu saldo y aparece en el informe.",
+            "📅 Nuevo informe semanal de la party en Inicio: hunts, horas, tu parte, el costo de los imbuements y con quién jugaste más.",
+            "🧩 Efecto de fábrica de los ítems: al elegir un ítem conocido, el sitio rellena los slots y los elementos, y no acepta un imbuement del mismo elemento. Borrar una hunt o sesión devuelve las horas de los imbuements (los bosses no las devuelven).",
+            "🪙 Valor de la Tibia Coin por personaje: rellénalo una vez y mira cuánto valen 1, 25 y 250 Tibia Coin en gold coins. En el cofre de los bosses y en el precio de los ítems, el valor también aparece en Tibia Coin y puedes escribir en cualquiera de los dos.",
+            "📥 Exportar a Excel: descarga la hoja de cálculo con los números detrás de los gráficos (sesiones, días, hunts, party, XP, bosses y equipamiento) para guardar y seguir a tu personaje.",
+            "🌍 Textos revisados en los 7 idiomas: Equipamiento, sesión en vivo y pantallas que aún aparecían en portugués. Al cambiar de idioma, la pantalla abierta se actualiza al instante.",
+            "⏱️ Los imbuements ahora cuentan las horas hacia arriba, con un aviso cada 20 h para rehacerlos. Cada equipamiento guarda además el total de horas por tipo de imbuement, que solo crece y aparece en la tarjeta, el informe semanal y la hoja de cálculo."
+          ]
+        },
+        "ja": {
+          "title": "パーティー、Tibia Coin、スプレッドシート",
+          "summary": "パーティーでのインビューメント費用、パーティーの週間レポート、Tibia Coinの価値、Excel出力。",
+          "changes": [
+            "⚔️ 他の人が共有したパーティーの狩りで、その狩り場用のセットを持っている人は、インビューメント費用が自動で差し引かれます。時間はカウンターから、費用はあなたの残高から引かれ、レポートにも表示されます。",
+            "📅 ホームにパーティーの週間レポートを追加しました：狩りの回数、時間、あなたの取り分、インビューメント費用、よく一緒に狩った相手。",
+            "🧩 アイテムの初期効果に対応しました。既知のアイテムを選ぶとスロット数と属性が自動入力され、同じ属性のインビューメントは付けられません。狩りやセッションを削除するとインビューメントの時間が戻ります（ボスは戻りません）。",
+            "🪙 キャラクターごとにTibia Coinの価値を設定できます。一度入力すれば、1・25・250 Tibia Coinがgold coinでいくらかが分かります。ボスの金庫やアイテム価格ではTibia Coinでも表示され、どちらにも入力できます。",
+            "📥 Excelに出力できます。グラフの元になる数値（セッション、日別、狩り、パーティー、XP、ボス、装備）をスプレッドシートで保存して、キャラクターの成長を追えます。",
+            "🌍 7言語すべてで文章を見直しました：装備、ライブセッション、まだポルトガル語だった画面。言語を切り替えると、開いている画面もすぐに更新されます。",
+            "⏱️ インビューメントの時間は上向きにカウントされ、20時間ごとにやり直しのお知らせが出ます。装備ごとにインビューメントの種類別の累計時間も記録され（増えるだけです）、カード、週間レポート、スプレッドシートに表示されます。"
+          ]
+        },
+        "de": {
+          "title": "Party, Tibia Coin und Tabelle",
+          "summary": "Imbuement-Kosten in der Party, Wochenbericht der Party, Tibia-Coin-Wert und Excel-Export.",
+          "changes": [
+            "⚔️ Bei Party-Hunts, die jemand anderes geteilt hat, zahlt jeder mit einem Set für den Hunt-Ort die Imbuements jetzt automatisch: Die Zeit geht vom Zähler ab, die Kosten von deinem Saldo und erscheinen im Bericht.",
+            "📅 Neuer Wochenbericht der Party auf der Startseite: Hunts, Stunden, dein Anteil, die Imbuement-Kosten und mit wem du am meisten gespielt hast.",
+            "🧩 Werkseffekt der Items: Wählst du ein bekanntes Item, füllt die Seite Slots und Elemente aus und akzeptiert kein Imbuement desselben Elements. Beim Löschen einer Hunt oder Session kommen die Imbuement-Stunden zurück (bei Bossen nicht).",
+            "🪙 Tibia-Coin-Wert pro Charakter: einmal eintragen und sehen, was 1, 25 und 250 Tibia Coin in Gold Coins wert sind. Im Boss-Tresor und bei den Item-Preisen erscheint der Wert auch in Tibia Coin, und du kannst in beiden Feldern eingeben.",
+            "📥 Export nach Excel: Lade die Tabelle mit den Zahlen hinter den Diagrammen herunter (Sessions, Tage, Hunts, Party, XP, Bosse und Ausrüstung), um deinen Charakter zu speichern und zu verfolgen.",
+            "🌍 Texte in allen 7 Sprachen überarbeitet: Ausrüstung, Live-Session und Seiten, die noch auf Portugiesisch erschienen. Beim Sprachwechsel aktualisiert sich die geöffnete Seite sofort.",
+            "⏱️ Imbuements zählen die Stunden jetzt aufwärts, mit einem Hinweis alle 20 Std. zum Erneuern. Jede Ausrüstung speichert zusätzlich die Gesamtstunden pro Imbuement-Typ, die nur wachsen und auf der Karte, im Wochenbericht und in der Tabelle erscheinen."
+          ]
+        },
+        "pl": {
+          "title": "Party, Tibia Coin i arkusz",
+          "summary": "Koszty imbuementów w party, tygodniowy raport party, wartość Tibia Coin i eksport do Excela.",
+          "changes": [
+            "⚔️ W huntach w party, które ktoś udostępnił, każdy, kto ma set na miejsce huntu, od razu płaci za imbuementy: czas schodzi z licznika, koszt z twojego salda i pojawia się w raporcie.",
+            "📅 Nowy tygodniowy raport party na stronie głównej: hunty, godziny, twój udział, koszt imbuementów i z kim grałeś najczęściej.",
+            "🧩 Efekt fabryczny przedmiotów: po wybraniu znanego przedmiotu strona uzupełnia sloty i żywioły i nie przyjmuje imbuementu tego samego żywiołu. Usunięcie huntu lub sesji zwraca godziny imbuementów (bossy ich nie zwracają).",
+            "🪙 Wartość Tibia Coin dla każdej postaci: wpisz ją raz i zobacz, ile gold coins warte jest 1, 25 i 250 Tibia Coin. W skarbcu bossów i w cenach przedmiotów wartość pokazuje się także w Tibia Coin, a wpisywać można w obu polach.",
+            "📥 Eksport do Excela: pobierz arkusz z liczbami stojącymi za wykresami (sesje, dni, hunty, party, XP, bossy i wyposażenie), aby zachować dane i śledzić swoją postać.",
+            "🌍 Teksty sprawdzone we wszystkich 7 językach: Wyposażenie, sesja na żywo i ekrany, które wciąż były po portugalsku. Po zmianie języka otwarty ekran odświeża się od razu.",
+            "⏱️ Imbuementy liczą teraz godziny w górę, z przypomnieniem co 20 h o odnowieniu. Każde wyposażenie zapamiętuje też łączne godziny według typu imbuementu; wartość tylko rośnie i widać ją na karcie, w raporcie tygodniowym i w arkuszu."
+          ]
+        },
+        "fr": {
+          "title": "Party, Tibia Coin et tableur",
+          "summary": "Coût des imbuements en party, rapport hebdomadaire de la party, valeur de la Tibia Coin et export Excel.",
+          "changes": [
+            "⚔️ Dans les hunts en party partagées par quelqu'un d'autre, toute personne ayant un set pour le lieu de la hunt paie désormais les imbuements automatiquement : le temps est retiré du compteur, le coût de votre solde, et tout apparaît dans le rapport.",
+            "📅 Nouveau rapport hebdomadaire de la party sur l'accueil : hunts, heures, votre part, le coût des imbuements et les personnes avec qui vous avez le plus joué.",
+            "🧩 Effet d'origine des objets : en choisissant un objet connu, le site remplit les slots et les éléments, et refuse un imbuement du même élément. Supprimer une hunt ou une session rend les heures d'imbuement (pas pour les boss).",
+            "🪙 Valeur de la Tibia Coin par personnage : saisissez-la une fois et voyez ce que valent 1, 25 et 250 Tibia Coin en gold coins. Dans le coffre des boss et dans le prix des objets, la valeur s'affiche aussi en Tibia Coin, et vous pouvez saisir dans les deux.",
+            "📥 Export vers Excel : téléchargez le tableur avec les chiffres derrière les graphiques (sessions, jours, hunts, party, XP, boss et équipement) pour conserver et suivre votre personnage.",
+            "🌍 Textes revus dans les 7 langues : Équipement, session en direct et écrans qui apparaissaient encore en portugais. Quand vous changez de langue, l'écran ouvert se met à jour tout de suite.",
+            "⏱️ Les imbuements comptent maintenant les heures vers le haut, avec un avis toutes les 20 h pour les refaire. Chaque équipement garde aussi le total d'heures par type d'imbuement, qui ne fait que croître et s'affiche sur la carte, dans le rapport hebdomadaire et dans le tableur."
+          ]
+        },
+        "ru": {
+          "title": "Party, Tibia Coin и таблица",
+          "summary": "Расходы на имбуементы в party, недельный отчёт по party, стоимость Tibia Coin и экспорт в Excel.",
+          "changes": [
+            "⚔️ В хантах в party, которыми поделился кто-то другой, у каждого, у кого есть набор для этого места, расходы на имбуементы списываются сами: время уходит со счётчика, стоимость — с вашего баланса и попадает в отчёт.",
+            "📅 Новый недельный отчёт по party на главной: ханты, часы, ваша доля, расходы на имбуементы и с кем вы играли чаще всего.",
+            "🧩 Заводской эффект предметов: при выборе известного предмета сайт сам заполняет слоты и стихии и не принимает имбуемент той же стихии. Удаление ханта или сессии возвращает часы имбуементов (у боссов — нет).",
+            "🪙 Стоимость Tibia Coin для каждого персонажа: укажите её один раз и смотрите, сколько gold coins стоят 1, 25 и 250 Tibia Coin. В хранилище боссов и в ценах предметов значение тоже показывается в Tibia Coin, а вводить можно в любом из двух полей.",
+            "📥 Экспорт в Excel: скачайте таблицу с числами, на которых построены графики (сессии, дни, ханты, party, XP, боссы и экипировка), чтобы сохранить их и следить за персонажем.",
+            "🌍 Тексты проверены на всех 7 языках: экипировка, живая сессия и экраны, которые всё ещё были на португальском. При смене языка открытый экран обновляется сразу.",
+            "⏱️ Имбуементы теперь считают часы вверх, с напоминанием каждые 20 ч о том, что пора обновить. Каждая экипировка также хранит общее число часов по типам имбуементов — оно только растёт и видно на карточке, в недельном отчёте и в таблице."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.1",
       "date": "2026-11-24",
       "title": "Equipamentos em todos os idiomas",

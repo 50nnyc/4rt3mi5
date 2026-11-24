@@ -826,6 +826,9 @@ class Store:
             xp INTEGER NOT NULL DEFAULT 0, raw_xp INTEGER NOT NULL DEFAULT 0, balance INTEGER NOT NULL DEFAULT 0,
             supplies INTEGER NOT NULL DEFAULT 0, damage INTEGER NOT NULL DEFAULT 0, healing INTEGER NOT NULL DEFAULT 0,
             PRIMARY KEY (session_id, ended_at))""")
+        # 0.32.2: efeito de fábrica do item (elementos) e valor da Tibia Coin de cada personagem
+        self._conn.execute("""CREATE TABLE IF NOT EXISTS char_prefs (
+            name_key TEXT PRIMARY KEY, tc_gold INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL)""")
         self._conn.executescript("""
         -- 0.32.0: imbuements e gastos invisíveis (Player Hardcore)
         CREATE TABLE IF NOT EXISTS gear_items (
@@ -857,6 +860,18 @@ class Store:
             key TEXT NOT NULL, item TEXT NOT NULL, price INTEGER NOT NULL, world TEXT, updated_at TEXT NOT NULL,
             PRIMARY KEY (key, item));
         """)
+        # 0.32.2: horas acumuladas de cada equipamento por tipo de imbuement (só cresce; nunca volta a zero)
+        fresh = self._conn.execute("SELECT 1 FROM sqlite_master WHERE name = 'gear_lifetime'").fetchone() is None
+        self._conn.execute("""CREATE TABLE IF NOT EXISTS gear_lifetime (
+            gear_id INTEGER NOT NULL REFERENCES gear_items(id) ON DELETE CASCADE, imbuement TEXT NOT NULL,
+            hours REAL NOT NULL DEFAULT 0, PRIMARY KEY (gear_id, imbuement))""")
+        if fresh:  # quem já usava: soma o que cada imbuement (inclusive os refeitos) já tinha contado
+            self._conn.execute("INSERT INTO gear_lifetime SELECT gear_id, imbuement, SUM(hours_used) FROM gear_charges "
+                               "GROUP BY gear_id, imbuement HAVING SUM(hours_used) > 0")
+        if "elements" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(gear_items)")}:  # 0.32.2
+            self._conn.execute("ALTER TABLE gear_items ADD COLUMN elements TEXT NOT NULL DEFAULT '[]'")
+        if "auto" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(session_gear)")}:  # 0.32.2
+            self._conn.execute("ALTER TABLE session_gear ADD COLUMN auto INTEGER NOT NULL DEFAULT 0")
         for table in ("solo_sessions", "boss_sessions"):
             self._conn.execute(f"CREATE INDEX IF NOT EXISTS ix_{table}_content ON {table}(content_hash)")
             todo = self._conn.execute(f"SELECT * FROM {table} WHERE content_hash IS NULL").fetchall()
@@ -1193,8 +1208,9 @@ class Store:
     def key_chars(self, key: str) -> list[dict]:
         main = (self._conn.execute("SELECT main_char FROM access_keys WHERE key = ?", (key,)).fetchone() or [None])[0]
         rows = self._conn.execute("SELECT name, verified_at FROM key_chars WHERE key = ? ORDER BY name", (key,)).fetchall()
-        return [{"name": r["name"], "verified_at": r["verified_at"], "is_main": name_key(r["name"]) == name_key(main or "")}
-                for r in rows]
+        coin = self.coin_map([r["name"] for r in rows])  # 0.32.2: valor da Tibia Coin em gold (0 = não informado)
+        return [{"name": r["name"], "verified_at": r["verified_at"], "is_main": name_key(r["name"]) == name_key(main or ""),
+                 "tc_gold": coin.get(name_key(r["name"]), 0)} for r in rows]
 
     # ------------------------------------------------------------------ 0.16.0: contas (login com senha)
     PW_ITERATIONS = 200_000   # só para conferir hashes antigos (0.16.0); os novos são Argon2id
@@ -1665,6 +1681,7 @@ class Store:
                     c.execute("INSERT INTO hunt_players (hunt_id, name_key, name) VALUES (?, ?, ?)", (keep_id, r[0], r[1]))
             c.execute("DELETE FROM damage_inputs WHERE kind = 'hunt' AND ref_id = ?", (drop_id,))
             c.execute("DELETE FROM party_sessions WHERE hunt_id = ?", (drop_id,))
+            self.release_ref_gear("hunt", drop_id)
             c.execute("DELETE FROM hunts WHERE id = ?", (drop_id,))
             self._forget_split("hunt", drop_id)
             c.commit()
@@ -1680,6 +1697,7 @@ class Store:
 
     def delete_hunt(self, hunt_id: int) -> bool:
         with self._lock:
+            self.release_ref_gear("hunt", hunt_id)  # 0.32.2: devolve as horas dos imbuements (só bosses não devolvem)
             cur = self._conn.execute("DELETE FROM hunts WHERE id = ?", (hunt_id,))
             self._forget_split("hunt", hunt_id)
             self._conn.execute("DELETE FROM damage_inputs WHERE kind = 'hunt' AND ref_id = ?", (hunt_id,))
@@ -2602,6 +2620,7 @@ class Store:
         items = [dict(r) for r in self._conn.execute("SELECT * FROM gear_items WHERE name_key = ? ORDER BY id", (nk,))]
         for it in items:
             it["native"] = json.loads(it["native"] or "[]")
+            it["elements"] = json.loads(it.get("elements") or "[]")
             it["charges"] = [self._charge(r) for r in self._conn.execute(
                 "SELECT * FROM gear_charges WHERE gear_id = ? AND ended_at IS NULL ORDER BY id", (it["id"],))]
         return items
@@ -2616,18 +2635,37 @@ class Store:
         row = self._conn.execute("SELECT * FROM gear_items WHERE id = ?", (gear_id,)).fetchone()
         return dict(row) if row else None
 
-    def gear_add(self, name: str, item_name: str, kind: str, slots: int, native: list[str], catalog: str | None) -> dict:
+    def gear_add(self, name: str, item_name: str, kind: str, slots: int, native: list[str], catalog: str | None,
+                 elements: list[str] | None = None) -> dict:
         with self._lock:
             cur = self._conn.execute(
-                "INSERT INTO gear_items (name_key, name, kind, slots, native, catalog, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (name_key(name), item_name, kind, slots, json.dumps(native), catalog, _iso(utcnow())))
+                "INSERT INTO gear_items (name_key, name, kind, slots, native, catalog, elements, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (name_key(name), item_name, kind, slots, json.dumps(native), catalog, json.dumps(elements or []), _iso(utcnow())))
             self._conn.commit()
         return self.gear_item(cur.lastrowid)
 
-    def gear_update(self, gear_id: int, item_name: str, slots: int, native: list[str]) -> None:
+    def gear_update(self, gear_id: int, item_name: str, slots: int, native: list[str], elements: list[str] | None = None) -> None:
         with self._lock:
-            self._conn.execute("UPDATE gear_items SET name = ?, slots = ?, native = ? WHERE id = ?",
-                               (item_name, slots, json.dumps(native), gear_id))
+            self._conn.execute("UPDATE gear_items SET name = ?, slots = ?, native = ?, elements = ? WHERE id = ?",
+                               (item_name, slots, json.dumps(native), json.dumps(elements or []), gear_id))
+            self._conn.commit()
+
+    # ------------------------------------------------------------------ 0.32.2: valor da Tibia Coin (em gold) por personagem
+    def coin_get(self, name: str) -> int:
+        row = self._conn.execute("SELECT tc_gold FROM char_prefs WHERE name_key = ?", (name_key(name),)).fetchone()
+        return int(row[0]) if row else 0
+
+    def coin_map(self, names: list[str]) -> dict[str, int]:
+        keys = [name_key(n) for n in names]
+        if not keys:
+            return {}
+        marks = ",".join("?" * len(keys))
+        return {r[0]: int(r[1]) for r in self._conn.execute(
+            f"SELECT name_key, tc_gold FROM char_prefs WHERE name_key IN ({marks})", keys)}
+
+    def coin_set(self, name: str, gold: int) -> None:
+        with self._lock:
+            self._conn.execute("INSERT OR REPLACE INTO char_prefs VALUES (?, ?, ?)", (name_key(name), gold, _iso(utcnow())))
             self._conn.commit()
 
     def gear_delete(self, gear_id: int) -> None:
@@ -2652,10 +2690,34 @@ class Store:
             self._conn.execute("UPDATE gear_charges SET ended_at = ? WHERE id = ?", (_iso(utcnow()), charge_id))
             self._conn.commit()
 
+    def _life_add(self, charge_id: int, hours: float) -> None:
+        """Soma (ou tira, se negativo) horas do acumulado do equipamento + tipo de imbuement dessa recarga."""
+        row = self._conn.execute("SELECT gear_id, imbuement FROM gear_charges WHERE id = ?", (charge_id,)).fetchone()
+        if row:
+            self._conn.execute("INSERT OR IGNORE INTO gear_lifetime VALUES (?, ?, 0)", (row[0], row[1]))
+            self._conn.execute("UPDATE gear_lifetime SET hours = MAX(0, hours + ?) WHERE gear_id = ? AND imbuement = ?",
+                               (hours, row[0], row[1]))
+
     def charge_add_hours(self, charge_id: int, hours: float) -> None:
         with self._lock:
             self._conn.execute("UPDATE gear_charges SET hours_used = MAX(0, hours_used + ?) WHERE id = ?", (hours, charge_id))
+            self._life_add(charge_id, hours)
             self._conn.commit()
+
+    def life_add_extra(self, charge_id: int, hours: float) -> None:
+        """Horas usadas antes de refazer o imbuement (não entram no contador do ciclo, entram no acumulado)."""
+        with self._lock:
+            self._life_add(charge_id, hours)
+            self._conn.commit()
+
+    def lifetime_for(self, gear_ids: list[int]) -> dict[int, dict[str, float]]:
+        out: dict[int, dict[str, float]] = {}
+        for i in range(0, len(gear_ids), 500):
+            chunk = gear_ids[i:i + 500]
+            marks = ",".join("?" * len(chunk))
+            for r in self._conn.execute(f"SELECT gear_id, imbuement, hours FROM gear_lifetime WHERE gear_id IN ({marks})", chunk):
+                out.setdefault(r[0], {})[r[1]] = r[2]
+        return out
 
     def usage_add(self, name: str, kind: str, ref_id: int, charge_id: int | None, label: str, hours: float, cost: int,
                   day: str) -> None:
@@ -2723,17 +2785,41 @@ class Store:
                 if u["charge_id"]:
                     self._conn.execute("UPDATE gear_charges SET hours_used = MAX(0, hours_used - ?) WHERE id = ?",
                                        (u["hours"], u["charge_id"]))
+                    self._life_add(u["charge_id"], -u["hours"])
             self._conn.execute("DELETE FROM gear_usage WHERE name_key = ? AND kind = ? AND ref_id = ?", (name_key(name), kind, ref_id))
             self._conn.execute("DELETE FROM session_gear WHERE name_key = ? AND kind = ? AND ref_id = ?", (name_key(name), kind, ref_id))
             self._conn.commit()
 
     def session_gear_save(self, name: str, kind: str, ref_id: int, set_id: int | None, set_name: str | None,
-                          pause: int, hours: float, cost: int) -> None:
+                          pause: int, hours: float, cost: int, auto: bool = False) -> None:
         with self._lock:
             self._conn.execute(
-                "INSERT OR REPLACE INTO session_gear (kind, ref_id, name_key, set_id, set_name, pause_minutes, hours, cost, assigned_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (kind, ref_id, name_key(name), set_id, set_name, pause, hours, cost, _iso(utcnow())))
+                "INSERT OR REPLACE INTO session_gear (kind, ref_id, name_key, set_id, set_name, pause_minutes, hours, cost, assigned_at, auto) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (kind, ref_id, name_key(name), set_id, set_name, pause, hours, cost, _iso(utcnow()), 1 if auto else 0))
             self._conn.commit()
+
+    def session_gear_one(self, name: str, kind: str, ref_id: int) -> dict | None:
+        row = self._conn.execute("SELECT * FROM session_gear WHERE name_key = ? AND kind = ? AND ref_id = ?",
+                                 (name_key(name), kind, ref_id)).fetchone()
+        return dict(row) if row else None
+
+    def release_ref_gear(self, kind: str, ref_id: int) -> None:
+        """0.32.2: apagou a sessão/hunt: as horas dos imbuements voltam para todos os jogadores que tinham um set nela."""
+        with self._lock:
+            for u in self._conn.execute("SELECT * FROM gear_usage WHERE kind = ? AND ref_id = ?", (kind, ref_id)).fetchall():
+                if u["charge_id"]:
+                    self._conn.execute("UPDATE gear_charges SET hours_used = MAX(0, hours_used - ?) WHERE id = ?",
+                                       (u["hours"], u["charge_id"]))
+                    self._life_add(u["charge_id"], -u["hours"])
+            self._conn.execute("DELETE FROM gear_usage WHERE kind = ? AND ref_id = ?", (kind, ref_id))
+            self._conn.execute("DELETE FROM session_gear WHERE kind = ? AND ref_id = ?", (kind, ref_id))
+            self._conn.commit()
+
+    def usage_since(self, name: str, kind: str, since_day: str) -> list[dict]:
+        return [dict(r) for r in self._conn.execute(
+            "SELECT * FROM gear_usage WHERE name_key = ? AND kind = ? AND day >= ? ORDER BY day, id",
+            (name_key(name), kind, since_day))]
 
     def usage_report(self, name: str, since_day: str) -> list[dict]:
         return [dict(r) for r in self._conn.execute(

@@ -1017,6 +1017,13 @@ I18N.onChange(async () => {
   if (S.page === "cms") loadCms();
   if (S.page === "cal") loadCal();
   if (S.page === "home") loadHome();
+  // 0.32.2: o que o app monta com frases dinâmicas (Equipamentos, sessão ao vivo, Stacker, bosses…) sai de novo no idioma novo
+  if (S.page === "gear" && G.data) paintGear();
+  if (S.page === "stack") { paintLive(); loadStack({ quiet: true }); }
+  if (S.page === "boss") loadBoss({ quiet: true });
+  if (S.page === "loot") loadLootList();
+  if (S.page === "hunts") loadHunts();
+  if (S.page === "chars") renderChars();
   const n = $("#newsNotice");
   if (n) { const html = await newsNotice(); if (html) n.outerHTML = html; }
 });
@@ -1115,7 +1122,7 @@ function renderChars() {
         <button class="btn2" data-view="${esc(c.name)}">Ver</button>
         ${c.is_main ? "" : `<button class="btn2" data-main="${esc(c.name)}">Tornar main</button>
                             <button class="btn2" data-unlink="${esc(c.name)}">Remover</button>`}
-      </div></div>`).join("") || `<p class="muted">Nenhum personagem vinculado.</p>`;
+      </div></div>${tcBar(c.name)}`).join("") || `<p class="muted">Nenhum personagem vinculado.</p>`;
 }
 async function loadChars() {
   try { S.me = await api("GET", "/api/me"); } catch { return; }
@@ -1355,6 +1362,12 @@ function partyTable(h, name) {
       <td class="${p.diff > 0 ? "neg" : p.diff < 0 ? "pos" : ""}">${p.diff > 0 ? "paga " + kk(p.diff) : p.diff < 0 ? "recebe " + kk(-p.diff) : "—"}</td></tr>`).join("")}
   </table></div>`;
 }
+/** 0.32.2: o custo dos imbuements dos meus personagens nessa hunt (já descontado do meu saldo; só eu vejo). */
+function myGearLine(h) {
+  const g = (h.my_gear || []).filter((x) => x.cost);
+  if (!g.length) return "";
+  return `<div class="banner" style="margin-top:8px" data-i18n-skip>${esc(g.map((x) => tf("⚔️ Imbuements de {0}: −{1} ({2}, {3})", x.name, fmt(x.cost) + " gp", x.set_name || "set", hrs(x.hours))).join(" · "))}</div>`;
+}
 function huntCard(h, name, title) {
   const cls = h.profit_each >= 0 ? "gold" : "neg";
   return `<div class="card">
@@ -1365,10 +1378,12 @@ function huntCard(h, name, title) {
     <div class="big ${cls}" data-count="${h.profit_each}" data-suffix=" gp">${fmt(h.profit_each)} gp</div>
     <div class="muted"><b class="${cls}">${fmt(h.profit_each_per_hour)} gp/h</b> por pessoa · total da PT ${fmt(h.balance)} gp</div>
     ${rulesLine(h)}
+    ${myGearLine(h)}
     ${actionBox(view(h, name), h)}
     ${chartToggle(h, name)} ${shareButton("hunt", h)}
     ${h.kind === "boss" ? "" : partyShared(h)}
     <details style="margin-top:4px"><summary class="link">Transferências e detalhes da PT ▾</summary>
+      ${tcBar(name)}
       <h2>Transferências</h2>${transfersBox(h)}
       <h2>Jogadores</h2>${partyTable(h, name)}
       <div class="muted" style="margin-top:8px"><abbr title="Valor de todo o loot pego pela PT">Loot</abbr> ${fmt(h.loot)} · <abbr title="Gasto com comida, runas e potions">Supplies</abbr> ${fmt(h.supplies)} · <abbr title="Como o Party Hunt Analyser valorizou o loot (campo Loot Type do relatório)">Loot type</abbr> ${esc(h.loot_type || "—")}</div>
@@ -1462,7 +1477,7 @@ function sparkline(vals, label) {
   const w = 240, hgt = 48, lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
   const pts = vals.map((v, i) => `${((i / (vals.length - 1)) * w).toFixed(1)},${(hgt - 3 - ((v - lo) / span) * (hgt - 6)).toFixed(1)}`).join(" ");
   const last = vals[vals.length - 1];
-  return `<div class="spark" role="img" aria-label="${esc(label)}: último valor ${fmt(last)}">
+  return `<div class="spark" role="img" aria-label="${esc(T(label))}: ${esc(tf("último valor {0}", fmt(last)))}">
     <svg viewBox="0 0 ${w} ${hgt}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" vector-effect="non-scaling-stroke"/></svg>
     <div class="hint" style="margin:2px 0 0"><span>${esc(label)}</span> · <span>último:</span> <b>${fmt(last)}</b></div></div>`;
 }
@@ -1784,6 +1799,7 @@ async function loadHome() {
     ${dupNotice(hunts)}
     ${boostedCard(boosted)}
     ${achHomeCard(ach)}
+    ${tcBar()}
     <h2>👥 Última hunt em party</h2>
     ${hunts.length ? huntCard(hunts[0], S.nick, "Última hunt") : emptyState("home")}
     ${streak ? streakTeaser(streak) : ""}
@@ -1798,7 +1814,8 @@ async function loadHome() {
     <h2>🏅 Ranking da PT</h2><div class="card" id="ptRank"></div>
     <h2>Hunts anteriores (${hunts.length - 1})</h2>
     ${hunts.length > 1 ? hunts.slice(1, 6).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}
-    ${hunts.length > 6 ? `<button class="btn2" data-page-link="loot" style="width:100%; margin-top:4px">🔎 Ver e buscar todas as hunts</button>` : ""}` : ""}`;
+    ${hunts.length > 6 ? `<button class="btn2" data-page-link="loot" style="width:100%; margin-top:4px">🔎 Ver e buscar todas as hunts</button>` : ""}
+    <h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}` : ""}`;
   countUp(el);
   if (hunts.length) {
     renderPtRank();
@@ -1819,6 +1836,7 @@ async function loadHomeSolo(el, headline) {
     ${headlineCard(news)}
     ${boostedCard(boosted)}
     ${achHomeCard(ach)}
+    ${tcBar()}
     <h2>🧍 Última hunt solo</h2>
     ${last ? soloItem(last).replace("<details class=\"card\">", "<details class=\"card\" open>") : emptyState("stack")}
     <button class="btn2" data-page-link="stack" style="width:100%; margin-top:4px">📈 Abrir o Hunt Session Stacker</button>
@@ -1826,7 +1844,8 @@ async function loadHomeSolo(el, headline) {
     ${d && d.sessions.length ? recapCard("solo", d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => ({ at: s.started_at, secs: s.duration_seconds, value: s.xp,
       perHour: Math.round(s.xp * 3600 / s.duration_seconds), label: new Date(s.started_at).toLocaleDateString("pt-BR") }))) : ""}
     ${goalCard("solo", d ? d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => Math.round(s.xp * 3600 / s.duration_seconds)) : [])}
-    ${streak ? streakTeaser(streak) : ""}`;
+    ${streak ? streakTeaser(streak) : ""}
+    <h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}`;
   countUp(el);
   if (streak) celebrateRewards(streak.granted);
 }
@@ -2728,20 +2747,20 @@ function bossHuntItem(h) {
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
       <div class="muted" style="font-size:13px">Sessões vinculadas: ${h.members && h.members.length ? h.members.map(esc).join(", ") : "nenhuma ainda"}</div>
       ${rotationLine(h.rotation)}
-    </summary>${claimBanner(h)}${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, S.nick)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, S.nick)}${rulesBox(h)}${tagsBox(h)}${h.vault ? vaultBlock(h.vault) : ""}${deleteButton(h)}</details>`;
+    </summary>${claimBanner(h)}${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, S.nick)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, S.nick)}${rulesBox(h)}${tagsBox(h)}${tcBar()}${h.vault ? vaultBlock(h.vault) : ""}${deleteButton(h)}</details>`;
 }
 /* ---------- 0.23.0: 👑 rotações e 🗃️ cofre da rotação ---------- */
 /** "Rotação Bastions: Cobra Bastion" -> linha com a coroa (o nome dos bosses fica como no jogo). */
 function rotationLine(r) {
   if (!r) return "";
-  return `<div class="rot-name">${esc(`👑 Rotação ${r.name.replace(/^Rotação /, "")}`)}</div>`;
+  return `<div class="rot-name" data-i18n-skip>${esc(tf("👑 Rotação {0}", r.name.replace(/^Rotação /, "")))}</div>`;
 }
 function rotationsBlock(list, mode) {
   const rows = (list || []).filter((r) => r.mode === mode).slice(0, 15);
   if (!rows.length) return "";
   return `<details class="card"><summary class="row"><b>👑 Rotações</b><span class="muted">${rows.length} ▾</span></summary>
     ${rows.map((r) => `<div class="row" style="padding:6px 0; border-bottom:1px solid var(--line)">
-      <span><b>${esc(dayLabel(r.day))}</b> · ${esc(`👑 Rotação ${r.name.replace(/^Rotação /, "")}`)}
+      <span><b>${esc(dayLabel(r.day))}</b> · <span data-i18n-skip>${esc(tf("👑 Rotação {0}", r.name.replace(/^Rotação /, "")))}</span>
         <div class="muted" style="font-size:12px">${r.groups.map((g) => esc(g.quest)).join(" · ")}</div></span>
       <span class="${r.balance >= 0 ? "pos" : "neg"}">${kk(r.balance)}</span></div>`).join("")}
     <div class="hint">Rotação = os bosses do mesmo dia, pelo grupo de cada um (quest ou lore). Nomes como a comunidade usa.</div></details>`;
@@ -2775,6 +2794,13 @@ function sellPreview(total, withFee, members, cost = 0, perItem = 0) {
     + (perItem ? ` · <span>${esc(`${fmt(Math.floor(net / perItem))} gp por runa`)}</span>` : "")
     + ` · <b class="gold">${esc(`${fmt(each)} gp para cada um`)}</b>`;
 }
+/** 0.32.2: quadro com o valor do item em Tibia Coin (convertido do valor em gold coins). */
+function tcBox(gp, what) {
+  if (!(gp > 0)) return "";
+  const r = tcRateOf();
+  if (!r) return "";
+  return `<div class="tcbox" data-i18n-skip>${esc(tf("🪙 {0}: {1} Tibia Coin ({2})", T(what), tcNum(gp / r), fmt(gp) + " gp"))}</div>`;
+}
 function vaultBlock(v, open = false) {
   VAULTS.set(vref(v), v);
   VAULT_SUBS = v.subs || [];
@@ -2788,15 +2814,16 @@ function vaultBlock(v, open = false) {
       <div class="row"><b>${fmt(d.qty)}x ${esc(d.item)}</b><span class="muted" style="font-size:13px">${VAULT_STATUS[d.status]}</span></div>
       <div class="vault-key" title="Código e dia do drop">${esc(d.code)} · ${esc(dayLabel(d.dropped_on))}</div>
       <div class="muted" style="font-size:13px"><span>${esc(`dropou: ${d.dropped_by}`)}</span>${d.estimate ? ` · <span>${esc(`estimado ${fmt(d.estimate)} gp`)}</span>` : ""}</div>
+      ${tcBox(sold ? d.sold_total : d.price_each ? d.price_each * d.qty : d.estimate ? d.estimate * d.qty : 0, sold ? "vendido" : d.price_each ? "preço" : "estimado")}
       ${sold ? `<div style="font-size:14px; margin-top:4px"><span>${esc(`Vendido por ${fmt(d.sold_total)} gp`)}</span>${d.market_fee ? ` · <span>${esc(`taxa ${fmt(d.fee)} gp`)}</span>` : ""}
         · <span>${esc(`líquido ${fmt(d.net)} gp`)}</span> · <b class="gold">${esc(`${fmt(d.each)} gp para cada um`)}</b></div>${vaultTransfers("drop", d.id, d.transfers)}` : ""}
       ${d.can_edit && d.status === "stock" ? `<div class="vault-actions">
-          <input type="number" min="0" step="1" inputmode="numeric" placeholder="Preço de cada (gp)" value="${d.price_each ?? ""}" data-vprice-in aria-label="Preço de cada (gp)">
+          <input type="number" min="0" step="1" inputmode="numeric" placeholder="Preço de cada (gp)" value="${d.price_each ?? ""}" data-vprice-in data-tc-gp aria-label="Preço de cada (gp)">${tcAfter(d.price_each)}
           <button class="btn2" data-vprice="${d.id}">Salvar preço</button>
           <button class="btn2" data-vsell-open="${d.id}">💰 Vendi</button>
           <button class="danger-link" data-vdel="${d.id}">Apagar</button></div>
         <div class="vault-sell hidden" data-vsell-box="${d.id}">
-          <input type="number" min="1" step="1" inputmode="numeric" placeholder="Vendido por quanto (total, gp)" data-vtotal aria-label="Vendido por quanto (total, gp)">
+          <input type="number" min="1" step="1" inputmode="numeric" placeholder="Vendido por quanto (total, gp)" data-vtotal data-tc-gp aria-label="Vendido por quanto (total, gp)">${tcAfter()}
           <label class="check-row"><input type="checkbox" data-vfee checked> Taxa do Market</label>
           <div class="hint" data-vpreview data-members="${n}"></div>
           <button class="btn2" data-vsell="${d.id}">Confirmar venda</button></div>` : ""}
@@ -2806,12 +2833,13 @@ function vaultBlock(v, open = false) {
       <div class="row"><b>${esc(`🔨 ${c.label} → ${c.result || "?"}`)}</b><span class="muted" style="font-size:13px">${esc(`fica com ${c.seller}`)}</span></div>
       <div class="muted" style="font-size:13px"><span>Do estoque:</span> ${esc(c.used.map((u) => `${u.item} ${u.code} (${dayLabel(u.dropped_on)}, ${u.dropped_by})`).join(", ") || "—")}${c.bought.length
         ? ` · <span>Compradas:</span> ${esc(c.bought.map((b) => `${b.item} (${fmt(b.cost)} gp)`).join(", "))}` : ""}</div>
+      ${tcBox(c.sold_total || 0, "vendido")}${c.cost ? tcBox(c.cost, "comprado") : ""}
       ${c.sold_total ? `<div style="font-size:14px; margin-top:4px"><span>${esc(`Vendido por ${fmt(c.sold_total)} gp`)}</span>${c.market_fee ? ` · <span>${esc(`taxa ${fmt(c.fee)} gp`)}</span>` : ""}
         ${c.cost ? ` · <span>${esc(`runas compradas ${fmt(c.cost)} gp`)}</span>` : ""} · <span>${esc(`líquido ${fmt(c.net)} gp`)}</span>
         · <span>${esc(`${fmt(c.per_item)} gp por runa`)}</span> · <b class="gold">${esc(`${fmt(c.each)} gp para cada um`)}</b></div>${vaultTransfers("craft", c.id, c.transfers)}`
         : `<div class="hint">Ainda não vendido.</div>`}
       ${c.can_edit ? `<div class="vault-actions" data-vcraft-box="${c.id}">
-          <input type="number" min="1" step="1" inputmode="numeric" placeholder="Vendido por quanto (total, gp)" value="${c.sold_total ?? ""}" data-vtotal aria-label="Vendido por quanto (total, gp)">
+          <input type="number" min="1" step="1" inputmode="numeric" placeholder="Vendido por quanto (total, gp)" value="${c.sold_total ?? ""}" data-vtotal data-tc-gp aria-label="Vendido por quanto (total, gp)">${tcAfter(c.sold_total)}
           <label class="check-row"><input type="checkbox" data-vfee${c.sold_total ? (c.market_fee ? " checked" : "") : " checked"}> Taxa do Market</label>
           <button class="btn2" data-vcraft-sell="${c.id}">Salvar venda</button>
           <button class="danger-link" data-vcraft-del="${c.id}">Desfazer o uso</button>
@@ -2834,6 +2862,7 @@ function vaultBlock(v, open = false) {
     <p class="hint">Drops para vender ou usar depois, inclusive os que caíram para outro membro. A divisão é entre quem estava nesta rotação,
       mesmo que a venda seja meses depois. Só quem registrou um drop muda o preço dele.</p>
     <div class="hint" style="margin-bottom:6px">👥 ${v.members.map((m) => `${esc(m)}${subTag(m)}`).join(", ")}</div>
+    ${tcBar()}
     ${drops || `<p class="muted">Nenhum drop guardado.</p>`}
     ${sets}${crafts}
     ${mineIn ? `<form class="vault-add" data-vadd="${vref(v)}">
@@ -2841,7 +2870,7 @@ function vaultBlock(v, open = false) {
         <input name="qty" type="number" min="1" max="1000" value="1" inputmode="numeric" aria-label="Quantidade" style="width:80px">
         <select name="dropped_by" aria-label="Quem dropou">${memberOpts}</select>
         <input name="dropped_on" type="date" value="${esc(String(v.day).slice(0, 10))}" aria-label="Dia do drop" title="Dia do drop">
-        <input name="price_each" type="number" min="0" step="1" inputmode="numeric" placeholder="Preço de cada (gp, opcional)" aria-label="Preço de cada (gp, opcional)">
+        <input name="price_each" type="number" min="0" step="1" inputmode="numeric" placeholder="Preço de cada (gp, opcional)" data-tc-gp aria-label="Preço de cada (gp, opcional)">${tcAfter()}
         <button class="btn2" type="submit">＋ Guardar drop</button></form>` : ""}
     <div class="err" data-vault-err="${vref(v)}"></div></details>`;
 }
@@ -3933,13 +3962,14 @@ function itemPopover(key) {
   } else {
     body = `<div class="muted">Nenhum NPC compra este item.</div>
       <div class="muted" style="margin:6px 0">Preço médio dos usuários: <b style="color:var(--text)">${p.avg_price ? fmt(p.avg_price) + " gp" : "—"}</b>${p.avg_count ? ` (${p.avg_count} ${p.avg_count === 1 ? "pessoa" : "pessoas"})` : ""}</div>
-      <form class="price-form row" data-price-item="${esc(key)}">
-        <input type="number" min="0" step="1" inputmode="numeric" placeholder="Seu preço (gp)" value="${p.my_price ?? ""}" style="padding:8px 10px">
+      <form class="price-form row" data-price-item="${esc(key)}" style="flex-wrap:wrap; gap:6px">
+        <input type="number" min="0" step="1" inputmode="numeric" placeholder="Seu preço (gp)" value="${p.my_price ?? ""}" data-tc-gp style="padding:8px 10px; flex:1 1 120px; min-width:0">${tcAfter(p.my_price)}
         <button class="btn2" type="submit">Salvar</button>
       </form>
       <div class="hint">Seu preço: ${p.my_price ? fmt(p.my_price) + " gp" : "não informado"}. Ele entra na média de todos.</div>`;
   }
-  return `<div class="pop-head">${itemImg(p.name, 32)}<b>${esc(p.name)}</b></div>${body}`;
+  const unit = p.my_price || p.npc_price || p.avg_price || p.unit_price || 0;  // 0.32.2: o mesmo valor em Tibia Coin
+  return `<div class="pop-head">${itemImg(p.name, 32)}<b>${esc(p.name)}</b></div>${tcBox(unit, "preço")}${body}`;
 }
 const pop = Object.assign(document.createElement("div"), { id: "pop", className: "pop hidden" });
 document.body.appendChild(pop);
@@ -4005,6 +4035,126 @@ function openStackFlow(text = "", autoSave = false) {
 }
 $("#stackOpen").addEventListener("click", () => openStackFlow());
 
+/* ---------- 0.32.2: 🪙 Valor da Tibia Coin ----------
+   Cada personagem guarda quantas gold coins vale 1 Tibia Coin. Preencher uma vez basta: onde há valor em gold coins
+   (cofre dos bosses, por exemplo) o app mostra também em Tibia Coin, e digitar em Tibia Coin converte para gold coins. */
+const tcRow = (name) => ((S.me && S.me.chars) || []).find((c) => c.name.toLowerCase() === String(name || "").toLowerCase());
+const tcRateOf = (name = S.nick) => (tcRow(name) || {}).tc_gold || 0;
+const tcNum = (n) => Number(Math.round(n * 100) / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+const tcLineOf = (r) => tf("1 Tibia Coin = {0} · 25 Tibia Coin = {1} · 250 Tibia Coin = {2}", fmt(r) + " gp", fmt(r * 25) + " gp", fmt(r * 250) + " gp");
+/** "≈ 12,5 Tibia Coin" para um valor em gp (vazio enquanto a pessoa não informou o valor da Tibia Coin). */
+function tcOf(gp, name = S.nick) {
+  const r = tcRateOf(name);
+  return r && gp > 0 ? ` · ${tf("≈ {0} Tibia Coin", tcNum(gp / r))}` : "";
+}
+/** Campo em Tibia Coin ao lado de um campo em gp (marque o campo em gp com data-tc-gp). */
+function tcAfter(gp = null, name = S.nick) {
+  const r = tcRateOf(name);
+  if (!r) return "";
+  return `<input type="number" min="0" step="any" inputmode="decimal" data-tc-link placeholder="Tibia Coin" aria-label="Tibia Coin" title="Tibia Coin"
+    value="${gp > 0 ? Math.round((gp / r) * 100) / 100 : ""}" style="flex:1 1 110px; min-width:0; max-width:160px">`;
+}
+function tcBar(name = S.nick) {
+  const r = tcRateOf(name);
+  return `<div class="card tcbar" data-tcbar="${esc(name)}"><div class="row"><b>🪙 Valor da Tibia Coin</b><span class="muted" style="font-size:13px" data-i18n-skip data-tc-line>${r ? esc(tcLineOf(r)) : ""}</span></div>
+    <div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap; margin-top:6px">
+      <input data-tc-rate inputmode="numeric" autocomplete="off" placeholder="Gold coins por 1 Tibia Coin" value="${r || ""}" style="flex:1 1 220px; min-width:0" aria-label="Gold coins por 1 Tibia Coin">
+      <button class="btn2" data-tc-save type="button">Salvar</button></div>
+    <div class="hint">Informe quantas gold coins vale 1 Tibia Coin. Os valores em gold coins passam a aparecer também em Tibia Coin.</div>
+    <div class="err" data-tc-err></div></div>`;
+}
+document.addEventListener("input", (e) => {
+  const rate = e.target.closest("[data-tc-rate]");
+  if (rate) {
+    const bar = rate.closest("[data-tcbar]"), v = parseInt(rate.value.replace(/\D/g, ""), 10) || 0;
+    bar.querySelector("[data-tc-line]").textContent = v ? tcLineOf(v) : "";
+    return;
+  }
+  const r = tcRateOf();
+  if (!r) return;
+  if (e.target.matches("[data-tc-link]")) {  // digitou em Tibia Coin: converte para gold coins
+    const gp = e.target.previousElementSibling;
+    if (gp && gp.matches("[data-tc-gp]")) { gp.value = e.target.value === "" ? "" : Math.round(parseFloat(e.target.value) * r); gp.dispatchEvent(new Event("input", { bubbles: true })); }
+  } else if (e.target.matches("[data-tc-gp]")) {  // digitou em gold coins: mostra em Tibia Coin
+    const tc = e.target.nextElementSibling;
+    if (tc && tc.matches("[data-tc-link]")) tc.value = e.target.value === "" ? "" : Math.round((parseFloat(e.target.value) / r) * 100) / 100;
+  }
+});
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-tc-save]");
+  if (!b) return;
+  e.preventDefault();
+  const bar = b.closest("[data-tcbar]"), name = bar.dataset.tcbar, err = bar.querySelector("[data-tc-err]");
+  const v = parseInt(bar.querySelector("[data-tc-rate]").value.replace(/\D/g, ""), 10) || 0;
+  err.textContent = "";
+  try {
+    const r = await api("POST", `/api/coin/${encodeURIComponent(name)}`, { gold: v });
+    const row = tcRow(name);
+    if (row) row.tc_gold = r.gold;
+    document.querySelectorAll(`[data-tcbar="${CSS.escape(name)}"]`).forEach((x) => { x.outerHTML = tcBar(name); });
+    if (S.page === "boss") loadBoss({ quiet: true });
+    else if (S.page === "home") loadHome();
+    else if (S.page === "chars") renderChars();
+  } catch (ex) { if (ex.status !== 401) err.textContent = ex.message; }
+});
+
+/* ---------- 0.32.2: 📥 Exportar para Excel ---------- */
+function exportCard() {
+  return `<details class="card" id="exportCard"><summary class="row"><b>📥 Exportar para Excel</b><span class="muted">▾</span></summary>
+    <div id="exportBody"><p class="muted">Abra para escolher o que exportar.</p></div></details>`;
+}
+document.addEventListener("toggle", async (e) => {
+  if (e.target.id !== "exportCard" || !e.target.open) return;
+  const body = $("#exportBody");
+  try {
+    const r = await api("GET", "/api/export/sections");
+    body.innerHTML = `<p class="hint" style="margin-top:0">Escolha o que levar para a planilha. Cada item vira uma aba, com os números por trás dos gráficos, para você guardar e acompanhar o seu personagem.</p>
+      <div class="chips">${r.sections.map((s) => `<label class="check-row"><input type="checkbox" data-exp-sec value="${s.key}" checked> ${esc(T(s.label))}</label>`).join("")}</div>
+      <button class="btn2" data-export-go type="button" style="margin-top:8px">📥 Baixar planilha (.xlsx)</button><div class="err" id="exportErr"></div>`;
+  } catch (err) { body.innerHTML = `<div class="err">${esc(err.message)}</div>`; }
+}, true);
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-export-go]");
+  if (!b) return;
+  e.preventDefault();
+  const secs = [...document.querySelectorAll("[data-exp-sec]:checked")].map((x) => x.value);
+  const err = $("#exportErr");
+  err.textContent = "";
+  if (!secs.length) { err.textContent = T("Marque pelo menos uma opção."); return; }
+  b.disabled = true;
+  try {
+    const res = await timedFetch(S.api + `/api/export/${encodeURIComponent(S.nick)}?sections=${secs.join(",")}&lang=${encodeURIComponent(I18N.lang)}`, { headers: authHeaders() }, 60000);
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error((d.detail && d.detail.message) || d.detail || `Erro ${res.status}`); }
+    const url = URL.createObjectURL(await res.blob()), a = document.createElement("a");
+    a.href = url; a.download = `${S.nick.replace(/[^A-Za-z0-9_-]+/g, "_")}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch (ex) { err.textContent = ex.message || T("Sem conexão. Tente de novo quando voltar."); }
+  finally { b.disabled = false; }
+});
+
+/* ---------- 0.32.2: 📅 Relatório semanal da party ---------- */
+function partyReportCard() {
+  return `<details class="card" id="partyReport"><summary class="row"><b>📅 Relatório semanal da party</b><span class="muted">▾</span></summary>
+    <div id="partyReportBody"><p class="muted">Abra para carregar.</p></div></details>`;
+}
+document.addEventListener("toggle", async (e) => {
+  if (e.target.id !== "partyReport" || !e.target.open) return;
+  const body = $("#partyReportBody");
+  try {
+    const r = await api("GET", `/api/party-report/${encodeURIComponent(S.nick)}?weeks=8`);
+    body.innerHTML = r.weeks.map((w) => `<div class="card" style="margin:8px 0; padding:10px">
+        <div class="row"><b>${esc(tf("Semana de {0}", brData(w.week)))}</b><span class="muted" data-i18n-skip>${esc(tf("{0} · {1} em party", w.hunts === 1 ? tf("{0} hunt", w.hunts) : tf("{0} hunts", w.hunts), hrs(w.seconds / 3600)))}</span></div>
+        <div class="row"><span class="muted">Seu rateio</span><b class="${w.profit >= 0 ? "pos" : "neg"}" data-i18n-skip>${gpx(w.profit)}</b></div>
+        ${r.gear && w.gear_cost ? `<div class="row"><span class="muted">Imbuements</span><b class="neg" data-i18n-skip>−${gpx(w.gear_cost)}</b></div>` : ""}
+        <div class="row"><span class="muted">Líquido</span><b class="${w.net >= 0 ? "gold" : "neg"}" data-i18n-skip>${esc(tf("{0} ({1}/h)", gpx(w.net), gpx(w.per_hour)))}</b></div>
+        ${w.mates.length ? `<div class="muted" style="font-size:13px" data-i18n-skip>${esc(tf("Jogou mais com: {0}", w.mates.map((m) => `${m.name} (${m.hunts})`).join(", ")))}</div>` : ""}
+        <details style="margin-top:6px"><summary class="link">Hunts da semana ▾</summary>
+          ${w.list.map((h) => `<div class="row muted" style="font-size:13px; padding:3px 0"><span data-i18n-skip>${esc(when(h.started_at))} · ${esc(h.place || "—")} · ${dur(h.seconds)}</span>
+            <span data-i18n-skip>${gpx(h.profit)}${h.gear_cost ? ` · −${gpx(h.gear_cost)}` : ""}</span></div>`).join("")}</details></div>`).join("")
+      || `<p class="muted">Nenhuma hunt em party nas últimas semanas.</p>`;
+  } catch (err) { body.innerHTML = `<div class="err">${esc(err.message)}</div>`; }
+}, true);
+
 /* ---------- 0.32.0: ⚔️ Equipamentos e gastos invisíveis (Player Hardcore) ----------
    Itens com imbuements, anéis e amuletos recarregáveis, sets por hunt e o custo por hora de uso,
    que entra sozinho no lucro líquido. Preços informados pelo jogador (ou a média do mundo). */
@@ -4044,7 +4194,8 @@ function chargeRow(c) {
   return `<div class="card" style="margin:8px 0; padding:10px">
     <div class="row"><b>${nm}</b><span class="muted">${esc(tf("{0} por {1} · {2}/h", gpx(c.total_cost), hrs(c.hours_total), gpx(c.hourly)))}</span></div>
     <div class="gbar" style="margin:6px 0"><div style="width:${c.fraction}%"></div></div>
-    <div class="muted" style="font-size:13px">${esc(tf("Usado {0} de {1} ({2}%) · faltam {3}", hrs(c.hours_used % c.hours_total), hrs(c.hours_total), String(c.fraction).replace(".", ","), hrs(c.hours_left)))}${c.cycles ? " · " + esc(tf(c.cycles === 1 ? "{0} ciclo completo" : "{0} ciclos completos", c.cycles)) : ""}</div>
+    <div class="muted" style="font-size:13px">${esc(tf("Usado {0} · ciclo atual: {1} de {2}", hrs(c.hours_used), hrs(c.hours_used % c.hours_total), hrs(c.hours_total)))}</div>
+    ${c.cycles ? `<div class="banner" style="margin-top:6px">${esc(tf(c.cycles === 1 ? "⏰ {0} ciclo de {1} completo: hora de refazer o imbuement." : "⏰ {0} ciclos de {1} completos: hora de refazer o imbuement.", c.cycles, hrs(c.hours_total)))}</div>` : ""}
     ${how}
     <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px; flex-wrap:wrap">
       <button class="link" data-gear="hours:${c.id}" type="button">Usei e não informei</button>
@@ -4058,7 +4209,8 @@ function imbueForm(it) {
   }
   const allowed = G.cat.allowed[it.kind] || {};
   const have = new Set(it.charges.map((c) => c.imbuement));
-  const opts = Object.keys(allowed).filter((k) => !have.has(k) && !it.native.includes(k));
+  const blocked = new Set([...it.native, ...(it.elements || []).flatMap((e) => G.cat.blocks[e] || [])]);  // efeito de fábrica
+  const opts = Object.keys(allowed).filter((k) => !have.has(k) && !blocked.has(k));
   if (it.charges.length >= it.slots || !opts.length) return it.charges.length >= it.slots ? `<div class="hint">${esc(tf("Todos os {0} slots em uso.", it.slots))}</div>` : "";
   return `<div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap" data-imbue-form="${it.id}">
     <select data-imb-key aria-label="Imbuement">${opts.map((k) => `<option value="${k}">${esc(imbName(k))}</option>`).join("")}</select>
@@ -4074,7 +4226,20 @@ function itemCard(it) {
     ${it.charges.map(chargeRow).join("")}
     ${imbueForm(it)}
     ${it.native && it.native.length ? `<div class="hint">${esc(tf("Já traz de fábrica: {0}.", it.native.map((k) => imbName(k)).map(T).join(", ")))}</div>` : ""}
+    ${it.lifetime && it.lifetime.length ? `<div class="hint" data-i18n-skip>${esc(tf("Total já usado neste equipamento: {0}", it.lifetime.map((l) => `${T(l.label)} ${hrs(l.hours)}`).join(" · ")))}</div>` : ""}
+    ${it.catalog ? "" : elementsEditor(it)}
     <div style="margin-top:8px"><button class="danger-link" data-gear="rmitem:${it.id}" type="button">🗑 Apagar este item</button></div></details>`;
+}
+const ELEM_PT = { physical: "Físico", holy: "Sagrado", earth: "Terra", energy: "Energia", death: "Morte", ice: "Gelo", fire: "Fogo" };
+const elemList = (els) => (els || []).map((e) => T(ELEM_PT[e])).join(", ");
+/** 0.32.2: efeito de fábrica do item (elementos). Quem já traz o elemento não aceita o imbuement do mesmo elemento. */
+function elementsEditor(it) {
+  const has = new Set(it.elements || []);
+  return `<details style="margin-top:8px" data-elem-box="${it.id}"><summary class="link">${it.elements && it.elements.length
+    ? esc(tf("Efeito de fábrica: {0}", elemList(it.elements))) : T("Efeito de fábrica: nenhum")} ▾</summary>
+    <div class="hint">Marque os elementos que o item já traz (proteção ou dano). O imbuement do mesmo elemento não é aceito.</div>
+    <div class="chips">${G.cat.elements.map((e) => `<label class="check-row"><input type="checkbox" data-elem-val value="${e}"${has.has(e) ? " checked" : ""}> ${esc(T(ELEM_PT[e]))}</label>`).join("")}</div>
+    <button class="btn2" data-gear="elems:${it.id}" type="button" style="margin-top:6px">Salvar efeito de fábrica</button></details>`;
 }
 
 function newItemForm() {
@@ -4094,19 +4259,31 @@ function paintNewBody() {
       .map((a) => `<option value="${a.key}">${esc(tf("{0} · {1} min · {2} silver tokens", a.name, a.minutes, a.silver_tokens))}</option>`).join("")}</select>`;
     return;
   }
-  const allowed = Object.keys(G.cat.allowed[kind] || {});
-  box.innerHTML = `<label class="muted" for="gnName">Nome do item</label><input id="gnName" maxlength="60" autocomplete="off" placeholder="Ex.: Soulmantle">
+  const known = (G.cat.known || []).filter((k) => k[1] === kind);
+  box.innerHTML = `<label class="muted" for="gnName">Nome do item</label><input id="gnName" maxlength="60" autocomplete="off" list="gnKnown" placeholder="Ex.: Soulmantle">
+    <datalist id="gnKnown">${known.map((k) => `<option value="${esc(k[0])}">`).join("")}</datalist>
+    <div class="hint" id="gnFound"></div>
     <label class="muted" for="gnSlots">Slots de imbuement</label>
     <select id="gnSlots">${[1, 2, 3].map((n) => `<option value="${n}"${n === 2 ? " selected" : ""}>${n}</option>`).join("")}</select>
-    ${allowed.length ? `<div class="muted" style="margin-top:8px">O item já traz de fábrica (não aceita esses imbuements):</div>
-      <div class="chips">${allowed.map((k) => `<label class="check-row"><input type="checkbox" data-gn-native value="${k}"> ${esc(imbName(k).split(" (")[0])}</label>`).join("")}</div>` : ""}`;
+    <div class="muted" style="margin-top:8px">O item já traz de fábrica (não aceita o imbuement do mesmo elemento):</div>
+    <div class="chips">${G.cat.elements.map((e) => `<label class="check-row"><input type="checkbox" data-gn-elem value="${e}"> ${esc(T(ELEM_PT[e]))}</label>`).join("")}</div>`;
 }
+/** Escolheu um item conhecido: já preenche os slots e o efeito de fábrica (dá para ajustar). */
+function fillKnownItem() {
+  const nm = ($("#gnName").value || "").trim().toLowerCase(), k = (G.cat.known || []).find((x) => x[0].toLowerCase() === nm && x[1] === $("#gnKind").value);
+  if (!k) { $("#gnFound").textContent = ""; return; }
+  $("#gnSlots").value = String(k[2]);
+  document.querySelectorAll("[data-gn-elem]").forEach((x) => { x.checked = k[3].includes(x.value); });
+  $("#gnFound").textContent = k[3].length ? tf("Preenchi os slots e o efeito de fábrica: {0}.", elemList(k[3])) : T("Preenchi os slots. Esse item não traz elemento de fábrica.");
+}
+document.addEventListener("input", (e) => { if (e.target.id === "gnName") fillKnownItem(); });
+document.addEventListener("change", (e) => { if (e.target.id === "gnName") fillKnownItem(); });
 
 function setsBlock() {
   const items = G.data.items;
   const places = (G.places || []).map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
   const list = G.data.sets.map((s) => `<div class="card" style="margin:8px 0; padding:10px">
-      <div class="row"><b>${esc(s.name)}</b><span class="muted">${esc(tf("{0} imbuements · {1}/h", s.slots, gpx(s.hourly)))}</span></div>
+      <div class="row"><b>${esc(s.name)}</b><span class="muted">${esc(tf(s.slots === 1 ? "{0} imbuement · {1}/h" : "{0} imbuements · {1}/h", s.slots, gpx(s.hourly)))}</span></div>
       <div class="muted" style="font-size:13px">${s.place_id ? "📍 " + esc(((G.places || []).find((p) => p.id === s.place_id) || {}).name || "") + " · " : ""}${s.items.map(esc).join(", ") || esc(T("sem itens"))}</div>
       <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px">
         <button class="link" data-gear="editset:${s.id}" type="button">Editar</button>
@@ -4203,9 +4380,13 @@ document.addEventListener("click", async (e) => {
   if (act === "newitem") {
     const kind = $("#gnKind").value, acc = kind === "ring" || kind === "amulet";
     const body = acc ? { name: "-", kind, catalog: $("#gnCat").value }
-      : { name: ($("#gnName").value || "").trim(), kind, slots: +$("#gnSlots").value, native: [...document.querySelectorAll("[data-gn-native]:checked")].map((x) => x.value) };
+      : { name: ($("#gnName").value || "").trim(), kind, slots: +$("#gnSlots").value, elements: [...document.querySelectorAll("[data-gn-elem]:checked")].map((x) => x.value) };
     if (!body.name) { $("#gnErr").textContent = "Dê um nome ao item."; return; }
     await gearCall("POST", "/item", body);
+  } else if (act === "elems") {
+    const it = G.data.items.find((x) => x.id === +id);
+    await gearCall("PUT", `/item/${id}`, { name: it.name, kind: it.kind, slots: it.slots, native: it.native || [],
+      elements: [...b.closest("[data-elem-box]").querySelectorAll("[data-elem-val]:checked")].map((x) => x.value) });
   } else if (act === "rmitem") { if (confirm("Apagar este item e os imbuements dele?")) await gearCall("DELETE", `/item/${id}`); }
   else if (act === "imbue") {
     const f = b.closest("[data-imbue-form]");
@@ -4253,7 +4434,8 @@ document.addEventListener("toggle", async (e) => {
     const pend = r.pending.map((p) => `<div class="row muted" style="font-size:13px"><span>${esc(usageLabel(p.label))}</span>
         <span>${esc(tf("{0}% usado · falta usar ≈ {1}", String(p.fraction).replace(".", ","), gpx(p.unused_value)))}</span></div>`).join("");
     $("#gearReportBody").innerHTML = `${wk || `<p class="muted">Nenhum gasto registrado ainda. Escolha um set nas suas hunts.</p>`}
-      ${pend ? `<h2>Pago e ainda não usado</h2>${pend}` : ""}`;
+      ${pend ? `<h2>Pago e ainda não usado</h2>${pend}` : ""}
+      ${r.lifetime && r.lifetime.length ? `<h2>Horas acumuladas por equipamento</h2>${r.lifetime.map((l) => `<div class="row muted" style="font-size:13px"><span data-i18n-skip>${esc(l.item)} · ${esc(T(l.label))}</span><span data-i18n-skip>${hrs(l.hours)}</span></div>`).join("")}` : ""}`;
   } catch (err) { $("#gearReportBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
 }, true);
 
@@ -4323,7 +4505,8 @@ async function paintLive() {
     <div style="margin-top:6px">${lines.join("")}${bar}</div>
     <div class="row" style="justify-content:flex-start; gap:8px; margin-top:8px"><button class="btn2" data-live="paste" type="button">📋 Colar atualização</button>
       <button class="link" data-live="finish" type="button">⏹ Finalizar</button></div>
-    <div class="hint">Nada disso é salvo no servidor. Ao finalizar, você escolhe se salva a sessão no Stacker.</div></div>`;
+    ${isHardcore() ? `<div class="hint">Cada atualização fica salva no servidor, acumulada. Ao finalizar, a sessão já está no Stacker.</div>`
+      : `<div class="hint">Nada disso é salvo no servidor. Ao finalizar, você escolhe se salva a sessão no Stacker.</div>`}</div>`;
 }
 setInterval(() => { if (S.page === "stack") paintLive(); }, 60000);
 
@@ -4678,7 +4861,7 @@ async function checkUpdate() {
       <button class="copy" id="doUpdate" style="border-color:var(--gold)">Atualizar agora</button></div>`;
     $("#doUpdate").addEventListener("click", async () => {
       const err = await window.pywebview.api.reload_ui().catch((e) => String(e));
-      if (err) { box.textContent = "Não foi possível atualizar: " + err; return; }
+      if (err) { box.textContent = tf("Não foi possível atualizar: {0}", err); return; }
       try { sessionStorage.setItem("ui-reload", "1"); } catch {}
       location.reload();
     });
@@ -4688,7 +4871,7 @@ async function checkUpdate() {
     $("#doUpdate").addEventListener("click", async () => {
       box.innerHTML = "Instalando… o app vai fechar e abrir de novo sozinho.";
       const err = await window.pywebview.api.install_update().catch((e) => String(e));
-      if (err) box.textContent = "Não foi possível atualizar: " + err;
+      if (err) box.textContent = tf("Não foi possível atualizar: {0}", err);
     });
   }
   box.classList.remove("hidden");
@@ -5229,7 +5412,7 @@ function boostedCard(b) {
   return `<div class="card"><b>🔥 Boost de hoje</b>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:8px">
       ${one("Criatura", b.creature)}${one("Boss", b.boss)}</div>
-    <div class="hint">Criatura boosted dá mais XP e loot; boss boosted, mais chance de loot. Vale até o próximo server save. ${TN_CREDIT}</div></div>`;
+    <div class="hint"><span>Criatura boosted dá mais XP e loot; boss boosted, mais chance de loot. Vale até o próximo server save.</span> <span>${TN_CREDIT}</span></div></div>`;
 }
 /** Início: resumo de conquistas e a próxima mais perto de sair. Falha em silêncio (não atrapalha a tela). */
 function achievementsFor(nick) {

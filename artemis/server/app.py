@@ -44,6 +44,7 @@ from artemis.core import captcha
 from artemis.core import rotations as rot
 from artemis.core import damage as damage_core
 from artemis.core import imbuing
+from artemis.core import xlsx as xlsx_core
 from artemis.core import party as party_core
 from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
@@ -1603,6 +1604,13 @@ def _hunts_out(hunts: list[dict], access: dict, kind: str = "hunt") -> list[dict
         h = _public(h, access)
         h["place"] = _place_ref(h.get("place_id"), places)
         h["in_party"] = in_party
+        h["my_gear"] = []  # 0.32.2: o custo dos imbuements dos meus personagens nessa hunt (só aparece para mim)
+        if in_party and kind == "hunt" and hid:
+            for p in raw["players"]:
+                g = store.session_gear_one(p["name"], "hunt", hid) if name_key(p["name"]) in mine else None
+                if g and g["cost"]:
+                    h["my_gear"].append({"name": p["name"], "set_name": g["set_name"], "hours": round(g["hours"], 2),
+                                         "cost": g["cost"], "auto": bool(g["auto"])})
         h["inputs"] = [_input_view(i) for i in inputs.get(hid, [])] if in_party else []
         h["member_sessions"] = [_member_view(s, access, raw) for s in members.get(hid, [])] if in_party else []
         auto = {}
@@ -2014,7 +2022,9 @@ NOT_IN_PARTY_HUNT = "Seu personagem não está nesse lootsplit."
 
 @app.post("/api/hunt/{hunt_id}/place")
 def hunt_place(hunt_id: int, body: PlaceSet, access: dict = Depends(require_session)):
-    return _change_place("hunts", hunt_id, body.place_id, access)
+    out = _change_place("hunts", hunt_id, body.place_id, access)
+    _auto_gear_party(hunt_id)  # 0.32.2: quem tem set para esse local já paga o tempo dos imbuements
+    return out
 
 
 @app.post("/api/hunt/{hunt_id}/input")
@@ -2065,6 +2075,7 @@ def hunt_member_session(hunt_id: int, body: MemberRawIn, access: dict = Depends(
             store.refund_link(link["id"])
         raise HTTPException(409, "Você já juntou a sua sessão a esse lootsplit." if not link
                             else f"A sessão de {name} já está junto a esse lootsplit.")
+    _auto_gear_party(hunt_id)  # 0.32.2: a duração da sessão do membro pode ser a mais exata
     return {"hunt": _hunt_payload("hunt", hunt_id, access)}
 
 
@@ -3227,6 +3238,12 @@ def _charge_view(c: dict) -> dict:
     return c
 
 
+def _life_label(key: str) -> str:
+    if key.startswith("charge:"):
+        return "Recarga com silver token"
+    return imbuing.CATALOG[key]["name"].split(" (")[0] if key in imbuing.CATALOG else key
+
+
 def _gear_payload(name: str, access: dict) -> dict:
     prices = _imb_prices(access, name)
     items = store.gear_list(name)
@@ -3234,6 +3251,11 @@ def _gear_payload(name: str, access: dict) -> dict:
         it["kind_name"] = imbuing.GEAR_KINDS.get(it["kind"], it["kind"])
         it["charges"] = [_charge_view(c) for c in it["charges"]]
         it["hourly"] = sum(c["hourly"] for c in it["charges"])
+    life = store.lifetime_for([i["id"] for i in items])
+    for it in items:  # 0.32.2: horas acumuladas por tipo de imbuement (só cresce)
+        it["lifetime"] = [{"imbuement": k, "label": _life_label(k), "hours": round(h, 2)}
+                          for k, h in sorted(life.get(it["id"], {}).items(), key=lambda kv: -kv[1]) if h > 0]
+        it["lifetime_hours"] = round(sum(x["hours"] for x in it["lifetime"]), 2)
     sets = store.set_list(name)
     by_id = {i["id"]: i for i in items}
     for s in sets:
@@ -3248,7 +3270,8 @@ def gear_catalog(_: dict = Depends(require_session)):
     return {"imbuements": list(imbuing.CATALOG.values()), "kinds": imbuing.GEAR_KINDS, "tiers": imbuing.TIERS,
             "fees": imbuing.SHRINE_FEE, "hours": imbuing.HOURS, "accessories": list(imbuing.ACCESSORIES.values()),
             "allowed": {k: imbuing.allowed_imbuements(k) for k in imbuing.GEAR_KINDS}, "items": IMB_ITEMS,
-            "max_slots": imbuing.MAX_SLOTS}
+            "max_slots": imbuing.MAX_SLOTS, "elements": list(imbuing.ELEMENTS), "blocks": imbuing.ELEMENT_BLOCKS,
+            "known": [[i["name"], i["kind"], i["slots"], i["elements"]] for i in imbuing.known_items()]}
 
 
 @app.get("/api/gear/{name}")
@@ -3276,11 +3299,16 @@ class GearItemIn(BaseModel):
     kind: Literal[tuple(imbuing.GEAR_KINDS)]  # type: ignore[valid-type]
     slots: int = Field(default=2, ge=0, le=imbuing.MAX_SLOTS)
     native: list[str] = Field(default_factory=list, max_length=12)  # efeitos que o item já traz (bloqueiam o imbuement)
+    elements: list[str] = Field(default_factory=list, max_length=7)  # 0.32.2: elementos de fábrica (bloqueiam o mesmo elemento)
     catalog: str | None = None  # anel/amuleto recarregável do catálogo
 
 
 def _clean_native(native: list[str]) -> list[str]:
     return [n for n in dict.fromkeys(native) if n in imbuing.CATALOG]
+
+
+def _clean_elements(elements: list[str]) -> list[str]:
+    return [e for e in imbuing.ELEMENTS if e in elements]
 
 
 @app.post("/api/gear/{name}/item")
@@ -3295,7 +3323,8 @@ def gear_item_add(name: str, body: GearItemIn, access: dict = Depends(require_se
             raise HTTPException(422, "Escolha o anel ou amuleto da lista.")
         catalog = acc["key"]
         body.name = acc["name"]
-    store.gear_add(name, " ".join(body.name.split()), body.kind, body.slots, _clean_native(body.native), catalog)
+    store.gear_add(name, " ".join(body.name.split()), body.kind, body.slots, _clean_native(body.native), catalog,
+                   _clean_elements(body.elements))
     return _gear_payload(name, access)
 
 
@@ -3310,7 +3339,8 @@ def _my_item(name: str, gear_id: int) -> dict:
 def gear_item_edit(name: str, gear_id: int, body: GearItemIn, access: dict = Depends(require_session)):
     _gear_guard(name, access)
     it = _my_item(name, gear_id)
-    store.gear_update(gear_id, it["name"] if it["catalog"] else " ".join(body.name.split()), body.slots, _clean_native(body.native))
+    store.gear_update(gear_id, it["name"] if it["catalog"] else " ".join(body.name.split()), body.slots, _clean_native(body.native),
+                      _clean_elements(body.elements))
     return _gear_payload(name, access)
 
 
@@ -3344,7 +3374,8 @@ def gear_imbue(name: str, gear_id: int, body: ImbueIn, access: dict = Depends(re
         raise HTTPException(422, "Anel e amuleto não levam imbuement.")
     mine = next(g for g in store.gear_list(name) if g["id"] == gear_id)
     current = [ch["imbuement"] for ch in mine["charges"]]
-    err = imbuing.check_imbue(it["kind"], it["slots"], json.loads(it["native"] or "[]"), current, body.imbuement, body.tier)
+    err = imbuing.check_imbue(it["kind"], it["slots"], json.loads(it["native"] or "[]"), current, body.imbuement, body.tier,
+                              json.loads(it.get("elements") or "[]"))
     if err:
         raise HTTPException(422, err)
     _new_charge(name, access, it, body.imbuement, body.tier)
@@ -3409,6 +3440,7 @@ def gear_charge_restart(name: str, charge_id: int, body: HoursIn, access: dict =
     if body.hours > 0:
         store.usage_add(name, "manual", 0, charge_id, _charge_label(it, c), body.hours,
                         imbuing.use_cost(c["total_cost"], body.hours, c["hours_total"]), datetime.now(BRT).date().isoformat())
+        store.life_add_extra(charge_id, body.hours)  # entra no acumulado do equipamento
     store.charge_end(charge_id)
     if c["imbuement"].startswith("charge:"):
         acc = imbuing.ACCESSORIES[c["imbuement"][7:]]
@@ -3495,11 +3527,34 @@ def _session_seconds(name: str, kind: str, ref_id: int) -> tuple[int, str]:
     return int(row.get("duration_seconds") or 0), str(row["started_at"])[:10]
 
 
-def _apply_gear(name: str, kind: str, ref_id: int, set_id: int | None, pause: int) -> dict:
+def _auto_gear_party(hunt_id: int) -> None:
+    """0.32.2: lootsplit compartilhado por alguém: cada jogador Hardcore que tem set para o local da hunt (e ainda não
+    escolheu outro à mão) paga o tempo dos imbuements, entra no saldo dele e no relatório semanal da party."""
+    h = store.hunt(hunt_id)
+    if not h or not h.get("place_id"):
+        return
+    for p in h["players"]:
+        owner = store.char_owner(p["name"])
+        if not owner or store.player_type(owner) not in _hardcore_types():
+            continue
+        cur = store.session_gear_one(p["name"], "hunt", hunt_id)
+        if cur and not cur["auto"]:
+            continue  # o próprio jogador já escolheu (ou tirou) o set
+        st = store.last_set_for_place(p["name"], h["place_id"])
+        if st and (not cur or cur["set_id"] != st["id"] or cur["auto"]):
+            try:
+                _apply_gear(p["name"], "hunt", hunt_id, st["id"], cur["pause_minutes"] if cur else 0, auto=True)
+            except HTTPException:
+                continue
+
+
+def _apply_gear(name: str, kind: str, ref_id: int, set_id: int | None, pause: int, auto: bool = False) -> dict:
     """Debita dos imbuements do set o tempo da hunt (menos a pausa): custo proporcional às 20 horas de cada um."""
     seconds, day = _session_seconds(name, kind, ref_id)
     store.release_session_gear(name, kind, ref_id)
     if not set_id:
+        if kind == "hunt":  # 0.32.2: "sem set" escolhido à mão: o automático da party não volta a mexer
+            store.session_gear_save(name, kind, ref_id, None, None, pause, 0, 0, False)
         return {"cost": 0, "hours": 0}
     st = store.set_get(set_id)
     if not st or st["name_key"] != name_key(name):
@@ -3514,7 +3569,7 @@ def _apply_gear(name: str, kind: str, ref_id: int, set_id: int | None, pause: in
             store.usage_add(name, kind, ref_id, c["id"], _charge_label(it, c), hours, cost, day)
             store.charge_add_hours(c["id"], hours)
             total += cost
-    store.session_gear_save(name, kind, ref_id, set_id, st["name"], pause, hours, total)
+    store.session_gear_save(name, kind, ref_id, set_id, st["name"], pause, hours, total, auto)
     return {"cost": total, "hours": round(hours, 2)}
 
 
@@ -3561,7 +3616,235 @@ def gear_report(name: str, weeks: int = 8, access: dict = Depends(require_sessio
             pending.append({"label": _charge_label(it, c), "hours_used": round(c["hours_used"], 2), "hours_total": c["hours_total"],
                             "fraction": c["fraction"], "paid": c["total_cost"],
                             "unused_value": round(c["total_cost"] * (1 - c["fraction"] / 100)), "cycles": c["cycles"]})
-    return {"weeks": sorted(out.values(), key=lambda w: w["week"], reverse=True), "pending": pending}
+    life = store.lifetime_for([i["id"] for i in store.gear_list(name)])
+    total = [{"item": it["name"], "label": _life_label(k), "hours": round(h, 2)}
+             for it in store.gear_list(name) for k, h in sorted(life.get(it["id"], {}).items(), key=lambda kv: -kv[1]) if h > 0]
+    return {"weeks": sorted(out.values(), key=lambda w: w["week"], reverse=True), "pending": pending, "lifetime": total}
+
+
+# ------------------------------------------------------------------ 0.32.2: relatório semanal da party
+def _week_of(day: str) -> str:
+    d = datetime.fromisoformat(day[:10]).date()
+    return (d - timedelta(days=d.weekday())).isoformat()
+
+
+def _party_weeks(name: str, weeks: int) -> list[dict]:
+    """Por semana (segunda a domingo): hunts em party, horas, o que coube ao personagem, o custo dos imbuements dele
+    (se tiver set) e com quem mais jogou."""
+    weeks = max(1, min(weeks, 52))
+    today = datetime.now(BRT).date()
+    first = (today - timedelta(days=today.weekday() + 7 * (weeks - 1))).isoformat()
+    nk = name_key(name)
+    hunts = [h for h in store.hunts_for_player(name) if str(h["started_at"])[:10] >= first]
+    gear = store.session_gear_for(name, [("hunt", h["id"]) for h in hunts])
+    out: dict[str, dict] = {}
+    places: dict = {}
+    for h in hunts:
+        wk = _week_of(str(h["started_at"]))
+        w = out.setdefault(wk, {"week": wk, "hunts": 0, "seconds": 0, "profit": 0, "gear_cost": 0, "net": 0,
+                                "mates": {}, "list": []})
+        me = next((p for p in h["players"] if name_key(p["name"]) == nk), None)
+        mine = me["profit"] if me and me.get("profit") is not None else (h.get("profit_each") or 0)
+        g = gear.get(("hunt", h["id"]))
+        cost = g["cost"] if g else 0
+        w["hunts"] += 1
+        w["seconds"] += int(h.get("duration_seconds") or 0)
+        w["profit"] += mine
+        w["gear_cost"] += cost
+        w["net"] += mine - cost
+        for p in h["players"]:
+            if name_key(p["name"]) != nk:
+                m = w["mates"].setdefault(p["name"], {"name": p["name"], "hunts": 0})
+                m["hunts"] += 1
+        place = _place_ref(h.get("place_id"), places)
+        w["list"].append({"id": h["id"], "started_at": h["started_at"], "place": place["name"] if place else None,
+                          "players": h.get("players_count"), "seconds": int(h.get("duration_seconds") or 0),
+                          "profit": mine, "gear_cost": cost, "set_name": g["set_name"] if g else None,
+                          "mates": [p["name"] for p in h["players"] if name_key(p["name"]) != nk]})
+    rows = []
+    for w in sorted(out.values(), key=lambda x: x["week"], reverse=True):
+        w["mates"] = sorted(w["mates"].values(), key=lambda m: (-m["hunts"], m["name"].lower()))[:8]
+        w["per_hour"] = _per_hour(w["net"], w["seconds"])
+        rows.append(w)
+    return rows
+
+
+@app.get("/api/party-report/{name}")
+def party_report(name: str, weeks: int = 8, access: dict = Depends(require_session)):
+    """Relatório semanal da party do personagem (só o dono vê)."""
+    require_owner(name, access)
+    return {"weeks": _party_weeks(name, weeks), "gear": store.player_type(access["key"]) in _hardcore_types()}
+
+
+# ------------------------------------------------------------------ 0.32.2: valor da Tibia Coin (em gold coins)
+TC_MAX = 100_000  # gp por 1 Tibia Coin (o jogo gira em torno de 40 mil; sobra margem)
+
+
+class CoinIn(BaseModel):
+    gold: int = Field(ge=0, le=TC_MAX)
+
+
+def _coin_payload(name: str) -> dict:
+    g = store.coin_get(name)
+    return {"name": name, "gold": g, "x1": g, "x25": g * 25, "x250": g * 250}
+
+
+@app.get("/api/coin/{name}")
+def coin_get(name: str, access: dict = Depends(require_session)):
+    require_owner(name, access)
+    return _coin_payload(name)
+
+
+@app.post("/api/coin/{name}")
+def coin_set(name: str, body: CoinIn, access: dict = Depends(require_session)):
+    """Quantas gold coins vale 1 Tibia Coin para esse personagem (0 apaga). Todas as telas convertem por esse valor."""
+    require_owner(name, access)
+    store.coin_set(name, body.gold)
+    return _coin_payload(name)
+
+
+# ------------------------------------------------------------------ 0.32.2: exportar para planilha (Excel)
+EXPORT_SECTIONS = {
+    "sessions": "Sessões (solo + party)", "days": "Resumo por dia", "places": "Comparação por hunt", "loot": "Itens coletados",
+    "party": "Lootsplits da party", "party_weekly": "Party por semana", "xp": "XP do personagem", "bosses": "Sessões de boss",
+    "gear_items": "Equipamentos e imbuements", "gear_weekly": "Imbuements por semana",
+}
+_GEAR_SECTIONS = ("gear_items", "gear_weekly")
+
+
+def _mins(seconds) -> float:
+    return round((seconds or 0) / 60, 1)
+
+
+def _export_sheets(name: str, access: dict, sections: list[str]) -> list[tuple[str, list[str], list[list]]]:
+    out: list[tuple[str, list[str], list[list]]] = []
+    hardcore = store.player_type(access["key"]) in _hardcore_types()
+    need = {"sessions", "days", "places", "loot"} & set(sections)
+    sessions, prices = _enriched_sessions(name, access, "all") if need else ([], {})
+    for sec in sections:
+        if sec == "sessions":
+            out.append(("Sessões", ["Data", "Origem", "Hunt", "Duração (min)", "XP", "Raw XP", "Balance (gp)", "Supplies (gp)",
+                                    "Loot em NPC (gp)", "Imbuements (gp)", "Lucro líquido (gp)", "XP/h", "Lucro líquido/h (gp)", "Set"],
+                        [[str(s["started_at"])[:16].replace("T", " "), "party" if s["source"] == "party" else "solo",
+                          (s.get("place") or {}).get("name"), _mins(s["duration_seconds"]), s["xp"], s["raw_xp"], s["balance"],
+                          s["supplies"], s["loot_value"], s["gear_cost"], s["net_profit"], _per_hour(s["xp"], s["duration_seconds"]),
+                          _per_hour(s["net_profit"], s["duration_seconds"]), (s.get("gear") or {}).get("set_name")]
+                         for s in reversed(sessions)]))
+        elif sec == "days":
+            days: dict[str, dict] = {}
+            for s in sessions:
+                d = days.setdefault(str(s["started_at"])[:10], {"n": 0, "sec": 0, "xp": 0, "bal": 0, "loot": 0, "gear": 0, "net": 0})
+                d["n"] += 1
+                d["sec"] += s["duration_seconds"]
+                d["xp"] += s["xp"]
+                d["bal"] += s["balance"]
+                d["loot"] += s["loot_value"]
+                d["gear"] += s["gear_cost"]
+                d["net"] += s["net_profit"]
+            out.append(("Por dia", ["Dia", "Sessões", "Horas", "XP", "XP/h", "Balance (gp)", "Loot em NPC (gp)", "Imbuements (gp)",
+                                    "Lucro líquido (gp)", "Lucro líquido/h (gp)"],
+                        [[k, d["n"], round(d["sec"] / 3600, 2), d["xp"], _per_hour(d["xp"], d["sec"]), d["bal"], d["loot"], d["gear"],
+                          d["net"], _per_hour(d["net"], d["sec"])] for k, d in sorted(days.items())]))
+        elif sec == "places":
+            bp = _by_place(sessions)
+            out.append(("Por hunt", ["Hunt", "Sessões", "Horas", "XP/h", "Balance/h (gp)", "Melhor XP/h", "Melhor balance/h (gp)"],
+                        [[r["place"], r["sessions"], r["hours"], r["xp_h"], r["gold_h"], r["best_xp_h"], r["best_gold_h"]]
+                         for r in (bp["rows"] if bp else [])]))
+        elif sec == "loot":
+            tot: dict[str, dict] = {}
+            for s in sessions:
+                for it in s["loot"]:
+                    t = tot.setdefault(it["key"], {"count": 0, "value": 0})
+                    t["count"] += it["count"]
+                    t["value"] += it["value"]
+            out.append(("Itens coletados", ["Item", "Quantidade", "Valor em NPC (gp)"],
+                        [[k, t["count"], t["value"]] for k, t in sorted(tot.items(), key=lambda kv: -kv[1]["value"])]))
+        elif sec == "party":
+            nk = name_key(name)
+            hunts = store.hunts_for_player(name)
+            gear = store.session_gear_for(name, [("hunt", h["id"]) for h in hunts])
+            places: dict = {}
+            rows = []
+            for h in reversed(hunts):
+                me = next((p for p in h["players"] if name_key(p["name"]) == nk), None)
+                mine = me["profit"] if me and me.get("profit") is not None else (h.get("profit_each") or 0)
+                g = gear.get(("hunt", h["id"]))
+                pl = _place_ref(h.get("place_id"), places)
+                rows.append([str(h["started_at"])[:16].replace("T", " "), pl["name"] if pl else None, h.get("players_count"),
+                             _mins(h.get("duration_seconds")), h.get("profit_each"), mine, g["cost"] if g else 0,
+                             mine - (g["cost"] if g else 0), ", ".join(p["name"] for p in h["players"])])
+            out.append(("Lootsplits", ["Data", "Hunt", "Jogadores", "Duração (min)", "Profit por pessoa (gp)", "Seu rateio (gp)",
+                                       "Imbuements (gp)", "Líquido (gp)", "Quem jogou"], rows))
+        elif sec == "party_weekly":
+            out.append(("Party por semana", ["Semana (segunda)", "Hunts", "Horas", "Seu rateio (gp)", "Imbuements (gp)", "Líquido (gp)",
+                                             "Líquido/h (gp)", "Quem mais jogou com você"],
+                        [[w["week"], w["hunts"], round(w["seconds"] / 3600, 2), w["profit"], w["gear_cost"], w["net"], w["per_hour"],
+                          ", ".join(f"{m['name']} ({m['hunts']})" for m in w["mates"])] for w in reversed(_party_weeks(name, 52))]))
+        elif sec == "xp":
+            ch = _xp_charts(name)
+            out.append(("XP por dia", ["Dia", "XP ganha"], [[d["day"], d["gain"]] for d in ch["daily"]]))
+            out.append(("XP por mês", ["Mês", "XP ganha"], [[m["month"], m["gain"]] for m in ch["monthly"]]))
+            out.append(("XP por trimestre", ["Trimestre", "XP ganha"], [[q["quarter"], q["gain"]] for q in ch["quarterly"]]))
+        elif sec == "bosses":
+            out.append(("Bosses", ["Data", "Modo", "Duração (min)", "XP", "Balance (gp)", "Supplies (gp)"],
+                        [[str(b["started_at"])[:16].replace("T", " "), b["mode"], _mins(b["duration_seconds"]), b["xp"], b["balance"],
+                          b["supplies"]] for b in reversed(store.boss_sessions_for(name))]))
+        elif sec == "gear_items" and hardcore:
+            rows = []
+            items = store.gear_list(name)
+            life = store.lifetime_for([i["id"] for i in items])
+            for it in items:
+                active = [(_charge_label(it, c), _charge_view(c)) for c in it["charges"]]
+                lf = life.get(it["id"], {})
+                rows.append([it["name"], imbuing.GEAR_KINDS.get(it["kind"], it["kind"]), it["slots"], ", ".join(it["elements"]),
+                             "; ".join(lbl.split(" · ")[-1] for lbl, _ in active),
+                             sum(c["total_cost"] for _, c in active), sum(round(c["hours_used"], 2) for _, c in active),
+                             round(sum(lf.values()), 2),
+                             "; ".join(f"{_life_label(k)}: {round(h, 2)} h" for k, h in sorted(lf.items(), key=lambda kv: -kv[1]) if h > 0)])
+            out.append(("Equipamentos", ["Item", "Tipo", "Slots", "Elementos de fábrica", "Imbuements ativos", "Pago (gp)", "Horas usadas",
+                                         "Horas acumuladas", "Acumulado por imbuement"], rows))
+        elif sec == "gear_weekly" and hardcore:
+            rep = gear_report(name, 52, access)
+            out.append(("Imbuements por semana", ["Semana (segunda)", "Horas de hunt", "Custo (gp)", "Itens"],
+                        [[w["week"], w["hunt_hours"], w["cost"], "; ".join(f"{i['label']} ({i['hours']} h, {i['cost']} gp)" for i in w["items"])]
+                         for w in reversed(rep["weeks"])]))
+    return out
+
+
+@app.get("/api/export/sections")
+def export_sections(access: dict = Depends(require_session)):
+    hardcore = store.player_type(access["key"]) in _hardcore_types()
+    return {"sections": [{"key": k, "label": v} for k, v in EXPORT_SECTIONS.items() if hardcore or k not in _GEAR_SECTIONS]}
+
+
+_UI_LANGS = ("en", "es", "ja", "de", "pl", "fr", "ru")
+_UI_DICT: dict[str, dict] = {}
+
+
+def _ui_dict(lang: str) -> dict:
+    """Dicionário de textos da tela (os mesmos i18n-*.json do site) para traduzir cabeçalhos da planilha."""
+    if lang not in _UI_LANGS:
+        return {}
+    if lang not in _UI_DICT:
+        try:
+            _UI_DICT[lang] = json.loads((WEB_DIR / f"i18n-{lang}.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            _UI_DICT[lang] = {}
+    return _UI_DICT[lang]
+
+
+@app.get("/api/export/{name}")
+def export_xlsx(name: str, sections: str = "", lang: str = "", access: dict = Depends(require_session)):
+    """Planilha do Excel com os dados por trás dos gráficos e das listas (só o dono do personagem).
+    `lang`: idioma do site; abas e cabeçalhos saem nele (o que não tiver tradução fica em português)."""
+    require_owner(name, access)
+    chosen = [s for s in dict.fromkeys(x.strip() for x in sections.split(",")) if s in EXPORT_SECTIONS] or list(EXPORT_SECTIONS)
+    d = _ui_dict(lang)
+    sheets = [(d.get(n, n), [d.get(h, h) for h in heads], rows) for n, heads, rows in _export_sheets(name, access, chosen)]
+    data = xlsx_core.build(sheets)
+    fname = re.sub(r"[^A-Za-z0-9_-]+", "_", name) + "-" + datetime.now(BRT).date().isoformat() + ".xlsx"
+    return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"', "Cache-Control": "no-store"})
 
 
 # ------------------------------------------------------------------ 0.32.0: hunt session ao vivo (só Hardcore)

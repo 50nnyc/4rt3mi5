@@ -12,6 +12,9 @@ Regras (tabelas e explicações do dono do projeto):
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 HOURS = 20  # duração de um imbuement, em horas de uso
 TIERS = ("Basic", "Intricate", "Powerful")
 SHRINE_FEE = {1: 7_500, 2: 60_000, 3: 250_000}  # taxa do shrine por nível (vale para qualquer forma de pagar)
@@ -136,7 +139,35 @@ def allowed_imbuements(kind: str) -> dict[str, int]:
     return {}
 
 
-def check_imbue(kind: str, slots: int, native: list[str], current: list[str], imbuement: str, tier: int) -> str | None:
+# 0.32.2: efeito de fábrica do item (elementos). Um item que já traz o elemento não aceita o imbuement do mesmo elemento
+# (proteção ou dano). Elemento físico e sagrado de dano não têm imbuement; sagrado só tem proteção.
+ELEMENTS = ("physical", "holy", "earth", "energy", "death", "ice", "fire")
+ELEMENT_BLOCKS = {"physical": [], "holy": ["demon_presence"], "earth": ["venom", "snake_skin"], "energy": ["electrify", "cloud_fabric"],
+                  "death": ["reap", "lich_shroud"], "ice": ["frost", "quara_scale"], "fire": ["scorch", "dragon_hide"]}
+
+
+def blocked_by(elements: list[str] | None) -> set[str]:
+    return {k for e in (elements or []) for k in ELEMENT_BLOCKS.get(e, [])}
+
+
+_KNOWN: list[dict] | None = None
+
+
+def known_items() -> list[dict]:
+    """Itens que aceitam imbuement, com tipo, slots e elementos de fábrica (data/gear_items.json)."""
+    global _KNOWN
+    if _KNOWN is None:
+        path = Path(__file__).resolve().parent.parent / "data" / "gear_items.json"
+        try:
+            rows = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            rows = []
+        _KNOWN = [{"name": n, "kind": k, "slots": s, "elements": e} for n, k, s, e in rows]
+    return _KNOWN
+
+
+def check_imbue(kind: str, slots: int, native: list[str], current: list[str], imbuement: str, tier: int,
+                elements: list[str] | None = None) -> str | None:
     """Mensagem de erro se não dá para pôr `imbuement` nesse item; None se pode.
     `native`: imbuements que o item já traz de fábrica (ex.: "life_leech" não existe aqui; use a chave do
     imbuement que ele bloqueia, como "vampirism" ou "quara_scale"). `current`: os que já estão no item."""
@@ -149,7 +180,7 @@ def check_imbue(kind: str, slots: int, native: list[str], current: list[str], im
         return "Esse tipo de item não aceita esse imbuement."
     if tier > allowed[imbuement]:
         return "Esse tipo de item aceita esse imbuement só em um nível menor."
-    if imbuement in native:
+    if imbuement in native or imbuement in blocked_by(elements):
         return "Esse item já traz esse efeito e não aceita o imbuement."
     if imbuement in current:
         return "Esse imbuement já está no item (não repete)."
