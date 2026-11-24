@@ -1,6 +1,74 @@
 {
   "releases": [
     {
+      "version": "0.32.4",
+      "date": "2026-11-24",
+      "title": "Imbuements: trocar e avisos",
+      "changes": [
+        "🔁 Equipamentos: novo botão Trocar muda o imbuement (ou o nível) de um slot de uma vez. Reiniciar, Trocar e “Usei e não informei” agora abrem um painel na própria tela, em vez de janelas do navegador, e os cartões não fecham mais a cada ação.",
+        "⏳ Aviso de imbuement perto de acabar: no Início e em Equipamentos você vê quanto falta para fechar as 20 h. O custo do imbuement escolhido já aparece ao abrir a lista.",
+        "🛡️ Mais segurança nos dados: não dá mais para reduzir os slots abaixo do que está imbuído, nem marcar um efeito de fábrica que bloqueia um imbuement ativo. Reiniciar sem preço informado não faz mais o imbuement sumir."
+      ],
+      "tr": {
+        "en": {
+          "title": "Imbuements: swap and warnings",
+          "changes": [
+            "🔁 Equipment: the new Swap button changes a slot's imbuement (or tier) in one step. Restart, Swap and “I used it and didn't log it” now open a panel on the page instead of browser pop-ups, and cards no longer close after every action.",
+            "⏳ Warning when an imbuement is about to run out: on Home and in Equipment you see how much is left to fill the 20 h. The cost of the chosen imbuement shows as soon as the list opens.",
+            "🛡️ Safer data: you can no longer reduce the slots below what is imbued, or set a factory effect that blocks an active imbuement. Restarting without a price no longer makes the imbuement disappear."
+          ]
+        },
+        "es": {
+          "title": "Imbuements: cambiar y avisos",
+          "changes": [
+            "🔁 Equipamiento: el nuevo botón Cambiar modifica el imbuement (o el nivel) de un slot de una vez. Reiniciar, Cambiar y «Lo usé y no lo registré» ahora abren un panel en la propia pantalla, en lugar de ventanas del navegador, y las tarjetas ya no se cierran con cada acción.",
+            "⏳ Aviso de imbuement a punto de acabar: en Inicio y en Equipamiento ves cuánto falta para completar las 20 h. El costo del imbuement elegido aparece apenas se abre la lista.",
+            "🛡️ Datos más seguros: ya no se pueden reducir los slots por debajo de lo imbuido ni marcar un efecto de fábrica que bloquea un imbuement activo. Reiniciar sin precio informado ya no hace desaparecer el imbuement."
+          ]
+        },
+        "ja": {
+          "title": "インビューメント：交換と警告",
+          "changes": [
+            "🔁 装備：新しい「交換」ボタンで、スロットのインビューメント（またはレベル）を一度に変更できます。リセット、交換、「使ったが記録しなかった」はブラウザのダイアログではなく画面内のパネルで開き、操作のたびにカードが閉じなくなりました。",
+            "⏳ インビューメントがもうすぐ切れる警告：ホームと装備で、20時間まであとどれくらいか確認できます。選んだインビューメントの費用は、リストを開くとすぐに表示されます。",
+            "🛡️ データの安全性向上：付いているインビューメントより少ないスロット数にはできず、有効なインビューメントと競合する初期効果も設定できません。価格が未入力のままリセットしても、インビューメントが消えなくなりました。"
+          ]
+        },
+        "de": {
+          "title": "Imbuements: Tauschen und Warnungen",
+          "changes": [
+            "🔁 Ausrüstung: Der neue Button Tauschen ändert das Imbuement (oder die Stufe) eines Slots in einem Schritt. Neu starten, Tauschen und „Genutzt, aber nicht eingetragen“ öffnen jetzt ein Panel auf der Seite statt Browser-Fenster, und die Karten schließen sich nicht mehr nach jeder Aktion.",
+            "⏳ Warnung, wenn ein Imbuement bald abläuft: Auf der Startseite und in der Ausrüstung siehst du, wie viel bis zu den 20 Std. fehlt. Die Kosten des gewählten Imbuements erscheinen, sobald die Liste geöffnet wird.",
+            "🛡️ Sicherere Daten: Die Slots lassen sich nicht mehr unter die Zahl der Imbuements senken, und ein Werkseffekt, der ein aktives Imbuement blockiert, kann nicht gesetzt werden. Neu starten ohne Preis lässt das Imbuement nicht mehr verschwinden."
+          ]
+        },
+        "pl": {
+          "title": "Imbuementy: zamiana i ostrzeżenia",
+          "changes": [
+            "🔁 Wyposażenie: nowy przycisk Zamień zmienia imbuement (lub poziom) w slocie za jednym razem. Zrestartuj, Zamień i „Użyłem i nie zapisałem” otwierają teraz panel na stronie zamiast okien przeglądarki, a karty nie zamykają się po każdej akcji.",
+            "⏳ Ostrzeżenie o imbuemencie, który zaraz się skończy: na stronie głównej i w Wyposażeniu widzisz, ile brakuje do 20 h. Koszt wybranego imbuementu pojawia się od razu po otwarciu listy.",
+            "🛡️ Bezpieczniejsze dane: nie można już zmniejszyć slotów poniżej liczby imbuementów ani ustawić fabrycznego efektu, który blokuje aktywny imbuement. Restart bez podanej ceny nie usuwa już imbuementu."
+          ]
+        },
+        "fr": {
+          "title": "Imbuements : remplacer et avertissements",
+          "changes": [
+            "🔁 Équipements : le nouveau bouton Remplacer change l'imbuement (ou le niveau) d'un emplacement en une seule fois. Réinitialiser, Remplacer et « J'ai utilisé sans le noter » ouvrent maintenant un panneau dans la page, au lieu de fenêtres du navigateur, et les cartes ne se ferment plus après chaque action.",
+            "⏳ Avertissement quand un imbuement va bientôt finir : sur l'Accueil et dans Équipements, vous voyez combien il reste pour atteindre les 20 h. Le coût de l'imbuement choisi s'affiche dès l'ouverture de la liste.",
+            "🛡️ Données plus sûres : impossible de réduire les emplacements en dessous du nombre d'imbuements ou de définir un effet d'usine qui bloque un imbuement actif. Réinitialiser sans prix renseigné ne fait plus disparaître l'imbuement."
+          ]
+        },
+        "ru": {
+          "title": "Имбуементы: замена и предупреждения",
+          "changes": [
+            "🔁 Экипировка: новая кнопка «Заменить» меняет имбуемент (или уровень) в слоте за один шаг. «Сбросить», «Заменить» и «Использовал, но не указал» теперь открывают панель на странице вместо окон браузера, а карточки больше не закрываются после каждого действия.",
+            "⏳ Предупреждение о скором окончании имбуемента: на главной и в Экипировке видно, сколько осталось до 20 ч. Стоимость выбранного имбуемента показывается сразу при открытии списка.",
+            "🛡️ Данные надёжнее: нельзя уменьшить слоты ниже числа имбуементов и нельзя задать заводской эффект, блокирующий активный имбуемент. Сброс без указанной цены больше не убирает имбуемент."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.3",
       "date": "2026-11-24",
       "title": "Ajustes na planilha",

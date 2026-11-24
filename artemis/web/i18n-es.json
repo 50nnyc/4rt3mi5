@@ -1775,5 +1775,19 @@
   "Total já usado neste equipamento: {0}": "Total ya usado en este equipamiento: {0}",
   "Horas acumuladas por equipamento": "Horas acumuladas por equipamiento",
   "Horas acumuladas": "Horas acumuladas",
-  "Acumulado por imbuement": "Acumulado por imbuement"
+  "Acumulado por imbuement": "Acumulado por imbuement",
+  "Horas usadas que não foram para nenhuma hunt (opcional)": "Horas usadas fuera de cualquier hunt (opcional)",
+  "Somar horas": "Sumar horas",
+  "Reiniciar": "Reiniciar",
+  "Trocar": "Cambiar",
+  "🔁 Trocar": "🔁 Cambiar",
+  "Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.": "Cambia por otro imbuement (u otro nivel): el actual sale y el nuevo entra con el contador en cero.",
+  "Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.": "¿Rehiciste el imbuement? El contador vuelve a cero y el nuevo costo usa los precios de hoy.",
+  "{0} · {1}: ciclo de {2} completo, hora de refazer.": "{0} · {1}: ciclo de {2} completo, hora de rehacerlo.",
+  "{0} · {1}: faltam {2} para refazer.": "{0} · {1}: faltan {2} para rehacerlo.",
+  "⏳ Faltam {0} para completar o ciclo de {1}.": "⏳ Faltan {0} para completar el ciclo de {1}.",
+  "⏳ Imbuements para refazer": "⏳ Imbuements para rehacer",
+  "Abrir Equipamentos": "Abrir Equipamiento",
+  "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.": "El ítem tiene más imbuements que esos slots. Quita un imbuement antes de reducir los slots.",
+  "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.": "Ese efecto de fábrica bloquea un imbuement que ya está en el ítem. Quita el imbuement antes."
 }

@@ -1815,7 +1815,7 @@ async function loadHome() {
     <h2>Hunts anteriores (${hunts.length - 1})</h2>
     ${hunts.length > 1 ? hunts.slice(1, 6).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}
     ${hunts.length > 6 ? `<button class="btn2" data-page-link="loot" style="width:100%; margin-top:4px">🔎 Ver e buscar todas as hunts</button>` : ""}
-    <h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}` : ""}`;
+    ${gearAlertSlot()}<h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}` : ""}`;
   countUp(el);
   if (hunts.length) {
     renderPtRank();
@@ -1845,7 +1845,7 @@ async function loadHomeSolo(el, headline) {
       perHour: Math.round(s.xp * 3600 / s.duration_seconds), label: new Date(s.started_at).toLocaleDateString("pt-BR") }))) : ""}
     ${goalCard("solo", d ? d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => Math.round(s.xp * 3600 / s.duration_seconds)) : [])}
     ${streak ? streakTeaser(streak) : ""}
-    <h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}`;
+    ${gearAlertSlot()}<h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}`;
   countUp(el);
   if (streak) celebrateRewards(streak.granted);
 }
@@ -4178,6 +4178,7 @@ const usageLabel = (l) => String(l).replace(/ \(recarga\)$/, ` (${T("recarga")})
 
 async function loadGear(opts = {}) {
   const el = $("#gearResult");
+  G.msg = ""; G.act = null;
   if (!opts.quiet) el.innerHTML = skeleton("stack");
   try {
     if (!G.cat) G.cat = await api("GET", "/api/gear/catalog");
@@ -4187,7 +4188,37 @@ async function loadGear(opts = {}) {
   paintGear();
 }
 
-function chargeRow(c) {
+/** 0.32.4: painel de ação embaixo do imbuement (horas, reiniciar, trocar), no lugar das janelas do navegador. */
+function chargePanel(c, it) {
+  if (!G.act || G.act.id !== c.id) return "";
+  const kind = G.act.kind;
+  const hoursField = (label) => `<label class="muted" style="display:block; margin-top:6px">${esc(T(label))}
+      <input data-pn-hours type="text" maxlength="6" value="${kind === "hours" ? 1 : 0}" inputmode="decimal" autocomplete="off" style="width:90px; padding:4px 6px"></label>`;
+  const buttons = (go, label) => `<div class="row" style="justify-content:flex-start; gap:10px; margin-top:8px">
+      <button class="btn2" data-gear="${go}:${c.id}" type="button">${esc(T(label))}</button>
+      <button class="link" data-gear="pn-close:${c.id}" type="button">Cancelar</button></div>`;
+  let inner = "";
+  if (kind === "hours") {
+    inner = `<div class="muted" style="font-size:13px">Quantas horas você usou esse imbuement sem registrar numa hunt?</div>${hoursField("Horas")}${buttons("do-hours", "Somar horas")}`;
+  } else if (kind === "restart") {
+    inner = `<div class="muted" style="font-size:13px">Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.</div>
+      ${hoursField("Horas usadas que não foram para nenhuma hunt (opcional)")}${buttons("do-restart", "Reiniciar")}`;
+  } else if (kind === "swap") {
+    const allowed = G.cat.allowed[it.kind] || {};
+    const others = new Set(it.charges.filter((x) => x.id !== c.id).map((x) => x.imbuement));
+    const blocked = new Set([...(it.native || []), ...(it.elements || []).flatMap((e) => G.cat.blocks[e] || [])]);
+    const opts = Object.keys(allowed).filter((k) => !others.has(k) && !blocked.has(k));
+    inner = `<div class="muted" style="font-size:13px">Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.</div>
+      <div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap; margin-top:6px" data-swap-form="${c.id}">
+        <select data-imb-key aria-label="Imbuement">${opts.map((k) => `<option value="${k}"${k === c.imbuement ? " selected" : ""}>${esc(imbName(k))}</option>`).join("")}</select>
+        <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}"${t === c.tier ? " selected" : ""}>${TIER[t - 1]}</option>`).join("")}</select>
+        <div class="hint" data-imb-plan style="flex-basis:100%; margin:0"></div></div>
+      ${hoursField("Horas usadas que não foram para nenhuma hunt (opcional)")}${buttons("do-swap", "Trocar")}`;
+  }
+  return `<div class="panel-act" data-pn="${c.id}" style="margin-top:8px; padding:8px 10px; border-radius:10px; background:rgba(127,127,127,.1)">${inner}</div>`;
+}
+
+function chargeRow(c, it) {
   const acc = c.imbuement.startsWith("charge:");
   const nm = acc ? `<span>${T("Recarga com silver token")}</span>` : `<span>${esc(imbName(c.imbuement))}</span> · <span>${TIER[c.tier - 1]}</span>`;
   const how = !acc && c.plan && c.plan.best ? `<div class="hint">💡 ${esc(adviceText(c.imbuement, c.tier, c.plan.best))}</div>` : "";
@@ -4195,12 +4226,15 @@ function chargeRow(c) {
     <div class="row"><b>${nm}</b><span class="muted">${esc(tf("{0} por {1} · {2}/h", gpx(c.total_cost), hrs(c.hours_total), gpx(c.hourly)))}</span></div>
     <div class="gbar" style="margin:6px 0"><div style="width:${c.fraction}%"></div></div>
     <div class="muted" style="font-size:13px">${esc(tf("Usado {0} · ciclo atual: {1} de {2}", hrs(c.hours_used), hrs(c.hours_used % c.hours_total), hrs(c.hours_total)))}</div>
+    ${!c.cycles && !acc && c.fraction >= GEAR_WARN_FRACTION ? `<div class="banner" style="margin-top:6px">${esc(tf("⏳ Faltam {0} para completar o ciclo de {1}.", hrs(c.hours_left), hrs(c.hours_total)))}</div>` : ""}
     ${c.cycles ? `<div class="banner" style="margin-top:6px">${esc(tf(c.cycles === 1 ? "⏰ {0} ciclo de {1} completo: hora de refazer o imbuement." : "⏰ {0} ciclos de {1} completos: hora de refazer o imbuement.", c.cycles, hrs(c.hours_total)))}</div>` : ""}
     ${how}
     <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px; flex-wrap:wrap">
       <button class="link" data-gear="hours:${c.id}" type="button">Usei e não informei</button>
       <button class="link" data-gear="restart:${c.id}" type="button">🔄 Reiniciar contador</button>
-      <button class="danger-link" data-gear="rmcharge:${c.id}" type="button">Tirar</button></div></div>`;
+      ${acc ? "" : `<button class="link" data-gear="swap:${c.id}" type="button">🔁 Trocar</button>`}
+      <button class="danger-link" data-gear="rmcharge:${c.id}" type="button">Tirar</button></div>
+    ${chargePanel(c, it)}</div>`;
 }
 
 function imbueForm(it) {
@@ -4212,18 +4246,18 @@ function imbueForm(it) {
   const blocked = new Set([...it.native, ...(it.elements || []).flatMap((e) => G.cat.blocks[e] || [])]);  // efeito de fábrica
   const opts = Object.keys(allowed).filter((k) => !have.has(k) && !blocked.has(k));
   if (it.charges.length >= it.slots || !opts.length) return it.charges.length >= it.slots ? `<div class="hint">${esc(tf("Todos os {0} slots em uso.", it.slots))}</div>` : "";
-  return `<div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap" data-imbue-form="${it.id}">
+  return `<div data-imbue-form="${it.id}"><div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap">
     <select data-imb-key aria-label="Imbuement">${opts.map((k) => `<option value="${k}">${esc(imbName(k))}</option>`).join("")}</select>
-    <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}">${TIER[t - 1]}</option>`).join("")}</select>
+    <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}"${t === 3 ? " selected" : ""}>${TIER[t - 1]}</option>`).join("")}</select>
     <button class="btn2" data-gear="imbue:${it.id}" type="button">＋ Imbuement</button></div>
-    <div class="hint" data-imb-plan></div>`;
+    <div class="hint" data-imb-plan></div></div>`;
 }
 
 function itemCard(it) {
   const used = it.charges.length;
-  return `<details class="card" ${used ? "" : "open"}><summary><div class="row"><b>${esc(it.name)}</b>
+  return `<details class="card" data-k="i${it.id}" ${used ? "" : "open"}><summary><div class="row"><b>${esc(it.name)}</b>
       <span class="muted">${esc(it.catalog ? tf("{0} · {1}/h", T(it.kind_name), gpx(it.hourly)) : tf("{0} · {1}/{2} slots · {3}/h", T(it.kind_name), used, it.slots, gpx(it.hourly)))}</span></div></summary>
-    ${it.charges.map(chargeRow).join("")}
+    ${it.charges.map((c) => chargeRow(c, it)).join("")}
     ${imbueForm(it)}
     ${it.native && it.native.length ? `<div class="hint">${esc(tf("Já traz de fábrica: {0}.", it.native.map((k) => imbName(k)).map(T).join(", ")))}</div>` : ""}
     ${it.lifetime && it.lifetime.length ? `<div class="hint" data-i18n-skip>${esc(tf("Total já usado neste equipamento: {0}", it.lifetime.map((l) => `${T(l.label)} ${hrs(l.hours)}`).join(" · ")))}</div>` : ""}
@@ -4235,8 +4269,10 @@ const elemList = (els) => (els || []).map((e) => T(ELEM_PT[e])).join(", ");
 /** 0.32.2: efeito de fábrica do item (elementos). Quem já traz o elemento não aceita o imbuement do mesmo elemento. */
 function elementsEditor(it) {
   const has = new Set(it.elements || []);
-  return `<details style="margin-top:8px" data-elem-box="${it.id}"><summary class="link">${it.elements && it.elements.length
+  return `<details style="margin-top:8px" data-k="e${it.id}" data-elem-box="${it.id}"><summary class="link">${it.elements && it.elements.length
     ? esc(tf("Efeito de fábrica: {0}", elemList(it.elements))) : T("Efeito de fábrica: nenhum")} ▾</summary>
+    <label class="muted" style="display:block; margin-top:6px">Slots de imbuement
+      <select data-slots-val style="width:auto">${[1, 2, 3].map((n) => `<option value="${n}"${n === it.slots ? " selected" : ""}>${n}</option>`).join("")}</select></label>
     <div class="hint">Marque os elementos que o item já traz (proteção ou dano). O imbuement do mesmo elemento não é aceito.</div>
     <div class="chips">${G.cat.elements.map((e) => `<label class="check-row"><input type="checkbox" data-elem-val value="${e}"${has.has(e) ? " checked" : ""}> ${esc(T(ELEM_PT[e]))}</label>`).join("")}</div>
     <button class="btn2" data-gear="elems:${it.id}" type="button" style="margin-top:6px">Salvar efeito de fábrica</button></details>`;
@@ -4332,7 +4368,11 @@ function planHtml(p) {
 function paintGear() {
   const d = G.data, el = $("#gearResult");
   const total = d.items.reduce((a, i) => a + i.hourly, 0);
-  el.innerHTML = `<div class="card"><b>⚔️ Gasto invisível por hora de hunt</b>
+  // 0.32.4: guarda quais cartões estavam abertos (cada ação repinta a tela e fechava tudo) e a posição da rolagem
+  const keyOf = (x) => x.dataset.k || ((x.querySelector("summary") || {}).textContent || "").trim().slice(0, 24);
+  const wasOpen = new Set([...el.querySelectorAll("details[open]")].map(keyOf)), seen = G.seen || new Set(), scroll = window.scrollY;
+  const msg = G.msg ? `<div class="err" role="alert">${esc(G.msg)}</div>` : "";
+  el.innerHTML = msg + `<div class="card"><b>⚔️ Gasto invisível por hora de hunt</b>
       <div class="big gold">${gpx(total)}/h</div><div class="hint">Soma de todos os imbuements, anéis e amuletos em uso. Cada hunt usa só os itens do set escolhido.</div></div>
     <h2>Itens</h2>${d.items.map(itemCard).join("") || `<p class="muted">Nenhum item ainda. Cadastre as peças que você usa nas hunts.</p>`}${newItemForm()}
     <h2>Sets</h2>${setsBlock()}
@@ -4340,17 +4380,62 @@ function paintGear() {
     <details class="card"><summary class="row"><b>💰 Preços dos itens</b><span class="muted">▾</span></summary>${pricesBlock()}</details>
     <details class="card" id="gearReport"><summary class="row"><b>📊 Relatório semanal</b><span class="muted">▾</span></summary><div id="gearReportBody"><p class="muted">Abra para carregar.</p></div></details>`;
   paintNewBody();
+  el.querySelectorAll("details").forEach((x) => { const k = keyOf(x); if (seen.has(k)) x.open = wasOpen.has(k); seen.add(k); });
+  G.seen = seen;
+  window.scrollTo(0, scroll);
+  // mostra o custo do primeiro imbuement já na tela (sem precisar mexer nas listas)
+  el.querySelectorAll("[data-imbue-form], [data-swap-form]").forEach((f) => showPlan(f));
+}
+
+/** 0.32.4: no Início (Hardcore), avisa dos imbuements que estão perto de acabar ou que já completaram o ciclo de 20 h. */
+const GEAR_WARN_FRACTION = 85;
+function gearAlertSlot() {
+  if (!isHardcore()) return "";
+  setTimeout(fillGearAlert, 0);  // roda depois que o Início foi desenhado
+  return `<div id="gearAlert"></div>`;
+}
+async function fillGearAlert() {
+  const box = $("#gearAlert");
+  if (!box) return;
+  try {
+    const d = await api("GET", gearUrl());
+    G.data = d;
+    if (!G.cat) G.cat = await api("GET", "/api/gear/catalog");
+    const rows = [];
+    for (const it of d.items) for (const c of it.charges) {
+      if (c.imbuement.startsWith("charge:")) continue;
+      if (c.cycles >= 1) rows.push({ it, c, late: true });
+      else if (c.fraction >= GEAR_WARN_FRACTION) rows.push({ it, c, late: false });
+    }
+    if (!rows.length) { box.innerHTML = ""; return; }
+    const line = (r) => r.late
+      ? tf("{0} · {1}: ciclo de {2} completo, hora de refazer.", r.it.name, imbName(r.c.imbuement).split(" (")[0], hrs(r.c.hours_total))
+      : tf("{0} · {1}: faltam {2} para refazer.", r.it.name, imbName(r.c.imbuement).split(" (")[0], hrs(r.c.hours_left));
+    box.innerHTML = `<div class="banner" style="margin-top:12px"><b>${T("⏳ Imbuements para refazer")}</b>
+      ${rows.map((r) => `<div data-i18n-skip style="font-size:14px; margin-top:4px">${esc(line(r))}</div>`).join("")}
+      <button class="link" data-page-link="gear" type="button" style="margin-top:6px">${T("Abrir Equipamentos")} →</button></div>`;
+  } catch { box.innerHTML = ""; }
+}
+
+/** Custo e o jeito mais barato de montar o imbuement escolhido (mostrado ao abrir e a cada troca da lista). */
+async function showPlan(f) {
+  const key = f.querySelector("[data-imb-key]"), tier = f.querySelector("[data-imb-tier]"), out = f.querySelector("[data-imb-plan]");
+  if (!key || !tier || !out) return;
+  try {
+    const p = await api("GET", gearUrl(`/plan?imbuement=${key.value}&tier=${tier.value}`));
+    out.textContent = p.total === null ? tf("Faltam preços: {0}.", p.missing.join(", ")) : `💡 ${adviceText(p.imbuement, p.tier, p.best)} ${tf("Total {0}.", gpx(p.total))}`;
+  } catch (err) { out.textContent = err.message; }
 }
 
 async function gearCall(method, path, body) {
-  try { G.data = await api(method, gearUrl(path), body); paintGear(); return true; }
-  catch (e) { if (e.status !== 401) alert(e.message); return false; }
+  try { G.data = await api(method, gearUrl(path), body); G.msg = ""; G.act = null; paintGear(); return true; }
+  catch (e) { if (e.status !== 401) { G.msg = e.message; paintGear(); window.scrollTo(0, 0); } return false; }
 }
-const askHours = (msg) => {
-  const v = prompt(msg, "1");
-  if (v === null) return null;
-  const h = parseFloat(String(v).replace(",", "."));
-  return h > 0 ? h : 0;
+/** Lê as horas digitadas no painel de ação (vírgula ou ponto). */
+const panelHours = (id) => {
+  const el = document.querySelector(`[data-pn="${id}"] [data-pn-hours]`);
+  const h = parseFloat(String((el && el.value) || "0").replace(",", "."));
+  return h > 0 ? Math.min(h, 100) : 0;
 };
 
 document.addEventListener("change", async (e) => {
@@ -4362,14 +4447,8 @@ document.addEventListener("change", async (e) => {
     catch (err) { alert(err.message); }
     return;
   }
-  const f = e.target.closest("[data-imbue-form]");
-  if (f && (e.target.matches("[data-imb-key]") || e.target.matches("[data-imb-tier]"))) {
-    const out = f.parentElement.querySelector("[data-imb-plan]");
-    try {
-      const p = await api("GET", gearUrl(`/plan?imbuement=${f.querySelector("[data-imb-key]").value}&tier=${f.querySelector("[data-imb-tier]").value}`));
-      out.textContent = p.total === null ? tf("Faltam preços: {0}.", p.missing.join(", ")) : `💡 ${adviceText(p.imbuement, p.tier, p.best)} ${tf("Total {0}.", gpx(p.total))}`;
-    } catch (err) { out.textContent = err.message; }
-  }
+  const f = e.target.closest("[data-imbue-form], [data-swap-form]");
+  if (f && (e.target.matches("[data-imb-key]") || e.target.matches("[data-imb-tier]"))) showPlan(f);
 });
 
 document.addEventListener("click", async (e) => {
@@ -4385,21 +4464,28 @@ document.addEventListener("click", async (e) => {
     await gearCall("POST", "/item", body);
   } else if (act === "elems") {
     const it = G.data.items.find((x) => x.id === +id);
-    await gearCall("PUT", `/item/${id}`, { name: it.name, kind: it.kind, slots: it.slots, native: it.native || [],
+    const sl = b.closest("[data-elem-box]").querySelector("[data-slots-val]");
+    await gearCall("PUT", `/item/${id}`, { name: it.name, kind: it.kind, slots: sl ? +sl.value : it.slots, native: it.native || [],
       elements: [...b.closest("[data-elem-box]").querySelectorAll("[data-elem-val]:checked")].map((x) => x.value) });
-  } else if (act === "rmitem") { if (confirm("Apagar este item e os imbuements dele?")) await gearCall("DELETE", `/item/${id}`); }
+  } else if (act === "rmitem") { if (confirm(T("Apagar este item e os imbuements dele?"))) await gearCall("DELETE", `/item/${id}`); }
   else if (act === "imbue") {
     const f = b.closest("[data-imbue-form]");
     await gearCall("POST", `/item/${id}/imbue`, { imbuement: f.querySelector("[data-imb-key]").value, tier: +f.querySelector("[data-imb-tier]").value });
   } else if (act === "recharge") await gearCall("POST", `/item/${id}/recharge`);
-  else if (act === "rmcharge") { if (confirm("Tirar este imbuement do item?")) await gearCall("DELETE", `/charge/${id}`); }
-  else if (act === "hours") {
-    const h = askHours("Quantas horas você usou esse imbuement sem registrar numa hunt?");
+  else if (act === "rmcharge") { if (confirm(T("Tirar este imbuement do item?"))) await gearCall("DELETE", `/charge/${id}`); }
+  else if (act === "hours" || act === "restart" || act === "swap") {  // abre (ou fecha) o painel embaixo do imbuement
+    G.act = G.act && G.act.id === +id && G.act.kind === act ? null : { id: +id, kind: act };
+    paintGear();
+    const pn = document.querySelector(`[data-pn="${id}"]`);
+    if (pn) { const first = pn.querySelector("input, select"); if (first) first.focus(); }
+  } else if (act === "pn-close") { G.act = null; paintGear(); }
+  else if (act === "do-hours") {
+    const h = panelHours(id);
     if (h) await gearCall("POST", `/charge/${id}/hours`, { hours: h });
-  } else if (act === "restart") {
-    let h = 0;
-    if (confirm("Usou mais algum tempo do imbuement antes de refazer?\n\nOK = informar as horas · Cancelar = só reiniciar")) h = askHours("Quantas horas a mais?") || 0;
-    await gearCall("POST", `/charge/${id}/restart`, { hours: h });
+  } else if (act === "do-restart") await gearCall("POST", `/charge/${id}/restart`, { hours: panelHours(id) });
+  else if (act === "do-swap") {
+    const f = b.closest("[data-pn]").querySelector("[data-swap-form]");
+    await gearCall("POST", `/charge/${id}/swap`, { imbuement: f.querySelector("[data-imb-key]").value, tier: +f.querySelector("[data-imb-tier]").value, hours: panelHours(id) });
   } else if (act === "calc") {
     try { $("#gcOut").innerHTML = planHtml(await api("GET", gearUrl(`/plan?imbuement=${$("#gcKey").value}&tier=${$("#gcTier").value}`))); }
     catch (err) { $("#gcOut").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
@@ -4408,7 +4494,7 @@ document.addEventListener("click", async (e) => {
     if (!name) { $("#gsErr").textContent = "Dê um nome ao set."; return; }
     await gearCall("POST", "/set", { id: +$("#gsId").value || null, name, place_id: +$("#gsPlace").value || null,
       gear_ids: [...document.querySelectorAll("[data-gs-item]:checked")].map((x) => +x.value) });
-  } else if (act === "rmset") { if (confirm("Apagar este set?")) await gearCall("DELETE", `/set/${id}`); }
+  } else if (act === "rmset") { if (confirm(T("Apagar este set?"))) await gearCall("DELETE", `/set/${id}`); }
   else if (act === "editset") {
     const s = G.data.sets.find((x) => x.id === +id), f = $("#setForm");
     f.open = true; $("#gsName").value = s.name; $("#gsId").value = s.id; $("#gsPlace").value = s.place_id || "";

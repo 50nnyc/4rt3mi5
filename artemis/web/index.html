@@ -628,6 +628,12 @@
   .who.sub { background: rgba(242, 201, 76, .1); color: var(--gold); border: 1px solid rgba(242, 201, 76, .4); }
   .subs-form { display: grid; gap: 10px; }
   .subs-form label > span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  /* 0.32.4: Equipamentos — listas e campos no mesmo estilo do resto do site */
+  #gearResult select, #gearResult input:not([type=checkbox]):not([type=hidden]) { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--card2); color: var(--text); font: inherit; max-width: 100%; }
+  #gearResult select[data-imb-key] { flex: 1 1 100%; }
+  #gearResult select[data-imb-tier] { flex: 1 1 120px; }
+  #gearResult .panel-act input[data-pn-hours] { width: 90px; }
   .subs-form select { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
   .subs-scopes { display: flex; flex-wrap: wrap; gap: 6px 14px; }
   .subs-link { font: 13px/1.4 Consolas, ui-monospace, monospace; word-break: break-all; background: var(--card2); border: 1px dashed var(--gold);

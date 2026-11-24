@@ -1775,5 +1775,19 @@
   "Total já usado neste equipamento: {0}": "この装備でこれまでに使った合計：{0}",
   "Horas acumuladas por equipamento": "装備ごとの累計時間",
   "Horas acumuladas": "累計時間",
-  "Acumulado por imbuement": "インビューメントごとの累計"
+  "Acumulado por imbuement": "インビューメントごとの累計",
+  "Horas usadas que não foram para nenhuma hunt (opcional)": "どのハントにも入っていない使用時間（任意）",
+  "Somar horas": "時間を加算",
+  "Reiniciar": "リセット",
+  "Trocar": "交換",
+  "🔁 Trocar": "🔁 交換",
+  "Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.": "別のインビューメント（または別のレベル）に交換します。今のものは外れ、新しいものはカウンター0から始まります。",
+  "Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.": "インビューメントをやり直しましたか？カウンターは0に戻り、新しい費用は今日の価格で計算されます。",
+  "{0} · {1}: ciclo de {2} completo, hora de refazer.": "{0}・{1}：{2}のサイクルが完了しました。やり直す時間です。",
+  "{0} · {1}: faltam {2} para refazer.": "{0}・{1}：やり直しまであと{2}です。",
+  "⏳ Faltam {0} para completar o ciclo de {1}.": "⏳ {1}のサイクル完了まであと{0}です。",
+  "⏳ Imbuements para refazer": "⏳ やり直すインビューメント",
+  "Abrir Equipamentos": "装備を開く",
+  "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.": "アイテムのインビューメント数がこのスロット数を超えています。スロットを減らす前にインビューメントを外してください。",
+  "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.": "この初期効果は、アイテムに付いているインビューメントと競合します。先にインビューメントを外してください。"
 }

@@ -1775,5 +1775,19 @@
   "Total já usado neste equipamento: {0}": "Bisher an dieser Ausrüstung genutzt: {0}",
   "Horas acumuladas por equipamento": "Gesamtstunden pro Ausrüstung",
   "Horas acumuladas": "Gesamtstunden",
-  "Acumulado por imbuement": "Gesamt pro Imbuement"
+  "Acumulado por imbuement": "Gesamt pro Imbuement",
+  "Horas usadas que não foram para nenhuma hunt (opcional)": "Stunden außerhalb jeder Hunt (optional)",
+  "Somar horas": "Stunden addieren",
+  "Reiniciar": "Neu starten",
+  "Trocar": "Tauschen",
+  "🔁 Trocar": "🔁 Tauschen",
+  "Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.": "Gegen ein anderes Imbuement (oder eine andere Stufe) tauschen: das aktuelle wird entfernt, das neue startet mit dem Zähler bei null.",
+  "Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.": "Imbuement erneuert? Der Zähler springt auf null zurück und die neuen Kosten nutzen die heutigen Preise.",
+  "{0} · {1}: ciclo de {2} completo, hora de refazer.": "{0} · {1}: Zyklus von {2} abgeschlossen, Zeit zum Erneuern.",
+  "{0} · {1}: faltam {2} para refazer.": "{0} · {1}: noch {2} bis zum Erneuern.",
+  "⏳ Faltam {0} para completar o ciclo de {1}.": "⏳ Noch {0} bis der Zyklus von {1} voll ist.",
+  "⏳ Imbuements para refazer": "⏳ Imbuements zum Erneuern",
+  "Abrir Equipamentos": "Ausrüstung öffnen",
+  "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.": "Das Item hat mehr Imbuements als diese Slots. Entferne ein Imbuement, bevor du die Slots verringerst.",
+  "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.": "Dieser Werkseffekt blockiert ein Imbuement, das schon auf dem Item ist. Entferne zuerst das Imbuement."
 }

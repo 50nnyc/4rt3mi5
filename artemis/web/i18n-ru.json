@@ -1775,5 +1775,19 @@
   "Total já usado neste equipamento: {0}": "Всего использовано на этой экипировке: {0}",
   "Horas acumuladas por equipamento": "Накопленные часы по экипировке",
   "Horas acumuladas": "Накопленные часы",
-  "Acumulado por imbuement": "Накоплено по имбуементам"
+  "Acumulado por imbuement": "Накоплено по имбуементам",
+  "Horas usadas que não foram para nenhuma hunt (opcional)": "Часы вне любого ханта (необязательно)",
+  "Somar horas": "Добавить часы",
+  "Reiniciar": "Сбросить",
+  "Trocar": "Заменить",
+  "🔁 Trocar": "🔁 Заменить",
+  "Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.": "Замените на другой имбуемент (или другой уровень): текущий снимается, а новый начинает со счётчика с нуля.",
+  "Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.": "Обновили имбуемент? Счётчик вернётся к нулю, а новая стоимость считается по сегодняшним ценам.",
+  "{0} · {1}: ciclo de {2} completo, hora de refazer.": "{0} · {1}: цикл {2} завершён, пора обновить.",
+  "{0} · {1}: faltam {2} para refazer.": "{0} · {1}: осталось {2} до обновления.",
+  "⏳ Faltam {0} para completar o ciclo de {1}.": "⏳ Осталось {0} до конца цикла {1}.",
+  "⏳ Imbuements para refazer": "⏳ Имбуементы для обновления",
+  "Abrir Equipamentos": "Открыть экипировку",
+  "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.": "На предмете больше имбуементов, чем этих слотов. Снимите имбуемент, прежде чем уменьшать слоты.",
+  "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.": "Этот заводской эффект блокирует имбуемент, который уже на предмете. Сначала снимите имбуемент."
 }

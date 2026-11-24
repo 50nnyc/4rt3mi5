@@ -1775,5 +1775,19 @@
   "Total já usado neste equipamento: {0}": "Total already used on this equipment: {0}",
   "Horas acumuladas por equipamento": "Accumulated hours per equipment",
   "Horas acumuladas": "Accumulated hours",
-  "Acumulado por imbuement": "Accumulated per imbuement"
+  "Acumulado por imbuement": "Accumulated per imbuement",
+  "Horas usadas que não foram para nenhuma hunt (opcional)": "Hours used outside any hunt (optional)",
+  "Somar horas": "Add hours",
+  "Reiniciar": "Restart",
+  "Trocar": "Swap",
+  "🔁 Trocar": "🔁 Swap",
+  "Trocar por outro imbuement (ou outro nível): o atual sai e o novo entra com o contador zerado.": "Swap for another imbuement (or another tier): the current one comes out and the new one starts with the counter at zero.",
+  "Refez o imbuement? O contador volta a zero e o custo novo usa os preços de hoje.": "Redid the imbuement? The counter goes back to zero and the new cost uses today's prices.",
+  "{0} · {1}: ciclo de {2} completo, hora de refazer.": "{0} · {1}: {2} cycle completed, time to redo it.",
+  "{0} · {1}: faltam {2} para refazer.": "{0} · {1}: {2} left until you redo it.",
+  "⏳ Faltam {0} para completar o ciclo de {1}.": "⏳ {0} left to complete the {1} cycle.",
+  "⏳ Imbuements para refazer": "⏳ Imbuements to redo",
+  "Abrir Equipamentos": "Open Equipment",
+  "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.": "The item has more imbuements than these slots. Remove an imbuement before reducing the slots.",
+  "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.": "This factory effect blocks an imbuement that is already on the item. Remove the imbuement first."
 }

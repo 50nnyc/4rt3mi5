@@ -3339,6 +3339,14 @@ def _my_item(name: str, gear_id: int) -> dict:
 def gear_item_edit(name: str, gear_id: int, body: GearItemIn, access: dict = Depends(require_session)):
     _gear_guard(name, access)
     it = _my_item(name, gear_id)
+    if not it["catalog"]:  # 0.32.4: não deixa o item ficar incoerente com o que já está imbuído
+        active = next(g for g in store.gear_list(name) if g["id"] == gear_id)["charges"]
+        if len(active) > body.slots:
+            raise HTTPException(422, "O item tem mais imbuements do que esses slots. Tire um imbuement antes de reduzir os slots.")
+        clash = [ch["imbuement"] for ch in active
+                 if ch["imbuement"] in imbuing.blocked_by(_clean_elements(body.elements)) or ch["imbuement"] in _clean_native(body.native)]
+        if clash:
+            raise HTTPException(422, "Esse efeito de fábrica bloqueia um imbuement que já está no item. Tire o imbuement antes.")
     store.gear_update(gear_id, it["name"] if it["catalog"] else " ".join(body.name.split()), body.slots, _clean_native(body.native),
                       _clean_elements(body.elements))
     return _gear_payload(name, access)
@@ -3357,12 +3365,17 @@ class ImbueIn(BaseModel):
     tier: int = Field(ge=1, le=3)
 
 
-def _new_charge(name: str, access: dict, it: dict, imbuement: str, tier: int) -> dict:
-    prices = _imb_prices(access, name)
-    eff = _eff(prices)
+def _plan_for(name: str, access: dict, imbuement: str, tier: int) -> dict:
+    """Plano mais barato do imbuement; erro 422 se faltar preço (confira ANTES de encerrar o imbuement antigo)."""
+    eff = _eff(_imb_prices(access, name))
     plan = imbuing.best_plan(imbuement, tier, eff, eff.get("gold token"))
     if plan["total"] is None:
         raise HTTPException(422, "Informe o preço de todos os itens desse imbuement, em Preços dos itens.")
+    return plan
+
+
+def _new_charge(name: str, access: dict, it: dict, imbuement: str, tier: int) -> dict:
+    plan = _plan_for(name, access, imbuement, tier)
     return store.charge_add(it["id"], imbuement, tier, plan, plan["total"], imbuing.HOURS)
 
 
@@ -3437,18 +3450,50 @@ def gear_charge_restart(name: str, charge_id: int, body: HoursIn, access: dict =
     e o novo ciclo já usa os preços de hoje."""
     _gear_guard(name, access)
     c, it = _my_charge(name, charge_id)
+    accessory = c["imbuement"].startswith("charge:")
+    if not accessory:
+        _plan_for(name, access, c["imbuement"], c["tier"])  # 0.32.4: sem preço, nada é encerrado (antes o item ficava sem o imbuement)
     if body.hours > 0:
         store.usage_add(name, "manual", 0, charge_id, _charge_label(it, c), body.hours,
                         imbuing.use_cost(c["total_cost"], body.hours, c["hours_total"]), datetime.now(BRT).date().isoformat())
         store.life_add_extra(charge_id, body.hours)  # entra no acumulado do equipamento
     store.charge_end(charge_id)
-    if c["imbuement"].startswith("charge:"):
+    if accessory:
         acc = imbuing.ACCESSORIES[c["imbuement"][7:]]
         silver = _eff(_imb_prices(access, name)).get("silver token") or c["plan"].get("silver_price") or 0
         store.charge_add(it["id"], c["imbuement"], 0, {"silver_tokens": acc["silver_tokens"], "silver_price": silver},
                          imbuing.accessory_charge_cost(acc["key"], silver), c["hours_total"])
     else:
         _new_charge(name, access, it, c["imbuement"], c["tier"])
+    return _gear_payload(name, access)
+
+
+class SwapIn(BaseModel):
+    imbuement: str
+    tier: int = Field(ge=1, le=3)
+    hours: float = Field(default=0, ge=0, le=100)  # horas usadas do imbuement antigo que não entraram em nenhuma hunt
+
+
+@app.post("/api/gear/{name}/charge/{charge_id}/swap")
+def gear_charge_swap(name: str, charge_id: int, body: SwapIn, access: dict = Depends(require_session)):
+    """0.32.4: troca o imbuement de um slot (outro tipo ou outro nível) de uma vez: o antigo sai, o novo entra com contador zerado."""
+    _gear_guard(name, access)
+    c, it = _my_charge(name, charge_id)
+    if c["imbuement"].startswith("charge:"):
+        raise HTTPException(422, "Anel e amuleto não levam imbuement.")
+    mine = next(g for g in store.gear_list(name) if g["id"] == it["id"])
+    others = [ch["imbuement"] for ch in mine["charges"] if ch["id"] != charge_id]
+    err = imbuing.check_imbue(it["kind"], it["slots"], json.loads(it["native"] or "[]"), others, body.imbuement, body.tier,
+                              json.loads(it.get("elements") or "[]"))
+    if err:
+        raise HTTPException(422, err)
+    plan = _plan_for(name, access, body.imbuement, body.tier)
+    if body.hours > 0:
+        store.usage_add(name, "manual", 0, charge_id, _charge_label(it, c), body.hours,
+                        imbuing.use_cost(c["total_cost"], body.hours, c["hours_total"]), datetime.now(BRT).date().isoformat())
+        store.life_add_extra(charge_id, body.hours)
+    store.charge_end(charge_id)
+    store.charge_add(it["id"], body.imbuement, body.tier, plan, plan["total"], imbuing.HOURS)
     return _gear_payload(name, access)
 
 
