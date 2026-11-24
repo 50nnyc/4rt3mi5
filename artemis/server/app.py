@@ -2547,6 +2547,8 @@ def set_place(session_id: int, body: PlaceSet, access: dict = Depends(require_se
     """Local da sessão: escolher é livre; trocar depois, só 2 vezes (0.20.0)."""
     out = _change_place("solo_sessions", session_id, body.place_id, access)
     row = store.solo_session(session_id)
+    if row:
+        _auto_gear_solo(row["name"], session_id)  # 0.32.5: o set dessa hunt entra sozinho
     out["compare"] = _compare_with_average(row["name"], row) if row else None
     return out
 
@@ -3152,6 +3154,8 @@ def stacker_upload(body: UploadIn, access: dict = Depends(require_session)):
     row, created = store.add_solo(name, session.fingerprint(name), session.to_dict(), owner_key, body.raw_text,
                                   body.place_id, level, who)
     row.pop("raw_text", None)
+    if created and not link:
+        _auto_gear_solo(name, row["id"])  # 0.32.5: com local escolhido, o set da hunt entra sozinho
     if link:
         if not created:
             store.refund_link(link["id"])
@@ -3593,12 +3597,32 @@ def _auto_gear_party(hunt_id: int) -> None:
                 continue
 
 
+def _auto_gear_solo(name: str, session_id: int) -> None:
+    """0.32.5: sessão solo com local definido e jogador Hardcore com set para esse local: o set entra sozinho
+    (só se ele ainda não escolheu, nem tirou, o set à mão)."""
+    row = store.solo_session(session_id)
+    if not row or not row.get("place_id") or row.get("other_player"):
+        return
+    owner = store.char_owner(name)
+    if not owner or store.player_type(owner) not in _hardcore_types():
+        return
+    cur = store.session_gear_one(name, "solo", session_id)
+    if cur and not cur["auto"]:
+        return
+    st = store.last_set_for_place(name, row["place_id"])
+    if st and (not cur or cur["set_id"] != st["id"] or cur["auto"]):
+        try:
+            _apply_gear(name, "solo", session_id, st["id"], cur["pause_minutes"] if cur else 0, auto=True)
+        except HTTPException:
+            pass
+
+
 def _apply_gear(name: str, kind: str, ref_id: int, set_id: int | None, pause: int, auto: bool = False) -> dict:
     """Debita dos imbuements do set o tempo da hunt (menos a pausa): custo proporcional às 20 horas de cada um."""
     seconds, day = _session_seconds(name, kind, ref_id)
     store.release_session_gear(name, kind, ref_id)
     if not set_id:
-        if kind == "hunt":  # 0.32.2: "sem set" escolhido à mão: o automático da party não volta a mexer
+        if kind in ("hunt", "solo"):  # 0.32.2: "sem set" escolhido à mão: o automático da party não volta a mexer
             store.session_gear_save(name, kind, ref_id, None, None, pause, 0, 0, False)
         return {"cost": 0, "hours": 0}
     st = store.set_get(set_id)

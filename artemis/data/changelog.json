@@ -1,6 +1,82 @@
 {
   "releases": [
     {
+      "version": "0.32.5",
+      "date": "2026-11-24",
+      "title": "Configurações por assunto",
+      "changes": [
+        "🧭 Configurações agora tem “Onde configurar”: atalhos por assunto (personagem, hunts e imbuements) que levam direto ao lugar certo, inclusive às abas de Equipamentos.",
+        "🗂️ Equipamentos ficou em abas (Itens, Sets, Preços e Relatório), cada uma com o que se usa junto, e funciona melhor no celular.",
+        "🧩 Nas suas sessões, o botão Gerenciar sets leva ao lugar de montar os sets; sem nenhum set ainda, há um atalho para criar o primeiro.",
+        "🚀 Mais fácil começar: Equipamentos tem um guia de primeiros passos, abre na última aba que você usou e, quando falta o preço de um material, mostra o aviso com um botão para informá-lo. Nas sessões solo, o set da hunt agora entra sozinho quando você escolhe o local, como na party."
+      ],
+      "tr": {
+        "en": {
+          "title": "Settings by topic",
+          "changes": [
+            "🧭 Settings now has “Where to configure”: shortcuts by topic (character, hunts and imbuements) that take you straight to the right place, including the Equipment tabs.",
+            "🗂️ Equipment is now in tabs (Items, Sets, Prices and Report), each with what you use together, and it works better on phones.",
+            "🧩 In your sessions, the Manage sets button takes you to where you build sets; with no set yet, there is a shortcut to create the first one.",
+            "🚀 Easier to get started: Equipment has a first-steps guide, opens on the last tab you used and, when a material's price is missing, shows a notice with a button to enter it. In solo sessions, the hunt's set now applies by itself when you pick the spot, as in the party."
+          ]
+        },
+        "es": {
+          "title": "Configuración por tema",
+          "changes": [
+            "🧭 Configuración ahora tiene «Dónde configurar»: atajos por tema (personaje, hunts e imbuements) que te llevan directo al lugar correcto, incluidas las pestañas de Equipamiento.",
+            "🗂️ Equipamiento quedó en pestañas (Ítems, Sets, Precios e Informe), cada una con lo que se usa junto, y funciona mejor en el celular.",
+            "🧩 En tus sesiones, el botón Gestionar sets te lleva a donde armas los sets; si aún no tienes ninguno, hay un atajo para crear el primero.",
+            "🚀 Más fácil empezar: Equipamiento tiene una guía de primeros pasos, abre en la última pestaña que usaste y, cuando falta el precio de un material, muestra un aviso con un botón para informarlo. En las sesiones solo, el set de la hunt ahora entra solo cuando eliges el lugar, como en la party."
+          ]
+        },
+        "ja": {
+          "title": "テーマ別の設定",
+          "changes": [
+            "🧭 設定に「どこで設定するか」が加わりました。キャラクター、ハント、インビューメントのテーマ別ショートカットで、装備の各タブを含め、目的の場所へ直接移動できます。",
+            "🗂️ 装備がタブ（アイテム、セット、価格、レポート）に分かれ、一緒に使うものがまとまりました。スマートフォンでも使いやすくなっています。",
+            "🧩 セッション画面の「セットを管理」ボタンから、セットを作る場所へ移動できます。セットがまだない場合は、最初のセットを作るショートカットが表示されます。",
+            "🚀 始めやすくなりました：装備に最初のステップのガイドが加わり、最後に使ったタブで開きます。素材の価格が未入力のときは、入力ボタン付きのお知らせが出ます。ソロセッションでも、場所を選ぶとパーティと同じようにハントのセットが自動で適用されます。"
+          ]
+        },
+        "de": {
+          "title": "Einstellungen nach Thema",
+          "changes": [
+            "🧭 Die Einstellungen haben jetzt „Wo einstellen“: Abkürzungen nach Thema (Charakter, Hunts und Imbuements), die dich direkt zum richtigen Ort bringen, auch zu den Tabs der Ausrüstung.",
+            "🗂️ Die Ausrüstung ist jetzt in Tabs aufgeteilt (Items, Sets, Preise und Bericht), jeder mit dem, was man zusammen braucht, und funktioniert besser auf dem Handy.",
+            "🧩 In deinen Sessions führt der Button Sets verwalten dorthin, wo du Sets baust; ohne Set gibt es eine Abkürzung, um das erste zu erstellen.",
+            "🚀 Leichterer Einstieg: Die Ausrüstung hat eine Erste-Schritte-Anleitung, öffnet im zuletzt genutzten Tab und zeigt bei fehlendem Materialpreis einen Hinweis mit Button zum Eintragen. In Solo-Sessions wird das Set der Hunt jetzt von selbst angewendet, sobald du den Ort wählst, wie in der Party."
+          ]
+        },
+        "pl": {
+          "title": "Ustawienia według tematu",
+          "changes": [
+            "🧭 Ustawienia mają teraz „Gdzie skonfigurować”: skróty według tematu (postać, huntów i imbuementy), które prowadzą prosto we właściwe miejsce, także do kart Wyposażenia.",
+            "🗂️ Wyposażenie jest teraz w kartach (Przedmioty, Sety, Ceny i Raport), każda z tym, czego używa się razem, i lepiej działa na telefonie.",
+            "🧩 W twoich sesjach przycisk Zarządzaj setami prowadzi do miejsca, gdzie tworzysz sety; gdy nie masz jeszcze żadnego, jest skrót do utworzenia pierwszego.",
+            "🚀 Łatwiejszy start: Wyposażenie ma przewodnik pierwszych kroków, otwiera się na ostatnio użytej karcie, a gdy brakuje ceny materiału, pokazuje komunikat z przyciskiem do jej podania. W sesjach solo set huntu stosuje się teraz sam po wybraniu miejsca, tak jak w party."
+          ]
+        },
+        "fr": {
+          "title": "Paramètres par sujet",
+          "changes": [
+            "🧭 Les Paramètres ont maintenant « Où configurer » : des raccourcis par sujet (personnage, hunts et imbuements) qui vous mènent directement au bon endroit, y compris aux onglets d'Équipements.",
+            "🗂️ Équipements est maintenant en onglets (Objets, Sets, Prix et Rapport), chacun avec ce qu'on utilise ensemble, et il fonctionne mieux sur téléphone.",
+            "🧩 Dans vos sessions, le bouton Gérer les sets mène à l'endroit où l'on crée les sets ; sans aucun set, un raccourci permet de créer le premier.",
+            "🚀 Plus facile de commencer : Équipements a un guide des premiers pas, s'ouvre sur le dernier onglet utilisé et, quand le prix d'un matériau manque, affiche un avis avec un bouton pour le renseigner. Dans les sessions solo, le set de la hunt s'applique maintenant tout seul quand vous choisissez le lieu, comme en party."
+          ]
+        },
+        "ru": {
+          "title": "Настройки по темам",
+          "changes": [
+            "🧭 В Настройках появился раздел «Где настроить»: ярлыки по темам (персонаж, ханты и имбуементы), которые ведут прямо в нужное место, в том числе во вкладки Экипировки.",
+            "🗂️ Экипировка теперь разделена на вкладки (Предметы, Сеты, Цены и Отчёт), в каждой то, что используется вместе, и на телефоне она работает лучше.",
+            "🧩 В ваших сессиях кнопка «Управлять сетами» ведёт туда, где создаются сеты; если сетов ещё нет, есть ярлык для создания первого.",
+            "🚀 Проще начать: в Экипировке есть руководство по первым шагам, она открывается на последней использованной вкладке, а если не указана цена материала, показывает уведомление с кнопкой для ввода. В соло-сессиях сет ханта теперь применяется сам, когда вы выбираете место, как в пати."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.4",
       "date": "2026-11-24",
       "title": "Imbuements: trocar e avisos",

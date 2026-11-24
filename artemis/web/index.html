@@ -631,6 +631,18 @@
   /* 0.32.4: Equipamentos — listas e campos no mesmo estilo do resto do site */
   #gearResult select, #gearResult input:not([type=checkbox]):not([type=hidden]) { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line);
     background: var(--card2); color: var(--text); font: inherit; max-width: 100%; }
+  /* 0.32.5: atalhos de configuração (Configurações) e abas de Equipamentos */
+  .hub { display: grid; gap: 8px; margin: 6px 0 14px; }
+  .hub h3 { margin: 8px 0 0; font-size: 13px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .hub-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .hubbtn { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card2); color: var(--text); font: inherit; cursor: pointer; min-height: 48px; }
+  .hubbtn:hover, .hubbtn:focus-visible { border-color: var(--gold); }
+  .hubbtn > span:first-child { font-size: 20px; line-height: 1.1; }
+  .hubbtn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
+  #gearTabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; margin: 10px 0 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #gearTabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 13px; line-height: 1.2; min-width: 0; }
+  #gearTabs .pill { margin-left: 0; }
   #gearResult select[data-imb-key] { flex: 1 1 100%; }
   #gearResult select[data-imb-tier] { flex: 1 1 120px; }
   #gearResult .panel-act input[data-pn-hours] { width: 90px; }
@@ -1194,6 +1206,7 @@
     <div id="pageSettings" class="hidden">
       <h1>Configurações</h1>
       <p class="muted" style="margin-top:-4px">Suas preferências no 4rt3mi5.</p>
+      <div id="configHub"></div>
       <h2>🎮 Tipo de player</h2>
       <div class="card">
         <div class="ptypes" id="playerTypes" role="radiogroup" aria-label="Tipo de player"></div>

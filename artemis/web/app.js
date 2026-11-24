@@ -968,7 +968,33 @@ function ptypeButtons(current) {
       <span class="pt-ic" aria-hidden="true">${p.ic}</span><span><b>${esc(p.label)}</b>${on && current ? `<span class="pt-cur">(Atual)</span>` : ""}</span></button>`;
   }).join("");
 }
+/** 0.32.5: "Onde configurar": atalhos por assunto (personagem, hunts, imbuements) que levam direto ao lugar certo. */
+function configHub() {
+  const hc = isHardcore();
+  const b = (attr, ic, label, hint) => `<button class="hubbtn" type="button" ${attr}><span aria-hidden="true">${ic}</span><span><b>${T(label)}</b><small>${T(hint)}</small></span></button>`;
+  return `<div class="hub"><h3>👤 ${T("Personagem")}</h3><div class="hub-row">
+      ${b('data-hub-scroll="playerTypes"', "🎮", "Tipo de player", "Solo, Hardcore e outros")}
+      ${b('data-page-link="chars"', "🧙", "Meus personagens", "Vincular, main e Tibia Coin")}
+      ${b('data-hub-scroll="settingsLang"', "🌐", "Idioma", "O app inteiro muda na hora")}</div>
+    <h3>🗺️ ${T("Hunts")}</h3><div class="hub-row">
+      ${b('data-page-link="hunts"', "📍", "Locais de hunt", "Escolha onde você caça")}
+      ${b('data-page-link="stack"', "📈", "Sessões salvas", "Histórico e set de cada sessão")}
+      ${hc ? b('data-gear-open="sets"', "🧩", "Sets por hunt", "Quais peças usar em cada hunt") : ""}</div>
+    <h3>⚔️ ${T("Imbuements")}</h3>${hc ? `<div class="hub-row">
+      ${b('data-gear-open="itens"', "🎒", "Itens e imbuements", "Pôr, trocar e tirar")}
+      ${b('data-gear-open="precos"', "💰", "Preços e calculadora", "Quanto custa cada imbuement")}
+      ${b('data-gear-open="relatorio"', "📊", "Relatório de gastos", "Horas e custo por semana")}</div>`
+      : `<div class="hub-row">${b('data-hub-scroll="playerTypes"', "🔥", "Só para o Player Hardcore", "Troque o tipo de player para liberar")}</div>`}</div>`;
+}
+document.addEventListener("click", (e) => {
+  const o = e.target.closest("[data-gear-open]");
+  if (o) { e.preventDefault(); closeDrawer(); openGear(o.dataset.gearOpen); return; }
+  const s = e.target.closest("[data-hub-scroll]");
+  if (s) { const t = document.getElementById(s.dataset.hubScroll); if (t) t.scrollIntoView({ behavior: "smooth", block: "center" }); }
+});
 function paintPlayerType() {
+  const hub = $("#configHub");
+  if (hub) hub.innerHTML = configHub();
   $("#gearItem").classList.toggle("hidden", !isHardcore());  // 0.32.0: Equipamentos só para o Hardcore
   $("#playerTypes").innerHTML = ptypeButtons(ptype());
   $("#playerTypeHint").textContent = PTYPE_INFO[isHardcore() ? "hardcore" : ptype()] || "";
@@ -4179,6 +4205,7 @@ const usageLabel = (l) => String(l).replace(/ \(recarga\)$/, ` (${T("recarga")})
 async function loadGear(opts = {}) {
   const el = $("#gearResult");
   G.msg = ""; G.act = null;
+  if (!G.tab) { try { G.tab = (await kv.get("geartab")) || "itens"; } catch { G.tab = "itens"; } }  // 0.32.5: abre na última aba usada
   if (!opts.quiet) el.innerHTML = skeleton("stack");
   try {
     if (!G.cat) G.cat = await api("GET", "/api/gear/catalog");
@@ -4365,21 +4392,44 @@ function planHtml(p) {
     <div class="muted">${esc(tf("Taxa do shrine: {0} · total {1} por {2}", gpx(p.fee), gpx(p.total), hrs(G.cat.hours)))}${p.saved ? " · " + esc(tf("economia de {0} em relação à pior opção", gpx(p.saved))) : ""}</div>`;
 }
 
+/** 0.32.5: guia de primeiros passos (some quando há peça, imbuement e set). */
+function firstSteps(d) {
+  const hasItem = d.items.length > 0, hasImb = d.items.some((i) => i.charges.length), hasSet = d.sets.length > 0;
+  if (hasItem && hasImb && hasSet) return "";
+  const step = (done, n, label, btn) => `<div class="row" style="justify-content:flex-start; gap:10px; margin:6px 0"><span aria-hidden="true">${done ? "✅" : n}</span>
+    <span style="flex:1; ${done ? "opacity:.65; text-decoration:line-through" : ""}">${esc(T(label))}</span>${done ? "" : btn}</div>`;
+  return `<div class="card" id="firstSteps"><b>🚀 ${T("Primeiros passos")}</b>
+    ${step(hasItem, "1️⃣", "Cadastre uma peça (sua armadura, por exemplo)", `<button class="btn2" data-gear="firstitem" type="button">${T("Cadastrar")}</button>`)}
+    ${step(hasImb, "2️⃣", "Abra a peça e ponha um imbuement", hasItem ? `<button class="btn2" data-gear="tab:itens" type="button">${T("Ver itens")}</button>` : "")}
+    ${step(hasSet, "3️⃣", "Monte um set com as peças da hunt", hasItem ? `<button class="btn2" data-gear="tab:sets" type="button">${T("Montar set")}</button>` : "")}
+    <div class="hint">${T("Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.")}</div></div>`;
+}
+const GEAR_TABS = [{ key: "itens", icon: "🎒", label: "Itens" }, { key: "sets", icon: "🧩", label: "Sets" },
+  { key: "precos", icon: "💰", label: "Preços" }, { key: "relatorio", icon: "📊", label: "Relatório" }];
+/** Abre Equipamentos já na aba certa (usado pelos atalhos de configuração). */
+function openGear(tab) { G.tab = tab; G.act = null; if (S.page === "gear") { if (G.data) paintGear(); window.scrollTo(0, 0); } else go("gear"); }
 function paintGear() {
   const d = G.data, el = $("#gearResult");
   const total = d.items.reduce((a, i) => a + i.hourly, 0);
   // 0.32.4: guarda quais cartões estavam abertos (cada ação repinta a tela e fechava tudo) e a posição da rolagem
   const keyOf = (x) => x.dataset.k || ((x.querySelector("summary") || {}).textContent || "").trim().slice(0, 24);
   const wasOpen = new Set([...el.querySelectorAll("details[open]")].map(keyOf)), seen = G.seen || new Set(), scroll = window.scrollY;
-  const msg = G.msg ? `<div class="err" role="alert">${esc(G.msg)}</div>` : "";
+  const msg = G.msg ? `<div class="err" role="alert">${esc(G.msg)}${/Preços dos itens|prices/i.test(G.msg) ? ` <button class="link" data-gear="tab:precos" type="button">💰 ${esc(T("Informar preços"))}</button>` : ""}</div>` : "";
+  // 0.32.5: a tela virou abas (itens, sets, preços e relatório), cada uma com o que se usa junto
+  const tab = GEAR_TABS.some((t) => t.key === G.tab) ? G.tab : "itens";
+  const badge = { itens: d.items.length, sets: d.sets.length };
+  const tabs = `<div class="seg" role="tablist" id="gearTabs" aria-label="Equipamentos">${GEAR_TABS.map((t) => `<button type="button" role="tab" aria-selected="${t.key === tab}" class="${t.key === tab ? "on" : ""}" data-gear="tab:${t.key}">${t.icon} ${esc(T(t.label))}${badge[t.key] ? ` <span class="pill" data-i18n-skip>${badge[t.key]}</span>` : ""}</button>`).join("")}</div>`;
+  const body = {
+    itens: () => `${d.items.map(itemCard).join("") || `<p class="muted">Nenhum item ainda. Cadastre as peças que você usa nas hunts.</p>`}${newItemForm()}`,
+    sets: () => `<p class="hint" style="margin-top:0">Um set é o conjunto de peças que você usa numa hunt. Escolha o set nas suas sessões e o custo entra no lucro.</p>${setsBlock()}`,
+    precos: () => `<details class="card" open data-k="pp"><summary class="row"><b>💰 Preços dos itens</b><span class="muted">▾</span></summary>${pricesBlock()}</details>
+      <details class="card" data-k="pc"><summary class="row"><b>🧮 Calculadora de imbuement</b><span class="muted">▾</span></summary>${calcBlock()}</details>`,
+    relatorio: () => `<div id="gearReportBody"><p class="muted">Carregando…</p></div>`,
+  }[tab]();
   el.innerHTML = msg + `<div class="card"><b>⚔️ Gasto invisível por hora de hunt</b>
-      <div class="big gold">${gpx(total)}/h</div><div class="hint">Soma de todos os imbuements, anéis e amuletos em uso. Cada hunt usa só os itens do set escolhido.</div></div>
-    <h2>Itens</h2>${d.items.map(itemCard).join("") || `<p class="muted">Nenhum item ainda. Cadastre as peças que você usa nas hunts.</p>`}${newItemForm()}
-    <h2>Sets</h2>${setsBlock()}
-    <details class="card"><summary class="row"><b>🧮 Calculadora de imbuement</b><span class="muted">▾</span></summary>${calcBlock()}</details>
-    <details class="card"><summary class="row"><b>💰 Preços dos itens</b><span class="muted">▾</span></summary>${pricesBlock()}</details>
-    <details class="card" id="gearReport"><summary class="row"><b>📊 Relatório semanal</b><span class="muted">▾</span></summary><div id="gearReportBody"><p class="muted">Abra para carregar.</p></div></details>`;
-  paintNewBody();
+      <div class="big gold">${gpx(total)}/h</div><div class="hint">Soma de todos os imbuements, anéis e amuletos em uso. Cada hunt usa só os itens do set escolhido.</div></div>${tabs}${tab === "itens" || tab === "sets" ? firstSteps(d) : ""}${body}`;
+  if (tab === "itens") paintNewBody();
+  if (tab === "relatorio") loadGearReport();
   el.querySelectorAll("details").forEach((x) => { const k = keyOf(x); if (seen.has(k)) x.open = wasOpen.has(k); seen.add(k); });
   G.seen = seen;
   window.scrollTo(0, scroll);
@@ -4423,7 +4473,9 @@ async function showPlan(f) {
   if (!key || !tier || !out) return;
   try {
     const p = await api("GET", gearUrl(`/plan?imbuement=${key.value}&tier=${tier.value}`));
-    out.textContent = p.total === null ? tf("Faltam preços: {0}.", p.missing.join(", ")) : `💡 ${adviceText(p.imbuement, p.tier, p.best)} ${tf("Total {0}.", gpx(p.total))}`;
+    if (p.total === null) {  // 0.32.5: falta preço: leva direto para a aba onde se informa
+      out.innerHTML = `${esc(tf("Faltam preços: {0}.", p.missing.join(", ")))} <button class="link" data-gear="tab:precos" type="button">💰 ${esc(T("Informar preços"))}</button>`;
+    } else out.textContent = `💡 ${adviceText(p.imbuement, p.tier, p.best)} ${tf("Total {0}.", gpx(p.total))}`;
   } catch (err) { out.textContent = err.message; }
 }
 
@@ -4456,6 +4508,16 @@ document.addEventListener("click", async (e) => {
   if (!b) return;
   e.preventDefault();
   const [act, id] = b.dataset.gear.split(":");
+  if (act === "tab") {
+    G.tab = id; G.act = null; G.msg = ""; paintGear(); window.scrollTo(0, 0);
+    try { kv.set("geartab", id); } catch {}  // 0.32.5: lembra a última aba
+    return;
+  }
+  if (act === "firstitem") {  // 0.32.5: guia de primeiros passos: abre o formulário do primeiro item
+    G.tab = "itens"; paintGear();
+    const f = $("#gearResult details:not([data-k])"); if (f) { f.open = true; f.scrollIntoView({ behavior: "smooth", block: "center" }); const n = $("#gnName"); if (n) n.focus(); }
+    return;
+  }
   if (act === "newitem") {
     const kind = $("#gnKind").value, acc = kind === "ring" || kind === "amulet";
     const body = acc ? { name: "-", kind, catalog: $("#gnCat").value }
@@ -4510,8 +4572,7 @@ document.addEventListener("click", async (e) => {
     } catch (err) { if (err.status !== 401) alert(err.message); }
   }
 });
-document.addEventListener("toggle", async (e) => {
-  if (e.target.id !== "gearReport" || !e.target.open) return;
+async function loadGearReport() {
   try {
     const r = await api("GET", gearUrl("/report?weeks=8"));
     const wk = r.weeks.map((w) => `<div class="card" style="margin:8px 0; padding:10px"><div class="row"><b>${esc(tf("Semana de {0}", brData(w.week)))}</b>
@@ -4519,14 +4580,19 @@ document.addEventListener("toggle", async (e) => {
         ${w.items.map((i) => `<div class="row muted" style="font-size:13px"><span>${esc(usageLabel(i.label))}</span><span>${hrs(i.hours)} · ${gpx(i.cost)}</span></div>`).join("")}</div>`).join("");
     const pend = r.pending.map((p) => `<div class="row muted" style="font-size:13px"><span>${esc(usageLabel(p.label))}</span>
         <span>${esc(tf("{0}% usado · falta usar ≈ {1}", String(p.fraction).replace(".", ","), gpx(p.unused_value)))}</span></div>`).join("");
-    $("#gearReportBody").innerHTML = `${wk || `<p class="muted">Nenhum gasto registrado ainda. Escolha um set nas suas hunts.</p>`}
+    const body = $("#gearReportBody");
+    if (!body) return;  // trocou de aba enquanto carregava
+    body.innerHTML = `${wk || `<p class="muted">Nenhum gasto registrado ainda. Escolha um set nas suas hunts.</p>`}
       ${pend ? `<h2>Pago e ainda não usado</h2>${pend}` : ""}
       ${r.lifetime && r.lifetime.length ? `<h2>Horas acumuladas por equipamento</h2>${r.lifetime.map((l) => `<div class="row muted" style="font-size:13px"><span data-i18n-skip>${esc(l.item)} · ${esc(T(l.label))}</span><span data-i18n-skip>${hrs(l.hours)}</span></div>`).join("")}` : ""}`;
-  } catch (err) { $("#gearReportBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
-}, true);
+  } catch (err) { const b = $("#gearReportBody"); if (b) b.innerHTML = `<div class="err">${esc(err.message)}</div>`; }
+}
 
 /** Na lista de hunts: qual set foi usado e quanto tempo de pausa (o custo entra no lucro líquido). */
 function gearBox(s, kind, ref) {
+  if (isHardcore() && s.net_profit !== undefined && G.data && !G.data.sets.length) {  // 0.32.5: sem set ainda: leva direto para criar
+    return `<div class="hint" style="margin-top:10px">⚔️ <button class="link" data-gear-open="sets" type="button">${T("Criar um set de imbuements")}</button> ${T("para o custo entrar no lucro desta hunt.")}</div>`;
+  }
   if (!isHardcore() || s.net_profit === undefined || !G.data || !G.data.sets.length) {
     return s.gear && s.gear.cost ? `<div class="hint">${esc(tf("⚔️ Gastos invisíveis: −{0} ({1}, {2})", gpx(s.gear.cost), s.gear.set_name || "set", hrs(s.gear.hours)))}</div>` : "";
   }
@@ -4537,6 +4603,7 @@ function gearBox(s, kind, ref) {
     <label class="muted">⚔️ Set usado <select data-gset><option value="">Nenhum</option>${G.data.sets.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
     <label class="muted">Pausa (min) <input data-gpause type="number" min="0" max="1440" value="${s.gear ? s.gear.pause_minutes : 0}" style="width:70px; padding:4px 6px"></label>
     <button class="btn2" data-gear="gsave" type="button">Salvar</button>
+    <button class="link" data-gear-open="sets" type="button">🧩 ${T("Gerenciar sets")}</button>
     ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}</div>`;
 }
 
