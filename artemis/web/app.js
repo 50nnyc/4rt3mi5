@@ -4623,11 +4623,11 @@ function gearBox(s, kind, ref) {
   return `<div class="tagline-row" style="margin-top:10px" data-gbox="${kind}:${ref}">
     <label class="muted">⚔️ Set usado <select data-gset><option value="">Nenhum</option>${G.data.sets.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
     <label class="muted">Pausa (min) <input data-gpause type="number" min="0" max="1440" value="${s.gear ? s.gear.pause_minutes : 0}" style="width:70px; padding:4px 6px"></label>
-    ${s.place ? `<label class="muted"><input type="checkbox" data-gconfirm${s.gear && s.gear.auto ? " checked" : ""}> ${esc(T("Usar sempre este set nesta hunt"))}</label>` : ""}
+    ${s.place ? `<label class="muted"><input type="checkbox" data-gconfirm${s.gear && (s.gear.pinned || s.gear.auto) ? " checked" : ""}> ${esc(T("Usar sempre este set nesta hunt"))}</label>` : ""}
     <button class="btn2" data-gear="gsave" type="button">Salvar</button>
     <button class="link" data-gear-open="sets" type="button">🧩 ${T("Gerenciar sets")}</button>
     ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}
-    ${s.gear && s.gear.auto ? `<div class="hint" style="flex-basis:100%">🔁 ${esc(T("Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser."))}</div>` : ""}</div>`;
+    ${s.gear && (s.gear.pinned || s.gear.auto) ? `<div class="hint" style="flex-basis:100%">🔁 ${esc(T("Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser."))}</div>` : ""}</div>`;
 }
 
 /* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------

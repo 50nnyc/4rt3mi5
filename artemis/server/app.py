@@ -2362,8 +2362,10 @@ def _enriched_sessions(name: str, access: dict, source: str = "all") -> tuple[li
     gear = store.session_gear_for(name, refs)
     for s, ref in zip(sessions, refs):
         g = gear.get(ref)
+        pref = store.pref_get(name, s["place_id"]) if g and s.get("place_id") else None  # 0.32.7: set confirmado para essa hunt
         s["gear"] = {"set_id": g["set_id"], "set_name": g["set_name"], "pause_minutes": g["pause_minutes"],
-                     "hours": g["hours"], "cost": g["cost"], "auto": bool(g["auto"])} if g else None
+                     "hours": g["hours"], "cost": g["cost"], "auto": bool(g["auto"]),
+                     "pinned": bool(pref and pref["confirmed"] and pref["set_id"] == g["set_id"])} if g else None
         s["gear_cost"] = g["cost"] if g else 0
         s["net_profit"] -= s["gear_cost"]
     # 0.20.0: Input Analyser de cada sessão (só aparece para quem enviou)

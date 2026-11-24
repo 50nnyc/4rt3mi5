@@ -1,6 +1,58 @@
 {
   "releases": [
     {
+      "version": "0.32.7",
+      "date": "2026-11-24",
+      "title": "Set confirmado visível",
+      "changes": [
+        "🔁 Na sessão, o botão ⚔️ Set usado agora mostra quando o set é o que você confirmou para aquela hunt e deixa a caixa “Usar sempre este set nesta hunt” marcada."
+      ],
+      "tr": {
+        "en": {
+          "title": "Confirmed set shown",
+          "changes": [
+            "🔁 On the session, the ⚔️ Set used button now shows when the set is the one you confirmed for that hunt and keeps the “Always use this set on this hunt” box checked."
+          ]
+        },
+        "es": {
+          "title": "Set confirmado visible",
+          "changes": [
+            "🔁 En la sesión, el botón ⚔️ Set usado ahora muestra cuando el set es el que confirmaste para esa hunt y deja marcada la casilla «Usar siempre este set en esta hunt»."
+          ]
+        },
+        "ja": {
+          "title": "確認済みセットの表示",
+          "changes": [
+            "🔁 セッションの「⚔️ 使用したセット」ボタンに、そのハントで確認したセットかどうかが表示され、「このハントでは常にこのセットを使う」のチェックも入ったままになります。"
+          ]
+        },
+        "de": {
+          "title": "Bestätigtes Set sichtbar",
+          "changes": [
+            "🔁 In der Session zeigt der Button ⚔️ Genutztes Set jetzt an, wenn das Set das für diese Hunt bestätigte ist, und lässt das Kästchen „Dieses Set immer in dieser Hunt nutzen“ angehakt."
+          ]
+        },
+        "pl": {
+          "title": "Widoczny potwierdzony set",
+          "changes": [
+            "🔁 W sesji przycisk ⚔️ Użyty set pokazuje teraz, gdy set jest tym potwierdzonym dla danego huntu, i zostawia zaznaczone pole „Zawsze używaj tego setu na tym hunt”."
+          ]
+        },
+        "fr": {
+          "title": "Set confirmé visible",
+          "changes": [
+            "🔁 Dans la session, le bouton ⚔️ Set utilisé indique maintenant quand le set est celui que vous avez confirmé pour cette hunt et laisse cochée la case « Toujours utiliser ce set sur cette hunt »."
+          ]
+        },
+        "ru": {
+          "title": "Подтверждённый сет виден",
+          "changes": [
+            "🔁 В сессии кнопка ⚔️ Использованный сет теперь показывает, что сет — тот, который вы подтвердили для этого ханта, и оставляет отмеченным пункт «Всегда использовать этот сет в этом ханте»."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.6",
       "date": "2026-11-24",
       "title": "Set confirmado a cada hunt",
