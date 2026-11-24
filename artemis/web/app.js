@@ -2145,7 +2145,7 @@ function soloItem(s) {
       ${owner ? `<div class="muted" style="font-size:13px">lucro líquido real <b class="${s.net_profit >= 0 ? "pos" : "neg"}">${kk(s.net_profit)}</b></div>` : ""}
       ${s.other_player ? `<div><span class="who other" style="margin-left:0">${s.played_by ? esc(`🤝 Jogada por ${s.played_by}`) : "🤝 Jogada por outra pessoa"}</span></div>` : ""}
     </summary>
-    ${party ? `<div class="tagline-row" style="font-size:14px">${s.place ? "📍 " + esc(s.place.name) : ""} <span class="muted">Mudanças desta sessão são feitas na aba 🤝 Loot split.</span></div>`
+    ${party ? `<div class="tagline-row" style="font-size:14px">${s.place ? "📍 " + esc(s.place.name) : ""} <span class="muted">Mudanças desta sessão são feitas no Lootsplit.</span></div>`
       : `<div class="tagline-row" style="font-size:14px">${placeTag("solo", s)} ${s.can_delete ? inputTag("solo", s) : ""}</div>`}
     ${inputBlock(s.input)}
     <div style="margin-top:10px">${statGrid([
@@ -2266,8 +2266,8 @@ function sourceSeg(d) {
   const c = d.counts || { solo: 0, party: 0 };
   const opts = [["all", "Tudo", c.solo + c.party], ["solo", "Solo", c.solo], ["party", "🤝 Party", c.party]];
   return `<div class="seg" role="tablist" aria-label="Origem">${opts.map(([k, t, n]) =>
-    `<button data-source="${k}" class="${(d.source || "all") === k ? "on" : ""}" role="tab" aria-selected="${(d.source || "all") === k}">${t} (${n})</button>`).join("")}</div>
-    ${d.input_total ? `<div class="hint">Dano recebido somado (Input Analyser): <b>${fmt(d.input_total)}</b></div>` : ""}`;
+    `<button data-source="${k}" class="${(d.source || "all") === k ? "on" : ""}" role="tab" aria-selected="${(d.source || "all") === k}">${esc(tf("{0} ({1})", T(t), n))}</button>`).join("")}</div>
+    ${d.input_total ? `<div class="hint">${esc(tf("Dano recebido somado (Input Analyser): {0}", fmt(d.input_total)))}</div>` : ""}`;
 }
 document.addEventListener("click", (e) => {
   const b = e.target.closest("[data-source]");
@@ -4013,7 +4013,18 @@ const gearUrl = (p = "") => `/api/gear/${encodeURIComponent(S.nick)}${p}`;
 const gpx = (n) => fmt(Math.round(n || 0)) + " gp";
 const hrs = (h) => String(Math.round((h || 0) * 100) / 100).replace(".", ",") + " h";
 const imbName = (k) => ((G.cat.imbuements.find((i) => i.key === k) || {}).name || k);
+const T = (x) => I18N.t(x);
+const TIER = ["Basic", "Intricate", "Powerful"];
 const SRC_LABEL = { mine: "seu preço", world: "média do mundo", all: "média geral", default: "preço padrão" };
+/** Frase do melhor jeito de montar o imbuement (montada aqui para sair no idioma escolhido). */
+function adviceText(key, tier, best) {
+  const nm = imbName(key).split(" (")[0], k = best.token_levels;
+  if (!k) return tf("{0}: compre todos os itens no market.", nm);
+  if (k === tier) return tf("{0}: troque por {1} gold tokens no NPC.", nm, best.tokens);
+  return tf("{0}: troque {1} gold tokens (níveis 1 a {2}) e compre no market só os itens dos níveis {3} a {4}.", nm, best.tokens, k, k + 1, tier);
+}
+/** Nome de um registro do relatório/uso: o que vem do servidor com "(recarga)" sai traduzido. */
+const usageLabel = (l) => String(l).replace(/ \(recarga\)$/, ` (${T("recarga")})`);
 
 async function loadGear(opts = {}) {
   const el = $("#gearResult");
@@ -4028,13 +4039,12 @@ async function loadGear(opts = {}) {
 
 function chargeRow(c) {
   const acc = c.imbuement.startsWith("charge:");
-  const nm = acc ? "Recarga com silver token" : `${esc(imbName(c.imbuement))} · ${["Basic", "Intricate", "Powerful"][c.tier - 1]}`;
-  const how = !acc && c.plan && c.plan.advice ? `<div class="hint">💡 ${esc(c.plan.advice)}</div>` : "";
+  const nm = acc ? `<span>${T("Recarga com silver token")}</span>` : `<span>${esc(imbName(c.imbuement))}</span> · <span>${TIER[c.tier - 1]}</span>`;
+  const how = !acc && c.plan && c.plan.best ? `<div class="hint">💡 ${esc(adviceText(c.imbuement, c.tier, c.plan.best))}</div>` : "";
   return `<div class="card" style="margin:8px 0; padding:10px">
-    <div class="row"><b>${nm}</b><span class="muted">${gpx(c.total_cost)} por ${hrs(c.hours_total)} · ${gpx(c.hourly)}/h</span></div>
+    <div class="row"><b>${nm}</b><span class="muted">${esc(tf("{0} por {1} · {2}/h", gpx(c.total_cost), hrs(c.hours_total), gpx(c.hourly)))}</span></div>
     <div class="gbar" style="margin:6px 0"><div style="width:${c.fraction}%"></div></div>
-    <div class="muted" style="font-size:13px">Usado ${hrs(c.hours_used % c.hours_total)} de ${hrs(c.hours_total)} (${String(c.fraction).replace(".", ",")}%)
-      · faltam ${hrs(c.hours_left)}${c.cycles ? ` · ${c.cycles} ${c.cycles === 1 ? "ciclo completo" : "ciclos completos"}` : ""}</div>
+    <div class="muted" style="font-size:13px">${esc(tf("Usado {0} de {1} ({2}%) · faltam {3}", hrs(c.hours_used % c.hours_total), hrs(c.hours_total), String(c.fraction).replace(".", ","), hrs(c.hours_left)))}${c.cycles ? " · " + esc(tf(c.cycles === 1 ? "{0} ciclo completo" : "{0} ciclos completos", c.cycles)) : ""}</div>
     ${how}
     <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px; flex-wrap:wrap">
       <button class="link" data-gear="hours:${c.id}" type="button">Usei e não informei</button>
@@ -4049,10 +4059,10 @@ function imbueForm(it) {
   const allowed = G.cat.allowed[it.kind] || {};
   const have = new Set(it.charges.map((c) => c.imbuement));
   const opts = Object.keys(allowed).filter((k) => !have.has(k) && !it.native.includes(k));
-  if (it.charges.length >= it.slots || !opts.length) return it.charges.length >= it.slots ? `<div class="hint">Todos os ${it.slots} slots em uso.</div>` : "";
+  if (it.charges.length >= it.slots || !opts.length) return it.charges.length >= it.slots ? `<div class="hint">${esc(tf("Todos os {0} slots em uso.", it.slots))}</div>` : "";
   return `<div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap" data-imbue-form="${it.id}">
     <select data-imb-key aria-label="Imbuement">${opts.map((k) => `<option value="${k}">${esc(imbName(k))}</option>`).join("")}</select>
-    <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}">${["Basic", "Intricate", "Powerful"][t - 1]}</option>`).join("")}</select>
+    <select data-imb-tier aria-label="Nível">${[1, 2, 3].map((t) => `<option value="${t}">${TIER[t - 1]}</option>`).join("")}</select>
     <button class="btn2" data-gear="imbue:${it.id}" type="button">＋ Imbuement</button></div>
     <div class="hint" data-imb-plan></div>`;
 }
@@ -4060,10 +4070,10 @@ function imbueForm(it) {
 function itemCard(it) {
   const used = it.charges.length;
   return `<details class="card" ${used ? "" : "open"}><summary><div class="row"><b>${esc(it.name)}</b>
-      <span class="muted">${esc(it.kind_name)}${it.catalog ? "" : ` · ${used}/${it.slots} slots`} · ${gpx(it.hourly)}/h</span></div></summary>
+      <span class="muted">${esc(it.catalog ? tf("{0} · {1}/h", T(it.kind_name), gpx(it.hourly)) : tf("{0} · {1}/{2} slots · {3}/h", T(it.kind_name), used, it.slots, gpx(it.hourly)))}</span></div></summary>
     ${it.charges.map(chargeRow).join("")}
     ${imbueForm(it)}
-    ${it.native && it.native.length ? `<div class="hint">Já traz de fábrica: ${it.native.map((k) => esc(imbName(k))).join(", ")}.</div>` : ""}
+    ${it.native && it.native.length ? `<div class="hint">${esc(tf("Já traz de fábrica: {0}.", it.native.map((k) => imbName(k)).map(T).join(", ")))}</div>` : ""}
     <div style="margin-top:8px"><button class="danger-link" data-gear="rmitem:${it.id}" type="button">🗑 Apagar este item</button></div></details>`;
 }
 
@@ -4072,7 +4082,7 @@ function newItemForm() {
   return `<details class="card"><summary class="row"><b>＋ Novo item</b><span class="muted">▾</span></summary>
     <div id="gearNew" style="margin-top:8px">
       <label class="muted" for="gnKind">Tipo</label>
-      <select id="gnKind" data-gn-kind>${kinds.map(([k, n]) => `<option value="${k}">${esc(n)}</option>`).join("")}</select>
+      <select id="gnKind" data-gn-kind>${kinds.map(([k, n]) => `<option value="${k}">${esc(T(n))}</option>`).join("")}</select>
       <div id="gnBody"></div>
       <button class="btn2" data-gear="newitem" type="button" style="margin-top:8px">Salvar item</button>
       <div class="err" id="gnErr"></div></div></details>`;
@@ -4081,7 +4091,7 @@ function paintNewBody() {
   const kind = $("#gnKind").value, box = $("#gnBody");
   if (kind === "ring" || kind === "amulet") {
     box.innerHTML = `<label class="muted" for="gnCat">Qual?</label><select id="gnCat">${G.cat.accessories.filter((a) => a.kind === kind)
-      .map((a) => `<option value="${a.key}">${esc(a.name)} · ${a.minutes} min · ${a.silver_tokens} silver tokens</option>`).join("")}</select>`;
+      .map((a) => `<option value="${a.key}">${esc(tf("{0} · {1} min · {2} silver tokens", a.name, a.minutes, a.silver_tokens))}</option>`).join("")}</select>`;
     return;
   }
   const allowed = Object.keys(G.cat.allowed[kind] || {});
@@ -4096,8 +4106,8 @@ function setsBlock() {
   const items = G.data.items;
   const places = (G.places || []).map((p) => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
   const list = G.data.sets.map((s) => `<div class="card" style="margin:8px 0; padding:10px">
-      <div class="row"><b>${esc(s.name)}</b><span class="muted">${s.slots} imbuements · ${gpx(s.hourly)}/h</span></div>
-      <div class="muted" style="font-size:13px">${s.place_id ? "📍 " + esc(((G.places || []).find((p) => p.id === s.place_id) || {}).name || "") + " · " : ""}${s.items.map(esc).join(", ") || "sem itens"}</div>
+      <div class="row"><b>${esc(s.name)}</b><span class="muted">${esc(tf("{0} imbuements · {1}/h", s.slots, gpx(s.hourly)))}</span></div>
+      <div class="muted" style="font-size:13px">${s.place_id ? "📍 " + esc(((G.places || []).find((p) => p.id === s.place_id) || {}).name || "") + " · " : ""}${s.items.map(esc).join(", ") || esc(T("sem itens"))}</div>
       <div class="row" style="justify-content:flex-start; gap:10px; margin-top:6px">
         <button class="link" data-gear="editset:${s.id}" type="button">Editar</button>
         <button class="danger-link" data-gear="rmset:${s.id}" type="button">Apagar</button></div></div>`).join("");
@@ -4116,12 +4126,12 @@ function pricesBlock() {
   const row = (item) => {
     const p = P[item];
     return `<tr><td>${esc(item)}</td><td><input data-gprice="${esc(item)}" inputmode="numeric" value="${p.mine || ""}" placeholder="${p.effective || ""}" style="width:110px; padding:4px 6px" aria-label="${esc(item)}"></td>
-      <td class="muted" style="font-size:12px">${p.effective ? gpx(p.effective) + " · " + SRC_LABEL[p.source] : "sem preço"}</td></tr>`;
+      <td class="muted" style="font-size:12px">${p.effective ? esc(tf("{0} · {1}", gpx(p.effective), T(SRC_LABEL[p.source]))) : esc(T("sem preço"))}</td></tr>`;
   };
   const tokens = ["gold token", "silver token"];
   const groups = G.cat.imbuements.map((i) => `<details><summary class="link">${esc(i.name)}</summary><div class="table-wrap"><table>
-      ${i.materials.map((m, n) => `<tr><td colspan="3" class="muted" style="font-size:12px">${["Basic", "Intricate", "Powerful"][n]}: ${m.qty}x</td></tr>${row(m.item)}`).join("")}</table></div></details>`).join("");
-  return `<div class="hint">O seu preço vale só para você. Sem preço seu, vale a média dos jogadores do seu mundo (descartando valores muito acima da média), e antes disso o preço padrão.</div>
+      ${i.materials.map((m, n) => `<tr><td colspan="3" class="muted" style="font-size:12px">${TIER[n]}: ${m.qty}x</td></tr>${row(m.item)}`).join("")}</table></div></details>`).join("");
+  return `<div class="hint">O seu preço vale só para você. Sem preço seu, vale a média dos jogadores do seu mundo (descartando valores muito acima da média) e, se não houver, o preço padrão.</div>
     <div class="table-wrap"><table>${tokens.map(row).join("")}</table></div>${groups}`;
 }
 
@@ -4133,12 +4143,13 @@ function calcBlock() {
       <button class="btn2" data-gear="calc" type="button">Calcular</button></div><div id="gcOut"></div>`;
 }
 function planHtml(p) {
-  if (p.total === null) return `<div class="err">Faltam preços: ${p.missing.map(esc).join(", ")}.</div>`;
-  const rows = p.options.map((o) => `<tr class="${o === p.best || (p.best && o.token_levels === p.best.token_levels) ? "gold" : ""}"><td>${o.token_levels
-    ? `${o.tokens} gold tokens (níveis 1 a ${o.token_levels})${o.token_levels < p.tier ? " + itens do market dos níveis seguintes" : ""}` : "Tudo no market"}</td><td>${gpx(o.cost)}</td></tr>`).join("");
-  return `<p style="margin:8px 0"><b>${esc(p.advice)}</b></p>
+  if (p.total === null) return `<div class="err">${esc(tf("Faltam preços: {0}.", p.missing.join(", ")))}</div>`;
+  const rows = p.options.map((o) => `<tr class="${p.best && o.token_levels === p.best.token_levels ? "gold" : ""}"><td>${esc(o.token_levels
+    ? tf(o.token_levels < p.tier ? "{0} gold tokens (níveis 1 a {1}) + itens do market dos níveis seguintes" : "{0} gold tokens (níveis 1 a {1})", o.tokens, o.token_levels)
+    : T("Tudo no market"))}</td><td>${gpx(o.cost)}</td></tr>`).join("");
+  return `<p style="margin:8px 0"><b>${esc(adviceText(p.imbuement, p.tier, p.best))}</b></p>
     <div class="table-wrap"><table><tr><th>Opção</th><th>Custo</th></tr>${rows}</table></div>
-    <div class="muted">Taxa do shrine: ${gpx(p.fee)} · <b>total ${gpx(p.total)}</b> por ${hrs(G.cat.hours)}${p.saved ? ` · economia de ${gpx(p.saved)} em relação à pior opção` : ""}</div>`;
+    <div class="muted">${esc(tf("Taxa do shrine: {0} · total {1} por {2}", gpx(p.fee), gpx(p.total), hrs(G.cat.hours)))}${p.saved ? " · " + esc(tf("economia de {0} em relação à pior opção", gpx(p.saved))) : ""}</div>`;
 }
 
 function paintGear() {
@@ -4179,7 +4190,7 @@ document.addEventListener("change", async (e) => {
     const out = f.parentElement.querySelector("[data-imb-plan]");
     try {
       const p = await api("GET", gearUrl(`/plan?imbuement=${f.querySelector("[data-imb-key]").value}&tier=${f.querySelector("[data-imb-tier]").value}`));
-      out.textContent = p.total === null ? "Faltam preços: " + p.missing.join(", ") : `💡 ${p.advice} Total ${gpx(p.total)}.`;
+      out.textContent = p.total === null ? tf("Faltam preços: {0}.", p.missing.join(", ")) : `💡 ${adviceText(p.imbuement, p.tier, p.best)} ${tf("Total {0}.", gpx(p.total))}`;
     } catch (err) { out.textContent = err.message; }
   }
 });
@@ -4236,11 +4247,11 @@ document.addEventListener("toggle", async (e) => {
   if (e.target.id !== "gearReport" || !e.target.open) return;
   try {
     const r = await api("GET", gearUrl("/report?weeks=8"));
-    const wk = r.weeks.map((w) => `<div class="card" style="margin:8px 0; padding:10px"><div class="row"><b>Semana de ${brData(w.week)}</b>
-        <span class="muted">${hrs(w.hunt_hours)} de hunt · <b>${gpx(w.cost)}</b></span></div>
-        ${w.items.map((i) => `<div class="row muted" style="font-size:13px"><span>${esc(i.label)}</span><span>${hrs(i.hours)} · ${gpx(i.cost)}</span></div>`).join("")}</div>`).join("");
-    const pend = r.pending.map((p) => `<div class="row muted" style="font-size:13px"><span>${esc(p.label)}</span>
-        <span>${String(p.fraction).replace(".", ",")}% usado · falta usar ≈ ${gpx(p.unused_value)}</span></div>`).join("");
+    const wk = r.weeks.map((w) => `<div class="card" style="margin:8px 0; padding:10px"><div class="row"><b>${esc(tf("Semana de {0}", brData(w.week)))}</b>
+        <span class="muted">${esc(tf("{0} de hunt · {1}", hrs(w.hunt_hours), gpx(w.cost)))}</span></div>
+        ${w.items.map((i) => `<div class="row muted" style="font-size:13px"><span>${esc(usageLabel(i.label))}</span><span>${hrs(i.hours)} · ${gpx(i.cost)}</span></div>`).join("")}</div>`).join("");
+    const pend = r.pending.map((p) => `<div class="row muted" style="font-size:13px"><span>${esc(usageLabel(p.label))}</span>
+        <span>${esc(tf("{0}% usado · falta usar ≈ {1}", String(p.fraction).replace(".", ","), gpx(p.unused_value)))}</span></div>`).join("");
     $("#gearReportBody").innerHTML = `${wk || `<p class="muted">Nenhum gasto registrado ainda. Escolha um set nas suas hunts.</p>`}
       ${pend ? `<h2>Pago e ainda não usado</h2>${pend}` : ""}`;
   } catch (err) { $("#gearReportBody").innerHTML = `<div class="err">${esc(err.message)}</div>`; }
@@ -4249,7 +4260,7 @@ document.addEventListener("toggle", async (e) => {
 /** Na lista de hunts: qual set foi usado e quanto tempo de pausa (o custo entra no lucro líquido). */
 function gearBox(s, kind, ref) {
   if (!isHardcore() || s.net_profit === undefined || !G.data || !G.data.sets.length) {
-    return s.gear && s.gear.cost ? `<div class="hint">⚔️ Gastos invisíveis: −${gpx(s.gear.cost)} (${esc(s.gear.set_name || "set")}, ${hrs(s.gear.hours)})</div>` : "";
+    return s.gear && s.gear.cost ? `<div class="hint">${esc(tf("⚔️ Gastos invisíveis: −{0} ({1}, {2})", gpx(s.gear.cost), s.gear.set_name || "set", hrs(s.gear.hours)))}</div>` : "";
   }
   const cur = s.gear ? s.gear.set_id : null;
   const suggest = !cur && s.place ? (G.data.sets.find((x) => x.place_id === s.place.id) || {}).id : null;
@@ -4258,7 +4269,7 @@ function gearBox(s, kind, ref) {
     <label class="muted">⚔️ Set usado <select data-gset><option value="">Nenhum</option>${G.data.sets.map((x) => `<option value="${x.id}"${x.id === sel ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select></label>
     <label class="muted">Pausa (min) <input data-gpause type="number" min="0" max="1440" value="${s.gear ? s.gear.pause_minutes : 0}" style="width:70px; padding:4px 6px"></label>
     <button class="btn2" data-gear="gsave" type="button">Salvar</button>
-    ${s.gear && s.gear.cost ? `<span class="muted">−${gpx(s.gear.cost)} (${hrs(s.gear.hours)})</span>` : suggest ? `<span class="muted">sugerido para esta hunt</span>` : ""}</div>`;
+    ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}</div>`;
 }
 
 /* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------
@@ -5937,7 +5948,7 @@ async function openVipView(nome) {
       ? t.gear.sets.map((s) => `<div class="card" style="margin:6px 0; padding:10px"><div class="row"><b>${esc(s.name)}</b><span class="muted">${s.place ? "📍 " + esc(s.place) + " · " : ""}${fmt(s.hourly)} gp/h</span></div>
           <div class="muted" style="font-size:13px">${s.items.map(esc).join(", ")}</div></div>`).join("") : `<p class="muted">Nenhum set.</p>`)
       + t.gear.items.map((i) => `<div class="card" style="margin:6px 0; padding:10px"><b>${esc(i.name)}</b> <span class="muted">${esc(i.kind)}</span>
-          ${i.charges.map((c) => `<div class="muted" style="font-size:13px">${esc(c.label)} · ${fmt(c.cost)} gp por ${String(c.hours).replace(".", ",")} h</div>`).join("")}</div>`).join("");
+          ${i.charges.map((c) => `<div class="muted" style="font-size:13px">${esc(T(c.label))} · ${esc(tf("{0} gp por {1} h", fmt(c.cost), String(c.hours).replace(".", ",")))}</div>`).join("")}</div>`).join("");
   }
   if (!Object.keys(t).length) {
     html += `<p class="muted" style="margin-top:14px">Ainda não há detalhes liberados por ${esc(nome)}.</p>`;

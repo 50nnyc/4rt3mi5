@@ -3332,7 +3332,7 @@ def _new_charge(name: str, access: dict, it: dict, imbuement: str, tier: int) ->
     eff = _eff(prices)
     plan = imbuing.best_plan(imbuement, tier, eff, eff.get("gold token"))
     if plan["total"] is None:
-        raise HTTPException(422, "Faltam preços: " + ", ".join(plan["missing"]) + ".")
+        raise HTTPException(422, "Informe o preço de todos os itens desse imbuement, em Preços dos itens.")
     return store.charge_add(it["id"], imbuement, tier, plan, plan["total"], imbuing.HOURS)
 
 

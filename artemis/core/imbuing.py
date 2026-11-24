@@ -146,9 +146,9 @@ def check_imbue(kind: str, slots: int, native: list[str], current: list[str], im
         return "Nível inválido (1 a 3)."
     allowed = allowed_imbuements(kind)
     if imbuement not in allowed:
-        return f"{GEAR_KINDS.get(kind, kind)} não aceita {CATALOG[imbuement]['name']}."
+        return "Esse tipo de item não aceita esse imbuement."
     if tier > allowed[imbuement]:
-        return f"{GEAR_KINDS.get(kind, kind)} aceita {CATALOG[imbuement]['name']} só até o nível {TIERS[allowed[imbuement] - 1]}."
+        return "Esse tipo de item aceita esse imbuement só em um nível menor."
     if imbuement in native:
         return "Esse item já traz esse efeito e não aceita o imbuement."
     if imbuement in current:

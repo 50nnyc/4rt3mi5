@@ -1,6 +1,74 @@
 {
   "releases": [
     {
+      "version": "0.32.1",
+      "date": "2026-11-24",
+      "title": "Equipamentos em todos os idiomas",
+      "summary": "Equipamentos, sessão ao vivo e preços agora nos 7 idiomas, com textos revisados.",
+      "changes": [
+        "🌍 A tela de Equipamentos, a sessão ao vivo e o painel Tudo / Solo / Party agora aparecem nos 7 idiomas: itens, sets, preços, calculadora, relatório semanal, nomes dos imbuements e mensagens de aviso.",
+        "✍️ Textos revisados e mais claros: a explicação dos preços (seu preço, média do mundo e preço padrão), as dicas de qual é o jeito mais barato de montar cada imbuement e as mensagens de erro."
+      ],
+      "tr": {
+        "en": {
+          "title": "Equipment in every language",
+          "summary": "Equipment, live session and prices now in all languages.",
+          "changes": [
+            "🌍 The Equipment screen, the live session and the All / Solo / Party dashboard now appear in all 7 languages: items, sets, prices, calculator, weekly report, imbuement names and warning messages.",
+            "✍️ Revised, clearer texts: the price explanation (your price, world average and default price), the tips on the cheapest way to build each imbuement, and the error messages."
+          ]
+        },
+        "es": {
+          "title": "Equipamiento en todos los idiomas",
+          "summary": "Equipamiento, sesión en vivo y precios ahora en todos los idiomas.",
+          "changes": [
+            "🌍 La pantalla de Equipamiento, la sesión en vivo y el panel Todo / Solo / Party ahora aparecen en los 7 idiomas: ítems, sets, precios, calculadora, informe semanal, nombres de los imbuements y mensajes de aviso.",
+            "✍️ Textos revisados y más claros: la explicación de los precios (tu precio, promedio del mundo y precio predeterminado), los consejos sobre la forma más barata de montar cada imbuement y los mensajes de error."
+          ]
+        },
+        "ja": {
+          "title": "装備画面の多言語対応",
+          "summary": "装備、ライブセッション、価格が全言語に対応しました。",
+          "changes": [
+            "🌍 装備画面、ライブセッション、「すべて／ソロ／パーティ」パネルが7言語に対応しました：アイテム、セット、価格、計算機、週次レポート、インビューメント名、警告メッセージ。",
+            "✍️ 文章を見直し、わかりやすくしました：価格の説明（あなたの価格、ワールド平均、標準価格）、各インビューメントを最も安く作る方法のヒント、エラーメッセージ。"
+          ]
+        },
+        "de": {
+          "title": "Ausrüstung in allen Sprachen",
+          "summary": "Ausrüstung, Live-Session und Preise jetzt in allen Sprachen.",
+          "changes": [
+            "🌍 Die Ausrüstungsseite, die Live-Session und das Dashboard Alle / Solo / Party erscheinen jetzt in allen 7 Sprachen: Items, Sets, Preise, Rechner, Wochenbericht, Imbuement-Namen und Hinweismeldungen.",
+            "✍️ Überarbeitete, klarere Texte: die Erklärung der Preise (dein Preis, Weltdurchschnitt und Standardpreis), die Tipps zum günstigsten Weg für jedes Imbuement und die Fehlermeldungen."
+          ]
+        },
+        "pl": {
+          "title": "Wyposażenie we wszystkich językach",
+          "summary": "Wyposażenie, sesja na żywo i ceny w każdym języku.",
+          "changes": [
+            "🌍 Ekran Wyposażenie, sesja na żywo i panel Wszystko / Solo / Party są teraz dostępne we wszystkich 7 językach: przedmioty, sety, ceny, kalkulator, raport tygodniowy, nazwy imbuementów i komunikaty.",
+            "✍️ Poprawione, jaśniejsze teksty: wyjaśnienie cen (twoja cena, średnia świata i cena domyślna), wskazówki, jak najtaniej zrobić każdy imbuement, oraz komunikaty o błędach."
+          ]
+        },
+        "fr": {
+          "title": "Équipement dans toutes les langues",
+          "summary": "Équipement, session en direct et prix dans toutes les langues.",
+          "changes": [
+            "🌍 L'écran Équipement, la session en direct et le tableau Tout / Solo / Party s'affichent maintenant dans les 7 langues : objets, sets, prix, calculateur, rapport hebdomadaire, noms des imbuements et messages d'avertissement.",
+            "✍️ Textes revus et plus clairs : l'explication des prix (votre prix, moyenne du monde et prix par défaut), les conseils sur la façon la moins chère de monter chaque imbuement et les messages d'erreur."
+          ]
+        },
+        "ru": {
+          "title": "Экипировка на всех языках",
+          "summary": "Экипировка, живая сессия и цены теперь на всех языках.",
+          "changes": [
+            "🌍 Экран «Экипировка», живая сессия и панель «Все / Соло / Пати» теперь доступны на всех 7 языках: предметы, наборы, цены, калькулятор, недельный отчёт, названия имбуементов и сообщения.",
+            "✍️ Тексты проверены и стали понятнее: объяснение цен (ваша цена, среднее по миру и цена по умолчанию), подсказки о самом дешёвом способе сделать каждый имбуемент и сообщения об ошибках."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.0",
       "date": "2026-11-24",
       "title": "Equipamentos e sessão ao vivo",
