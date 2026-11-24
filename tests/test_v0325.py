@@ -68,7 +68,8 @@ class SetAutomaticoSoloTests(unittest.TestCase):
         self._post("/assign", {"kind": "solo", "ref_id": s2, "set_id": a, "confirm": True})
         self.assertTrue(suggest(s2)["confirmed"])
         sessions = self.client.get("/api/stacker/Hilay?period=30", headers=self.h).json()["sessions"]
-        self.assertTrue(next(s for s in sessions if s["id"] == s2)["gear"]["pinned"])  # aviso "usando sempre este set"        before = self._hours()
+        self.assertTrue(next(s for s in sessions if s["id"] == s2)["gear"]["pinned"])  # aviso "usando sempre este set"
+        before = self._hours()
         s3 = up(4)
         self.assertGreater(self._hours(), before)  # confirmado: o set entra sozinho
         # trocar para o set B volta a perguntar nas próximas vezes
