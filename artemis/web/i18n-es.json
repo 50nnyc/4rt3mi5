@@ -1420,5 +1420,8 @@
   "Esses lootsplits não parecem ser da mesma sessão.": "Estos lootsplits no parecen ser de la misma sesión.",
   "💸 Ir acertar agora": "💸 Ir a saldar",
   "Ver em 👤 Meus personagens": "Ver en 👤 Mis personajes",
-  "📍 Ver as hunts sem local": "📍 Ver las hunts sin lugar"
+  "📍 Ver as hunts sem local": "📍 Ver las hunts sin lugar",
+  "Esse Input Analyser está com valores muito baixos para essa hunt.": "Este Input Analyser tiene valores muy bajos para esta hunt.",
+  "Dica: talvez o seu Input Analyser esteja em \"Recent values\". Troque para \"Session values\", copie de novo e cole aqui. Se os valores estão corretos, confirme para salvar assim mesmo.": "Consejo: quizá tu Input Analyser esté en \"Recent values\". Cambia a \"Session values\", copia de nuevo y pega aquí. Si los valores son correctos, confirma para guardar igual.",
+  "Os valores estão certos, salvar assim": "Los valores son correctos, guardar así"
 }

@@ -1420,5 +1420,8 @@
   "Esses lootsplits não parecem ser da mesma sessão.": "Эти lootsplit не похожи на одну сессию.",
   "💸 Ir acertar agora": "💸 Перейти к расчёту",
   "Ver em 👤 Meus personagens": "Смотреть в 👤 Мои персонажи",
-  "📍 Ver as hunts sem local": "📍 Показать охоты без места"
+  "📍 Ver as hunts sem local": "📍 Показать охоты без места",
+  "Esse Input Analyser está com valores muito baixos para essa hunt.": "В этом Input Analyser слишком низкие значения для этой охоты.",
+  "Dica: talvez o seu Input Analyser esteja em \"Recent values\". Troque para \"Session values\", copie de novo e cole aqui. Se os valores estão corretos, confirme para salvar assim mesmo.": "Подсказка: возможно, ваш Input Analyser стоит на \"Recent values\". Переключите на \"Session values\", скопируйте снова и вставьте сюда. Если значения верны, подтвердите, чтобы всё равно сохранить.",
+  "Os valores estão certos, salvar assim": "Значения верные, сохранить как есть"
 }

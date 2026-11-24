@@ -1,6 +1,74 @@
 {
   "releases": [
     {
+      "version": "0.31.2",
+      "date": "2026-11-24",
+      "title": "Aviso de Input Analyser baixo",
+      "summary": "Se o seu Input Analyser parecer baixo demais, o app avisa antes de salvar.",
+      "changes": [
+        "🛡️ Se o Input Analyser vier com valores muito baixos para a hunt, o 4rt3mi5 avisa antes de salvar, com a dica de trocar de \"Recent values\" para \"Session values\". Se os valores estão certos, é só confirmar.",
+        "🛠️ Se um Input Analyser ou uma sessão for enviado errado e já não puder ser editado, o administrador pode corrigir pelo painel: Input Analyser, Hunt Analyser e Party Hunt Analyser."
+      ],
+      "tr": {
+        "en": {
+          "title": "Low Input Analyser warning",
+          "summary": "If your Input Analyser looks too low, the app warns you before saving.",
+          "changes": [
+            "🛡️ If the Input Analyser comes with very low values for the hunt, 4rt3mi5 warns you before saving, with the tip to switch from \"Recent values\" to \"Session values\". If the values are right, just confirm.",
+            "🛠️ If an Input Analyser or a session was sent wrong and can no longer be edited, the administrator can fix it from the panel: Input Analyser, Hunt Analyser and Party Hunt Analyser."
+          ]
+        },
+        "es": {
+          "title": "Aviso de Input Analyser bajo",
+          "summary": "Si tu Input Analyser parece demasiado bajo, la app avisa antes de guardar.",
+          "changes": [
+            "🛡️ Si el Input Analyser trae valores muy bajos para la hunt, 4rt3mi5 avisa antes de guardar, con el consejo de cambiar de \"Recent values\" a \"Session values\". Si los valores son correctos, solo confirma.",
+            "🛠️ Si un Input Analyser o una sesión se envió mal y ya no se puede editar, el administrador puede corregirlo desde el panel: Input Analyser, Hunt Analyser y Party Hunt Analyser."
+          ]
+        },
+        "ja": {
+          "title": "Input Analyserの低値チェック",
+          "summary": "Input Analyserの値が低すぎるときは、保存前にお知らせします。",
+          "changes": [
+            "🛡️ Input Analyserの値が狩りにしては極端に低いとき、保存の前にお知らせし、「Recent values」から「Session values」へ切り替えるヒントを表示します。値が正しければ、確認するだけです。",
+            "🛠️ Input Analyserやセッションを間違えて送信し、編集できなくなった場合は、管理者がパネルから修正できます（Input Analyser、Hunt Analyser、Party Hunt Analyser）。"
+          ]
+        },
+        "de": {
+          "title": "Warnung bei niedrigem Input Analyser",
+          "summary": "Wirkt dein Input Analyser zu niedrig, warnt dich die App vor dem Speichern.",
+          "changes": [
+            "🛡️ Hat der Input Analyser für die Hunt sehr niedrige Werte, warnt dich 4rt3mi5 vor dem Speichern, mit dem Tipp, von \"Recent values\" auf \"Session values\" umzustellen. Stimmen die Werte, bestätige einfach.",
+            "🛠️ Wurde ein Input Analyser oder eine Session falsch gesendet und lässt sich nicht mehr bearbeiten, kann der Administrator es im Panel korrigieren: Input Analyser, Hunt Analyser und Party Hunt Analyser."
+          ]
+        },
+        "pl": {
+          "title": "Ostrzeżenie o niskim Input Analyser",
+          "summary": "Gdy twój Input Analyser wygląda na zbyt niski, aplikacja ostrzeże przed zapisem.",
+          "changes": [
+            "🛡️ Jeśli Input Analyser ma bardzo niskie wartości jak na hunt, 4rt3mi5 ostrzeże przed zapisem, z podpowiedzią, by przełączyć z \"Recent values\" na \"Session values\". Jeśli wartości są poprawne, wystarczy potwierdzić.",
+            "🛠️ Jeśli Input Analyser lub sesja zostały wysłane błędnie i nie można ich już edytować, administrator może je poprawić w panelu: Input Analyser, Hunt Analyser i Party Hunt Analyser."
+          ]
+        },
+        "fr": {
+          "title": "Alerte Input Analyser trop bas",
+          "summary": "Si votre Input Analyser semble trop bas, l'app vous prévient avant d'enregistrer.",
+          "changes": [
+            "🛡️ Si l'Input Analyser a des valeurs très basses pour la hunt, 4rt3mi5 vous prévient avant d'enregistrer, avec l'astuce de passer de \"Recent values\" à \"Session values\". Si les valeurs sont justes, il suffit de confirmer.",
+            "🛠️ Si un Input Analyser ou une session a été envoyé par erreur et ne peut plus être modifié, l'administrateur peut le corriger depuis le panneau : Input Analyser, Hunt Analyser et Party Hunt Analyser."
+          ]
+        },
+        "ru": {
+          "title": "Предупреждение о низком Input Analyser",
+          "summary": "Если ваш Input Analyser выглядит слишком низким, приложение предупредит перед сохранением.",
+          "changes": [
+            "🛡️ Если в Input Analyser слишком низкие значения для охоты, 4rt3mi5 предупредит перед сохранением и подскажет переключить «Recent values» на «Session values». Если значения верны, просто подтвердите.",
+            "🛠️ Если Input Analyser или сессия отправлены неверно и больше не редактируются, администратор может исправить их в панели: Input Analyser, Hunt Analyser и Party Hunt Analyser."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.31.1",
       "date": "2026-11-23",
       "title": "Unir duplicadas e ir direto ao ponto",

@@ -1420,5 +1420,8 @@
   "Esses lootsplits não parecem ser da mesma sessão.": "これらのlootsplitは同じセッションではないようです。",
   "💸 Ir acertar agora": "💸 精算に行く",
   "Ver em 👤 Meus personagens": "👤 マイキャラクターで見る",
-  "📍 Ver as hunts sem local": "📍 場所なしの狩りを見る"
+  "📍 Ver as hunts sem local": "📍 場所なしの狩りを見る",
+  "Esse Input Analyser está com valores muito baixos para essa hunt.": "このInput Analyserは、この狩りにしては値がとても低いです。",
+  "Dica: talvez o seu Input Analyser esteja em \"Recent values\". Troque para \"Session values\", copie de novo e cole aqui. Se os valores estão corretos, confirme para salvar assim mesmo.": "ヒント：Input Analyserが「Recent values」になっているかもしれません。「Session values」に切り替えて、もう一度コピーして貼り付けてください。値が正しければ、確認してそのまま保存できます。",
+  "Os valores estão certos, salvar assim": "値は正しいので、このまま保存"
 }

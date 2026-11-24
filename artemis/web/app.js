@@ -4205,14 +4205,18 @@ document.addEventListener("click", async (e) => {
     } else {
       const raw = ($("#flowStepText") || {}).value?.trim();
       if (!raw) { err.textContent = "Cole o texto primeiro."; f.disabled = false; return; }
-      if (act === "input-save") await api("POST", `${flowBase()}/input`, Flow.kind === "hunt" ? { raw_text: raw, nickname: S.nick } : { raw_text: raw });
+      if (act === "input-save" || act === "input-confirm") {
+        const sure = act === "input-confirm";  // 0.31.2: "tenho certeza" depois do aviso de valores baixos
+        await api("POST", `${flowBase()}/input`, Flow.kind === "hunt" ? { raw_text: raw, nickname: S.nick, confirm: sure } : { raw_text: raw, confirm: sure });
+      }
       if (act === "session-save") await api("POST", `${flowBase()}/session`, { raw_text: raw, nickname: S.nick });
     }
     nextFlowStep();
   } catch (ex) {
     f.disabled = false;
     if (ex.status === 401) return;
-    if (err) err.innerHTML = `${esc(ex.message)}${ex.hint ? `<div class="hint">${esc(ex.hint)}</div>` : ""}`;
+    if (err) err.innerHTML = `${esc(ex.message)}${ex.hint ? `<div class="hint">${esc(ex.hint)}</div>` : ""}` +
+      (ex.reason === "low_input" ? `<div class="row2"><button class="btn2" data-flow="input-confirm" type="button">Os valores estão certos, salvar assim</button></div>` : "");
   }
 });
 

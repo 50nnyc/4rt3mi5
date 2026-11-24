@@ -1946,11 +1946,13 @@ class PlaceSet(BaseModel):
 
 class RawIn(BaseModel):
     raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+    confirm: bool = False  # 0.31.2: "tenho certeza" quando o Input Analyser parece baixo demais
 
 
 class MemberRawIn(RawIn):
     nickname: Name
     for_char: Name | None = None  # 0.23.0: jogador autorizado juntando a sessão pelo dono
+    confirm: bool = False  # 0.31.2: "tenho certeza" quando o Input Analyser parece baixo demais
 
 
 def _change_place(table: str, row_id: int, place_id: int, access: dict) -> dict:
@@ -1980,6 +1982,17 @@ def _parse_input(raw: str) -> dict:
         raise HTTPException(422, str(e))
 
 
+LOW_INPUT = "Esse Input Analyser está com valores muito baixos para essa hunt."
+LOW_INPUT_HINT = ("Dica: talvez o seu Input Analyser esteja em \"Recent values\". Troque para \"Session values\", "
+                  "copie de novo e cole aqui. Se os valores estão corretos, confirme para salvar assim mesmo.")
+
+
+def _check_low_input(data: dict, duration: int | None, peers: list[int], confirm: bool) -> None:
+    """Pergunta antes de salvar (o Input Analyser salvo não se edita) quando o total parece baixo demais."""
+    if not confirm and damage_core.looks_low(data, duration, peers):
+        raise HTTPException(409, {"message": LOW_INPUT, "hint": LOW_INPUT_HINT, "reason": "low_input"})
+
+
 def _require_type(access: dict, allowed: tuple, message: str) -> None:
     if store.player_type(access["key"]) not in allowed:
         raise HTTPException(403, message)
@@ -2007,8 +2020,10 @@ def hunt_place(hunt_id: int, body: PlaceSet, access: dict = Depends(require_sess
 def hunt_input(hunt_id: int, body: MemberRawIn, access: dict = Depends(require_session)):
     """Input Analyser de um membro da PT (só Player Hardcore). Salvou, não edita."""
     _require_type(access, _sharing_types(), INPUT_ONLY_HARDCORE)
-    _, name = _party_member(hunt_id, body.nickname, access)
+    h, name = _party_member(hunt_id, body.nickname, access)
     data = _parse_input(body.raw_text)
+    peers = [i["total"] for i in store.inputs_for("hunt", [hunt_id]).get(hunt_id, []) if i["name"].lower() != name.lower()]
+    _check_low_input(data, h.get("duration_seconds"), peers, body.confirm)
     row, created = store.add_input("hunt", hunt_id, name, data, access["key"])
     if not created:
         raise HTTPException(409, INPUT_LOCKED)
@@ -2473,6 +2488,7 @@ def solo_input(session_id: int, body: RawIn, access: dict = Depends(require_sess
     if row["uploader_key"] != access["key"]:
         raise HTTPException(403, "Só quem enviou a sessão pode juntar o Input Analyser.")
     data = _parse_input(body.raw_text)
+    _check_low_input(data, row.get("duration_seconds"), [], body.confirm)
     saved, created = store.add_input("solo", session_id, row["name"], data, access["key"])
     if not created:
         raise HTTPException(409, INPUT_LOCKED)
@@ -4405,6 +4421,61 @@ def admin_place(body: AdminPlaceIn):
         store.reset_place_edits(table, body.id)
     st = store.place_state(table, body.id)
     return {"place": _place_ref(st["place_id"], {}), "place_edits": st["place_edits"], "edit_limit": PLACE_EDIT_LIMIT}
+
+
+class AdminRawIn(BaseModel):
+    raw_text: Annotated[str, Field(min_length=1, max_length=RAW_MAX)]
+
+
+class AdminInputIn(AdminRawIn):
+    kind: Literal["solo", "hunt"]
+    ref_id: int = Field(ge=1)
+    name: Name
+
+
+@app.post("/api/admin/input", dependencies=[Depends(require_admin)])
+def admin_input(body: AdminInputIn):
+    """0.31.2: o administrador corrige os valores de um Input Analyser já salvo (o jogador não edita)."""
+    got = store.set_input(body.kind, body.ref_id, body.name, _parse_input(body.raw_text))
+    if got is None:
+        raise HTTPException(404, "Esse personagem não tem Input Analyser salvo nessa hunt.")
+    return {"input": _input_view(got)}
+
+
+@app.delete("/api/admin/input/{kind}/{ref_id}/{name}", dependencies=[Depends(require_admin)])
+def admin_input_delete(kind: Literal["solo", "hunt"], ref_id: int, name: Name):
+    """Apaga o Input Analyser para o jogador poder enviar de novo."""
+    if not store.delete_input(kind, ref_id, name):
+        raise HTTPException(404, "Esse personagem não tem Input Analyser salvo nessa hunt.")
+    return {"ok": True}
+
+
+@app.post("/api/admin/hunt/{hunt_id}/party", dependencies=[Depends(require_admin)])
+def admin_party_session(hunt_id: int, body: AdminRawIn):
+    """0.31.2: troca o Party Hunt Analyser de um lootsplit pelo texto colado (mesmo id, local e Input Analysers)."""
+    _load_hunt("hunt", hunt_id)
+    report = _parse_party(body.raw_text)
+    got = store.update_hunt_report(hunt_id, report, body.raw_text)
+    if got is None:
+        raise HTTPException(409, "Já existe outro lootsplit igual a esse texto.")
+    return {"hunt": got}
+
+
+@app.post("/api/admin/solo/{session_id}/session", dependencies=[Depends(require_admin)])
+def admin_hunt_session(session_id: int, body: AdminRawIn):
+    """0.31.2: troca o Hunt Analyser de uma sessão pelo texto colado (mesmo id, local e Input Analyser)."""
+    row = store.solo_session(session_id)
+    if row is None:
+        raise HTTPException(404, "Sessão não encontrada.")
+    try:
+        session = parse_solo_session(body.raw_text)
+    except ParseError as e:
+        raise HTTPException(422, str(e))
+    got = store.replace_solo(session_id, session.fingerprint(row["name"]), session.to_dict(), body.raw_text)
+    if got == {}:
+        raise HTTPException(409, "Já existe outra sessão igual a esse texto.")
+    got.pop("raw_text", None)
+    return {"session": got}
 
 
 VIGIA_FILE = DATA_DIR / "vigia.json"  # escrito pelo tools/vigia.ps1 (Agendador do Windows)

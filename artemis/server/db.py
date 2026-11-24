@@ -2519,6 +2519,43 @@ class Store:
             self._conn.commit()
             return cur.rowcount > 0
 
+    # ------------------------------------------------------------------ 0.31.2: correção manual do administrador
+    def set_input(self, kind: str, ref_id: int, name: str, data: dict) -> dict | None:
+        """Troca os valores de um Input Analyser já salvo (só o administrador). None se ele não existe."""
+        with self._lock:
+            row = self._conn.execute("SELECT id FROM damage_inputs WHERE kind = ? AND ref_id = ? AND name_key = ?",
+                                     (kind, ref_id, name_key(name))).fetchone()
+            if row is None:
+                return None
+            self._conn.execute("UPDATE damage_inputs SET data_json = ? WHERE id = ?", (json.dumps(data), row["id"]))
+            self._conn.commit()
+            return self._input(self._conn.execute("SELECT * FROM damage_inputs WHERE id = ?", (row["id"],)).fetchone())
+
+    def delete_input(self, kind: str, ref_id: int, name: str) -> bool:
+        """Apaga o Input Analyser de um personagem para ele poder enviar de novo (só o administrador)."""
+        with self._lock:
+            cur = self._conn.execute("DELETE FROM damage_inputs WHERE kind = ? AND ref_id = ? AND name_key = ?",
+                                     (kind, ref_id, name_key(name)))
+            self._conn.commit()
+            return cur.rowcount > 0
+
+    def replace_solo(self, session_id: int, fingerprint: str, data: dict, raw_text: str) -> dict | None:
+        """Troca o conteúdo de um Hunt Analyser (solo) no mesmo registro: id, local e Input Analyser continuam."""
+        with self._lock:
+            if self._conn.execute("SELECT id FROM solo_sessions WHERE id = ?", (session_id,)).fetchone() is None:
+                return None
+            if self._conn.execute("SELECT 1 FROM solo_sessions WHERE fingerprint = ? AND id != ?", (fingerprint, session_id)).fetchone():
+                return {}
+            sets = ", ".join(f"{c} = ?" for c in SOLO_COLUMNS)
+            self._conn.execute(f"UPDATE solo_sessions SET fingerprint = ?, raw_text = ?, content_hash = ?, {sets} WHERE id = ?",
+                               (fingerprint, raw_text, session_content_hash(data) or "", *(data[c] for c in SOLO_COLUMNS), session_id))
+            self._conn.execute("DELETE FROM solo_kills WHERE session_id = ?", (session_id,))
+            self._conn.execute("DELETE FROM solo_loot WHERE session_id = ?", (session_id,))
+            self._conn.executemany("INSERT INTO solo_kills VALUES (?, ?, ?)", [(session_id, c, n) for c, n in data.get("kills", [])])
+            self._conn.executemany("INSERT INTO solo_loot VALUES (?, ?, ?)", [(session_id, i, n) for i, n in data.get("loot", [])])
+            self._conn.commit()
+            return dict(self._conn.execute("SELECT * FROM solo_sessions WHERE id = ?", (session_id,)).fetchone())
+
     # ------------------------------------------------------------------ 0.20.0: tipo de player
     DEFAULT_PLAYER_TYPE = "comum"
 

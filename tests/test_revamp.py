@@ -221,6 +221,9 @@ class RevampServerTests(unittest.TestCase):
         self.client.post("/api/prefs/player-type", json={"player_type": "comum"}, headers=h)  # comum junta quando quiser
         self.assertEqual(self.client.post(url, json={"raw_text": SOLO}, headers=h).status_code, 422)
         r = self.client.post(url, json={"raw_text": INPUT_1}, headers=h)
+        if r.status_code == 409:  # 0.31.2: total baixo para a sessão -> pergunta; "tenho certeza" salva
+            self.assertEqual(r.json()["detail"]["reason"], "low_input")
+            r = self.client.post(url, json={"raw_text": INPUT_1, "confirm": True}, headers=h)
         self.assertEqual(r.status_code, 200, r.text)
         self.assertEqual(r.json()["input"]["top_mob"]["name"], "elf scout")
         again = self.client.post(url, json={"raw_text": INPUT_2}, headers=h)

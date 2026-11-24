@@ -76,6 +76,24 @@ def parse_input(text: str) -> dict:
     return {"total": total, "max_dps": max_dps or 0, **out}
 
 
+LOW_DPS = 25        # média de dano recebido por segundo abaixo disso, numa hunt longa, é suspeita
+LOW_MIN_SECONDS = 600
+LOW_PEER_SHARE = 0.10  # ou menos de 10% do que os outros da PT receberam
+
+
+def looks_low(data: dict, duration_seconds: int | None, peer_totals: list[int] | None = None) -> bool:
+    """0.31.2: o total do Input Analyser parece pequeno demais para a hunt (ex.: o painel estava em
+    "Recent values" em vez de "Session values")? Só um aviso: quem tem certeza salva do mesmo jeito."""
+    total = data.get("total") or 0
+    if duration_seconds and duration_seconds >= LOW_MIN_SECONDS and total / duration_seconds < LOW_DPS:
+        return True
+    peers = sorted(p for p in (peer_totals or []) if p > 0)
+    if peers:
+        median = peers[len(peers) // 2]
+        return total < median * LOW_PEER_SHARE
+    return False
+
+
 def summary(data: dict) -> dict:
     """O que a tela mostra: quanto apanhou, o elemento que mais bateu e a criatura que mais bateu."""
     mobs = [s for s in data.get("sources", []) if not s.get("other")]
