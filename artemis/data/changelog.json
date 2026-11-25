@@ -1,6 +1,74 @@
 {
   "releases": [
     {
+      "version": "0.33.0",
+      "date": "2026-11-25",
+      "title": "Menu Relatórios",
+      "changes": [
+        "📑 Novo menu Relatórios (só para o Player Hardcore): Tudo, Party, Solo, Boss e Drops, cada um com os números do período, os melhores momentos e os gráficos logo abaixo. O relatório semanal da party e a planilha saíram do Início e vieram para cá.",
+        "⚔️ Todo relatório mostra o gasto invisível por fonte: imbuements, anel e amuleto, de cada peça, e o que foi usado fora das hunts. Só entram dados que você enviou, nada é estimado.",
+        "📤 Para compartilhar: copie o resumo pronto para WhatsApp ou Discord, baixe um card de imagem do resumo e de cada gráfico, e exporte para o Excel com um clique, no mesmo período do relatório."
+      ],
+      "tr": {
+        "en": {
+          "title": "Reports menu",
+          "changes": [
+            "📑 New Reports menu (Hardcore players only): All, Party, Solo, Boss and Drops, each with the period's numbers, the best moments and the charts right below. The weekly party report and the spreadsheet moved here from Home.",
+            "⚔️ Every report shows the hidden cost by source: imbuements, ring and amulet, piece by piece, plus what was used outside hunts. Only data you sent is used, nothing is estimated.",
+            "📤 To share: copy the ready-made summary for WhatsApp or Discord, download an image card of the summary and of each chart, and export to Excel with one click, for the same period as the report."
+          ]
+        },
+        "es": {
+          "title": "Menú Informes",
+          "changes": [
+            "📑 Nuevo menú Informes (solo para el jugador Hardcore): Todo, Party, Solo, Boss y Drops, cada uno con los números del período, los mejores momentos y los gráficos justo debajo. El informe semanal de la party y la hoja de cálculo pasaron del Inicio a aquí.",
+            "⚔️ Todo informe muestra el gasto invisible por fuente: imbuements, anillo y amuleto, pieza por pieza, y lo usado fuera de las hunts. Solo entran datos que enviaste, nada se estima.",
+            "📤 Para compartir: copia el resumen listo para WhatsApp o Discord, descarga una tarjeta de imagen del resumen y de cada gráfico, y exporta a Excel con un clic, en el mismo período del informe."
+          ]
+        },
+        "ja": {
+          "title": "レポートメニュー",
+          "changes": [
+            "📑 新しい「レポート」メニュー（ハードコアプレイヤー専用）：すべて、パーティ、ソロ、ボス、ドロップの各レポートに、期間の数字、ハイライト、すぐ下にグラフが表示されます。パーティの週間レポートとスプレッドシートはホームからここに移動しました。",
+            "⚔️ すべてのレポートに、出どころ別の見えないコスト（インビューメント、リング、アミュレット。装備ごと）と、ハント外で使った分が表示されます。あなたが送ったデータだけを使い、推定はしません。",
+            "📤 共有用：WhatsApp／Discord向けのまとめをコピー、サマリーと各グラフの画像カードを保存、そしてレポートと同じ期間でワンクリックでExcelに書き出せます。"
+          ]
+        },
+        "de": {
+          "title": "Menü Berichte",
+          "changes": [
+            "📑 Neues Menü Berichte (nur für Hardcore-Spieler): Alles, Party, Solo, Boss und Drops, jeweils mit den Zahlen des Zeitraums, den besten Momenten und den Diagrammen direkt darunter. Der Wochenbericht der Party und die Tabelle sind von der Startseite hierher gezogen.",
+            "⚔️ Jeder Bericht zeigt die versteckten Kosten nach Quelle: Imbuements, Ring und Amulett, Teil für Teil, sowie die Nutzung außerhalb von Hunts. Es zählen nur Daten, die du gesendet hast, nichts wird geschätzt.",
+            "📤 Zum Teilen: Kopiere die fertige Zusammenfassung für WhatsApp oder Discord, lade eine Bildkarte der Zusammenfassung und jedes Diagramms herunter und exportiere mit einem Klick nach Excel, für denselben Zeitraum wie der Bericht."
+          ]
+        },
+        "pl": {
+          "title": "Menu Raporty",
+          "changes": [
+            "📑 Nowe menu Raporty (tylko dla gracza Hardcore): Wszystko, Party, Solo, Boss i Dropy, każdy z liczbami z okresu, najlepszymi momentami i wykresami tuż pod spodem. Tygodniowy raport party i arkusz przeniesiono tu ze strony głównej.",
+            "⚔️ Każdy raport pokazuje ukryty koszt według źródła: imbuementy, pierścień i amulet, część po części, oraz to, co zużyto poza huntami. Używane są tylko wysłane przez ciebie dane, nic nie jest szacowane.",
+            "📤 Do udostępniania: skopiuj gotowe podsumowanie do WhatsApp lub Discorda, pobierz kartę obrazkową podsumowania i każdego wykresu oraz wyeksportuj do Excela jednym kliknięciem, za ten sam okres co raport."
+          ]
+        },
+        "fr": {
+          "title": "Menu Rapports",
+          "changes": [
+            "📑 Nouveau menu Rapports (réservé au joueur Hardcore) : Tout, Party, Solo, Boss et Drops, chacun avec les chiffres de la période, les meilleurs moments et les graphiques juste en dessous. Le rapport hebdomadaire de la party et le tableur ont quitté l'Accueil pour venir ici.",
+            "⚔️ Chaque rapport montre le coût caché par source : imbuements, anneau et amulette, pièce par pièce, et ce qui a été utilisé hors des hunts. Seules les données que vous avez envoyées comptent, rien n'est estimé.",
+            "📤 Pour partager : copiez le résumé prêt pour WhatsApp ou Discord, téléchargez une carte image du résumé et de chaque graphique, et exportez vers Excel en un clic, sur la même période que le rapport."
+          ]
+        },
+        "ru": {
+          "title": "Меню «Отчёты»",
+          "changes": [
+            "📑 Новое меню «Отчёты» (только для игрока Hardcore): Всё, Пати, Соло, Боссы и Дропы, в каждом числа за период, лучшие моменты и графики сразу ниже. Недельный отчёт пати и таблица переехали сюда с главной.",
+            "⚔️ Каждый отчёт показывает скрытые расходы по источникам: имбуементы, кольцо и амулет, по каждой вещи, и то, что использовано вне хантов. Учитываются только отправленные вами данные, ничего не оценивается.",
+            "📤 Чтобы поделиться: скопируйте готовую сводку для WhatsApp или Discord, скачайте карточку-изображение сводки и каждого графика и выгрузите в Excel одним нажатием за тот же период, что и отчёт."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.32.7",
       "date": "2026-11-24",
       "title": "Set confirmado visível",

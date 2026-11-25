@@ -983,7 +983,7 @@ function configHub() {
     <h3>⚔️ ${T("Imbuements")}</h3>${hc ? `<div class="hub-row">
       ${b('data-gear-open="itens"', "🎒", "Itens e imbuements", "Pôr, trocar e tirar")}
       ${b('data-gear-open="precos"', "💰", "Preços e calculadora", "Quanto custa cada imbuement")}
-      ${b('data-gear-open="relatorio"', "📊", "Relatório de gastos", "Horas e custo por semana")}</div>`
+      ${b('data-page-link="reports"', "📊", "Relatório de gastos", "Horas e custo por semana")}</div>`
       : `<div class="hub-row">${b('data-hub-scroll="playerTypes"', "🔥", "Só para o Player Hardcore", "Troque o tipo de player para liberar")}</div>`}</div>`;
 }
 document.addEventListener("click", (e) => {
@@ -996,6 +996,7 @@ function paintPlayerType() {
   const hub = $("#configHub");
   if (hub) hub.innerHTML = configHub();
   $("#gearItem").classList.toggle("hidden", !isHardcore());  // 0.32.0: Equipamentos só para o Hardcore
+  $("#reportsItem").classList.toggle("hidden", !isHardcore());  // 0.33.0: Relatórios também
   $("#playerTypes").innerHTML = ptypeButtons(ptype());
   $("#playerTypeHint").textContent = PTYPE_INFO[isHardcore() ? "hardcore" : ptype()] || "";
 }
@@ -1098,6 +1099,9 @@ function go(page, opts = {}) {
   $("#pageStack").classList.toggle("hidden", page !== "stack");
   $("#pageGear").classList.toggle("hidden", page !== "gear");
   $("#gearItem").classList.toggle("hidden", !isHardcore());
+  $("#reportsItem").classList.toggle("hidden", !isHardcore());
+  $("#pageReports").classList.toggle("hidden", page !== "reports");
+  if (page === "reports") loadReports();
   $("#pageChars").classList.toggle("hidden", page !== "chars");
   $("#pageHunts").classList.toggle("hidden", page !== "hunts");
   $("#pageNews").classList.toggle("hidden", page !== "news");
@@ -1841,7 +1845,7 @@ async function loadHome() {
     <h2>Hunts anteriores (${hunts.length - 1})</h2>
     ${hunts.length > 1 ? hunts.slice(1, 6).map((h) => historyItem(h, S.nick)).join("") : `<p class="muted">Nenhuma hunt anterior.</p>`}
     ${hunts.length > 6 ? `<button class="btn2" data-page-link="loot" style="width:100%; margin-top:4px">🔎 Ver e buscar todas as hunts</button>` : ""}
-    ${gearAlertSlot()}<h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}` : ""}`;
+    ${gearAlertSlot()}${reportsTeaser()}` : ""}`;
   countUp(el);
   if (hunts.length) {
     renderPtRank();
@@ -1871,7 +1875,7 @@ async function loadHomeSolo(el, headline) {
       perHour: Math.round(s.xp * 3600 / s.duration_seconds), label: new Date(s.started_at).toLocaleDateString("pt-BR") }))) : ""}
     ${goalCard("solo", d ? d.sessions.filter((s) => s.xp && s.duration_seconds).map((s) => Math.round(s.xp * 3600 / s.duration_seconds)) : [])}
     ${streak ? streakTeaser(streak) : ""}
-    ${gearAlertSlot()}<h2>📅 Relatórios e planilha</h2>${partyReportCard()}${exportCard()}`;
+    ${gearAlertSlot()}${reportsTeaser()}`;
   countUp(el);
   if (streak) celebrateRewards(streak.granted);
 }
@@ -4422,7 +4426,7 @@ function firstSteps(d) {
     <div class="hint">${T("Depois, escolha o set nas suas sessões: o custo entra no lucro sozinho.")}</div></div>`;
 }
 const GEAR_TABS = [{ key: "itens", icon: "🎒", label: "Itens" }, { key: "sets", icon: "🧩", label: "Sets" },
-  { key: "precos", icon: "💰", label: "Preços" }, { key: "relatorio", icon: "📊", label: "Relatório" }];
+  { key: "precos", icon: "💰", label: "Preços" }];  // 0.33.0: o relatório de gastos foi para o menu 📑 Relatórios
 /** Abre Equipamentos já na aba certa (usado pelos atalhos de configuração). */
 function openGear(tab) { G.tab = tab; G.act = null; if (S.page === "gear") { if (G.data) paintGear(); window.scrollTo(0, 0); } else go("gear"); }
 function paintGear() {
@@ -4443,12 +4447,12 @@ function paintGear() {
     sets: () => `<p class="hint" style="margin-top:0">Um set é o conjunto de peças que você usa numa hunt. Escolha o set nas suas sessões e o custo entra no lucro.</p>${setsBlock()}`,
     precos: () => `<details class="card" open data-k="pp"><summary class="row"><b>💰 Preços dos itens</b><span class="muted">▾</span></summary>${pricesBlock()}</details>
       <details class="card" data-k="pc"><summary class="row"><b>🧮 Calculadora de imbuement</b><span class="muted">▾</span></summary>${calcBlock()}</details>`,
-    relatorio: () => `<div id="gearReportBody"><p class="muted">Carregando…</p></div>`,
   }[tab]();
   el.innerHTML = msg + `<div class="card"><b>⚔️ Gasto invisível por hora de hunt</b>
       <div class="big gold">${gpx(total)}/h</div><div class="hint">Soma de todos os imbuements, anéis e amuletos em uso. Cada hunt usa só os itens do set escolhido.</div></div>${tabs}${tab === "itens" || tab === "sets" ? firstSteps(d) : ""}${body}`;
   if (tab === "itens") paintNewBody();
-  if (tab === "relatorio") loadGearReport();
+  el.insertAdjacentHTML("beforeend", `<div class="card"><div class="row"><b>📑 ${T("Relatório de gastos")}</b><button class="btn2" data-page-link="reports" type="button" style="margin:0">${T("Abrir")} →</button></div>
+    <div class="muted" style="font-size:13px">${T("O gasto invisível por fonte (imbuements, anel e amuleto) fica nos Relatórios.")}</div></div>`);
   el.querySelectorAll("details").forEach((x) => { const k = keyOf(x); if (seen.has(k)) x.open = wasOpen.has(k); seen.add(k); });
   G.seen = seen;
   window.scrollTo(0, scroll);
@@ -4456,6 +4460,12 @@ function paintGear() {
   el.querySelectorAll("[data-imbue-form], [data-swap-form]").forEach((f) => showPlan(f));
 }
 
+/** 0.33.0: os relatórios saíram do Início: aqui só o atalho para o menu 📑 Relatórios (Hardcore). */
+function reportsTeaser() {
+  if (!isHardcore()) return "";
+  return `<div class="card" style="margin-top:12px"><div class="row"><b>📑 ${T("Relatórios")}</b><button class="btn2" data-page-link="reports" type="button" style="margin:0">${T("Abrir")} →</button></div>
+    <div class="muted" style="font-size:13px">${T("Party, solo, boss, drops e tudo, com gráficos, cards para compartilhar e Excel.")}</div></div>`;
+}
 /** 0.32.4: no Início (Hardcore), avisa dos imbuements que estão perto de acabar ou que já completaram o ciclo de 20 h. */
 const GEAR_WARN_FRACTION = 85;
 function gearAlertSlot() {
@@ -4629,6 +4639,344 @@ function gearBox(s, kind, ref) {
     ${s.gear && s.gear.cost ? `<span class="muted">${esc(tf("−{0} ({1})", gpx(s.gear.cost), hrs(s.gear.hours)))}</span>` : suggest ? `<span class="muted">${esc(T("sugerido para esta hunt"))}</span>` : ""}
     ${s.gear && (s.gear.pinned || s.gear.auto) ? `<div class="hint" style="flex-basis:100%">🔁 ${esc(T("Set aplicado sozinho (o que você confirmou para esta hunt). Troque quando quiser."))}</div>` : ""}</div>`;
 }
+
+/* ---------- 0.33.0: 📑 Relatórios (Player Hardcore) ----------
+   Party, Solo, Boss, Drops e Tudo. Cada um mostra os números do período, o gasto invisível por fonte (imbuements, anel e amuleto),
+   gráficos, o texto para WhatsApp/Discord, um card de imagem por gráfico e a planilha do Excel. Só dados que o jogador enviou. */
+const R = { kind: "all", days: 30, data: null };
+const R_KINDS = [["all", "🌐", "Tudo"], ["party", "👥", "Party"], ["solo", "🧍", "Solo"], ["boss", "👑", "Boss"], ["drops", "💎", "Drops"]];
+const R_PERIODS = [[7, "7 dias"], [30, "30 dias"], [90, "90 dias"], [365, "1 ano"], [0, "Tudo"]];
+const R_SECS = {
+  all: ["sessions", "days", "places", "loot", "party", "party_weekly", "gear_spend"],
+  solo: ["sessions", "days", "places", "loot", "gear_spend"],
+  party: ["party", "party_weekly", "gear_spend"],
+  boss: ["bosses", "boss_items", "rare", "vault", "gear_spend"],
+  drops: ["loot", "boss_items", "rare", "vault"],
+};
+const R_COL = { pos: "#3ddc97", neg: "#ff6b6b", gold: "#f2c94c", imb: "#8b93ff", ring: "#f2c94c", amulet: "#ff9f6b", blue: "#5ec4ff", mute: "#7d8396" };
+const R_TYPE_LABEL = { imbuement: "Imbuements", ring: "Anel", amulet: "Amuleto" };
+const shortDay = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
+const rSigned = (n) => (n < 0 ? "−" : "") + gpx(Math.abs(n));
+const rKind = () => R_KINDS.find((k) => k[0] === R.kind) || R_KINDS[0];
+const rPeriod = () => (R_PERIODS.find((p) => p[0] === R.days) || R_PERIODS[1])[1];
+const rRange = (d) => (d.from ? `${brData(d.from)} → ${brData(d.to)}` : tf("até {0}", brData(d.to)));
+
+async function loadReports() {
+  const root = $("#reportsResult");
+  if (!root) return;
+  if (!isHardcore()) {
+    root.innerHTML = `<div class="card"><b>🔒 ${T("Os relatórios são só para o Player Hardcore.")}</b>
+      <p class="muted">${T("Troque o tipo de player em Configurações para liberar.")}</p>
+      <button class="btn2" data-page-link="settings" type="button">⚙️ ${T("Abrir Configurações")}</button></div>`;
+    return;
+  }
+  root.innerHTML = `<div class="seg rep-tabs" role="tablist" id="repTabs" aria-label="${esc(T("Relatórios"))}">${R_KINDS.map(([k, ic, lb]) =>
+      `<button type="button" role="tab" data-rep-kind="${k}" aria-selected="${k === R.kind}" class="${k === R.kind ? "on" : ""}"><span aria-hidden="true">${ic}</span> ${esc(T(lb))}</button>`).join("")}</div>
+    <div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap; margin:6px 0 10px"><label class="muted" for="repDays">${T("Período")}</label>
+      <select id="repDays">${R_PERIODS.map(([v, lb]) => `<option value="${v}"${v === R.days ? " selected" : ""}>${esc(T(lb))}</option>`).join("")}</select></div>
+    <div id="reportBody">${skeleton("stack")}</div>`;
+  await loadReportData();
+}
+async function loadReportData() {
+  const body = $("#reportBody");
+  if (!body) return;
+  body.innerHTML = skeleton("stack");
+  try { R.data = await api("GET", `/api/reports/${encodeURIComponent(S.nick)}?kind=${R.kind}&days=${R.days}`); }
+  catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  paintReport();
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-rep-kind]");
+  if (!t) return;
+  R.kind = t.dataset.repKind;
+  document.querySelectorAll("#repTabs button").forEach((b) => { const on = b.dataset.repKind === R.kind; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+  loadReportData();
+});
+document.addEventListener("change", (e) => { if (e.target.id === "repDays") { R.days = +e.target.value; loadReportData(); } });
+
+/** Gráficos do relatório: o mesmo dado serve para a tela (SVG) e para o card de imagem (canvas). */
+function reportSpecs(d) {
+  const sp = [];
+  const bars = (id, title, rows, unit, color) => rows.length && sp.push({ id, title, type: "bars", unit, items: rows, color });
+  const hb = (id, title, rows, unit) => rows.length && sp.push({ id, title, type: "hbars", unit, items: rows });
+  const gear = d.gear || { by_type: {}, sources: [], total: 0 };
+  const types = Object.entries(gear.by_type || {}).filter(([, v]) => v > 0).map(([k, v]) => ({ l: T(R_TYPE_LABEL[k]), v, c: R_COL[k === "imbuement" ? "imb" : k] }));
+  const colorOf = (t) => R_COL[t === "imbuement" ? "imb" : t];
+  if (d.kind === "drops") {
+    hb("items", "Itens que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
+    hb("boss_items", "Itens de boss", (d.boss_items || []).slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
+    bars("daily", "Valor do loot por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.value })), "gp", R_COL.gold);
+    const vt = d.totals;
+    const vs = [["Em estoque", vt.vault_stock, R_COL.blue], ["Vendido", vt.vault_sold, R_COL.pos], ["Usado", vt.vault_used, R_COL.imb]]
+      .filter(([, x]) => x && x.value > 0).map(([l, x, c]) => ({ l: T(l), v: x.value, c }));
+    if (vs.length) sp.push({ id: "vault", title: "Cofre de drops", type: "donut", unit: "gp", items: vs });
+    hb("rare", "Drops raros", (d.rare || []).slice(0, 8).map((r) => ({ l: r.name, v: r.value, s: r.day ? shortDay(r.day) : "" })), "gp");
+    return sp;
+  }
+  bars("daily", "Lucro líquido por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.net })), "gp", null);
+  if (d.kind === "boss") {
+    hb("bosses", "Bosses mortos", (d.bosses || []).slice(0, 8).map((b) => ({ l: b.name, v: b.kills })), "n");
+    hb("items", "Itens de boss que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
+    hb("rare", "Drops raros", (d.rare || []).slice(0, 8).map((r) => ({ l: r.name, v: r.value, s: r.day ? shortDay(r.day) : "" })), "gp");
+  } else {
+    hb("places", "Lucro líquido por hunt", d.places.slice(0, 8).map((p) => ({ l: p.place, v: p.net, s: `${kk(p.net_h)}/h` })), "gp");
+    hb("items", "Itens que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
+    if (d.kind !== "party") bars("xp", "XP por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.xp })), "xp", R_COL.blue);
+    if (d.kind !== "solo") hb("mates", "Com quem você mais jogou", (d.mates || []).map((m) => ({ l: m.name, v: m.hunts })), "n");
+  }
+  if (types.length) sp.push({ id: "gear_types", title: "Gasto invisível: de onde veio", type: "donut", unit: "gp", items: types });
+  hb("gear_sources", "Gasto invisível por fonte", gear.sources.slice(0, 8).map((s) => ({ l: usageLabel(s.label), v: s.cost, s: `${s.share}%`, c: colorOf(s.type) })), "gp");
+  return sp;
+}
+const rFmt = (v, unit) => (unit === "gp" ? kk(v) : fmt(v));
+
+function svgBars(spec) {
+  const W = 360, H = 170, padB = 24, padT = 14, rows = spec.items, n = rows.length;
+  const max = Math.max(...rows.map((r) => Math.abs(r.v)), 1), hasNeg = rows.some((r) => r.v < 0);
+  const base = hasNeg ? padT + (H - padT - padB) / 2 : H - padB, scale = (hasNeg ? (H - padT - padB) / 2 : H - padT - padB) / max;
+  const bw = Math.max(3, Math.min(26, (W - 20) / n - 4)), step = (W - 20) / n;
+  const every = Math.ceil(n / 7);
+  const bar = rows.map((r, i) => {
+    const h = Math.max(1, Math.abs(r.v) * scale), x = 10 + i * step + (step - bw) / 2, y = r.v >= 0 ? base - h : base;
+    const col = spec.color || (r.v >= 0 ? R_COL.pos : R_COL.neg);
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="${col}"><title>${esc(r.l)}: ${esc(fmt(r.v))}</title></rect>
+      ${i % every === 0 ? `<text x="${(x + bw / 2).toFixed(1)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">${esc(r.l)}</text>` : ""}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="rep-svg" role="img" aria-label="${esc(T(spec.title))}"><line x1="6" x2="${W - 6}" y1="${base}" y2="${base}" stroke="currentColor" opacity=".25"/>${bar}</svg>`;
+}
+function htmlHBars(spec) {
+  const rows = spec.items, max = Math.max(...rows.map((r) => Math.abs(r.v)), 1);
+  return `<div class="rep-hb">${rows.map((r) => `<div class="rep-hrow"><span class="rep-hl" title="${esc(r.l)}" data-i18n-skip>${esc(r.l)}</span>
+      <div class="rep-htrack"><div class="rep-hfill" style="width:${Math.max(2, (Math.abs(r.v) / max) * 100).toFixed(1)}%; background:${r.c || (r.v < 0 ? R_COL.neg : R_COL.gold)}"></div></div>
+      <span class="rep-hv" data-i18n-skip>${r.v < 0 ? "−" : ""}${rFmt(Math.abs(r.v), spec.unit)}${r.s ? ` · ${esc(r.s)}` : ""}</span></div>`).join("")}</div>`;
+}
+function svgDonut(spec) {
+  const tot = spec.items.reduce((a, r) => a + r.v, 0) || 1, R0 = 52, C = 2 * Math.PI * R0;
+  let off = 0;
+  const segs = spec.items.map((r) => { const len = (r.v / tot) * C, s = `<circle r="${R0}" cx="70" cy="70" fill="none" stroke="${r.c}" stroke-width="22" stroke-dasharray="${len.toFixed(2)} ${(C - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 70 70)"><title>${esc(r.l)}: ${esc(fmt(r.v))}</title></circle>`; off += len; return s; }).join("");
+  const leg = spec.items.map((r) => `<div class="rep-leg"><i style="background:${r.c}"></i><span data-i18n-skip>${esc(r.l)}</span><b data-i18n-skip>${rFmt(r.v, spec.unit)} · ${Math.round((r.v / tot) * 100)}%</b></div>`).join("");
+  return `<div class="rep-donut"><svg viewBox="0 0 140 140" role="img" aria-label="${esc(T(spec.title))}">${segs}<text x="70" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">${esc(rFmt(tot, spec.unit))}</text>
+    <text x="70" y="84" text-anchor="middle" font-size="9" fill="currentColor" opacity=".6">${spec.unit === "gp" ? "gp" : ""}</text></svg><div>${leg}</div></div>`;
+}
+function chartCard(spec) {
+  const body = spec.type === "bars" ? svgBars(spec) : spec.type === "donut" ? svgDonut(spec) : htmlHBars(spec);
+  return `<div class="card rep-chart"><div class="row"><b>${esc(T(spec.title))}</b>
+      <button class="link" data-rep-card="${spec.id}" type="button" title="${esc(T("Baixar o card de imagem para compartilhar"))}">🖼️ ${T("Card")}</button></div>${body}</div>`;
+}
+
+function reportHero(d) {
+  const t = d.totals, icon = rKind()[1], kind = T(rKind()[2]);
+  if (d.kind === "drops") {
+    return { big: t.loot_value + t.boss_value, label: T("Valor total dos drops"), sub: tf("{0} itens · {1} tipos · {2} raros", fmt(t.items), fmt(t.unique), fmt(t.rare)), icon, kind };
+  }
+  const sub = d.kind === "boss"
+    ? tf("{0} sessões · {1} bosses mortos · {2}", fmt(t.n), fmt(t.boss_kills || 0), dur(t.seconds))
+    : tf("{0} sessões · {1} · {2} XP/h", fmt(t.n), dur(t.seconds), fmt(t.xp_h));
+  return { big: t.net, label: T("Lucro líquido"), sub, icon, kind };
+}
+function reportKpis(d) {
+  const t = d.totals, g = d.gear;
+  if (d.kind === "drops") {
+    return [[T("Itens coletados"), fmt(t.items)], [T("Tipos de item"), fmt(t.unique)], [T("Loot das hunts"), gpx(t.loot_value)], [T("Loot de boss"), gpx(t.boss_value)],
+      [T("Drops raros"), `${fmt(t.rare)} · ${gpx(t.rare_value)}`], [T("Cofre: em estoque"), `${fmt(t.vault_stock.n)} · ${gpx(t.vault_stock.value)}`],
+      [T("Cofre: vendido"), `${fmt(t.vault_sold.n)} · ${gpx(t.vault_sold.value)}`], [T("Cofre: usado"), fmt(t.vault_used.n)]];
+  }
+  const k = [[T("Sessões"), fmt(t.n)], [T("Horas de hunt"), dur(t.seconds)], [T("Lucro antes do gasto invisível"), rSigned(t.gross)],
+    [T("Gasto invisível"), `−${gpx(g.total)}`], [T("Lucro líquido"), rSigned(t.net), t.net >= 0 ? "pos" : "neg"], [T("Líquido por hora"), `${rSigned(t.net_h)}/h`]];
+  if (d.kind !== "party" || t.xp) k.push([T("XP ganha"), fmt(t.xp)], [T("XP por hora"), fmt(t.xp_h)]);
+  if (d.kind === "all") k.push([T("Solo"), fmt(t.solo)], [T("Party"), fmt(t.party)]);
+  if (d.kind === "boss") k.push([T("Bosses mortos"), fmt(t.boss_kills || 0)]);
+  return k;
+}
+function highlightLines(d) {
+  const ph = (h) => (h.place ? ` · ${h.place}` : "");
+  const L = { best_day: ["🏆", "Melhor dia", (h) => `${brData(h.day)} · ${rSigned(h.value)}`], best_xp_day: ["⭐", "Dia com mais XP", (h) => `${brData(h.day)} · ${fmt(h.value)} XP`],
+    best_hunt: ["💰", "Melhor sessão", (h) => `${brData(h.day)}${ph(h)} · ${rSigned(h.value)}`], best_rate: ["⚡", "Melhor ritmo (10 min ou mais)", (h) => `${brData(h.day)}${ph(h)} · ${rSigned(h.value)}/h`],
+    longest: ["⏱️", "Sessão mais longa", (h) => `${brData(h.day)}${ph(h)} · ${dur(h.value)}`] };
+  return (d.highlights || []).map((h) => L[h.key] && { ic: L[h.key][0], label: L[h.key][1], text: L[h.key][2](h) }).filter(Boolean);
+}
+function gearCardHtml(d) {
+  const g = d.gear;
+  if (!g || (!g.total && !(g.manual && g.manual.cost))) return `<div class="card"><b>⚔️ ${T("Gasto invisível")}</b><p class="muted">${T("Nenhum gasto registrado no período. Escolha um set nas suas hunts para o custo entrar sozinho.")}</p></div>`;
+  const parts = Object.entries(g.by_type).map(([k, v]) => `<div class="stat"><span class="muted">${esc(T(R_TYPE_LABEL[k]))}</span><b class="neg" data-i18n-skip>−${gpx(v)}</b></div>`).join("");
+  return `<div class="card rep-gear"><div class="row"><b>⚔️ ${T("Gasto invisível")}</b><b class="neg" data-i18n-skip>−${gpx(g.total)}</b></div>
+    <div class="stats">${parts}</div>
+    ${g.manual && g.manual.cost ? `<div class="hint">${esc(tf("Fora das hunts (uso informado à mão): {0} em {1}.", gpx(g.manual.cost), hrs(g.manual.hours)))}</div>` : ""}
+    <div class="hint">${esc(tf("{0} de uso nas hunts do período.", hrs(g.hours)))}</div></div>`;
+}
+
+function paintReport() {
+  const d = R.data, body = $("#reportBody");
+  if (!body || !d) return;
+  const hero = reportHero(d);
+  if (d.empty) {
+    body.innerHTML = `<div class="card"><b>${hero.icon} ${esc(tf("Nada em {0} neste período.", hero.kind))}</b>
+      <p class="muted">${T("Quando você enviar sessões, lootsplits ou bosses, o relatório aparece aqui, com gráficos e cards para compartilhar.")}</p></div>`;
+    return;
+  }
+  const specs = reportSpecs(d);
+  R.specs = specs;
+  const hl = highlightLines(d);
+  body.innerHTML = `<div class="rep-hero"><div class="rep-hero-top"><span class="rep-badge">${hero.icon} ${esc(hero.kind)}</span><span class="muted" data-i18n-skip>${esc(S.nick)} · ${esc(rRange(d))}</span></div>
+      <div class="muted">${esc(hero.label)}</div>
+      <div class="rep-big ${hero.big < 0 ? "neg" : "gold"}" data-i18n-skip>${rSigned(hero.big)}</div>
+      <div class="muted" data-i18n-skip>${esc(hero.sub)}</div>
+      <div class="rep-actions"><button class="btn2" data-rep-copy="wa" type="button">📋 WhatsApp</button><button class="btn2" data-rep-copy="discord" type="button">📋 Discord</button>
+        <button class="btn2" data-rep-card="hero" type="button">🖼️ ${T("Card do resumo")}</button><button class="btn2" data-rep-xlsx type="button">📥 Excel</button></div>
+      <div class="err" id="repMsg" role="status"></div></div>
+    <div class="stats rep-kpis">${reportKpis(d).map(([k, v, c]) => `<div class="stat"><span class="muted">${esc(k)}</span><b class="${c || ""}" data-i18n-skip>${esc(v)}</b></div>`).join("")}</div>
+    ${d.kind === "drops" ? "" : gearCardHtml(d)}
+    ${hl.length ? `<div class="card"><b>🏅 ${T("Destaques do período")}</b>${hl.map((h) => `<div class="row rep-hl-row"><span>${h.ic} ${esc(T(h.label))}</span><b data-i18n-skip>${esc(h.text)}</b></div>`).join("")}</div>` : ""}
+    <h2>${T("Gráficos")}</h2>${specs.map(chartCard).join("") || `<p class="muted">${T("Sem dados suficientes para gráficos.")}</p>`}
+    ${reportTables(d)}
+    ${d.kind === "party" || d.kind === "all" ? partyReportCard() : ""}${exportCard()}`;
+}
+function reportTables(d) {
+  let html = "";
+  if (d.kind === "drops") {
+    if (d.items.length) html += `<details class="card"><summary class="row"><b>📦 ${T("Itens coletados")}</b><span class="muted">▾</span></summary><div class="table-wrap"><table><tr><th>${T("Item")}</th><th>${T("Quantidade")}</th><th>${T("Valor")}</th></tr>
+      ${d.items.map((i) => `<tr><td data-i18n-skip>${esc(i.name)}</td><td data-i18n-skip>${fmt(i.count)}</td><td data-i18n-skip>${gpx(i.value)}</td></tr>`).join("")}</table></div></details>`;
+    if ((d.rare || []).length) html += `<details class="card" open><summary class="row"><b>💎 ${T("Drops raros")}</b><span class="muted">▾</span></summary>
+      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${esc(r.name)}${r.boss ? ` · ${esc(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
+    if ((d.vault || []).length) html += `<details class="card"><summary class="row"><b>🗃️ ${T("Cofre de drops")}</b><span class="muted">▾</span></summary>
+      ${d.vault.map((v) => `<div class="row rep-hl-row"><span data-i18n-skip>${fmt(v.qty)}x ${esc(v.item)}</span><b data-i18n-skip>${esc(T({ stock: "Em estoque", sold: "Vendido", used: "Usado" }[v.status] || v.status))} · ${gpx(v.value)}</b></div>`).join("")}</details>`;
+    return html;
+  }
+  if ((d.gear.sources || []).length) html += `<details class="card"><summary class="row"><b>⚔️ ${T("Gasto invisível por fonte")}</b><span class="muted">▾</span></summary>
+    <div class="table-wrap"><table><tr><th>${T("Tipo")}</th><th>${T("Fonte")}</th><th>${T("Horas")}</th><th>${T("Custo")}</th></tr>
+    ${d.gear.sources.map((s) => `<tr><td>${esc(T(R_TYPE_LABEL[s.type]))}</td><td data-i18n-skip>${esc(usageLabel(s.label))}</td><td data-i18n-skip>${hrs(s.hours)}</td><td data-i18n-skip>${gpx(s.cost)}</td></tr>`).join("")}</table></div></details>`;
+  if (d.rows.length) html += `<details class="card"><summary class="row"><b>🗒️ ${T("Sessões do período")}</b><span class="muted">▾</span></summary><div class="table-wrap"><table>
+    <tr><th>${T("Data")}</th><th>${T("Hunt")}</th><th>${T("Duração")}</th><th>${T("Líquido")}</th></tr>
+    ${d.rows.slice(0, 60).map((r) => `<tr><td data-i18n-skip>${esc(when(r.started_at))}</td><td data-i18n-skip>${esc(r.place || (r.mode ? r.mode : "—"))}</td><td data-i18n-skip>${dur(r.seconds)}</td>
+      <td class="${r.net < 0 ? "neg" : ""}" data-i18n-skip>${rSigned(r.net)}${r.gear ? ` (−${kk(r.gear)})` : ""}</td></tr>`).join("")}</table></div></details>`;
+  if (d.kind === "boss" && (d.rare || []).length) html += `<details class="card" open><summary class="row"><b>💎 ${T("Drops raros")}</b><span class="muted">▾</span></summary>
+      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${esc(r.name)}${r.boss ? ` · ${esc(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
+  return html;
+}
+
+/* texto para WhatsApp (*negrito*) e Discord (**negrito**) */
+function reportText(d, mode) {
+  const b = (s) => (mode === "discord" ? `**${s}**` : `*${s}*`), t = d.totals, hero = reportHero(d), L = [];
+  L.push(b(`📑 ${T("Relatório")} ${hero.kind} · ${S.nick}`), `${rRange(d)} (${T(rPeriod())})`, "");
+  if (d.kind === "drops") {
+    L.push(`${b(T("Valor total dos drops"))}: ${gpx(hero.big)}`, `📦 ${tf("{0} itens · {1} tipos · {2} raros", fmt(t.items), fmt(t.unique), fmt(t.rare))}`);
+    d.items.slice(0, 5).forEach((i, n) => L.push(`${n + 1}. ${i.name} · ${fmt(i.count)}x · ${gpx(i.value)}`));
+    (d.rare || []).slice(0, 3).forEach((r) => L.push(`💎 ${r.name} · ${gpx(r.value)}`));
+    L.push(`🗃️ ${T("Cofre")}: ${tf("{0} em estoque · {1} vendidos", fmt(t.vault_stock.n), fmt(t.vault_sold.n))}`);
+  } else {
+    L.push(`${b(T("Lucro líquido"))}: ${rSigned(t.net)} (${rSigned(t.net_h)}/h)`, `📊 ${tf("{0} sessões · {1}", fmt(t.n), dur(t.seconds))}${t.xp ? ` · ${fmt(t.xp)} XP (${fmt(t.xp_h)}/h)` : ""}`,
+      `⚔️ ${b(T("Gasto invisível"))}: −${gpx(d.gear.total)}`);
+    Object.entries(d.gear.by_type).filter(([, v]) => v > 0).forEach(([k, v]) => L.push(`   • ${T(R_TYPE_LABEL[k])}: −${gpx(v)}`));
+    (d.gear.sources || []).slice(0, 3).forEach((s) => L.push(`   ◦ ${usageLabel(s.label)}: −${gpx(s.cost)}`));
+    if (d.kind === "boss" && (d.bosses || []).length) L.push(`👑 ${d.bosses.slice(0, 3).map((x) => `${x.name} ${fmt(x.kills)}x`).join(", ")}`);
+    if (d.places && d.places[0]) L.push(`📍 ${T("Melhor hunt")}: ${d.places[0].place} · ${rSigned(d.places[0].net)}`);
+    highlightLines(d).slice(0, 2).forEach((h) => L.push(`${h.ic} ${T(h.label)}: ${h.text}`));
+  }
+  L.push("", "4rt3mi5 · artemishunt.com.br");
+  return L.join("\n");
+}
+
+/* card de imagem (canvas): um por gráfico e um do resumo */
+function drawReportCard(d, spec) {
+  const W = 1080, H = 1350, c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d"), hero = reportHero(d), F = "'Segoe UI', system-ui, sans-serif";
+  const bg = g.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#0d1020"); bg.addColorStop(1, "#1b1740"); g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  g.fillStyle = "rgba(242,201,76,.10)"; g.beginPath(); g.arc(W - 80, 90, 360, 0, 7); g.fill();
+  g.textBaseline = "alphabetic"; g.fillStyle = R_COL.gold; g.font = `800 46px ${F}`; g.fillText("4RT3MI5", 64, 98);
+  g.fillStyle = "#c9cde0"; g.font = `500 30px ${F}`; g.textAlign = "right"; g.fillText(`${hero.icon} ${hero.kind}`, W - 64, 98); g.textAlign = "left";
+  const fit = (txt, weight, size, maxW) => { let s = size; do { g.font = `${weight} ${s}px ${F}`; s -= 2; } while (g.measureText(txt).width > maxW && s > 20); };
+  g.fillStyle = "#fff";
+  const title = spec ? T(spec.title) : `${T("Relatório")} ${hero.kind}`;
+  fit(title, 800, 60, W - 128); g.fillText(title, 64, 200);
+  g.fillStyle = "#9aa0bd"; g.font = `500 30px ${F}`; g.fillText(`${S.nick} · ${rRange(d)}`, 64, 250);
+  g.fillStyle = "#9aa0bd"; g.font = `500 34px ${F}`; g.fillText(hero.label, 64, 340);
+  g.fillStyle = hero.big < 0 ? R_COL.neg : R_COL.gold; fit(rSigned(hero.big), 800, 120, W - 128); g.fillText(rSigned(hero.big), 64, 456);
+  g.fillStyle = "#c9cde0"; g.font = `500 32px ${F}`; g.fillText(hero.sub, 64, 510);
+  const box = { x: 64, y: 560, w: W - 128, h: 640 };
+  g.fillStyle = "rgba(255,255,255,.05)"; g.beginPath(); g.roundRect(box.x - 20, box.y - 20, box.w + 40, box.h + 60, 28); g.fill();
+  if (spec) {
+    if (spec.type === "bars") canvasBars(g, spec, box, F);
+    else if (spec.type === "donut") canvasDonut(g, spec, box, F);
+    else canvasHBars(g, spec, box, F);
+  } else {
+    const k = reportKpis(d).slice(0, 8);
+    k.forEach(([lb, v], i) => {
+      const x = box.x + (i % 2) * (box.w / 2), y = box.y + 60 + Math.floor(i / 2) * 150;
+      g.fillStyle = "#9aa0bd"; g.font = `500 28px ${F}`; g.fillText(lb, x, y); g.fillStyle = "#fff"; g.font = `800 40px ${F}`; g.fillText(String(v).slice(0, 22), x, y + 54);
+    });
+  }
+  g.fillStyle = "#7d8396"; g.font = `500 28px ${F}`; g.textAlign = "center"; g.fillText("artemishunt.com.br", W / 2, H - 52);
+  return c;
+}
+function canvasBars(g, spec, box, F) {
+  const rows = spec.items, max = Math.max(...rows.map((r) => Math.abs(r.v)), 1), neg = rows.some((r) => r.v < 0);
+  const base = neg ? box.y + box.h / 2 - 20 : box.y + box.h - 50, half = neg ? box.h / 2 - 60 : box.h - 110, step = box.w / rows.length, bw = Math.min(54, step * 0.7);
+  g.strokeStyle = "rgba(255,255,255,.25)"; g.beginPath(); g.moveTo(box.x, base); g.lineTo(box.x + box.w, base); g.stroke();
+  const every = Math.ceil(rows.length / 8);
+  rows.forEach((r, i) => {
+    const h = Math.max(3, (Math.abs(r.v) / max) * half), x = box.x + i * step + (step - bw) / 2;
+    g.fillStyle = spec.color || (r.v >= 0 ? R_COL.pos : R_COL.neg); g.beginPath(); g.roundRect(x, r.v >= 0 ? base - h : base, bw, h, 8); g.fill();
+    if (i % every === 0) { g.fillStyle = "#9aa0bd"; g.font = `500 22px ${F}`; g.textAlign = "center"; g.fillText(r.l, x + bw / 2, box.y + box.h - 8); g.textAlign = "left"; }
+  });
+  const top = rows.reduce((a, r) => (Math.abs(r.v) > Math.abs(a.v) ? r : a), rows[0]);
+  g.fillStyle = "#fff"; g.font = `700 28px ${F}`; g.fillText(`${T("Maior")}: ${top.l} · ${rFmt(Math.abs(top.v), spec.unit)}`, box.x, box.y + 24);
+}
+function canvasHBars(g, spec, box, F) {
+  const rows = spec.items.slice(0, 8), max = Math.max(...rows.map((r) => Math.abs(r.v)), 1), rh = Math.min(76, box.h / rows.length);
+  rows.forEach((r, i) => {
+    const y = box.y + 20 + i * rh;
+    g.fillStyle = "#fff"; g.font = `600 28px ${F}`; g.fillText(r.l.length > 30 ? r.l.slice(0, 29) + "…" : r.l, box.x, y + 24);
+    const w = Math.max(8, (Math.abs(r.v) / max) * (box.w - 280));
+    g.fillStyle = r.c || (r.v < 0 ? R_COL.neg : R_COL.gold); g.beginPath(); g.roundRect(box.x, y + 34, w, 18, 9); g.fill();
+    g.fillStyle = "#c9cde0"; g.font = `600 26px ${F}`; g.textAlign = "right"; g.fillText(`${r.v < 0 ? "−" : ""}${rFmt(Math.abs(r.v), spec.unit)}${r.s ? " · " + r.s : ""}`, box.x + box.w, y + 24); g.textAlign = "left";
+  });
+}
+function canvasDonut(g, spec, box, F) {
+  const tot = spec.items.reduce((a, r) => a + r.v, 0) || 1, cx = box.x + 250, cy = box.y + 290, R1 = 210;
+  let a0 = -Math.PI / 2;
+  spec.items.forEach((r) => { const a1 = a0 + (r.v / tot) * Math.PI * 2; g.strokeStyle = r.c; g.lineWidth = 90; g.beginPath(); g.arc(cx, cy, R1 - 45, a0, a1); g.stroke(); a0 = a1; });
+  g.fillStyle = "#fff"; g.font = `800 46px ${F}`; g.textAlign = "center"; g.fillText(rFmt(tot, spec.unit), cx, cy + 14); g.textAlign = "left";
+  spec.items.forEach((r, i) => {
+    const y = box.y + 150 + i * 110, x = box.x + 530;
+    g.fillStyle = r.c; g.beginPath(); g.roundRect(x, y - 26, 34, 34, 8); g.fill();
+    g.fillStyle = "#fff"; g.font = `600 30px ${F}`; g.fillText(r.l, x + 54, y); g.fillStyle = "#c9cde0"; g.font = `500 26px ${F}`;
+    g.fillText(`${rFmt(r.v, spec.unit)} · ${Math.round((r.v / tot) * 100)}%`, x + 54, y + 36);
+  });
+}
+async function shareCanvas(c, fname) {
+  const blob = await new Promise((r) => c.toBlob(r, "image/png"));
+  if (!blob) throw new Error("png");
+  const file = new File([blob], fname, { type: "image/png" });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: "4rt3mi5" }); return "shared"; } catch (e) { if (e && e.name === "AbortError") return "cancel"; }
+  }
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return "saved";
+}
+async function downloadXlsx(secs, days) {
+  const res = await timedFetch(S.api + `/api/export/${encodeURIComponent(S.nick)}?sections=${secs.join(",")}&lang=${encodeURIComponent(I18N.lang)}&days=${days}`, { headers: authHeaders() }, 60000);
+  if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error((d.detail && d.detail.message) || d.detail || `Erro ${res.status}`); }
+  const url = URL.createObjectURL(await res.blob()), a = document.createElement("a");
+  a.href = url; a.download = `${S.nick.replace(/[^A-Za-z0-9_-]+/g, "_")}-${R.kind}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+document.addEventListener("click", async (e) => {
+  const msg = (t, ok) => { const m = $("#repMsg"); if (m) { m.textContent = t; m.style.color = ok ? "var(--ok, #3ddc97)" : ""; } };
+  const cp = e.target.closest("[data-rep-copy]");
+  if (cp && R.data) { const ok = await copyText(reportText(R.data, cp.dataset.repCopy)); msg(ok ? T("Copiado! Cole no WhatsApp ou no Discord.") : T("Não consegui copiar."), ok); return; }
+  const cd = e.target.closest("[data-rep-card]");
+  if (cd && R.data) {
+    const spec = cd.dataset.repCard === "hero" ? null : (R.specs || []).find((s) => s.id === cd.dataset.repCard);
+    try { const r = await shareCanvas(drawReportCard(R.data, spec), `4rt3mi5-${R.kind}-${cd.dataset.repCard}.png`); if (r === "saved") msg(T("Card salvo como imagem."), true); }
+    catch { msg(T("Não consegui gerar o card."), false); }
+    return;
+  }
+  if (e.target.closest("[data-rep-xlsx]")) {
+    const b = e.target.closest("[data-rep-xlsx]"); b.disabled = true;
+    try { await downloadXlsx(R_SECS[R.kind], R.days); msg(T("Planilha baixada."), true); } catch (ex) { msg(ex.message || T("Sem conexão. Tente de novo quando voltar."), false); } finally { b.disabled = false; }
+  }
+});
 
 /* ---------- 0.30.0: ⏱️ Sessão ao vivo ----------
    O site não lê o jogo: a pessoa cola o Hunt Analyser de tempos em tempos e o site compara o ritmo com a meta

@@ -2778,6 +2778,18 @@ class Store:
                     out[(kind, r["ref_id"])] = dict(r)
         return out
 
+    def charge_meta(self, charge_ids: list[int]) -> dict[int, dict]:
+        """0.33.0: de cada recarga/imbuement, a chave e o tipo da peça (para separar imbuement, anel e amuleto nos relatórios)."""
+        out: dict[int, dict] = {}
+        ids = sorted(set(charge_ids))
+        for i in range(0, len(ids), 500):
+            chunk = ids[i:i + 500]
+            marks = ",".join("?" * len(chunk))
+            for r in self._conn.execute(
+                    f"SELECT c.id, c.imbuement, g.kind, g.name FROM gear_charges c JOIN gear_items g ON g.id = c.gear_id WHERE c.id IN ({marks})", chunk):
+                out[r[0]] = {"imbuement": r[1], "item_kind": r[2], "item": r[3]}
+        return out
+
     def usage_for_session(self, name: str, kind: str, ref_id: int) -> list[dict]:
         return [dict(r) for r in self._conn.execute(
             "SELECT * FROM gear_usage WHERE name_key = ? AND kind = ? AND ref_id = ? ORDER BY id", (name_key(name), kind, ref_id))]

@@ -640,9 +640,34 @@
   .hubbtn:hover, .hubbtn:focus-visible { border-color: var(--gold); }
   .hubbtn > span:first-child { font-size: 20px; line-height: 1.1; }
   .hubbtn small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 2px; }
-  #gearTabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; margin: 10px 0 6px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  #gearTabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; margin: 10px 0 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
   #gearTabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 13px; line-height: 1.2; min-width: 0; }
   #gearTabs .pill { margin-left: 0; }
+  /* 0.33.0: 📑 Relatórios */
+  .rep-tabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .rep-tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 13px; min-width: 0; }
+  #reportsResult select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
+  .rep-hero { position: relative; overflow: hidden; border-radius: 18px; padding: 16px; margin: 6px 0 12px; border: 1px solid rgba(242,201,76,.35);
+    background: radial-gradient(120% 140% at 100% 0%, rgba(242,201,76,.18), transparent 55%), linear-gradient(135deg, #14172b, #1c1842); }
+  .rep-hero-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+  .rep-badge { background: rgba(242,201,76,.16); color: var(--gold); border-radius: 99px; padding: 3px 12px; font-weight: 700; font-size: 13px; }
+  .rep-big { font-size: clamp(30px, 9vw, 46px); font-weight: 800; line-height: 1.1; margin: 2px 0 4px; letter-spacing: -.5px; }
+  .rep-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 12px; }
+  .rep-actions .btn2 { margin: 0; }
+  .rep-kpis { margin-bottom: 10px; }
+  .rep-chart svg.rep-svg { width: 100%; height: auto; display: block; margin-top: 6px; color: var(--text); }
+  .rep-hb { display: grid; gap: 7px; margin-top: 8px; }
+  .rep-hrow { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+  .rep-hl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rep-htrack { height: 10px; background: rgba(127,127,127,.18); border-radius: 99px; overflow: hidden; }
+  .rep-hfill { height: 100%; border-radius: 99px; }
+  .rep-hv { color: var(--muted); white-space: nowrap; font-size: 12px; }
+  .rep-donut { display: grid; grid-template-columns: 130px 1fr; gap: 12px; align-items: center; margin-top: 8px; }
+  .rep-leg { display: grid; grid-template-columns: 12px 1fr auto; gap: 8px; align-items: center; font-size: 13px; padding: 3px 0; }
+  .rep-leg i { width: 12px; height: 12px; border-radius: 4px; display: block; }
+  .rep-hl-row { padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 14px; gap: 10px; }
+  .rep-hl-row:last-child { border-bottom: 0; }
+  @media (max-width: 420px) { .rep-donut { grid-template-columns: 1fr; justify-items: center; } .rep-donut > div { width: 100%; } }
   .flow-step select, .flow-step input[type=number] { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2);
     color: var(--text); font: inherit; max-width: 100%; }
   .flow-step select { width: 100%; margin-top: 4px; }
@@ -947,6 +972,7 @@
     <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Rankings</button>
     <button class="item hidden" id="gearItem" data-page="gear"><span class="ic">⚔️</span>Equipamentos</button>
+    <button class="item hidden" id="reportsItem" data-page="reports"><span class="ic">📑</span>Relatórios</button>
     <button class="item" data-page="vip"><span class="ic">⭐</span>VIP List</button>
     <button class="item" data-page="ach"><span class="ic">🏆</span>Conquistas</button>
     <div class="section">Tibia</div>
@@ -989,6 +1015,12 @@
       </div>
       <div id="liveBox"></div>
       <div id="stackResult"></div>
+    </div>
+
+    <div id="pageReports" class="hidden">
+      <h1>📑 Relatórios</h1>
+      <p class="muted" style="margin-top:-4px">Tudo sobre as suas hunts, bosses e drops, com o gasto invisível, gráficos, cards para compartilhar e Excel.</p>
+      <div id="reportsResult"></div>
     </div>
 
     <div id="pageGear" class="hidden">

@@ -162,6 +162,7 @@ class ExportarExcelTests(unittest.TestCase):
 
     def test_exporta_o_que_foi_pedido(self):
         h = self.login("Hilay")
+        self.client.post("/api/prefs/player-type", json={"player_type": "hardcore"}, headers=h)  # 0.33.0: só Hardcore
         self.client.post("/api/stacker", json={"raw_text": solo(2), "nickname": "Hilay"}, headers=h)
         self.client.post("/api/lootsplit", json={"raw_text": EXAMPLE, "nickname": "Hilay"}, headers=h)
         r = self.client.get("/api/export/Hilay?sections=sessions,days,party,party_weekly,xp,loot", headers=h)
@@ -173,11 +174,13 @@ class ExportarExcelTests(unittest.TestCase):
         for name in ("Sessões", "Por dia", "Lootsplits", "Party por semana", "XP por dia", "Itens coletados"):
             self.assertIn(name, wb)
         self.assertEqual(self.client.get("/api/export/Hilay", headers=self.login("Jioe")).status_code, 403)
-        # sem tipo Hardcore, as abas de equipamento ficam de fora
-        self.client.post("/api/prefs/player-type", json={"player_type": "comum"}, headers=h)
         names = [s["key"] for s in self.client.get("/api/export/sections", headers=h).json()["sections"]]
-        self.assertNotIn("gear_items", names)
+        self.assertIn("gear_items", names)
         self.assertIn("sessions", names)
+        # 0.33.0: sem tipo Hardcore, nem a planilha nem os relatórios abrem
+        self.client.post("/api/prefs/player-type", json={"player_type": "comum"}, headers=h)
+        self.assertEqual(self.client.get("/api/export/sections", headers=h).status_code, 403)
+        self.assertEqual(self.client.get("/api/export/Hilay", headers=h).status_code, 403)
 
     def test_exporta_equipamentos_do_hardcore(self):
         h = self.login("Hilay")
