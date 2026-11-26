@@ -4,6 +4,7 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core import damage
 from artemis.core.report import report_from_text
 from artemis.server import app as server

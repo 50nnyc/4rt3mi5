@@ -5,6 +5,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core import vocation
 from artemis.core import rankscan
 from artemis.server import app as server

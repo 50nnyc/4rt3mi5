@@ -3,6 +3,7 @@ import unittest
 
 from fastapi.testclient import TestClient
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.server import app as server
 from artemis.server.db import hash_token
 from tools import check_secrets as cs

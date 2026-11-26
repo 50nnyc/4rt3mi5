@@ -1,7 +1,7 @@
 // Guarda a página para que, sem internet, o celular ainda abra a tela "Sem conexão" do 4rt3mi5.
 // 0.17.0: o script do site saiu do HTML (app.js), então ele também fica guardado.
-const CACHE = "artemis-v4";  // 0.20.0: + alemão, polonês, francês e russo
-const OFFLINE = ["/", "/app.js", "/i18n.js"];  // 0.19.0: + idiomas (o dicionário escolhido entra ao ser usado)
+const CACHE = "artemis-v5";  // 0.33.1: + wiki-pages.js (o app.js depende dele)
+const OFFLINE = ["/", "/app.js", "/i18n.js", "/wiki-pages.js"];  // 0.19.0: + idiomas (o dicionário escolhido entra ao ser usado)
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(OFFLINE)));
   self.skipWaiting();
@@ -14,7 +14,7 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;
   // só a página inicial, os scripts e os idiomas (o painel /admin nunca vai para o cache)
-  const SCRIPTS = ["/app.js", "/i18n.js", ...["en", "es", "ja", "de", "pl", "fr", "ru"].map((c) => `/i18n-${c}.json`)];
+  const SCRIPTS = ["/app.js", "/i18n.js", "/wiki-pages.js",...["en", "es", "ja", "de", "pl", "fr", "ru"].map((c) => `/i18n-${c}.json`)];
   const key = e.request.mode === "navigate" ? (url.pathname === "/" ? "/" : null) : (SCRIPTS.includes(url.pathname) ? url.pathname : null);
   if (!key) return;
   e.respondWith(

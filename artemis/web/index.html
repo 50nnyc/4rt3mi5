@@ -313,6 +313,10 @@
   .pop { position: absolute; z-index: 70; background: var(--card); border: 1px solid var(--muted); border-radius: 12px; padding: 12px;
          box-shadow: 0 10px 30px rgba(0, 0, 0, .5); font-size: 14px; }
   .pop-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  /* sublinhado pontilhado: no celular não há mouse, o link precisa aparecer */
+  .wiki-link { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; }
+  .wiki-link:hover, .wiki-link:focus-visible { text-decoration-style: solid; }
+  span.wiki-link { text-decoration: none; }  /* sem página na wiki: só o texto */
   .npc { display: flex; align-items: center; gap: 10px; padding: 6px; margin-top: 6px; border-radius: 8px; cursor: pointer; }
   .npc:hover { background: var(--card2); }
   .npc-where { padding: 4px 6px 8px; color: var(--muted); font-size: 13px; }
@@ -1366,6 +1370,7 @@
 <div id="sheet" class="sheet hidden" role="dialog" aria-live="polite"></div>
 
 <script src="i18n.js"></script>
+<script src="wiki-pages.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

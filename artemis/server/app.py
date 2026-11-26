@@ -6003,6 +6003,12 @@ def app_script():
     return FileResponse(WEB_DIR / "app.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
+@app.get("/wiki-pages.js", include_in_schema=False)
+def wiki_pages_script():
+    """0.33.1: títulos de página conferidos; o site só cria link para nome que está nessa lista."""
+    return FileResponse(WEB_DIR / "wiki-pages.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
 # ------------------------------------------------------------------ site
 @app.get("/", include_in_schema=False)
 def index():

@@ -8,6 +8,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core.split import split_with_rules
 from artemis.server import app as server
 from tests import test_bosses as tb

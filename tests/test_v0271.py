@@ -6,6 +6,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.server import app as server
 from tests import limpar_banco
 from tests.test_server import COMMENTS, fake_fetch

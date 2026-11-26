@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core import rankscan
 from artemis.server import app as server
 from artemis.server.db import name_key

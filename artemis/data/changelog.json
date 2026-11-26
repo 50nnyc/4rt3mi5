@@ -1,6 +1,58 @@
 {
   "releases": [
     {
+      "version": "0.33.1",
+      "date": "2026-11-26",
+      "title": "Links para a TibiaWiki BR",
+      "changes": [
+        "📚 Quer saber mais? Clique no nome de um item, NPC, criatura, boss ou hunt da wiki para abrir a página dele na TibiaWiki BR. Ela abre em uma nova aba e o 4rt3mi5 continua aberto, para você usar os dois juntos. Só tem link o nome cuja página já confirmamos que existe; os outros aparecem como texto. Nos itens com janelinha, use o link Ver na TibiaWiki BR."
+      ],
+      "tr": {
+        "en": {
+          "title": "Links to TibiaWiki BR",
+          "changes": [
+            "📚 Want to know more? Click the name of an item, NPC, creature, boss or wiki hunting place to open its page on TibiaWiki BR. It opens in a new tab and 4rt3mi5 stays open, so you can use both together. Only names whose page we have confirmed to exist have a link; the others appear as plain text. In the item pop-up, use the View on TibiaWiki BR link."
+          ]
+        },
+        "es": {
+          "title": "Enlaces a TibiaWiki BR",
+          "changes": [
+            "📚 ¿Quieres saber más? Haz clic en el nombre de un ítem, NPC, criatura, boss o lugar de caza de la wiki para abrir su página en TibiaWiki BR. Se abre en una pestaña nueva y 4rt3mi5 sigue abierto, para usar los dos juntos. Solo tienen enlace los nombres cuya página ya confirmamos que existe; los demás aparecen como texto. En la ventanita del ítem, usa el enlace Ver en TibiaWiki BR."
+          ]
+        },
+        "ja": {
+          "title": "TibiaWiki BR へのリンク",
+          "changes": [
+            "📚 もっと知りたいときは、アイテム、NPC、クリーチャー、ボス、wikiの狩場の名前をクリックすると、TibiaWiki BR の該当ページが開きます。新しいタブで開き、4rt3mi5 は開いたままなので、両方を一緒に使えます。リンクが付くのはページがあることを確認できた名前だけで、ほかは文字のまま表示されます。アイテムの小窓では「TibiaWiki BR で見る」リンクを使ってください。"
+          ]
+        },
+        "de": {
+          "title": "Links zu TibiaWiki BR",
+          "changes": [
+            "📚 Mehr erfahren? Klicke auf den Namen eines Items, NPCs, einer Kreatur, eines Bosses oder eines Jagdorts aus dem Wiki, um die Seite dazu auf TibiaWiki BR zu öffnen. Sie öffnet sich in einem neuen Tab und 4rt3mi5 bleibt offen, so nutzt du beide zusammen. Einen Link haben nur Namen, deren Seite nachweislich vorhanden ist; die anderen erscheinen als Text. Im Item-Fenster nutzt du den Link Auf TibiaWiki BR ansehen."
+          ]
+        },
+        "pl": {
+          "title": "Linki do TibiaWiki BR",
+          "changes": [
+            "📚 Chcesz wiedzieć więcej? Kliknij nazwę przedmiotu, NPC, stworzenia, bossa lub miejsca polowań z wiki, aby otworzyć jej stronę w TibiaWiki BR. Otworzy się w nowej karcie, a 4rt3mi5 pozostanie otwarty, więc możesz korzystać z obu naraz. Link mają tylko nazwy, których strona na pewno istnieje; pozostałe są zwykłym tekstem. W okienku przedmiotu użyj linku Zobacz w TibiaWiki BR."
+          ]
+        },
+        "fr": {
+          "title": "Liens vers TibiaWiki BR",
+          "changes": [
+            "📚 Envie d'en savoir plus ? Cliquez sur le nom d'un objet, d'un PNJ, d'une créature, d'un boss ou d'un lieu de chasse du wiki pour ouvrir sa page sur TibiaWiki BR. Elle s'ouvre dans un nouvel onglet et 4rt3mi5 reste ouvert, pour utiliser les deux ensemble. Seuls les noms dont nous avons confirmé que la page existe ont un lien ; les autres restent en texte simple. Dans la fenêtre de l'objet, utilisez le lien Voir sur TibiaWiki BR."
+          ]
+        },
+        "ru": {
+          "title": "Ссылки на TibiaWiki BR",
+          "changes": [
+            "📚 Хотите узнать больше? Нажмите на название предмета, NPC, существа, босса или места охоты из вики, чтобы открыть его страницу на TibiaWiki BR. Она откроется в новой вкладке, а 4rt3mi5 останется открытым, так что можно пользоваться обоими сразу. Ссылка есть только у названий, чья страница точно существует; остальные показаны обычным текстом. В окошке предмета используйте ссылку «Открыть на TibiaWiki BR»."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.33.0",
       "date": "2026-11-25",
       "title": "Menu Relatórios",

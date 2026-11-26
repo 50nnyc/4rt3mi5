@@ -1,6 +1,7 @@
 """0.32.0: painel único do personagem (solo + party)."""
 import unittest
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core import imbuing
 from artemis.core.session import parse_solo_session
 from artemis.server import app as server

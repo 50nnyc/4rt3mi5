@@ -2,6 +2,7 @@
 import secrets
 import unittest
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.server import app as server
 from tests import test_server as ts
 

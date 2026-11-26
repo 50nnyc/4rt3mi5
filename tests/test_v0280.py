@@ -2,6 +2,7 @@
 import unittest
 from unittest import mock
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core import tibiaboosted
 from artemis.server import app as server
 from tests import limpar_banco

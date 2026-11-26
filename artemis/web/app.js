@@ -1493,7 +1493,7 @@ function historyItem(h, name) {
       <div class="row"><b>${when(h.started_at)}</b>${settleTag(v)}</div>
       <div class="row muted"><span>${dur(h.duration_seconds)} · ${h.players_count} jogadores${h.pending ? ` · ⏳ ${h.pending} a pagar` : ""}</span>
         <span class="${h.profit_each >= 0 ? "gold" : "neg"}">${kk(h.profit_each)} cada (${kk(h.profit_each_per_hour)}/h)</span></div>
-      <div class="muted hl-place">${h.place ? `📍 <span data-i18n-skip>${esc(h.place.name)}</span>` : `<span class="muted">📍 sem local</span>`}${dup}</div>
+      <div class="muted hl-place">${h.place ? `📍 <span data-i18n-skip>${placeLink(h.place.name)}</span>` : `<span class="muted">📍 sem local</span>`}${dup}</div>
     </summary>${dupBox(h)}${claimBanner(h)}${huntPlaceRow(h)}${rulesLine(h)}${actionBox(v, h)}${chartToggle(h, name)} ${shareButton("hunt", h)}${partyShared(h)}<h2>Transferências</h2>${transfersBox(h)}${partyTable(h, name)}${rulesBox(h)}${tagsBox(h)}${deleteButton(h)}</details>`;
 }
 /** 0.20.0: local do lootsplit (quem enviou define; os outros só veem). */
@@ -1796,6 +1796,7 @@ function recapCard(mode, items) {
 async function loadHome() {
   const el = $("#pageHome");
   el.innerHTML = skeleton("home");
+  await ensurePlaces();  // 0.33.1: placeLink precisa saber quais hunts são da wiki
   const mode = S.mode;
   const headline = api("GET", `/api/tibia/headline?lang=${encodeURIComponent(I18N.lang)}`).catch(() => null);
   if (mode !== "party") return loadHomeSolo(el, headline);
@@ -1982,7 +1983,7 @@ function lootNextStep(h) {
   const has = { place: !!h.place, session: own(h.member_sessions), input: own(h.inputs), set: !!h.my_set };
   const order = ["place", "session", ...(isHardcore(t) ? ["input", "set"] : [])];
   const label = { place: "📍 Inserir a hunt", session: "📈 Hunt Analyser", input: "🛡️ Input Analyser", set: "⚔️ Set de imbuements" };
-  const done = { place: h.place ? `📍 ${esc(h.place.name)}` : "", session: "📈 Hunt Analyser ✔", input: "🛡️ Input Analyser ✔",
+  const done = { place: h.place ? `📍 ${placeLink(h.place.name)}` : "", session: "📈 Hunt Analyser ✔", input: "🛡️ Input Analyser ✔",
     set: h.my_set ? `⚔️ ${esc(h.my_set.set_name || T("sem set"))} ✔` : "" };
   const canPlace = h.can_delete;  // só quem enviou o lootsplit escolhe o local
   const pending = order.filter((s) => !has[s] && (s !== "place" || canPlace));
@@ -2146,6 +2147,7 @@ function paintHuntList() {
 async function loadLootList() {
   const el = $("#huntList");
   if (!el || !S.nick) return;
+  await ensurePlaces();  // 0.33.1: placeLink precisa saber quais hunts são da wiki
   let d;
   try { d = await api("GET", `/api/hunts/${encodeURIComponent(S.nick)}`); }
   catch (err) { if (err.status !== 401) el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
@@ -2211,7 +2213,7 @@ function soloItem(s) {
       ${owner ? `<div class="muted" style="font-size:13px">lucro líquido real <b class="${s.net_profit >= 0 ? "pos" : "neg"}">${kk(s.net_profit)}</b></div>` : ""}
       ${s.other_player ? `<div><span class="who other" style="margin-left:0">${s.played_by ? esc(`🤝 Jogada por ${s.played_by}`) : "🤝 Jogada por outra pessoa"}</span></div>` : ""}
     </summary>
-    ${party ? `<div class="tagline-row" style="font-size:14px">${s.place ? "📍 " + esc(s.place.name) : ""} <span class="muted">Mudanças desta sessão são feitas no Lootsplit.</span></div>`
+    ${party ? `<div class="tagline-row" style="font-size:14px">${s.place ? "📍 " + placeLink(s.place.name) : ""} <span class="muted">Mudanças desta sessão são feitas no Lootsplit.</span></div>`
       : `<div class="tagline-row" style="font-size:14px">${placeTag("solo", s)} ${s.can_delete ? inputTag("solo", s) : ""}</div>`}
     ${inputBlock(s.input)}
     <div style="margin-top:10px">${statGrid([
@@ -2268,6 +2270,103 @@ const MAP_TILE = (x, y, z) => `https://tibiamaps.github.io/tibia-map-data/mapper
 const WIKI_CREDIT = `<div class="credit">📚 Imagens e dados de itens, criaturas e NPCs: <a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></div>`;
 S.prices = {}; S.period = 7;
 
+/** "dragon lord" -> "Dragon Lord", como a TibiaWiki BR nomeia páginas e imagens. 0.29.0: "Unaz The Mean" -> "Unaz the Mean" */
+function wikiTitle(name) {
+  const small = new Set(["of", "the", "de", "da", "do"]);
+  return String(name).split(" ").map((w, i) => (i && small.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+}
+// 0.33.1: link direto para a página da criatura, boss, item, NPC ou hunt na TibiaWiki BR (nova aba; o site continua aberto).
+// Só vira link o nome cuja página está em WIKI_TITLES (wiki-pages.js). Aqui, os nomes que a wiki escreve de outro jeito.
+const WIKI_ALIAS = {
+  "amenef the burning": "Amenef The Burning",
+  "bloated man-maggot": "Bloated Man-Maggot",
+  "bolfrim": "Bolfrim (Criatura)",
+  "cloak of terror": "Cloak Of Terror",
+  "delany": "Delany (Criatura)",
+  "denson larika": "Denson Larika (Criatura)",
+  "energuardian of tales": "Energuardian Of Tales",
+  "enusat the onyx wing": "Enusat The Onyx Wing",
+  "essence of malice": "Essence Of Malice",
+  "ghost of a planegazer": "Ghost Of A Planegazer",
+  "guardian of tales": "Guardian Of Tales",
+  "hacker": "Hacker (Criatura)",
+  "hairman the huge": "Hairman The Huge",
+  "kesar": "Kesar (Criatura)",
+  "lyxoph": "Lyxoph (Criatura)",
+  "man in the cave": "Man In The Cave",
+  "memory of a banshee": "Memory Of A Banshee",
+  "memory of a book": "Memory Of A Book",
+  "memory of a carnisylvan": "Memory Of A Carnisylvan",
+  "memory of a dwarf": "Memory Of A Dwarf",
+  "memory of a faun": "Memory Of A Faun",
+  "memory of a frazzlemaw": "Memory Of A Frazzlemaw",
+  "memory of a fungus": "Memory Of A Fungus",
+  "memory of a golem": "Memory Of A Golem",
+  "memory of a hero": "Memory Of A Hero",
+  "memory of a hydra": "Memory Of A Hydra",
+  "memory of a lizard": "Memory Of A Lizard",
+  "memory of a mammoth": "Memory Of A Mammoth",
+  "memory of a manticore": "Memory Of A Manticore",
+  "memory of a pirate": "Memory Of A Pirate",
+  "memory of a scarab": "Memory Of A Scarab",
+  "memory of a shaper": "Memory Of A Shaper",
+  "memory of a vampire": "Memory Of A Vampire",
+  "memory of a werelion": "Memory Of A Werelion",
+  "memory of a wolf": "Memory Of A Wolf",
+  "memory of a yalahari": "Memory Of A Yalahari",
+  "memory of an amazon": "Memory Of An Amazon",
+  "memory of an elf": "Memory Of An Elf",
+  "memory of an insectoid": "Memory Of An Insectoid",
+  "memory of an ogre": "Memory Of An Ogre",
+  "mirade": "Mirade (Criatura)",
+  "neferi the spy": "Neferi The Spy",
+  "onyx turmaline": "Onyx Tourmaline",
+  "priestess of the wild sun": "Priestess Of The Wild Sun",
+  "pythius the rotten": "Pythius The Rotten",
+  "reflection of a mage": "Reflection Of A Mage",
+  "reflection of mawhawk": "Reflection Of Mawhawk",
+  "reflection of obujos": "Reflection Of Obujos",
+  "rejana": "Rejana (Criatura)",
+  "ron the ripper": "Ron The Ripper",
+  "rotten man-maggot": "Rotten Man-Maggot",
+  "shrieking cry-stal": "Shrieking Cry-Stal",
+  "siramal": "Siramal (Criatura)",
+  "soul-broken harbinger": "Soul-Broken Harbinger",
+  "svoren the mad": "Svoren The Mad",
+  "the baron from below": "The Baron from Below",
+  "the corruptor of souls": "The Corruptor Of Souls",
+  "the count of the core": "The Count Of The Core",
+  "the duke of the depths": "The Duke Of The Depths",
+  "the hungry baron from below": "The Hungry Baron from Below",
+  "the lily of night": "The Lily Of Night",
+  "the source of corruption": "The Source Of Corruption",
+  "tjured": "Tjured (Criatura)",
+  "troll-trained salamander": "Troll-Trained Salamander",
+  "two-headed turtle": "Two-Headed Turtle",
+  "zarcorix of yalahar": "Zarcorix Of Yalahar"
+};
+/** minúsculas -> título exato confirmado: as maiúsculas do endereço são sempre as da wiki. */
+const WIKI_BY_KEY = new Map(WIKI_TITLES.map((t) => [t.toLowerCase(), t]));
+/** Endereço da página, ou "" quando o nome não está na lista conferida. */
+function WIKI_PAGE(name) {
+  const key = String(name || "").trim().toLowerCase();
+  const title = WIKI_BY_KEY.get((Object.prototype.hasOwnProperty.call(WIKI_ALIAS, key) ? WIKI_ALIAS[key] : key).toLowerCase());
+  return title ? "https://www.tibiawiki.com.br/wiki/" + encodeURIComponent(title.replace(/ /g, "_")) : "";
+}
+/** `html` já escapado. Sem página, devolve o próprio conteúdo, sem link. */
+function wikiLink(name, html = esc(name), attrs = 'class="wiki-link"') {
+  const url = WIKI_PAGE(name);
+  if (!url) return attrs.includes("chip") ? `<span ${attrs}>${html}</span>` : html;
+  return `<a ${attrs} href="${esc(url)}" target="_blank" rel="noopener">${html}</a>`;
+}
+/** Criaturas e bosses chegam em minúsculas ou com "The" maiúsculo: acerta o nome antes do link. */
+const creatureLink = (name, html = esc(name)) => wikiLink(wikiTitle(name || ""), html);
+/** Hunt da wiki vira link; as criadas pelos jogadores não têm página. */
+function placeLink(name) {
+  const wiki = (S.places || []).some((p) => p.source === "wiki" && p.name === name);  // lista ainda não carregada: sem link
+  return wiki ? wikiLink(name) : esc(name);
+}
+
 function itemImg(name, size = 28) {
   return `<img src="${WIKI_FILE(name)}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none" data-err="hide">`;
 }
@@ -2288,13 +2387,11 @@ function itemList(items, limit = 8) {
   return `<div class="items">${head}${rest.length ? `<details><summary class="link">Ver todos os itens (${items.length})</summary>${rest.map(itemRow).join("")}</details>` : ""}</div>`;
 }
 function killChips(kills) {
-  return `<div class="chips">${kills.map((k) => `<span class="chip" style="display:inline-flex; align-items:center; gap:6px">${creatureImg(k.key)}${fmt(k.count)}x ${esc(k.key)}</span>`).join("")}</div>`;
+  return `<div class="chips">${kills.map((k) => wikiLink(k.key, `${creatureImg(k.key)}${fmt(k.count)}x ${esc(k.key)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"')).join("")}</div>`;
 }
 /** Imagem da criatura na TibiaWiki BR ("dragon lord" -> Dragon_Lord.gif). Some se não existir. */
 function creatureImg(name, size = 24) {
-  const small = new Set(["of", "the", "de", "da", "do"]);
-  const title = String(name).split(" ").map((w, i) => (i && small.has(w.toLowerCase()) ? w.toLowerCase() : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");  // 0.29.0: "Unaz The Mean" -> Unaz_the_Mean.gif
-  return `<img src="${WIKI_FILE(title)}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none; object-fit:contain" data-err="remove">`;
+  return `<img src="${WIKI_FILE(wikiTitle(name))}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none; object-fit:contain" data-err="remove">`;
 }
 function itemsChart(items) {
   const top = items.filter((i) => i.value > 0).slice(0, 10);
@@ -2346,6 +2443,7 @@ async function loadStack(opts = {}) {
   const el = $("#stackResult");
   if (!opts.quiet) el.innerHTML = skeleton("stack");
   paintLive();
+  await ensurePlaces();  // 0.33.1: placeLink precisa saber quais hunts são da wiki
   let d;
   try { d = await api("GET", `/api/stacker/${encodeURIComponent(S.nick)}?period=${S.period}&source=${S.source || "all"}`); }
   catch (err) { el.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
@@ -2747,11 +2845,11 @@ $("#bossTabs").addEventListener("click", (e) => { const b = e.target.closest("[d
 
 const BOSS_CLASS = { Nemesis: "nemesis", Archfoe: "archfoe", Bane: "bane" };
 function bossTag(b) {
-  return `<span style="display:inline-flex; align-items:center; gap:6px">${creatureImg(b.key || b.name)}<b>${esc(b.name)}</b>`
+  return `<span style="display:inline-flex; align-items:center; gap:6px">${creatureLink(b.name, `${creatureImg(b.key || b.name)}<b>${esc(b.name)}</b>`)}`
     + `${b.class ? `<span class="boss-class ${BOSS_CLASS[b.class] || ""}">${esc(b.class)}</span>` : ""}</span>`;
 }
 function bossChips(list) {
-  return list.length ? `<div class="chips">${list.map((b) => `<span class="chip" style="display:inline-flex; align-items:center; gap:6px">${creatureImg(b.key || b.name)}${fmt(b.count)}x ${esc(b.name)}</span>`).join("")}</div>`
+  return list.length ? `<div class="chips">${list.map((b) => wikiLink(wikiTitle(b.name), `${creatureImg(b.key || b.name)}${fmt(b.count)}x ${esc(b.name)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"')).join("")}</div>`
     : `<span class="muted">nenhum boss reconhecido</span>`;
 }
 function bossTable(list) {
@@ -2858,7 +2956,7 @@ function vaultBlock(v, open = false) {
   const drops = v.drops.map((d) => {
     const sold = d.status === "sold";
     return `<div class="vault-row" data-vdrop="${d.id}">
-      <div class="row"><b>${fmt(d.qty)}x ${esc(d.item)}</b><span class="muted" style="font-size:13px">${VAULT_STATUS[d.status]}</span></div>
+      <div class="row"><b>${fmt(d.qty)}x ${wikiLink(d.item)}</b><span class="muted" style="font-size:13px">${VAULT_STATUS[d.status]}</span></div>
       <div class="vault-key" title="Código e dia do drop">${esc(d.code)} · ${esc(dayLabel(d.dropped_on))}</div>
       <div class="muted" style="font-size:13px"><span>${esc(`dropou: ${d.dropped_by}`)}</span>${d.estimate ? ` · <span>${esc(`estimado ${fmt(d.estimate)} gp`)}</span>` : ""}</div>
       ${tcBox(sold ? d.sold_total : d.price_each ? d.price_each * d.qty : d.estimate ? d.estimate * d.qty : 0, sold ? "vendido" : d.price_each ? "preço" : "estimado")}
@@ -2896,7 +2994,7 @@ function vaultBlock(v, open = false) {
     // estoque de cada tipo, com a chave (#código · dia) de cada unidade
     const lines = Object.keys(s.have).map((item) => {
       const units = v.drops.filter((d) => d.status === "stock" && d.item === item);
-      return `<div class="row" style="font-size:13px; padding:2px 0"><span>${s.have[item] ? "✔" : "—"} ${esc(item)}</span>
+      return `<div class="row" style="font-size:13px; padding:2px 0"><span>${s.have[item] ? "✔" : "—"} ${wikiLink(item)}</span>
         <span class="muted">${units.length ? units.map((d) => esc(`${d.code} · ${dayLabel(d.dropped_on)}${d.qty > 1 ? ` (${d.qty}x)` : ""}`)).join(", ") : ""}</span></div>`;
     }).join("");
     return `<div class="vault-set"><b>${esc(`🧩 ${s.label}: ${have} de ${total} no estoque`)}</b>
@@ -3009,7 +3107,7 @@ function craftModalStep1() {
   const rows = Object.keys(s.have).map((item) => {
     const units = v.drops.filter((d) => d.status === "stock" && d.item === item);
     const opts = units.map((d, i) => `<option value="${d.id}"${i === 0 ? " selected" : ""}>${esc(`${d.code} · ${dayLabel(d.dropped_on)} · dropou ${d.dropped_by}${d.qty > 1 ? ` (${d.qty}x)` : ""}`)}</option>`).join("");
-    return `<div class="cm-row" data-cm-item="${esc(item)}"><b>${esc(item)}</b>
+    return `<div class="cm-row" data-cm-item="${esc(item)}"><b>${wikiLink(item)}</b>
       <select data-cm-pick aria-label="${esc(item)}">${opts}<option value="buy"${units.length ? "" : " selected"}>🛒 Comprei esta</option></select>
       <input type="number" min="0" step="1" inputmode="numeric" placeholder="Comprada por (gp)" data-vbought="${esc(item)}"
         class="${units.length ? "hidden" : ""}" aria-label="Comprada por (gp)"></div>`;
@@ -3059,7 +3157,7 @@ document.addEventListener("click", async (e) => {
     $("#cmStep2").classList.remove("hidden");
     $("#cmStep2").innerHTML = `<b>Confira antes de usar</b>
       <div class="table-wrap" style="margin-top:8px"><table><tr><th>Runa</th><th>Origem</th></tr>
-      ${r.plan.map((p) => `<tr><td>${esc(p.item)}</td><td>${p.drop
+      ${r.plan.map((p) => `<tr><td>${wikiLink(p.item)}</td><td>${p.drop
         ? esc(`${p.drop.code} · ${dayLabel(p.drop.dropped_on)} · dropou ${p.drop.dropped_by}`)
         : esc(`🛒 comprada por ${fmt(p.cost)} gp`)}</td></tr>`).join("")}</table></div>
       <div style="margin-top:8px"><span>${esc(`Item: ${r.result || "—"}`)}</span> · <span>${esc(`fica com ${r.seller}`)}</span></div>
@@ -3237,7 +3335,7 @@ function sellBox(attr, id, refund, sellerSel) {
 }
 function renderPartyVault() {
   const v = PT.vault, p = v.party, t = v.totals;
-  const stockRows = v.stock.map((s) => `<tr><td>${esc(s.item)}<div class="muted" style="font-size:12px">${["drop", "service", "buy"].filter((o) => s.origins[o])
+  const stockRows = v.stock.map((s) => `<tr><td>${wikiLink(s.item)}<div class="muted" style="font-size:12px">${["drop", "service", "buy"].filter((o) => s.origins[o])
       .map((o) => `${bag(o)} ${s.origins[o]}`).join(" ")}</div></td>
     <td class="num">${fmt(s.qty)}</td>
     <td class="num"><input type="number" min="0" step="1" inputmode="numeric" value="${s.price ?? ""}" placeholder="sem preço" data-pv-price="${esc(s.item)}" aria-label="${esc(`Preço de ${s.item}`)}"></td>
@@ -3469,7 +3567,7 @@ function rareBlock(list) {
     ${list.map((d) => `<div class="row" data-item="${esc(d.key)}" style="padding:6px 0; border-bottom:1px solid var(--line); cursor:pointer">
       <span style="display:inline-flex; align-items:center; gap:8px">${itemImg((S.prices[d.key] || {}).name || d.key, 32)}
         <span><b>${d.count > 1 ? d.count + "x " : ""}${esc((S.prices[d.key] || {}).name || d.key)}</b>
-        <span class="muted" style="font-size:13px"><br>${esc(d.boss)} · ${esc(dayLabel(d.started_at.slice(0, 10)))}${d.rarity ? " · " + esc(RARITY_PT[d.rarity] || d.rarity) : ""}${d.source === "hunt" ? " · numa hunt do Stacker" : ""}</span></span></span>
+        <span class="muted" style="font-size:13px"><br>${creatureLink(d.boss)} · <span>${esc(dayLabel(d.started_at.slice(0, 10)))}</span>${d.rarity ? ` · <span>${esc(RARITY_PT[d.rarity] || d.rarity)}</span>` : ""}${d.source === "hunt" ? " <span>· numa hunt do Stacker</span>" : ""}</span></span></span>
       <span class="gold">${d.value ? kk(d.value) : "sem preço"}</span></div>`).join("")}
     <div class="hint">Conta como raro o item "very rare" ou "extremely rare" na TibiaWiki, ou item do boss que vale 500 mil gp ou mais.</div></div>`;
 }
@@ -3478,7 +3576,7 @@ function noNpcBlock(d) {
   const rows = d.no_npc.map((k) => {
     const p = S.prices[k] || { name: k };
     return `<div style="padding:8px 0; border-bottom:1px solid var(--line)">
-      <div class="row"><span style="display:inline-flex; align-items:center; gap:8px">${itemImg(p.name, 32)}<b>${esc(p.name)}</b></span>
+      <div class="row"><span style="display:inline-flex; align-items:center; gap:8px">${wikiLink(p.name, `${itemImg(p.name, 32)}<b>${esc(p.name)}</b>`)}</span>
         <span class="${p.unit_price ? "muted" : "neg"}" style="font-size:13px">${p.avg_price ? "média " + kk(p.avg_price) + (p.avg_count ? ` (${p.avg_count})` : "") : "sem preço"}</span></div>
       <form class="price-form row" data-price-item="${esc(k)}" style="margin-top:6px">
         <input type="number" min="0" step="1" inputmode="numeric" placeholder="Seu preço (gp)" value="${p.my_price ?? ""}" style="padding:8px 10px" aria-label="Seu preço para ${esc(p.name)}">
@@ -3493,6 +3591,7 @@ function noNpcBlock(d) {
 async function loadBoss(opts = {}) {
   const el = $("#bossResult");
   if (!opts.quiet) el.innerHTML = skeleton("stack");
+  await ensurePlaces();  // 0.33.1: placeLink precisa saber quais hunts são da wiki
   let d;
   try { d = await api("GET", `/api/bosses/${encodeURIComponent(S.nick)}`); }
   catch (err) {
@@ -3556,7 +3655,7 @@ function renderBoss() {
   countUp(el);
 }
 function bossBanner(r) {
-  const found = r.bosses.length ? `Bosses: ${r.bosses.map((b) => `<b>${esc(b.name)}</b>${b.count > 1 ? " ×" + b.count : ""}`).join(", ")}.`
+  const found = r.bosses.length ? `Bosses: ${r.bosses.map((b) => `<b>${creatureLink(b.name)}</b>${b.count > 1 ? " ×" + b.count : ""}`).join(", ")}.`
     : `<span class="neg">Nenhum boss reconhecido nessa sessão.</span> Ela foi guardada mesmo assim; confira se colou a sessão certa.`;
   return `<div class="banner ok">${r.created ? "Sessão de boss salva ✔" : "Essa sessão já estava salva ✔"} ${found}</div>`;
 }
@@ -3680,12 +3779,12 @@ document.addEventListener("click", async (e) => {
   } catch (err) { if (err.status !== 401) alert(err.message); del.disabled = false; }
 });
 
-function npcWhere(b) { return b ? `${esc(b.npc)}${b.city ? " (" + esc(b.city) + ")" : ""} por ${fmt(b.price)} gp cada` : "nenhum NPC compra (veja o preço médio)"; }
+function npcWhere(b) { return b ? `${wikiLink(b.npc)}${b.city ? " <span data-i18n-skip>(" + esc(b.city) + ")</span>" : ""} <span>por ${fmt(b.price)} gp cada</span>` : "nenhum NPC compra (veja o preço médio)"; }
 function alertsBlock(d) {
   return d.alerts.map((a) => {
     const p = S.prices[a.key] || { name: a.key };
     return `<div class="alert"><b>🔔 Você já tem ${fmt(a.count)}/${fmt(a.target)} ${esc(p.name)}</b>
-      <div class="muted">Hora de vender: ${npcWhere(a.best)}.</div>
+      <div class="muted">Hora de vender: ${npcWhere(a.best)}</div>
       ${d.is_owner ? `<button class="btn2" data-sold="${esc(a.key)}" style="margin-top:8px">Vendi — zerar contagem</button>` : ""}</div>`;
   }).join("");
 }
@@ -3921,7 +4020,7 @@ function renderCompare() {
     const best = (vals) => Math.max(...vals.filter((v) => typeof v === "number"));
     const xs = rows.map((r) => r.stats ? r.stats.xp_per_hour : null), gs = rows.map((r) => r.stats ? r.stats.gold_per_hour : null);
     const dmgTypes = (d) => d && d.types.length ? d.types.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>") : "—";
-    const dmgMobs = (d) => d && d.mobs.length ? d.mobs.slice(0, 3).map((t) => `${esc(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>")
+    const dmgMobs = (d) => d && d.mobs.length ? d.mobs.slice(0, 3).map((t) => `${creatureLink(t.name)} <span class="muted">${pctTxt(t.pct)}</span>`).join("<br>")
       + (d.other_pct ? `<br><span class="muted">(other) ${pctTxt(d.other_pct)}</span>` : "") : "—";
     const anyMine = rows.some((r) => r.mine), hard = isHardcore();
     // básico: para qualquer hunt
@@ -3938,8 +4037,8 @@ function renderCompare() {
       [party ? "Seus lootsplits" : "Suas sessões", rows.map((r) => mine(r, (s) => `${s.sessions} · ${dur(s.seconds)}`))],
       ["Seu XP/h", rows.map((r) => mine(r, (s) => `<b>${xpCell(s.xp_per_hour)}</b>`))],
       [party ? "Seu gold/h (sua parte)" : "Seu gold/h", rows.map((r) => mine(r, (s) => `<b>${kk(s.gold_per_hour)}</b>`))],
-      ["Criaturas que você mais matou", rows.map((r) => r.top_kills.map((k) => `${esc(k.key)} <span class="muted">${fmt(k.count)}</span>`).join("<br>") || "—")],
-      ["Itens que mais renderam para você", rows.map((r) => r.top_items.map((t) => `${esc(t.name)} <span class="muted">${kk(t.value)}</span>`).join("<br>") || "—")],
+      ["Criaturas que você mais matou", rows.map((r) => r.top_kills.map((k) => `${creatureLink(k.key)} <span class="muted">${fmt(k.count)}</span>`).join("<br>") || "—")],
+      ["Itens que mais renderam para você", rows.map((r) => r.top_items.map((t) => `${wikiLink(t.name)} <span class="muted">${kk(t.value)}</span>`).join("<br>") || "—")],
       ["Seu dano recebido: elemento", rows.map((r) => dmgTypes(r.my_damage))],
       ["Seu dano recebido: criaturas", rows.map((r) => dmgMobs(r.my_damage))],
     ] : [];
@@ -3950,7 +4049,7 @@ function renderCompare() {
     ] : [];
     const tr = ([label, cells]) => `<tr><td class="muted">${label}</td>${cells.map((c) => `<td>${c}</td>`).join("")}</tr>`;
     const sep = (t) => `<tr><td colspan="${rows.length + 1}" style="text-align:left; padding-top:12px"><b>${t}</b></td></tr>`;
-    el.innerHTML = `<div class="card table-wrap"><table class="cmp"><tr><th></th>${rows.map((r) => `<th>${esc(r.place.name)}<br><span class="muted">${esc(r.place.city || "")}</span></th>`).join("")}</tr>
+    el.innerHTML = `<div class="card table-wrap"><table class="cmp"><tr><th></th>${rows.map((r) => `<th>${placeLink(r.place.name)}<br><span class="muted">${esc(r.place.city || "")}</span></th>`).join("")}</tr>
       ${basic.map(tr).join("")}
       ${rich.length ? sep(`⭐ Suas hunts (${esc(S.nick)})`) + rich.map(tr).join("") : ""}
       ${pub.length ? sep("🔥 Input Analyser público") + pub.map(tr).join("") : ""}</table></div>
@@ -3999,7 +4098,7 @@ function itemPopover(key) {
     body = `<div class="muted">Melhor preço de NPC: <b style="color:var(--text)">${fmt(p.npc_price)} gp</b></div>
       ${p.buyers.slice(0, 4).map((b, i) => `<div class="npc" data-npc="${i}">
           <img src="${WIKI_FILE(b.npc)}" alt="" width="40" height="40" style="image-rendering:pixelated" data-err="hide">
-          <span><b>${esc(b.npc)}</b><br><span class="muted">${esc(b.city || "")}</span></span></div>
+          <span><b>${wikiLink(b.npc)}</b><br><span class="muted">${esc(b.city || "")}</span></span></div>
         <div class="npc-where hidden" data-npc-where="${i}">${esc(b.location || "")}${b.coords ? minimap(b.coords) : ""}</div>`).join("")}
       ${p.buyers.length > 4 ? `<div class="muted">+${p.buyers.length - 4} NPCs pagam o mesmo preço.</div>` : ""}
       <div class="hint">Passe o mouse (ou toque) na imagem do NPC para ver onde ele fica.</div>
@@ -4016,7 +4115,8 @@ function itemPopover(key) {
       <div class="hint">Seu preço: ${p.my_price ? fmt(p.my_price) + " gp" : "não informado"}. Ele entra na média de todos.</div>`;
   }
   const unit = p.my_price || p.npc_price || p.avg_price || p.unit_price || 0;  // 0.32.2: o mesmo valor em Tibia Coin
-  return `<div class="pop-head">${itemImg(p.name, 32)}<b>${esc(p.name)}</b></div>${tcBox(unit, "preço")}${body}`;
+  return `<div class="pop-head">${wikiLink(p.name, `${itemImg(p.name, 32)}<b>${esc(p.name)}</b>`)}</div>${tcBox(unit, "preço")}${body}
+    ${WIKI_PAGE(p.name) ? `<div class="credit">${wikiLink(p.name, "Ver na TibiaWiki BR ↗", "")}</div>` : ""}`;
 }
 const pop = Object.assign(document.createElement("div"), { id: "pop", className: "pop hidden" });
 document.body.appendChild(pop);
@@ -4043,7 +4143,7 @@ function toggleWhere(i, show) {
 }
 document.addEventListener("click", async (e) => {
   const row = e.target.closest("[data-item]");
-  if (row) { showPop(row); return; }
+  if (row) { if (!e.target.closest("a")) showPop(row); return; }
   const npc = e.target.closest("#pop [data-npc]");
   if (npc) { toggleWhere(npc.dataset.npc, true); return; }  // toque no celular: mostra o local deste NPC
   if (!e.target.closest("#pop")) { pop.classList.add("hidden"); popKey = null; }
@@ -4386,7 +4486,7 @@ function pricesBlock() {
   const P = G.data.prices;
   const row = (item) => {
     const p = P[item];
-    return `<tr><td>${esc(item)}</td><td><input data-gprice="${esc(item)}" inputmode="numeric" value="${p.mine || ""}" placeholder="${p.effective || ""}" style="width:110px; padding:4px 6px" aria-label="${esc(item)}"></td>
+    return `<tr><td>${wikiLink(item)}</td><td><input data-gprice="${esc(item)}" inputmode="numeric" value="${p.mine || ""}" placeholder="${p.effective || ""}" style="width:110px; padding:4px 6px" aria-label="${esc(item)}"></td>
       <td class="muted" style="font-size:12px">${p.effective ? esc(tf("{0} · {1}", gpx(p.effective), T(SRC_LABEL[p.source]))) : esc(T("sem preço"))}</td></tr>`;
   };
   const tokens = ["gold token", "silver token"];
@@ -4835,11 +4935,11 @@ function reportTables(d) {
   let html = "";
   if (d.kind === "drops") {
     if (d.items.length) html += `<details class="card"><summary class="row"><b>📦 ${T("Itens coletados")}</b><span class="muted">▾</span></summary><div class="table-wrap"><table><tr><th>${T("Item")}</th><th>${T("Quantidade")}</th><th>${T("Valor")}</th></tr>
-      ${d.items.map((i) => `<tr><td data-i18n-skip>${esc(i.name)}</td><td data-i18n-skip>${fmt(i.count)}</td><td data-i18n-skip>${gpx(i.value)}</td></tr>`).join("")}</table></div></details>`;
+      ${d.items.map((i) => `<tr><td data-i18n-skip>${wikiLink(i.name)}</td><td data-i18n-skip>${fmt(i.count)}</td><td data-i18n-skip>${gpx(i.value)}</td></tr>`).join("")}</table></div></details>`;
     if ((d.rare || []).length) html += `<details class="card" open><summary class="row"><b>💎 ${T("Drops raros")}</b><span class="muted">▾</span></summary>
-      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${esc(r.name)}${r.boss ? ` · ${esc(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
+      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${wikiLink(r.name)}${r.boss ? ` · ${creatureLink(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
     if ((d.vault || []).length) html += `<details class="card"><summary class="row"><b>🗃️ ${T("Cofre de drops")}</b><span class="muted">▾</span></summary>
-      ${d.vault.map((v) => `<div class="row rep-hl-row"><span data-i18n-skip>${fmt(v.qty)}x ${esc(v.item)}</span><b data-i18n-skip>${esc(T({ stock: "Em estoque", sold: "Vendido", used: "Usado" }[v.status] || v.status))} · ${gpx(v.value)}</b></div>`).join("")}</details>`;
+      ${d.vault.map((v) => `<div class="row rep-hl-row"><span data-i18n-skip>${fmt(v.qty)}x ${wikiLink(v.item)}</span><b data-i18n-skip>${esc(T({ stock: "Em estoque", sold: "Vendido", used: "Usado" }[v.status] || v.status))} · ${gpx(v.value)}</b></div>`).join("")}</details>`;
     return html;
   }
   if ((d.gear.sources || []).length) html += `<details class="card"><summary class="row"><b>⚔️ ${T("Gasto invisível por fonte")}</b><span class="muted">▾</span></summary>
@@ -4850,7 +4950,7 @@ function reportTables(d) {
     ${d.rows.slice(0, 60).map((r) => `<tr><td data-i18n-skip>${esc(when(r.started_at))}</td><td data-i18n-skip>${esc(r.place || (r.mode ? r.mode : "—"))}</td><td data-i18n-skip>${dur(r.seconds)}</td>
       <td class="${r.net < 0 ? "neg" : ""}" data-i18n-skip>${rSigned(r.net)}${r.gear ? ` (−${kk(r.gear)})` : ""}</td></tr>`).join("")}</table></div></details>`;
   if (d.kind === "boss" && (d.rare || []).length) html += `<details class="card" open><summary class="row"><b>💎 ${T("Drops raros")}</b><span class="muted">▾</span></summary>
-      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${esc(r.name)}${r.boss ? ` · ${esc(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
+      ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${wikiLink(r.name)}${r.boss ? ` · ${creatureLink(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
   return html;
 }
 
@@ -5320,9 +5420,9 @@ function placeTag(kind, x) {
   const owner = x.can_delete;
   if (!x.place) return owner ? `<button class="tagbtn warn" data-add="${kind}:${x.id}:place" title="Toque para dizer em qual hunt foi">📍 hunt sem local</button>`
     : `<span class="muted">📍 hunt sem local</span>`;
-  if (!owner) return `<span class="muted">📍 ${esc(x.place.name)}</span>`;
-  if (x.place_edits >= 2) return `<span class="muted">📍 ${esc(x.place.name)}</span> <span class="hint" style="margin:0">${PLACE_LOCKED_MSG}</span>`;
-  return `<span>📍 ${esc(x.place.name)}</span> <button class="link" style="font-size:13px" data-add="${kind}:${x.id}:place">trocar</button>`;
+  if (!owner) return `<span class="muted">📍 ${placeLink(x.place.name)}</span>`;
+  if (x.place_edits >= 2) return `<span class="muted">📍 ${placeLink(x.place.name)}</span> <span class="hint" style="margin:0">${PLACE_LOCKED_MSG}</span>`;
+  return `<span>📍 ${placeLink(x.place.name)}</span> <button class="link" style="font-size:13px" data-add="${kind}:${x.id}:place">trocar</button>`;
 }
 function inputTag(kind, x) {
   if (!canShare() || x.input) return "";
@@ -5331,14 +5431,14 @@ function inputTag(kind, x) {
 /** Dano recebido (Input Analyser): total, elemento e criatura que mais bateram; detalhes abrindo. */
 function inputBlock(i, who = "") {
   if (!i) return "";
-  const row = (r) => `<div class="row"><span>${esc(r.name)}</span><span class="muted">${fmt(r.value)} · ${pctTxt(r.pct)}</span></div>`;
+  const row = (r, mob) => `<div class="row"><span>${mob === true ? creatureLink(r.name) : esc(r.name)}</span><span class="muted">${fmt(r.value)} · ${pctTxt(r.pct)}</span></div>`;
   return `<div class="dmg"><b>🛡️ Dano recebido${who ? " · " + esc(who) : ""}</b>
     ${statGrid([["Total", fmt(i.total)], ["Max-DPS", fmt(i.max_dps)],
       ["Elemento que mais bateu", i.top_type ? `${esc(i.top_type.name)} (${pctTxt(i.top_type.pct)})` : "—"],
-      ["Criatura que mais bateu", i.top_mob ? `${esc(i.top_mob.name)} (${pctTxt(i.top_mob.pct)})` : "—"]])}
+      ["Criatura que mais bateu", i.top_mob ? `${creatureLink(i.top_mob.name)} (${pctTxt(i.top_mob.pct)})` : "—"]])}
     <details><summary class="link">Tipos de dano e de onde veio ▾</summary>
-      <h2>Tipos de dano</h2>${i.types.map(row).join("") || `<p class="muted">—</p>`}
-      <h2>De onde veio</h2>${i.sources.map(row).join("") || `<p class="muted">—</p>`}
+      <h2>Tipos de dano</h2>${i.types.map((r) => row(r)).join("") || `<p class="muted">—</p>`}
+      <h2>De onde veio</h2>${i.sources.map((r) => row(r, true)).join("") || `<p class="muted">—</p>`}
       <div class="hint">(other) não é criatura: é dano de outras fontes e só entra no total.</div></details></div>`;
 }
 /** 0.20.0: sessão do mesmo período que não bate com o Party Hunt Analyser (Leader: só supplies; Market: tudo). Sem alarde. */
@@ -5364,7 +5464,7 @@ function partyShared(h) {
         ["Balance/h", fmt(s.balance_h) + " gp"], ["Damage", fmt(s.damage)], ["Healing", fmt(s.healing)]])}
       ${discrepancyNote(s.discrepancy)}
       ${s.own && s.kills && s.kills.length ? `<details><summary class="link">Suas criaturas e itens (só você vê) ▾</summary>
-        ${killChips(s.kills)}<div class="chips" style="margin-top:6px">${s.loot.map((l) => `<span class="chip">${fmt(l.count)}x ${esc(l.key)}</span>`).join("")}</div></details>` : ""}</div>`).join("");
+        ${killChips(s.kills)}<div class="chips" style="margin-top:6px">${s.loot.map((l) => wikiLink((S.prices[l.key] || {}).name || l.key, `${fmt(l.count)}x ${esc(l.key)}`, 'class="chip wiki-link"')).join("")}</div></details>` : ""}</div>`).join("");
   const inputs = (h.inputs || []).map((i) => inputBlock(i, i.name)).join("");
   const me = h.players.find((p) => p.name.toLowerCase() === (S.nick || "").toLowerCase() && isMine(p.name));
   const t = ptype();
@@ -5991,7 +6091,7 @@ function achProgress(a) {
 function boostedCard(b) {
   if (!b || (!b.creature && !b.boss)) return "";
   const one = (label, name, hint) => name ? `<div style="display:flex;align-items:center;gap:8px;min-width:0">${creatureImg(name, 32)}
-    <span style="min-width:0"><span class="muted" style="font-size:12px;display:block">${label}</span><b data-i18n-skip>${esc(name)}</b></span></div>` : "";
+    <span style="min-width:0"><span class="muted" style="font-size:12px;display:block">${label}</span>${creatureLink(name, `<b data-i18n-skip>${esc(name)}</b>`)}</span></div>` : "";
   return `<div class="card"><b>🔥 Boost de hoje</b>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:8px">
       ${one("Criatura", b.creature)}${one("Boss", b.boss)}</div>

@@ -2,6 +2,7 @@
 import unittest
 from unittest import mock
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.server import app as server
 from tests import test_bosses as tb
 from tests.test_core import EXAMPLE

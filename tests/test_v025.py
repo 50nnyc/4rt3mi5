@@ -6,6 +6,7 @@ from unittest import mock
 
 from fastapi.testclient import TestClient
 
+import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
 from artemis.core.tibiadata import TibiaDataError
 from artemis.server import app as server
 from artemis.server.db import _iso, name_key, utcnow
