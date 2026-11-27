@@ -1049,7 +1049,8 @@ def recovery_login(body: LostLoginIn, request: Request):
 
 # ------------------------------------------------------------------ 0.13.0: uso das telas (só contadores)
 TRACK_PAGES = {"home", "loot", "stack", "boss", "hunts", "rank", "ach", "chars", "news", "settings",
-               "download", "subs", "parties", "gear"}  # 0.21.0; 0.23.0: 🤝 Substituições; 0.24.0: 🛡️ parties; 0.32.0: ⚔️
+               "download", "subs", "parties", "gear",  # 0.21.0; 0.23.0: 🤝 Substituições; 0.24.0: 🛡️ parties; 0.32.0: ⚔️
+               "reports", "vip", "tnews", "cms", "cal"}  # 0.33.2: telas do menu que ficavam fora da contagem
 
 
 class TrackIn(BaseModel):
@@ -1856,33 +1857,62 @@ def public_news(lang: str = ""):
 _SPLIT_TOKEN = re.compile(r"[A-Za-z0-9_-]{8,24}")
 
 
-def _split_link_guard(hunt_id: int, access: dict) -> dict:
-    h = _load_hunt("hunt", hunt_id)
+def _split_link_guard(kind: str, hunt_id: int, access: dict) -> dict:
+    h = _load_hunt(kind, hunt_id)
     in_party = any(store.is_linked(access["key"], p["name"]) for p in h["players"])
     if not (in_party or h.get("uploader_key") == access["key"]):
         raise HTTPException(403, {"message": "Só quem estava na PT pode criar o link.", "hint": FORBIDDEN_HINT})
     return h
 
 
+def _split_link_create(kind: str, hunt_id: int, access: dict) -> dict:
+    _split_link_guard(kind, hunt_id, access)
+    link = store.split_link_create(kind, hunt_id, access["key"])
+    return {"path": f"/l/{link['token']}", "expires_at": link["expires_at"], "days": store.SPLIT_LINK_DAYS}
+
+
+def _split_link_revoke(kind: str, hunt_id: int, access: dict) -> dict:
+    _split_link_guard(kind, hunt_id, access)
+    store.split_link_revoke(kind, hunt_id)
+    return {"revoked": True}
+
+
 @app.post("/api/hunt/{hunt_id}/link")
 def split_link_create(hunt_id: int, access: dict = Depends(require_session)):
     """Cria (ou renova) o link público deste lootsplit. Quem tem o endereço vê o resultado, sem conta."""
-    _split_link_guard(hunt_id, access)
-    link = store.split_link_create(hunt_id, access["key"])
-    return {"path": f"/l/{link['token']}", "expires_at": link["expires_at"], "days": store.SPLIT_LINK_DAYS}
+    return _split_link_create("hunt", hunt_id, access)
 
 
 @app.delete("/api/hunt/{hunt_id}/link")
 def split_link_revoke(hunt_id: int, access: dict = Depends(require_session)):
-    _split_link_guard(hunt_id, access)
-    store.split_link_revoke(hunt_id)
-    return {"revoked": True}
+    return _split_link_revoke("hunt", hunt_id, access)
 
 
-def _public_split(h: dict) -> dict:
+@app.post("/api/bosses/hunt/{hunt_id}/link")
+def boss_split_link_create(hunt_id: int, access: dict = Depends(require_session)):
+    """0.33.2: o mesmo link público para o lootsplit de bosses (que tem numeração própria)."""
+    return _split_link_create("boss", hunt_id, access)
+
+
+@app.delete("/api/bosses/hunt/{hunt_id}/link")
+def boss_split_link_revoke(hunt_id: int, access: dict = Depends(require_session)):
+    return _split_link_revoke("boss", hunt_id, access)
+
+
+def _split_by_token(token: str) -> tuple[str, dict] | None:
+    """(tipo, lootsplit) do link, ou None se não vale mais."""
+    target = store.split_link_target(token) if _SPLIT_TOKEN.fullmatch(token) else None
+    if target is None:
+        return None
+    kind, hunt_id = target
+    h = store.hunt(hunt_id) if kind == "hunt" else store.boss_hunt(hunt_id)
+    return (kind, h) if h is not None else None
+
+
+def _public_split(kind: str, h: dict) -> dict:
     """Só o que o resultado mostra: nada de código de acesso, quem enviou ou impressão digital."""
     place = store.place(h["place_id"]) if h.get("place_id") else None
-    return {"started_at": h["started_at"], "duration_seconds": h["duration_seconds"], "players_count": h["players_count"],
+    return {"kind": kind, "started_at": h["started_at"], "duration_seconds": h["duration_seconds"], "players_count": h["players_count"],
             "profit_each": h["profit_each"], "profit_each_per_hour": h["profit_each_per_hour"],
             "place": place["name"] if place else None,
             "transfers": [{"payer": t["payer"], "receiver": t["receiver"], "amount": t["amount"], "command": t["command"],
@@ -1891,11 +1921,10 @@ def _public_split(h: dict) -> dict:
 
 @app.get("/api/public/split/{token}")
 def public_split(token: str):
-    hid = store.split_link_hunt_id(token) if _SPLIT_TOKEN.fullmatch(token) else None
-    h = store.hunt(hid) if hid else None
-    if h is None:
+    found = _split_by_token(token)
+    if found is None:
         raise HTTPException(404, "Esse link não vale mais (venceu ou foi cancelado). Peça um novo a quem enviou.")
-    return _public_split(h)
+    return _public_split(*found)
 
 
 @app.get("/l/{token}", include_in_schema=False)
@@ -1903,13 +1932,14 @@ def split_page(token: str):
     """Página do link público: sem conta, sem indexar, com texto de prévia para Discord/WhatsApp."""
     import html as _html
     page = (WEB_DIR / "split.html").read_text(encoding="utf-8")
-    hid = store.split_link_hunt_id(token) if _SPLIT_TOKEN.fullmatch(token) else None
-    h = store.hunt(hid) if hid else None
-    if h is not None:
+    found = _split_by_token(token)
+    if found is not None:
+        kind, h = found
+        title = "Lootsplit de bosses" if kind == "boss" else "Lootsplit"
         desc = f"{h['players_count']} jogadores · cada um ficou com {h['profit_each']:,} gp".replace(",", ".")
-        page = page.replace("<!--OG-->", f'<meta property="og:title" content="Lootsplit · 4rt3mi5"><meta property="og:description" content="{_html.escape(desc)}"><meta property="og:type" content="website">')
+        page = page.replace("<!--OG-->", f'<meta property="og:title" content="{title} · 4rt3mi5"><meta property="og:description" content="{_html.escape(desc)}"><meta property="og:type" content="website">')
     return Response(page, media_type="text/html", headers={"Cache-Control": "no-store"},
-                    status_code=200 if h is not None else 404)
+                    status_code=200 if found is not None else 404)
 
 
 @app.get("/split.js", include_in_schema=False)
@@ -2303,7 +2333,7 @@ def _party_rows(name: str, skip_hashes: set) -> list[dict]:
     """0.32.0: o Hunt Analyser que o personagem juntou a cada Party Hunt Analyser, no mesmo formato das sessões solo.
     Fica de fora a sessão que o jogador também enviou como solo (mesma impressão digital): não conta duas vezes."""
     nk = name_key(name)
-    hunts = store.hunts_for_player(name)
+    hunts = store.hunts_for_player(name, -1)
     members = store.party_sessions_for([h["id"] for h in hunts])
     rows = []
     for h in hunts:
@@ -2319,6 +2349,7 @@ def _party_rows(name: str, skip_hashes: set) -> list[dict]:
                        ended_at=ps.get("ended_at"), session_label=ps.get("session_label"), place_id=h.get("place_id"),
                        other_player=1 if ps.get("other_player") else 0, played_by=ps.get("played_by"),
                        can_delete=False, profit_each=h.get("profit_each"), players_count=h.get("players_count"),
+                       my_profit=profit_of(h, name),
                        _kills=ps.get("kills") or [], _loot=ps.get("loot") or [])
             rows.append(row)
     return rows
@@ -2355,8 +2386,9 @@ def _enriched_sessions(name: str, access: dict, source: str = "all") -> tuple[li
         s["loot"] = sorted(items, key=lambda it: (-it["value"], -it["count"]))
         s["loot_value"] = sum(it["value"] for it in items)
         s["net_profit"] = s["loot_value"] - s["supplies"]  # lucro líquido real: loot pelos preços de NPC - supplies
-        if s["source"] == "party" and s.get("profit_each") is not None:
-            s["net_profit"] = s["profit_each"]  # na party vale o rateio do lootsplit
+        mine = s.pop("my_profit", None)
+        if s["source"] == "party" and mine is not None:
+            s["net_profit"] = mine  # na party vale o que coube ao personagem no lootsplit (com as regras de divisão)
     # 0.32.0: imbuements e gastos invisíveis do set usado em cada sessão (descontam do lucro líquido)
     refs = [("solo", s["id"]) if s["source"] == "solo" else ("hunt", s["hunt_id"]) for s in sessions]
     gear = store.session_gear_for(name, refs)
@@ -3738,14 +3770,16 @@ def _week_of(day: str) -> str:
     return (d - timedelta(days=d.weekday())).isoformat()
 
 
-def _party_weeks(name: str, weeks: int) -> list[dict]:
+def _party_weeks(name: str, weeks: int, since: str = "", only: set | None = None) -> list[dict]:
     """Por semana (segunda a domingo): hunts em party, horas, o que coube ao personagem, o custo dos imbuements dele
     (se tiver set) e com quem mais jogou."""
     weeks = max(1, min(weeks, 52))
     today = datetime.now(BRT).date()
     first = (today - timedelta(days=today.weekday() + 7 * (weeks - 1))).isoformat()
     nk = name_key(name)
-    hunts = [h for h in store.hunts_for_player(name) if str(h["started_at"])[:10] >= first]
+    first = since or first  # no Excel vale o período escolhido nos Relatórios
+    hunts = [h for h in store.hunts_for_player(name, -1)
+             if str(h["started_at"])[:10] >= first and (only is None or h["id"] in only)]
     gear = store.session_gear_for(name, [("hunt", h["id"]) for h in hunts])
     out: dict[str, dict] = {}
     places: dict = {}
@@ -3789,7 +3823,8 @@ def party_report(name: str, weeks: int = 8, access: dict = Depends(require_sessi
 # ------------------------------------------------------------------ 0.33.0: 📑 Relatórios (só Player Hardcore)
 REPORTS_ONLY_HARDCORE = "Os relatórios são só para o Player Hardcore. Troque o tipo em ⚙️ Configurações."
 REPORT_KINDS = ("party", "solo", "boss", "drops", "all")
-REPORT_DAYS = (7, 30, 90, 365, 0)  # 0 = tudo
+REPORT_DAYS = (7, 15, 30, 45, 90, 180, 360, 0)  # 0 = tudo
+EVERY_HUNT = -1  # os relatórios somam todos os lootsplits, sem o limite das listas da tela
 
 
 def _report_guard(name: str, access: dict) -> None:
@@ -3798,13 +3833,44 @@ def _report_guard(name: str, access: dict) -> None:
 
 
 def _since(days: int) -> str:
-    return "" if not days else (datetime.now(BRT).date() - timedelta(days=days)).isoformat()
+    """Primeiro dia do período: "7 dias" são hoje e os 6 anteriores."""
+    return "" if not days else (datetime.now(BRT).date() - timedelta(days=days - 1)).isoformat()
 
 
-def _gear_spend(name: str, since: str, kinds: tuple) -> dict:
+def _within(entries: list[dict], since: str, until: str = "") -> list[dict]:
+    return [e for e in entries if (not since or e["day"] >= since) and (not until or e["day"] <= until)]
+
+
+def _window(entries: list[dict]) -> dict:
+    t = _totals_of(entries, 0)
+    out = {k: t[k] for k in ("n", "seconds", "net", "net_h", "xp", "xp_h", "xp_n")}
+    out["active_days"] = len({e["day"] for e in entries})
+    return out
+
+
+def _periods(entries: list[dict]) -> list[dict]:
+    """Os mesmos registros somados em cada período, e no período anterior de mesmo tamanho (para comparar).
+    `complete`: o histórico já existia no primeiro dia do período anterior."""
+    today = datetime.now(BRT).date()
+    first = min((e["day"] for e in entries), default=None)
+    rows = []
+    for d in REPORT_DAYS:
+        row = {"days": d, "from": _since(d) or None, **_window(_within(entries, _since(d))), "prev": None}
+        if d:
+            start = (today - timedelta(days=2 * d - 1)).isoformat()
+            end = (today - timedelta(days=d)).isoformat()
+            row["prev"] = {"from": start, "to": end, "complete": bool(first) and first <= start,
+                           **_window(_within(entries, start, end))}
+        rows.append(row)
+    return rows
+
+
+def _gear_spend(name: str, since: str, kinds: tuple, refs: set | None = None) -> dict:
     """Gasto invisível do período por fonte: imbuements, anel e amuleto (cada peça e cada imbuement à parte).
     `kinds`: de onde vêm os usos (solo, hunt = party, boss). "manual" (usei e não informei) vem separado."""
     rows = store.usage_report(name, since or "0000-00-00")
+    if refs is not None:  # 0.33.2: filtro por hunt: só o uso das sessões daquele local (o informado à mão não tem local)
+        rows = [r for r in rows if (r["kind"], r["ref_id"]) in refs]
     meta = store.charge_meta([r["charge_id"] for r in rows if r["charge_id"]])
     types = {"imbuement": 0, "ring": 0, "amulet": 0}
     sources: dict[tuple, dict] = {}
@@ -3855,7 +3921,8 @@ def _place_rows(entries: list[dict]) -> list[dict]:
     for e in entries:
         if not e.get("place"):
             continue
-        a = acc.setdefault(e["place"], {"place": e["place"], "n": 0, "seconds": 0, "net": 0, "gear": 0, "xp": 0})
+        a = acc.setdefault(e["place"], {"place": e["place"], "n": 0, "seconds": 0, "net": 0, "gear": 0, "xp": 0, "xp_seconds": 0})
+        a["xp_seconds"] += e.get("xp_seconds", e["seconds"])
         a["n"] += 1
         a["seconds"] += e["seconds"]
         a["net"] += e["net"]
@@ -3864,7 +3931,7 @@ def _place_rows(entries: list[dict]) -> list[dict]:
     rows = []
     for a in acc.values():
         a["net_h"] = _per_hour(a["net"], a["seconds"])
-        a["xp_h"] = _per_hour(a["xp"], a["seconds"])
+        a["xp_h"] = _per_hour(a["xp"], a.pop("xp_seconds"))
         rows.append(a)
     return sorted(rows, key=lambda r: -r["net"])
 
@@ -3894,7 +3961,9 @@ def _totals_of(entries: list[dict], gear_total: int) -> dict:
     secs = sum(e["seconds"] for e in entries)
     net = sum(e["net"] for e in entries)
     xp = sum(e["xp"] for e in entries)
-    return {"n": len(entries), "seconds": secs, "xp": xp, "xp_h": _per_hour(xp, secs), "net": net, "net_h": _per_hour(net, secs),
+    xp_times = [e.get("xp_seconds", e["seconds"]) for e in entries]
+    return {"n": len(entries), "seconds": secs, "xp": xp, "xp_h": _per_hour(xp, sum(xp_times)), "xp_n": sum(1 for x in xp_times if x),
+            "net": net, "net_h": _per_hour(net, secs),
             "gear": gear_total, "gross": net + sum(e["gear"] for e in entries)}
 
 
@@ -3907,14 +3976,16 @@ def _session_entries(sessions: list[dict], since: str) -> list[dict]:
         out.append({"day": day, "started_at": s["started_at"], "source": s["source"], "place": (s.get("place") or {}).get("name"),
                     "seconds": int(s["duration_seconds"] or 0), "xp": int(s["xp"] or 0), "net": int(s["net_profit"]),
                     "gear": int(s["gear_cost"]), "set": (s.get("gear") or {}).get("set_name"),
-                    "loot": s["loot"], "kills": s["kills"], "supplies": int(s["supplies"] or 0), "loot_value": int(s["loot_value"])})
+                    "loot": s["loot"], "kills": s["kills"], "supplies": int(s["supplies"] or 0), "loot_value": int(s["loot_value"]),
+                    "hunt_id": s.get("hunt_id"),
+                    "ref": ("hunt", s["hunt_id"]) if s["source"] == "party" else ("solo", s.get("id"))})
     return out
 
 
 def _lootsplit_entries(name: str, since: str, only_without_own: bool) -> list[dict]:
     """Lootsplits da party do personagem. `only_without_own`: só os que não têm Hunt Analyser dele (já contados nas sessões)."""
     nk = name_key(name)
-    hunts = [h for h in store.hunts_for_player(name) if not since or str(h["started_at"])[:10] >= since]
+    hunts = [h for h in store.hunts_for_player(name, EVERY_HUNT) if not since or str(h["started_at"])[:10] >= since]
     members = store.party_sessions_for([h["id"] for h in hunts])
     gear = store.session_gear_for(name, [("hunt", h["id"]) for h in hunts])
     places: dict = {}
@@ -3933,7 +4004,8 @@ def _lootsplit_entries(name: str, since: str, only_without_own: bool) -> list[di
                     "seconds": int(h.get("duration_seconds") or 0), "xp": int((own or {}).get("xp") or 0), "net": int(mine - cost),
                     "gear": int(cost), "set": g["set_name"] if g else None, "loot": [], "kills": [], "supplies": 0, "loot_value": 0,
                     "players": h.get("players_count"), "mates": [p["name"] for p in h["players"] if name_key(p["name"]) != nk],
-                    "profit": int(mine), "hunt_id": h["id"]})
+                    "profit": int(mine), "hunt_id": h["id"], "ref": ("hunt", h["id"]),
+                    "xp_seconds": int(own.get("duration_seconds") or h.get("duration_seconds") or 0) if own else 0})
     return out
 
 
@@ -3965,14 +4037,14 @@ def _entry_row(e: dict) -> dict:
             "net": e["net"], "gear": e["gear"], "set": e.get("set"), "players": e.get("players")}
 
 
-def _report_hunts(name: str, access: dict, kind: str, days: int) -> dict:
+def _report_hunts(name: str, access: dict, kind: str, days: int, place: str = "") -> dict:
     since = _since(days)
     if kind == "solo":
         sessions, prices = _enriched_sessions(name, access, "solo")
-        entries = _session_entries(sessions, since)
+        entries = _session_entries(sessions, "")
         spend_kinds = ("solo",)
     elif kind == "party":
-        entries = _lootsplit_entries(name, since, False)
+        entries = _lootsplit_entries(name, "", False)
         sessions, prices = _enriched_sessions(name, access, "party")
         by_hunt = {s["hunt_id"]: s for s in sessions if s.get("hunt_id")}
         for e in entries:  # itens e criaturas vêm do Hunt Analyser do próprio jogador, quando ele juntou
@@ -3982,9 +4054,25 @@ def _report_hunts(name: str, access: dict, kind: str, days: int) -> dict:
         spend_kinds = ("hunt",)
     else:  # all: sessões do Stacker (solo + party com Hunt Analyser) + lootsplits sem Hunt Analyser do jogador
         sessions, prices = _enriched_sessions(name, access, "all")
-        entries = _session_entries(sessions, since) + _lootsplit_entries(name, since, True)
+        entries = _session_entries(sessions, "")
+        splits = {e["hunt_id"]: e for e in _lootsplit_entries(name, "", False)}
+        for e in entries:  # a sessão de party também diz com quem a pessoa jogou
+            split = splits.get(e["hunt_id"]) if e["source"] == "party" else None
+            if split:
+                e["mates"], e["players"] = split["mates"], split["players"]
+        entries += _lootsplit_entries(name, "", True)
         spend_kinds = ("solo", "hunt")
-    spend = _gear_spend(name, since, spend_kinds)
+    counts: dict[str, int] = {}
+    for e in entries:
+        if e.get("place"):
+            counts[e["place"]] = counts.get(e["place"], 0) + 1
+    refs = None
+    if place:  # filtra antes de tudo: período, comparação e panorama passam a falar só desta hunt
+        entries = [e for e in entries if e.get("place") == place]
+        refs = {e["ref"] for e in entries}
+    periods = _periods(entries)
+    entries = _within(entries, since)
+    spend = _gear_spend(name, since, spend_kinds, refs)
     entries.sort(key=lambda e: e["started_at"])
     series = _day_series(entries)
     totals = _totals_of(entries, spend["total"])
@@ -3992,7 +4080,9 @@ def _report_hunts(name: str, access: dict, kind: str, days: int) -> dict:
     totals["party"] = sum(1 for e in entries if e["source"] == "party")
     totals["loot_value"] = sum(e["loot_value"] for e in entries)
     totals["supplies"] = sum(e["supplies"] for e in entries)
-    return {"totals": totals, "daily": series, "places": _place_rows(entries)[:10], "items": _top_items(entries, prices),
+    options = [{"place": k, "n": n} for k, n in sorted(counts.items(), key=lambda kv: kv[0].lower())]
+    return {"place": place or None, "place_options": options,
+            "periods": periods, "totals": totals, "daily": series, "places": _place_rows(entries)[:10], "items": _top_items(entries, prices),
             "kills": _top_kills(entries), "highlights": _highlights(entries, series), "gear": spend,
             "mates": _mates(entries) if kind != "solo" else [], "rows": [_entry_row(e) for e in reversed(entries)][:200]}
 
@@ -4000,10 +4090,13 @@ def _report_hunts(name: str, access: dict, kind: str, days: int) -> dict:
 def _report_boss(name: str, access: dict, days: int) -> dict:
     since = _since(days)
     data = bosses_overview(name, access)
-    sess = [s for s in data["sessions"] if not since or str(s["started_at"])[:10] >= since]
+    every = data["sessions"]
+    sess = [s for s in every if not since or str(s["started_at"])[:10] >= since]
     entries = [{"day": str(s["started_at"])[:10], "started_at": s["started_at"], "source": "boss", "place": None,
                 "seconds": int(s["duration_seconds"] or 0), "xp": int(s["xp"] or 0), "net": int(s["net_profit"]),
-                "gear": int(s["gear_cost"]), "set": (s.get("gear") or {}).get("set_name"), "mode": s["mode"]} for s in sess]
+                "gear": int(s["gear_cost"]), "set": (s.get("gear") or {}).get("set_name"), "mode": s["mode"]} for s in every]
+    periods = _periods(entries)
+    entries = _within(entries, since)
     spend = _gear_spend(name, since, ("boss",))
     series = _day_series(entries)
     totals = _totals_of(entries, spend["total"])
@@ -4024,7 +4117,7 @@ def _report_boss(name: str, access: dict, days: int) -> dict:
         it["value"] = it["count"] * (p.get("unit_price") or 0)
     items.sort(key=lambda it: (-it["value"], -it["count"]))
     rare = [d for d in data["rare_drops"] if not since or str(d["started_at"])[:10] >= since]
-    return {"totals": totals, "daily": series, "places": [], "items": items[:12], "kills": [], "highlights": _highlights(entries, series),
+    return {"periods": periods, "totals": totals, "daily": series, "places": [], "items": items[:12], "kills": [], "highlights": _highlights(entries, series),
             "gear": spend, "mates": [], "bosses": sorted(per_boss.values(), key=lambda b: (-b["kills"], b["name"]))[:12],
             "rare": [{"name": d.get("name") or d.get("item"), "boss": d.get("boss"), "value": d.get("value", 0), "day": str(d["started_at"])[:10]}
                      for d in rare][:12],
@@ -4042,9 +4135,13 @@ def _vault_rows(data: dict) -> list[dict]:
 def _report_drops(name: str, access: dict, days: int) -> dict:
     since = _since(days)
     sessions, prices = _enriched_sessions(name, access, "all")
-    entries = _session_entries(sessions, since)
+    every = _session_entries(sessions, "")
+    entries = _within(every, since)
     items = _top_items(entries, prices, 15)
     boss = bosses_overview(name, access)
+    periods = _periods([{**e, "net": e["loot_value"], "gear": 0} for e in every]
+                       + [{"day": str(b["started_at"])[:10], "net": int(b["loot_value"]), "gear": 0, "xp": int(b["xp"] or 0),
+                           "seconds": int(b["duration_seconds"] or 0)} for b in boss["sessions"]])
     bsess = [s for s in boss["sessions"] if not since or str(s["started_at"])[:10] >= since]
     boss_items = _sum_counts((it["key"], it["count"]) for s in bsess for it in s["loot"])
     for it in boss_items:
@@ -4067,7 +4164,7 @@ def _report_drops(name: str, access: dict, days: int) -> dict:
         per_day[d] = per_day.get(d, 0) + int(s["loot_value"])
     daily = [{"day": d, "value": v} for d, v in sorted(per_day.items())]
     total_items = sum(i["count"] for i in _sum_counts((it["key"], it["count"]) for e in entries for it in e["loot"]))
-    return {"totals": {"items": total_items, "unique": len({it["key"] for e in entries for it in e["loot"]}),
+    return {"periods": periods, "totals": {"items": total_items, "unique": len({it["key"] for e in entries for it in e["loot"]}),
                        "loot_value": sum(e["loot_value"] for e in entries), "boss_value": sum(int(s["loot_value"]) for s in bsess),
                        "rare": len(rare), "rare_value": sum(int(d.get("value", 0)) for d in rare),
                        "vault_stock": by_status["stock"], "vault_sold": by_status["sold"], "vault_used": by_status["used"],
@@ -4082,7 +4179,8 @@ def _report_drops(name: str, access: dict, days: int) -> dict:
 
 
 @app.get("/api/reports/{name}")
-def reports(name: str, kind: str = "all", days: int = 30, access: dict = Depends(require_session)):
+def reports(name: str, kind: str = "all", days: int = 30, place: Annotated[str, Query(max_length=120)] = "",
+            access: dict = Depends(require_session)):
     """📑 Relatório do personagem (party, solo, boss, drops ou tudo) com totais, séries para os gráficos, destaques e o gasto
     invisível por fonte. Só o dono, só Player Hardcore. Nada é estimado fora dos dados que o jogador enviou."""
     _report_guard(name, access)
@@ -4094,7 +4192,7 @@ def reports(name: str, kind: str = "all", days: int = 30, access: dict = Depends
     elif kind == "drops":
         body = _report_drops(name, access, days)
     else:
-        body = _report_hunts(name, access, kind, days)
+        body = _report_hunts(name, access, kind, days, place)
     now = datetime.now(BRT)
     return {"kind": kind, "days": days, "name": name, "from": _since(days) or None, "to": now.date().isoformat(),
             "generated_at": now.isoformat(timespec="seconds"), "empty": not (body["totals"].get("n") or body["totals"].get("items")), **body}
@@ -4142,7 +4240,8 @@ def _mins(seconds) -> float:
     return round((seconds or 0) / 60, 1)
 
 
-def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None = None, lang: str = "", days: int = 0) -> list[tuple[str, list[str], list[list]]]:
+def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None = None, lang: str = "", days: int = 0,
+                   place: str = "") -> list[tuple[str, list[str], list[list]]]:
     tr = tr or {}
     since = _since(days)  # 0.33.0: o relatório exporta o mesmo período que mostra (0 = tudo)
 
@@ -4152,7 +4251,14 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
     out: list[tuple[str, list[str], list[list]]] = []
     hardcore = store.player_type(access["key"]) in _hardcore_types()
     need = {"sessions", "days", "places", "loot"} & set(sections)
-    sessions, prices = _enriched_sessions(name, access, "all") if need else ([], {})
+    sessions, prices = _enriched_sessions(name, access, "all") if need or place else ([], {})
+    only = refs = None  # filtro por hunt dos Relatórios
+    if place:
+        cache: dict = {}
+        only = {h["id"] for h in store.hunts_for_player(name, EVERY_HUNT)
+                if (_place_ref(h.get("place_id"), cache) or {}).get("name") == place}
+        sessions = [s for s in sessions if (s.get("place") or {}).get("name") == place]
+        refs = {("hunt", i) for i in only} | {("solo", s["id"]) for s in sessions if s["source"] == "solo"}
     if since:
         sessions = [s for s in sessions if str(s["started_at"])[:10] >= since]
     for sec in sections:
@@ -4195,7 +4301,8 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
                         [[k, t["count"], t["value"]] for k, t in sorted(tot.items(), key=lambda kv: -kv[1]["value"])]))
         elif sec == "party":
             nk = name_key(name)
-            hunts = [h for h in store.hunts_for_player(name) if not since or str(h["started_at"])[:10] >= since]
+            hunts = [h for h in store.hunts_for_player(name, EVERY_HUNT)
+                     if (not since or str(h["started_at"])[:10] >= since) and (only is None or h["id"] in only)]
             gear = store.session_gear_for(name, [("hunt", h["id"]) for h in hunts])
             places: dict = {}
             rows = []
@@ -4213,7 +4320,7 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
             out.append(("Party por semana", ["Semana (segunda)", "Hunts", "Horas", "Seu rateio (gp)", "Imbuements (gp)", "Líquido (gp)",
                                              "Líquido/h (gp)", "Quem mais jogou com você"],
                         [[w["week"], w["hunts"], round(w["seconds"] / 3600, 2), w["profit"], w["gear_cost"], w["net"], w["per_hour"],
-                          ", ".join(f"{m['name']} ({m['hunts']})" for m in w["mates"])] for w in reversed(_party_weeks(name, 52))]))
+                          ", ".join(f"{m['name']} ({m['hunts']})" for m in w["mates"])] for w in reversed(_party_weeks(name, 52, since, only))]))
         elif sec == "xp":
             ch = _xp_charts(name)
             out.append(("XP por dia", ["Dia", "XP ganha"], [[d["day"], d["gain"]] for d in ch["daily"]]))
@@ -4225,7 +4332,7 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
                           b["supplies"]] for b in reversed(store.boss_sessions_for(name))
                          if not since or str(b["started_at"])[:10] >= since]))
         elif sec == "gear_spend" and hardcore:
-            sp = _gear_spend(name, since, ("solo", "hunt", "boss"))
+            sp = _gear_spend(name, since, ("solo", "hunt", "boss"), refs)
             tname = {"imbuement": "Imbuement", "ring": "Anel", "amulet": "Amuleto"}
             out.append(("Gasto invisível", ["Tipo", "Fonte", "Horas", "Custo (gp)", "Parte do total (%)"],
                         [[tr.get(tname[s["type"]], tname[s["type"]]), s["label"], s["hours"], s["cost"], s["share"]] for s in sp["sources"]]
@@ -4295,15 +4402,16 @@ def _ui_dict(lang: str) -> dict:
 
 
 @app.get("/api/export/{name}")
-def export_xlsx(name: str, sections: str = "", lang: str = "", days: int = 0, access: dict = Depends(require_session)):
+def export_xlsx(name: str, sections: str = "", lang: str = "", days: int = 0,
+                place: Annotated[str, Query(max_length=120)] = "", access: dict = Depends(require_session)):
     """Planilha do Excel com os dados por trás dos gráficos e das listas (só o dono do personagem, só Hardcore).
     `lang`: idioma do site; abas e cabeçalhos saem nele (o que não tiver tradução fica em português).
-    `days`: período (7, 30, 90, 365); 0 = tudo."""
+    `days`: período (os de REPORT_DAYS); 0 = tudo."""
     _report_guard(name, access)
     chosen = [s for s in dict.fromkeys(x.strip() for x in sections.split(",")) if s in EXPORT_SECTIONS] or list(EXPORT_SECTIONS)
     days = days if days in REPORT_DAYS else 0
     d = _ui_dict(lang)
-    sheets = [(d.get(n, n), [d.get(h, h) for h in heads], rows) for n, heads, rows in _export_sheets(name, access, chosen, d, lang, days)]
+    sheets = [(d.get(n, n), [d.get(h, h) for h in heads], rows) for n, heads, rows in _export_sheets(name, access, chosen, d, lang, days, place)]
     data = xlsx_core.build(sheets)
     fname = re.sub(r"[^A-Za-z0-9_-]+", "_", name) + "-" + datetime.now(BRT).date().isoformat() + ".xlsx"
     return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

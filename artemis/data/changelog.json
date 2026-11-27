@@ -1,6 +1,90 @@
 {
   "releases": [
     {
+      "version": "0.33.2",
+      "date": "2026-11-27",
+      "title": "Períodos nos Relatórios e link de bosses",
+      "changes": [
+        "📑 Relatórios com botões de período em todas as abas: 7, 15, 30, 45, 90, 180 e 360 dias, além de Tudo. Cada botão mostra quantos registros existem. Em períodos longos, os gráficos juntam por semana ou por mês.",
+        "🧭 Novo Panorama dos períodos: veja todos lado a lado, por lucro, lucro por hora ou XP por hora, e toque para abrir. O resumo também compara com o período anterior do mesmo tamanho.",
+        "📅 Nos Relatórios: escolha uma hunt (em Tudo, Party e Solo) para ver só os números dela e comparar com o período anterior. O novo calendário mostra os dias com registro, com lucro em verde e prejuízo em vermelho. O app também lembra o último período que você escolheu.",
+        "🎯 Números mais exatos: 7 dias agora são hoje e os 6 anteriores, a XP por hora conta só as sessões com Hunt Analyser, e a aba Tudo respeita as regras de divisão e mostra com quem você jogou em todas as parties. Os relatórios somam todos os seus lootsplits.",
+        "👑 O Link público de um lootsplit de bosses agora abre o resultado dos bosses. Antes ele podia abrir uma hunt em party. A página, o resumo e a imagem agora mostram que é de bosses. Se você enviou um link de bosses antes desta versão, crie um novo e mande de novo."
+      ],
+      "tr": {
+        "en": {
+          "title": "Report periods and boss link",
+          "changes": [
+            "📑 Reports now have period buttons on every tab: 7, 15, 30, 45, 90, 180 and 360 days, plus All. Each button shows how many records there are. For long periods, the charts group by week or by month.",
+            "🧭 New period overview: see all of them side by side, by profit, profit per hour or XP per hour, and tap to open one. The summary also compares with the previous period of the same length.",
+            "📅 In Reports: pick a hunt (on All, Party and Solo) to see only its numbers and compare them with the previous period. The new calendar shows the days with records, with profit in green and loss in red. The app also remembers the last period you chose.",
+            "🎯 More exact numbers: 7 days now means today and the 6 days before, XP per hour counts only sessions with a Hunt Analyser, and the All tab follows the split rules and shows who you played with in every party. Reports add up all your lootsplits.",
+            "👑 The public link of a boss lootsplit now opens the boss result. Before, it could open a party hunt. The page, the summary and the image now show that it is about bosses. If you sent a boss link before this version, create a new one and send it again."
+          ]
+        },
+        "es": {
+          "title": "Períodos en Informes y enlace de bosses",
+          "changes": [
+            "📑 Los Informes tienen botones de período en todas las pestañas: 7, 15, 30, 45, 90, 180 y 360 días, además de Todo. Cada botón muestra cuántos registros hay. En períodos largos, los gráficos agrupan por semana o por mes.",
+            "🧭 Nuevo panorama de los períodos: míralos todos lado a lado, por beneficio, beneficio por hora o XP por hora, y toca para abrir uno. El resumen también compara con el período anterior de la misma duración.",
+            "📅 En Informes: elige una hunt (en Todo, Party y Solo) para ver solo sus números y compararlos con el período anterior. El nuevo calendario muestra los días con registro, con beneficio en verde y pérdida en rojo. La app también recuerda el último período que elegiste.",
+            "🎯 Números más exactos: 7 días ahora son hoy y los 6 anteriores, la XP por hora cuenta solo las sesiones con Hunt Analyser, y la pestaña Todo respeta las reglas de reparto y muestra con quién jugaste en todas las parties. Los informes suman todos tus lootsplits.",
+            "👑 El enlace público de un lootsplit de bosses ahora abre el resultado de los bosses. Antes podía abrir una hunt en party. La página, el resumen y la imagen ahora indican que es de bosses. Si enviaste un enlace de bosses antes de esta versión, crea uno nuevo y envíalo otra vez."
+          ]
+        },
+        "ja": {
+          "title": "レポートの期間とボスのリンク",
+          "changes": [
+            "📑 レポートのすべてのタブに期間ボタンが付きました：7、15、30、45、90、180、360日と「すべて」。各ボタンに記録の件数が出ます。長い期間では、グラフは週ごとか月ごとにまとまります。",
+            "🧭 新しい「期間の一覧」：利益、時間あたりの利益、時間あたりのXPで全期間を並べて見られ、タップすると開きます。まとめでは、同じ長さの直前の期間とも比較します。",
+            "📅 レポートで狩場を選べます（「すべて」「パーティー」「ソロ」）。その狩場の数字だけを表示し、前の期間と比較できます。新しいカレンダーは記録のある日を、利益は緑、損失は赤で表示します。最後に選んだ期間も記憶します。",
+            "🎯 数字がより正確になりました。7日間は今日と直前の6日間です。時間あたりのXPはHunt Analyserがあるセッションだけで計算します。「すべて」タブは分配ルールを反映し、すべてのパーティーで一緒に遊んだ人を表示します。レポートはすべてのlootsplitを合計します。",
+            "👑 ボスのLootsplitの公開リンクで、ボスの結果が開くようになりました。以前はパーティー狩りが開くことがありました。ページ、まとめ、画像にもボスのものだと表示されます。このバージョンより前にボスのリンクを送った場合は、新しく作ってもう一度送ってください。"
+          ]
+        },
+        "de": {
+          "title": "Zeiträume in Berichten und Boss-Link",
+          "changes": [
+            "📑 Die Berichte haben auf jedem Tab Zeitraum-Knöpfe: 7, 15, 30, 45, 90, 180 und 360 Tage sowie Alles. Jeder Knopf zeigt, wie viele Einträge es gibt. Bei langen Zeiträumen fassen die Diagramme nach Woche oder Monat zusammen.",
+            "🧭 Neuer Überblick der Zeiträume: alle nebeneinander nach Gewinn, Gewinn pro Stunde oder XP pro Stunde, zum Öffnen antippen. Die Zusammenfassung vergleicht außerdem mit dem gleich langen Zeitraum davor.",
+            "📅 In den Berichten: Wähle eine Hunt (unter Alles, Party und Solo), um nur ihre Zahlen zu sehen und mit dem Zeitraum davor zu vergleichen. Der neue Kalender zeigt die Tage mit Einträgen, Gewinn in Grün und Verlust in Rot. Die App merkt sich außerdem den zuletzt gewählten Zeitraum.",
+            "🎯 Genauere Zahlen: 7 Tage sind jetzt heute und die 6 Tage davor, XP pro Stunde zählt nur Sessions mit Hunt Analyser, und der Tab Alles beachtet die Aufteilungsregeln und zeigt in allen Partys, mit wem du gespielt hast. Die Berichte zählen alle deine Lootsplits.",
+            "👑 Der öffentliche Link eines Boss-Lootsplits öffnet jetzt das Boss-Ergebnis. Vorher konnte er eine Party-Hunt öffnen. Seite, Zusammenfassung und Bild zeigen jetzt, dass es um Bosse geht. Wenn du vor dieser Version einen Boss-Link verschickt hast, erstelle einen neuen und schicke ihn noch einmal."
+          ]
+        },
+        "pl": {
+          "title": "Okresy w raportach i link bossów",
+          "changes": [
+            "📑 Raporty mają przyciski okresu na każdej karcie: 7, 15, 30, 45, 90, 180 i 360 dni oraz Wszystko. Każdy przycisk pokazuje liczbę wpisów. W długich okresach wykresy łączą dane tygodniami lub miesiącami.",
+            "🧭 Nowy przegląd okresów: wszystkie obok siebie według zysku, zysku na godzinę lub XP na godzinę, dotknij, aby otworzyć. Podsumowanie porównuje też z poprzednim okresem tej samej długości.",
+            "📅 W raportach: wybierz hunta (w kartach Wszystko, Party i Solo), aby zobaczyć tylko jego liczby i porównać z poprzednim okresem. Nowy kalendarz pokazuje dni z wpisami: zysk na zielono, stratę na czerwono. Aplikacja pamięta też ostatnio wybrany okres.",
+            "🎯 Dokładniejsze liczby: 7 dni to teraz dziś i 6 dni wstecz, XP na godzinę liczy tylko sesje z Hunt Analyser, a karta Wszystko uwzględnia zasady podziału i pokazuje, z kim grałeś we wszystkich party. Raporty sumują wszystkie twoje lootsplity.",
+            "👑 Publiczny link do lootsplitu bossów otwiera teraz wynik bossów. Wcześniej mógł otworzyć huntę w party. Strona, podsumowanie i obraz pokazują teraz, że chodzi o bossów. Jeśli przed tą wersją udało ci się wysłać link do bossów, utwórz nowy i wyślij go ponownie."
+          ]
+        },
+        "fr": {
+          "title": "Périodes des rapports et lien des boss",
+          "changes": [
+            "📑 Les rapports ont des boutons de période sur tous les onglets : 7, 15, 30, 45, 90, 180 et 360 jours, plus Tout. Chaque bouton indique le nombre d'entrées. Sur les longues périodes, les graphiques regroupent par semaine ou par mois.",
+            "🧭 Nouveau panorama des périodes : voyez-les toutes côte à côte, par bénéfice, bénéfice par heure ou XP par heure, et touchez pour en ouvrir une. Le résumé compare aussi avec la période précédente de même durée.",
+            "📅 Dans les rapports : choisissez une hunt (dans Tout, Party et Solo) pour ne voir que ses chiffres et les comparer à la période précédente. Le nouveau calendrier montre les jours avec des entrées, le bénéfice en vert et la perte en rouge. L'application retient aussi la dernière période choisie.",
+            "🎯 Chiffres plus exacts : 7 jours correspondent maintenant à aujourd'hui et aux 6 jours précédents, l'XP par heure ne compte que les sessions avec un Hunt Analyser, et l'onglet Tout suit les règles de partage et montre avec qui vous avez joué dans toutes les parties. Les rapports additionnent tous vos lootsplits.",
+            "👑 Le lien public d'un lootsplit des boss ouvre maintenant le résultat des boss. Avant, il pouvait ouvrir une hunt en party. La page, le résumé et l'image indiquent maintenant qu'il s'agit de boss. Si vous avez envoyé un lien de boss avant cette version, créez-en un nouveau et renvoyez-le."
+          ]
+        },
+        "ru": {
+          "title": "Периоды в отчётах и ссылка на боссов",
+          "changes": [
+            "📑 В отчётах на каждой вкладке появились кнопки периода: 7, 15, 30, 45, 90, 180 и 360 дней, а также «Всё». На каждой кнопке видно число записей. На длинных периодах графики объединяют данные по неделям или месяцам.",
+            "🧭 Новый обзор периодов: все рядом — по прибыли, прибыли в час или XP в час, нажмите, чтобы открыть. Сводка также сравнивает с предыдущим периодом такой же длины.",
+            "📅 В отчётах: выберите хант (на вкладках «Всё», «Пати» и «Соло»), чтобы видеть только его цифры и сравнивать с предыдущим периодом. Новый календарь показывает дни с записями: прибыль зелёным, убыток красным. Приложение также запоминает последний выбранный период.",
+            "🎯 Более точные цифры: 7 дней — это сегодня и 6 предыдущих дней, XP в час считается только по сессиям с Hunt Analyser, а вкладка «Всё» учитывает правила раздела и показывает, с кем вы играли во всех пати. Отчёты суммируют все ваши лутсплиты.",
+            "👑 Публичная ссылка на лутсплит боссов теперь открывает результат по боссам. Раньше она могла открыть пати-хант. Страница, сводка и картинка теперь показывают, что это боссы. Если вы отправляли ссылку на боссов до этой версии, создайте новую и отправьте ещё раз."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.33.1",
       "date": "2026-11-26",
       "title": "Links para a TibiaWiki BR",

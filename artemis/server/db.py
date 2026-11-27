@@ -326,7 +326,8 @@ CREATE TABLE IF NOT EXISTS split_links (
     hunt_id     INTEGER NOT NULL,
     created_by  TEXT NOT NULL,
     created_at  TEXT NOT NULL,
-    expires_at  TEXT NOT NULL
+    expires_at  TEXT NOT NULL,
+    kind        TEXT NOT NULL DEFAULT 'hunt'   -- 0.33.2: 'hunt' (hunts) ou 'boss' (boss_hunts); cada tabela numera do 1
 );
 -- 0.12.0: personagens que aceitaram aparecer no 🥇 Ranking entre amigos
 CREATE TABLE IF NOT EXISTS ranking_optin (
@@ -817,6 +818,8 @@ class Store:
             self._conn.execute("ALTER TABLE party_items ADD COLUMN client TEXT")
         if "dropped_on" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(vault_drops)")}:
             self._conn.execute("ALTER TABLE vault_drops ADD COLUMN dropped_on TEXT")  # dia do drop (identifica o item)
+        if "kind" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(split_links)")}:  # 0.33.2
+            self._conn.execute("ALTER TABLE split_links ADD COLUMN kind TEXT NOT NULL DEFAULT 'hunt'")
         if "live" not in {r["name"] for r in self._conn.execute("PRAGMA table_info(solo_sessions)")}:  # 0.32.0: sessão ao vivo
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN live INTEGER NOT NULL DEFAULT 0")
             self._conn.execute("ALTER TABLE solo_sessions ADD COLUMN live_touched_at TEXT")
@@ -1562,36 +1565,37 @@ class Store:
     # ---- 0.29.0: link público
     SPLIT_LINK_DAYS = 30
 
-    def split_link_create(self, hunt_id: int, by_key: str) -> dict:
+    def split_link_create(self, kind: str, hunt_id: int, by_key: str) -> dict:
         """Um link por lootsplit: pedir de novo devolve o mesmo (renovando o prazo)."""
         import secrets
         now = utcnow()
         exp = _iso(now + timedelta(days=self.SPLIT_LINK_DAYS))
         with self._lock:
-            row = self._conn.execute("SELECT token FROM split_links WHERE hunt_id = ?", (hunt_id,)).fetchone()
+            row = self._conn.execute("SELECT token FROM split_links WHERE kind = ? AND hunt_id = ?", (kind, hunt_id)).fetchone()
             token = row["token"] if row else secrets.token_urlsafe(9)
             if row:
                 self._conn.execute("UPDATE split_links SET expires_at = ? WHERE token = ?", (exp, token))
             else:
-                self._conn.execute("INSERT INTO split_links VALUES (?, ?, ?, ?, ?)", (token, hunt_id, by_key, _iso(now), exp))
+                self._conn.execute("INSERT INTO split_links (token, hunt_id, created_by, created_at, expires_at, kind) "
+                                   "VALUES (?, ?, ?, ?, ?, ?)", (token, hunt_id, by_key, _iso(now), exp, kind))
             self._conn.commit()
         return {"token": token, "expires_at": exp}
 
-    def split_link_hunt_id(self, token: str) -> int | None:
-        row = self._conn.execute("SELECT hunt_id, expires_at FROM split_links WHERE token = ?", (token,)).fetchone()
+    def split_link_target(self, token: str) -> tuple[str, int] | None:
+        """(tipo, número do lootsplit) de um link que ainda vale."""
+        row = self._conn.execute("SELECT kind, hunt_id, expires_at FROM split_links WHERE token = ?", (token,)).fetchone()
         if row is None or row["expires_at"] < _iso(utcnow()):
             return None
-        return row["hunt_id"]
+        return row["kind"], row["hunt_id"]
 
-    def split_link_revoke(self, hunt_id: int) -> None:
+    def split_link_revoke(self, kind: str, hunt_id: int) -> None:
         with self._lock:
-            self._conn.execute("DELETE FROM split_links WHERE hunt_id = ?", (hunt_id,))
+            self._conn.execute("DELETE FROM split_links WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
             self._conn.commit()
 
     def _forget_split(self, kind: str, hunt_id: int) -> None:
         """Hunt apagada: some com as regras, os pagamentos e as marcações dela (chamar dentro do _lock)."""
-        if kind == "hunt":
-            self._conn.execute("DELETE FROM split_links WHERE hunt_id = ?", (hunt_id,))
+        self._conn.execute("DELETE FROM split_links WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_payments WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_rules WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
         self._conn.execute("DELETE FROM hunt_tags WHERE kind = ? AND hunt_id = ?", (kind, hunt_id))
@@ -1677,7 +1681,8 @@ class Store:
             c.execute("UPDATE OR IGNORE hunt_tags SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
             c.execute("UPDATE OR IGNORE hunt_payments SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
             c.execute("UPDATE OR IGNORE hunt_rules SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ?", (keep_id, drop_id))
-            c.execute("UPDATE split_links SET hunt_id = ? WHERE hunt_id = ? AND NOT EXISTS (SELECT 1 FROM split_links WHERE hunt_id = ?)",
+            c.execute("UPDATE split_links SET hunt_id = ? WHERE kind = 'hunt' AND hunt_id = ? "
+                      "AND NOT EXISTS (SELECT 1 FROM split_links WHERE kind = 'hunt' AND hunt_id = ?)",
                       (keep_id, drop_id, keep_id))
             have = {r[0] for r in c.execute("SELECT name_key FROM hunt_players WHERE hunt_id = ?", (keep_id,))}
             for r in c.execute("SELECT name_key, name FROM hunt_players WHERE hunt_id = ?", (drop_id,)).fetchall():

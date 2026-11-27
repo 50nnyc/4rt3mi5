@@ -1938,7 +1938,7 @@ function quickTransfers(h) {
 }
 /** Resumo do lootsplit para colar no Discord ou no WhatsApp (texto simples, sem depender do app). */
 function splitSummary(h) {
-  const lines = [`🏹 Lootsplit${h.place ? " · " + h.place.name : ""}`,
+  const lines = [`${h.kind === "boss" ? "👑 Lootsplit de bosses" : "🏹 Lootsplit"}${h.place ? " · " + h.place.name : ""}`,
     `⏱️ ${dur(h.duration_seconds)} · ${h.players_count} jogadores`,
     `💰 Cada um: ${fmt(h.profit_each)} gp (${fmt(h.profit_each_per_hour)} gp/h)`, ""];
   if (h.transfers.length) lines.push("💸 Quem transfere para quem:", ...h.transfers.map((t) => `• ${t.payer} → ${t.receiver}: ${fmt(t.amount)} gp`));
@@ -4743,9 +4743,18 @@ function gearBox(s, kind, ref) {
 /* ---------- 0.33.0: 📑 Relatórios (Player Hardcore) ----------
    Party, Solo, Boss, Drops e Tudo. Cada um mostra os números do período, o gasto invisível por fonte (imbuements, anel e amuleto),
    gráficos, o texto para WhatsApp/Discord, um card de imagem por gráfico e a planilha do Excel. Só dados que o jogador enviou. */
-const R = { kind: "all", days: 30, data: null };
+const R = { kind: "all", days: 30, data: null, metric: "net", place: "", nick: "" };
 const R_KINDS = [["all", "🌐", "Tudo"], ["party", "👥", "Party"], ["solo", "🧍", "Solo"], ["boss", "👑", "Boss"], ["drops", "💎", "Drops"]];
-const R_PERIODS = [[7, "7 dias"], [30, "30 dias"], [90, "90 dias"], [365, "1 ano"], [0, "Tudo"]];
+// 0.33.2: os mesmos botões em todas as abas (o servidor devolve os números de todos de uma vez)
+const R_PERIODS = [7, 15, 30, 45, 90, 180, 360, 0];
+const rShort = (n) => (n ? `${n}d` : T("Tudo"));
+// 0.33.2: o aparelho lembra o último período escolhido
+const R_DAYS_KEY = "artemis.repDays";
+try { const v = localStorage.getItem(R_DAYS_KEY); if (v !== null && R_PERIODS.includes(+v)) R.days = +v; } catch {}
+const rememberDays = () => { try { localStorage.setItem(R_DAYS_KEY, String(R.days)); } catch {} };
+const R_HUNT_KINDS = ["all", "party", "solo"];  // abas com filtro por hunt
+const rPlace = () => (R_HUNT_KINDS.includes(R.kind) ? R.place : "");
+const rScope = (d) => rRange(d) + (d.place ? ` · 📍 ${d.place}` : "");
 const R_SECS = {
   all: ["sessions", "days", "places", "loot", "party", "party_weekly", "gear_spend"],
   solo: ["sessions", "days", "places", "loot", "gear_spend"],
@@ -4758,10 +4767,11 @@ const R_TYPE_LABEL = { imbuement: "Imbuements", ring: "Anel", amulet: "Amuleto" 
 const shortDay = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 const rSigned = (n) => (n < 0 ? "−" : "") + gpx(Math.abs(n));
 const rKind = () => R_KINDS.find((k) => k[0] === R.kind) || R_KINDS[0];
-const rPeriod = () => (R_PERIODS.find((p) => p[0] === R.days) || R_PERIODS[1])[1];
+const rPeriod = () => (R.days ? tf("{0} dias", R.days) : T("Tudo"));
 const rRange = (d) => (d.from ? `${brData(d.from)} → ${brData(d.to)}` : tf("até {0}", brData(d.to)));
 
 async function loadReports() {
+  if (R.nick !== S.nick) { R.nick = S.nick; R.place = ""; }  // a hunt escolhida é de cada personagem
   const root = $("#reportsResult");
   if (!root) return;
   if (!isHardcore()) {
@@ -4772,8 +4782,8 @@ async function loadReports() {
   }
   root.innerHTML = `<div class="seg rep-tabs" role="tablist" id="repTabs" aria-label="${esc(T("Relatórios"))}">${R_KINDS.map(([k, ic, lb]) =>
       `<button type="button" role="tab" data-rep-kind="${k}" aria-selected="${k === R.kind}" class="${k === R.kind ? "on" : ""}"><span aria-hidden="true">${ic}</span> ${esc(T(lb))}</button>`).join("")}</div>
-    <div class="row" style="justify-content:flex-start; gap:8px; flex-wrap:wrap; margin:6px 0 10px"><label class="muted" for="repDays">${T("Período")}</label>
-      <select id="repDays">${R_PERIODS.map(([v, lb]) => `<option value="${v}"${v === R.days ? " selected" : ""}>${esc(T(lb))}</option>`).join("")}</select></div>
+    <div class="rep-periods" id="repChips" role="group" aria-label="${esc(T("Período"))}">${periodChips(null)}</div>
+    <div id="repPlaceBox"></div>
     <div id="reportBody">${skeleton("stack")}</div>`;
   await loadReportData();
 }
@@ -4781,8 +4791,11 @@ async function loadReportData() {
   const body = $("#reportBody");
   if (!body) return;
   body.innerHTML = skeleton("stack");
-  try { R.data = await api("GET", `/api/reports/${encodeURIComponent(S.nick)}?kind=${R.kind}&days=${R.days}`); }
+  paintChips(null);
+  try { R.data = await api("GET", `/api/reports/${encodeURIComponent(S.nick)}?kind=${R.kind}&days=${R.days}&place=${encodeURIComponent(rPlace())}`); }
   catch (err) { if (err.status !== 401) body.innerHTML = `<div class="err">${esc(err.message)}</div>`; return; }
+  paintChips(R.data.periods);
+  paintPlace(R.data);
   paintReport();
 }
 document.addEventListener("click", (e) => {
@@ -4792,20 +4805,171 @@ document.addEventListener("click", (e) => {
   document.querySelectorAll("#repTabs button").forEach((b) => { const on = b.dataset.repKind === R.kind; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
   loadReportData();
 });
-document.addEventListener("change", (e) => { if (e.target.id === "repDays") { R.days = +e.target.value; loadReportData(); } });
+document.addEventListener("click", (e) => {
+  const p = e.target.closest("[data-rep-days]");
+  if (p) {
+    if (+p.dataset.repDays === R.days) return;
+    R.days = +p.dataset.repDays;
+    rememberDays();
+    loadReportData();
+    return;
+  }
+  const m = e.target.closest("[data-rep-metric]");
+  const box = m && $("#repPanorama");
+  if (box) { R.metric = m.dataset.repMetric; box.outerHTML = panoramaCard(R.data); }
+});
+
+document.addEventListener("change", (e) => { if (e.target.id === "repPlace") { R.place = e.target.value; loadReportData(); } });
+document.addEventListener("click", (e) => {
+  const c = e.target.closest("[data-rep-day]");
+  if (!c || !R.data) return;
+  document.querySelectorAll("[data-rep-day]").forEach((b) => b.classList.toggle("sel", b === c));
+  const info = $("#repDayInfo");
+  if (info) info.textContent = dayText(R.data, c.dataset.repDay);
+});
+
+/* ---------- 0.33.2: filtro por hunt ---------- */
+function paintPlace(d) {
+  const box = $("#repPlaceBox");
+  if (!box) return;
+  const list = [...(d.place_options || [])];
+  if (!d.place_options || (!list.length && !d.place)) { box.innerHTML = ""; return; }
+  if (d.place && !list.some((o) => o.place === d.place)) list.push({ place: d.place, n: 0 });  // para poder voltar a "todas"
+  box.innerHTML = `<label class="rep-place">📍 <span class="muted">${T("Hunt")}</span>
+      <select id="repPlace"><option value="">${esc(T("Todas as hunts"))}</option>${list.map((o) => `<option value="${esc(o.place)}"${o.place === d.place ? " selected" : ""} data-i18n-skip>${esc(o.place)} (${fmt(o.n)})</option>`).join("")}</select></label>
+    ${d.place ? `<div class="hint">${esc(T("Com uma hunt escolhida, entram só as sessões marcadas nesse local. O uso informado à mão fica de fora."))}</div>` : ""}`;
+}
+
+/* ---------- 0.33.2: calendário do período ---------- */
+const CAL_MAX_DAYS = 371;  // 53 semanas
+const calDate = (day) => new Date(`${day}T12:00:00Z`);
+const calAdd = (day, n) => { const x = calDate(day); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const calValue = (d, row) => (d.kind === "drops" ? row.value : row.net);
+function calRange(d) {
+  const first = d.from || (d.daily[0] || {}).day || d.to;
+  const limit = calAdd(d.to, 1 - CAL_MAX_DAYS);
+  return { start: first < limit ? limit : first, cut: first < limit };
+}
+function dayText(d, day) {
+  const row = d.daily.find((x) => x.day === day);
+  if (!row) return tf("{0}: sem registros", brData(day));
+  const v = rSigned(calValue(d, row));
+  return d.kind === "drops" ? `${brData(day)}: ${v}` : tf("{0}: {1} · registros: {2}", brData(day), v, fmt(row.n)) + (row.xp ? ` · ${fmt(row.xp)} XP` : "");
+}
+function calendarCard(d) {
+  if (!(d.daily || []).length) return "";
+  const { start, cut } = calRange(d);
+  const days = [];
+  for (let x = start; x <= d.to; x = calAdd(x, 1)) days.push(x);
+  const byDay = new Map(d.daily.map((r) => [r.day, r]));
+  const shown = days.filter((x) => byDay.has(x)).map((x) => calValue(d, byDay.get(x)));
+  if (!shown.length) return "";
+  const maxUp = Math.max(...shown, 1), maxDown = Math.max(...shown.map((v) => -v), 1);
+  const level = (day) => {
+    const row = byDay.get(day);
+    if (!row) return "";
+    const v = calValue(d, row);
+    return !v ? "zero" : v > 0 ? `up l${Math.ceil((v / maxUp) * 4)}` : `down l${Math.ceil((-v / maxDown) * 4)}`;
+  };
+  const short = days.length <= 45;
+  const cell = (day) => `<button type="button" class="rep-day ${level(day)}" data-rep-day="${day}" title="${esc(dayText(d, day))}" aria-label="${esc(dayText(d, day))}">${short ? +day.slice(8, 10) : ""}</button>`;
+  const lead = "<i></i>".repeat((calDate(days[0]).getUTCDay() + 6) % 7);  // a semana começa na segunda
+  const week = short ? [0, 1, 2, 3, 4, 5, 6].map((i) => `<span data-i18n-skip>${esc(new Date(Date.UTC(2024, 0, 1 + i)).toLocaleDateString(I18N.lang, { weekday: "narrow", timeZone: "UTC" }))}</span>`).join("") : "";
+  return `<div class="card rep-cal"><b>📅 ${T("Calendário do período")}</b>
+    <div class="rep-cal-scroll"><div class="rep-cal-grid ${short ? "short" : "long"}">${week}${lead}${days.map(cell).join("")}</div></div>
+    ${short ? "" : `<div class="row muted rep-cal-ends" data-i18n-skip><span>${esc(brData(days[0]))}</span><span>${esc(brData(d.to))}</span></div>`}
+    <div class="rep-cal-info" id="repDayInfo" aria-live="polite">${esc(tf("{0} dias com registro em {1} dias. Toque num dia para ver os números.", fmt(shown.length), fmt(days.length)))}</div>
+    <div class="hint">${esc(T(d.kind === "drops" ? "Quanto mais forte o verde, maior o valor do loot." : "Verde é lucro e vermelho é prejuízo: quanto mais forte, maior o valor."))}</div>
+    ${cut ? `<div class="hint">${esc(T("O calendário mostra as últimas 53 semanas."))}</div>` : ""}</div>`;
+}
+/* num período longo, o calendário abre no fim (os dias mais recentes) */
+const scrollCalendar = () => { const c = $(".rep-cal-scroll"); if (c) c.scrollLeft = c.scrollWidth; };
+
+/* ---------- 0.33.2: períodos (botões, comparação e panorama) ---------- */
+function periodChips(periods) {
+  return R_PERIODS.map((n) => {
+    const row = periods && periods.find((x) => x.days === n);
+    const label = n ? tf("{0} dias", n) : T("Tudo");
+    return `<button type="button" data-rep-days="${n}" aria-pressed="${n === R.days}" class="${n === R.days ? "on" : ""}${row && !row.n ? " none" : ""}"
+      aria-label="${esc(row ? `${label}: ${tf("{0} registros", fmt(row.n))}` : label)}"><b data-i18n-skip>${esc(rShort(n))}</b><small data-i18n-skip>${row ? fmt(row.n) : "·"}</small></button>`;
+  }).join("");
+}
+function paintChips(periods) { const c = $("#repChips"); if (c) c.innerHTML = periodChips(periods); }
+
+/** Variação contra o período anterior. Sem base positiva não há porcentagem: mostra a diferença. */
+function rDelta(now, before, show) {
+  const diff = now - before;
+  if (!diff) return { cls: "flat", text: `= ${T("igual")}` };
+  // se o lucro virou prejuízo, uma porcentagem acima de 100% confunde: também mostra a diferença
+  const text = before > 0 && now >= 0 ?`${fmt(Math.round((Math.abs(diff) / before) * 1000) / 10)}%` : show(Math.abs(diff));
+  return { cls: diff > 0 ? "up" : "down", text: `${diff > 0 ? "▲" : "▼"} ${text}` };
+}
+function compareBlock(d) {
+  const cur = (d.periods || []).find((x) => x.days === d.days), prev = cur && cur.prev;
+  if (!prev) return "";
+  const range = `${brData(prev.from)} → ${brData(prev.to)}`;
+  if (!prev.n) return `<div class="hint rep-cmp-note">${esc(tf("Sem registros nos {0} dias anteriores ({1}), então não há comparação.", d.days, range))}</div>`;
+  const drops = d.kind === "drops", gp = (v) => rSigned(v);
+  const items = [[drops ? "Valor do loot" : "Lucro líquido", cur.net, prev.net, gp], [drops ? "Loot por hora" : "Líquido por hora", cur.net_h, prev.net_h, gp]];
+  if (!drops && cur.xp_n && prev.xp_n) items.push(["XP por hora", cur.xp_h, prev.xp_h, (v) => fmt(v)]);
+  items.push(["Sessões", cur.n, prev.n, (v) => fmt(v)]);
+  return `<div class="rep-cmp-title">${esc(tf("Comparado com os {0} dias anteriores", d.days))} <span data-i18n-skip>(${esc(range)})</span></div>
+    <div class="rep-cmp">${items.map(([label, a, b, show]) => { const x = rDelta(a, b, show);
+      return `<div class="rep-cmp-item"><span class="muted">${esc(T(label))}</span><b class="${x.cls}" data-i18n-skip>${esc(x.text)}</b><small class="muted" data-i18n-skip>${esc(show(b))} → ${esc(show(a))}</small></div>`; }).join("")}</div>
+    ${prev.complete ? "" : `<div class="hint">${esc(T("Seu histórico começa no meio do período anterior: compare com cuidado."))}</div>`}`;
+}
+
+const rMetrics = (kind) => (kind === "drops" ? [["net", "Valor do loot"], ["net_h", "Loot por hora"]]
+  : [["net", "Lucro líquido"], ["net_h", "Líquido por hora"], ["xp_h", "XP por hora"]]);
+function panoramaCard(d) {
+  const rows = d.periods || [];
+  if (!rows.some((r) => r.n)) return "";
+  const metrics = rMetrics(d.kind), metric = metrics.some(([k]) => k === R.metric) ? R.metric : "net";
+  const has = (r) => r.n > 0 && (metric !== "xp_h" || r.xp_n > 0);
+  const max = Math.max(...rows.filter(has).map((r) => Math.abs(r[metric])), 1);
+  const show = (v) => (metric === "xp_h" ? `${kk(v)} XP/h` : `${v < 0 ? "−" : ""}${kk(Math.abs(v))}${metric === "net_h" ? "/h" : ""}`);
+  return `<div class="card rep-pan" id="repPanorama"><b>🧭 ${T("Panorama dos períodos")}</b>
+    <div class="seg" role="group" aria-label="${esc(T("Panorama dos períodos"))}">${metrics.map(([k, l]) => `<button type="button" data-rep-metric="${k}" aria-pressed="${k === metric}" class="${k === metric ? "on" : ""}">${esc(T(l))}</button>`).join("")}</div>
+    ${rows.map((r) => `<button type="button" class="rep-pr${r.days === d.days ? " on" : ""}" data-rep-days="${r.days}">
+      <span class="rep-pr-l" data-i18n-skip>${esc(rShort(r.days))}</span>
+      <span class="rep-pr-track">${has(r) ? `<i class="${r[metric] < 0 ? "bad" : metric === "xp_h" ? "xp" : ""}" style="width:${Math.max(2, (Math.abs(r[metric]) / max) * 100).toFixed(1)}%"></i>` : ""}</span>
+      <b class="${has(r) && r[metric] < 0 ? "neg" : ""}" data-i18n-skip>${has(r) ? esc(show(r[metric])) : "—"}</b>
+      <small class="muted" data-i18n-skip>${esc(r.n ? tf("{0} registros · {1} dias jogados", fmt(r.n), fmt(r.active_days)) : T("sem registros"))}</small></button>`).join("")}
+    <div class="hint">${T("Os períodos são acumulados: o de 30 dias já inclui os 7 e os 15. Toque numa linha para abrir o período.")}</div></div>`;
+}
+
+/** Em períodos longos uma barra por dia fica ilegível: junta por semana e, se ainda for muito, por mês. */
+function groupSeries(daily, key) {
+  const weekOf = (day) => { const x = new Date(`${day}T12:00:00Z`); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x.toISOString().slice(0, 10); };
+  const join = (idOf, labelOf) => {
+    const acc = new Map();
+    daily.forEach((x) => { const id = idOf(x.day); acc.set(id, (acc.get(id) || 0) + x[key]); });
+    return [...acc].map(([id, v]) => ({ l: labelOf(id), v }));
+  };
+  if (daily.length <= 45) return { unit: "dia", items: daily.map((x) => ({ l: shortDay(x.day), v: x[key] })) };
+  const weeks = join(weekOf, shortDay);
+  if (weeks.length <= 40) return { unit: "semana", items: weeks };
+  return { unit: "mês", items: join((day) => day.slice(0, 7), (m) => `${m.slice(5, 7)}/${m.slice(2, 4)}`) };
+}
+const R_SERIES = {
+  net: { dia: "Lucro líquido por dia", semana: "Lucro líquido por semana", "mês": "Lucro líquido por mês" },
+  xp: { dia: "XP por dia", semana: "XP por semana", "mês": "XP por mês" },
+  value: { dia: "Valor do loot por dia", semana: "Valor do loot por semana", "mês": "Valor do loot por mês" },
+};
 
 /** Gráficos do relatório: o mesmo dado serve para a tela (SVG) e para o card de imagem (canvas). */
 function reportSpecs(d) {
   const sp = [];
   const bars = (id, title, rows, unit, color) => rows.length && sp.push({ id, title, type: "bars", unit, items: rows, color });
   const hb = (id, title, rows, unit) => rows.length && sp.push({ id, title, type: "hbars", unit, items: rows });
+  const series = (id, key, unit, color) => { const g = groupSeries(d.daily, key); bars(id, R_SERIES[key][g.unit], g.items, unit, color); };
   const gear = d.gear || { by_type: {}, sources: [], total: 0 };
   const types = Object.entries(gear.by_type || {}).filter(([, v]) => v > 0).map(([k, v]) => ({ l: T(R_TYPE_LABEL[k]), v, c: R_COL[k === "imbuement" ? "imb" : k] }));
   const colorOf = (t) => R_COL[t === "imbuement" ? "imb" : t];
   if (d.kind === "drops") {
     hb("items", "Itens que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
     hb("boss_items", "Itens de boss", (d.boss_items || []).slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
-    bars("daily", "Valor do loot por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.value })), "gp", R_COL.gold);
+    series("daily", "value", "gp", R_COL.gold);
     const vt = d.totals;
     const vs = [["Em estoque", vt.vault_stock, R_COL.blue], ["Vendido", vt.vault_sold, R_COL.pos], ["Usado", vt.vault_used, R_COL.imb]]
       .filter(([, x]) => x && x.value > 0).map(([l, x, c]) => ({ l: T(l), v: x.value, c }));
@@ -4813,7 +4977,7 @@ function reportSpecs(d) {
     hb("rare", "Drops raros", (d.rare || []).slice(0, 8).map((r) => ({ l: r.name, v: r.value, s: r.day ? shortDay(r.day) : "" })), "gp");
     return sp;
   }
-  bars("daily", "Lucro líquido por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.net })), "gp", null);
+  series("daily", "net", "gp", null);
   if (d.kind === "boss") {
     hb("bosses", "Bosses mortos", (d.bosses || []).slice(0, 8).map((b) => ({ l: b.name, v: b.kills })), "n");
     hb("items", "Itens de boss que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
@@ -4821,7 +4985,7 @@ function reportSpecs(d) {
   } else {
     hb("places", "Lucro líquido por hunt", d.places.slice(0, 8).map((p) => ({ l: p.place, v: p.net, s: `${kk(p.net_h)}/h` })), "gp");
     hb("items", "Itens que mais valeram", d.items.slice(0, 8).map((i) => ({ l: i.name, v: i.value, s: `${fmt(i.count)}x` })), "gp");
-    if (d.kind !== "party") bars("xp", "XP por dia", d.daily.map((x) => ({ l: shortDay(x.day), v: x.xp })), "xp", R_COL.blue);
+    if (d.kind !== "party") series("xp", "xp", "xp", R_COL.blue);
     if (d.kind !== "solo") hb("mates", "Com quem você mais jogou", (d.mates || []).map((m) => ({ l: m.name, v: m.hunts })), "n");
   }
   if (types.length) sp.push({ id: "gear_types", title: "Gasto invisível: de onde veio", type: "donut", unit: "gp", items: types });
@@ -4871,7 +5035,7 @@ function reportHero(d) {
   }
   const sub = d.kind === "boss"
     ? tf("{0} sessões · {1} bosses mortos · {2}", fmt(t.n), fmt(t.boss_kills || 0), dur(t.seconds))
-    : tf("{0} sessões · {1} · {2} XP/h", fmt(t.n), dur(t.seconds), fmt(t.xp_h));
+    : t.xp_n ? tf("{0} sessões · {1} · {2} XP/h", fmt(t.n), dur(t.seconds), fmt(t.xp_h)) : tf("{0} sessões · {1}", fmt(t.n), dur(t.seconds));
   return { big: t.net, label: T("Lucro líquido"), sub, icon, kind };
 }
 function reportKpis(d) {
@@ -4911,25 +5075,30 @@ function paintReport() {
   const hero = reportHero(d);
   if (d.empty) {
     body.innerHTML = `<div class="card"><b>${hero.icon} ${esc(tf("Nada em {0} neste período.", hero.kind))}</b>
-      <p class="muted">${T("Quando você enviar sessões, lootsplits ou bosses, o relatório aparece aqui, com gráficos e cards para compartilhar.")}</p></div>`;
+      <p class="muted">${T("Quando você enviar sessões, lootsplits ou bosses, o relatório aparece aqui, com gráficos e cards para compartilhar.")}</p></div>${panoramaCard(d)}`;
     return;
   }
   const specs = reportSpecs(d);
   R.specs = specs;
   const hl = highlightLines(d);
-  body.innerHTML = `<div class="rep-hero"><div class="rep-hero-top"><span class="rep-badge">${hero.icon} ${esc(hero.kind)}</span><span class="muted" data-i18n-skip>${esc(S.nick)} · ${esc(rRange(d))}</span></div>
+  body.innerHTML = `<div class="rep-hero"><div class="rep-hero-top"><span class="rep-badge">${hero.icon} ${esc(hero.kind)}</span><span class="muted" data-i18n-skip>${esc(S.nick)} · ${esc(rScope(d))}</span></div>
       <div class="muted">${esc(hero.label)}</div>
       <div class="rep-big ${hero.big < 0 ? "neg" : "gold"}" data-i18n-skip>${rSigned(hero.big)}</div>
       <div class="muted" data-i18n-skip>${esc(hero.sub)}</div>
+      ${compareBlock(d)}
       <div class="rep-actions"><button class="btn2" data-rep-copy="wa" type="button">📋 WhatsApp</button><button class="btn2" data-rep-copy="discord" type="button">📋 Discord</button>
         <button class="btn2" data-rep-card="hero" type="button">🖼️ ${T("Card do resumo")}</button><button class="btn2" data-rep-xlsx type="button">📥 Excel</button></div>
       <div class="err" id="repMsg" role="status"></div></div>
     <div class="stats rep-kpis">${reportKpis(d).map(([k, v, c]) => `<div class="stat"><span class="muted">${esc(k)}</span><b class="${c || ""}" data-i18n-skip>${esc(v)}</b></div>`).join("")}</div>
+    ${d.kind !== "drops" && d.totals.xp_n && d.totals.xp_n < d.totals.n ? `<div class="hint">${esc(tf("XP por hora calculado só com as {0} de {1} sessões que têm Hunt Analyser.", fmt(d.totals.xp_n), fmt(d.totals.n)))}</div>` : ""}
+    ${panoramaCard(d)}
+    ${calendarCard(d)}
     ${d.kind === "drops" ? "" : gearCardHtml(d)}
     ${hl.length ? `<div class="card"><b>🏅 ${T("Destaques do período")}</b>${hl.map((h) => `<div class="row rep-hl-row"><span>${h.ic} ${esc(T(h.label))}</span><b data-i18n-skip>${esc(h.text)}</b></div>`).join("")}</div>` : ""}
     <h2>${T("Gráficos")}</h2>${specs.map(chartCard).join("") || `<p class="muted">${T("Sem dados suficientes para gráficos.")}</p>`}
     ${reportTables(d)}
     ${d.kind === "party" || d.kind === "all" ? partyReportCard() : ""}${exportCard()}`;
+  scrollCalendar();
 }
 function reportTables(d) {
   let html = "";
@@ -4948,7 +5117,8 @@ function reportTables(d) {
   if (d.rows.length) html += `<details class="card"><summary class="row"><b>🗒️ ${T("Sessões do período")}</b><span class="muted">▾</span></summary><div class="table-wrap"><table>
     <tr><th>${T("Data")}</th><th>${T("Hunt")}</th><th>${T("Duração")}</th><th>${T("Líquido")}</th></tr>
     ${d.rows.slice(0, 60).map((r) => `<tr><td data-i18n-skip>${esc(when(r.started_at))}</td><td data-i18n-skip>${esc(r.place || (r.mode ? r.mode : "—"))}</td><td data-i18n-skip>${dur(r.seconds)}</td>
-      <td class="${r.net < 0 ? "neg" : ""}" data-i18n-skip>${rSigned(r.net)}${r.gear ? ` (−${kk(r.gear)})` : ""}</td></tr>`).join("")}</table></div></details>`;
+      <td class="${r.net < 0 ? "neg" : ""}" data-i18n-skip>${rSigned(r.net)}${r.gear ? ` (−${kk(r.gear)})` : ""}</td></tr>`).join("")}</table></div>
+    ${d.totals.n > 60 ? `<div class="hint">${esc(tf("Mostrando as 60 mais recentes de {0}. O Excel traz o período completo.", fmt(d.totals.n)))}</div>` : ""}</details>`;
   if (d.kind === "boss" && (d.rare || []).length) html += `<details class="card" open><summary class="row"><b>💎 ${T("Drops raros")}</b><span class="muted">▾</span></summary>
       ${d.rare.map((r) => `<div class="row rep-hl-row"><span data-i18n-skip>${wikiLink(r.name)}${r.boss ? ` · ${creatureLink(r.boss)}` : ""}</span><b data-i18n-skip>${brData(r.day)} · ${gpx(r.value)}</b></div>`).join("")}</details>`;
   return html;
@@ -4957,7 +5127,7 @@ function reportTables(d) {
 /* texto para WhatsApp (*negrito*) e Discord (**negrito**) */
 function reportText(d, mode) {
   const b = (s) => (mode === "discord" ? `**${s}**` : `*${s}*`), t = d.totals, hero = reportHero(d), L = [];
-  L.push(b(`📑 ${T("Relatório")} ${hero.kind} · ${S.nick}`), `${rRange(d)} (${T(rPeriod())})`, "");
+  L.push(b(`📑 ${T("Relatório")} ${hero.kind} · ${S.nick}`), `${rScope(d)} (${T(rPeriod())})`, "");
   if (d.kind === "drops") {
     L.push(`${b(T("Valor total dos drops"))}: ${gpx(hero.big)}`, `📦 ${tf("{0} itens · {1} tipos · {2} raros", fmt(t.items), fmt(t.unique), fmt(t.rare))}`);
     d.items.slice(0, 5).forEach((i, n) => L.push(`${n + 1}. ${i.name} · ${fmt(i.count)}x · ${gpx(i.value)}`));
@@ -4988,7 +5158,7 @@ function drawReportCard(d, spec) {
   g.fillStyle = "#fff";
   const title = spec ? T(spec.title) : `${T("Relatório")} ${hero.kind}`;
   fit(title, 800, 60, W - 128); g.fillText(title, 64, 200);
-  g.fillStyle = "#9aa0bd"; g.font = `500 30px ${F}`; g.fillText(`${S.nick} · ${rRange(d)}`, 64, 250);
+  g.fillStyle = "#9aa0bd"; g.font = `500 30px ${F}`; fit(`${S.nick} · ${rScope(d)}`, 500, 30, W - 128); g.fillText(`${S.nick} · ${rScope(d)}`, 64, 250);
   g.fillStyle = "#9aa0bd"; g.font = `500 34px ${F}`; g.fillText(hero.label, 64, 340);
   g.fillStyle = hero.big < 0 ? R_COL.neg : R_COL.gold; fit(rSigned(hero.big), 800, 120, W - 128); g.fillText(rSigned(hero.big), 64, 456);
   g.fillStyle = "#c9cde0"; g.font = `500 32px ${F}`; g.fillText(hero.sub, 64, 510);
@@ -5054,8 +5224,8 @@ async function shareCanvas(c, fname) {
   a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 5000);
   return "saved";
 }
-async function downloadXlsx(secs, days) {
-  const res = await timedFetch(S.api + `/api/export/${encodeURIComponent(S.nick)}?sections=${secs.join(",")}&lang=${encodeURIComponent(I18N.lang)}&days=${days}`, { headers: authHeaders() }, 60000);
+async function downloadXlsx(secs, days, place = "") {
+  const res = await timedFetch(S.api + `/api/export/${encodeURIComponent(S.nick)}?sections=${secs.join(",")}&lang=${encodeURIComponent(I18N.lang)}&days=${days}&place=${encodeURIComponent(place)}`, { headers: authHeaders() }, 60000);
   if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error((d.detail && d.detail.message) || d.detail || `Erro ${res.status}`); }
   const url = URL.createObjectURL(await res.blob()), a = document.createElement("a");
   a.href = url; a.download = `${S.nick.replace(/[^A-Za-z0-9_-]+/g, "_")}-${R.kind}-${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -5074,7 +5244,7 @@ document.addEventListener("click", async (e) => {
   }
   if (e.target.closest("[data-rep-xlsx]")) {
     const b = e.target.closest("[data-rep-xlsx]"); b.disabled = true;
-    try { await downloadXlsx(R_SECS[R.kind], R.days); msg(T("Planilha baixada."), true); } catch (ex) { msg(ex.message || T("Sem conexão. Tente de novo quando voltar."), false); } finally { b.disabled = false; }
+    try { await downloadXlsx(R_SECS[R.kind], R.days, rPlace()); msg(T("Planilha baixada."), true); } catch (ex) { msg(ex.message || T("Sem conexão. Tente de novo quando voltar."), false); } finally { b.disabled = false; }
   }
 });
 
@@ -6193,7 +6363,7 @@ function drawFooter(ctx, W, H) {
 }
 function drawHuntCard(ctx, W, H, h) {
   const me = nk(S.nick);
-  drawBase(ctx, W, H, "PARTY HUNT", `${new Date(h.started_at).toLocaleDateString("pt-BR")} · ${dur(h.duration_seconds)}`);
+  drawBase(ctx, W, H, h.kind === "boss" ? "PARTY BOSSES" : "PARTY HUNT",`${new Date(h.started_at).toLocaleDateString("pt-BR")} · ${dur(h.duration_seconds)}`);
   drawHero(ctx, W, "RENDEU PARA CADA UM", `${h.profit_each >= 0 ? "+" : "−"}${fmt(Math.abs(h.profit_each))} gp`, h.profit_each >= 0,
            `${fmt(h.profit_each_per_hour)} gp/h por pessoa · PT de ${h.players_count}`);
   const totalDmg = h.players.reduce((a, p) => a + Math.max(0, p.damage || 0), 0) || 1;
@@ -6317,23 +6487,24 @@ function openShareMenu(id) {
     ${shareOption("🔗 Link público", canLink
       ? "Quem abrir vê o resultado e as transferências, sem criar conta. Vale 30 dias e você pode cancelar."
       : "Salve este lootsplit na sua conta para poder criar um link.",
-      canLink ? `<button class="btn2" data-link-create="${h.id}">Criar link</button>` : "")}
+      canLink ? `<button class="btn2" data-link-create="${huntBase(h)}">Criar link</button>` : "")}
     <div id="shareLinkBox"></div>
     <div class="actions"><button class="btn2" data-close-modal>Fechar</button></div>`);
 }
 async function shareLinkAction(btn) {
-  const box = $("#shareLinkBox"), id = btn.dataset.linkCreate || btn.dataset.linkRevoke;
+  // 0.33.2: o botão guarda o endereço do lootsplit (huntBase): hunt e boss têm numeração própria
+  const box = $("#shareLinkBox"), base = btn.dataset.linkCreate || btn.dataset.linkRevoke;
   btn.disabled = true;
   try {
     if (btn.dataset.linkRevoke) {
-      await api("DELETE", `/api/hunt/${id}/link`);
+      await api("DELETE", `${base}/link`);
       box.innerHTML = `<div class="hint">Link cancelado. Quem tinha o endereço não consegue mais abrir.</div>`;
       return;
     }
-    const r = await api("POST", `/api/hunt/${id}/link`);
+    const r = await api("POST", `${base}/link`);
     const url = (S.api || location.origin) + r.path;
     box.innerHTML = `<div class="msgbox" data-i18n-skip>${esc(url)}</div>
-      <div class="row" style="justify-content:flex-end; gap:8px"><button class="btn2" data-link-revoke="${esc(id)}">Cancelar link</button>
+      <div class="row" style="justify-content:flex-end; gap:8px"><button class="btn2" data-link-revoke="${esc(base)}">Cancelar link</button>
       <button class="btn2" data-copy="${esc(url)}">Copiar link</button></div>
       <div class="hint">O link mostra os nomes, os valores e as transferências desta hunt para quem o receber.</div>`;
   } catch (err) { if (err.status !== 401) box.innerHTML = `<div class="err" data-i18n-skip>${esc(err.message)}</div>`; }

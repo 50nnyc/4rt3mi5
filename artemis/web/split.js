@@ -83,6 +83,7 @@
       return;
     }
     $("loading").classList.add("hidden");
+    if (data.kind === "boss") $("title").textContent = "👑 Lootsplit de bosses compartilhado";
     $("meta").textContent = [data.place, new Date(data.started_at).toLocaleDateString("pt-BR"), dur(data.duration_seconds), `${data.players_count} jogadores`].filter(Boolean).join(" · ");
     $("each").textContent = fmt(data.profit_each) + " gp";
     $("perHour").textContent = `${fmt(data.profit_each_per_hour)} gp/h por pessoa`;
