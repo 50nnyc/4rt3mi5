@@ -1,6 +1,134 @@
 {
   "releases": [
     {
+      "version": "0.33.4",
+      "date": "2026-11-27",
+      "title": "A tela não fecha nem sobe",
+      "changes": [
+        "📌 Depois de marcar um pagamento, salvar regras, marcações ou set, trocar um filtro ou período, a hunt continua aberta e a tela fica no mesmo lugar. No Lootsplit, a hunt marcada não some do filtro na hora.",
+        "📚 O crédito das imagens, com link para a TibiaWiki BR, agora aparece no rodapé de todas as telas."
+      ],
+      "tr": {
+        "en": {
+          "title": "The screen stays put",
+          "changes": [
+            "📌 After marking a payment, saving rules, tags or a set, or changing a filter or period, the hunt stays open and the screen stays where it was. In Lootsplit, the hunt you just marked does not drop out of the filter right away.",
+            "📚 The image credit, with a link to TibiaWiki BR, now appears in the footer of every screen."
+          ]
+        },
+        "es": {
+          "title": "La pantalla no se cierra ni sube",
+          "changes": [
+            "📌 Después de marcar un pago, guardar reglas, marcas o set, o cambiar un filtro o período, la hunt sigue abierta y la pantalla queda en el mismo lugar. En Lootsplit, la hunt marcada no desaparece del filtro al instante.",
+            "📚 El crédito de las imágenes, con enlace a TibiaWiki BR, ahora aparece en el pie de todas las pantallas."
+          ]
+        },
+        "ja": {
+          "title": "画面が閉じたり上に戻ったりしない",
+          "changes": [
+            "📌 支払いの記録、ルール・マーク・セットの保存、フィルターや期間の変更をしても、狩りは開いたままで、画面は同じ位置に残ります。Lootsplitでは、記録した狩りがすぐにフィルターから消えることはありません。",
+            "📚 TibiaWiki BRへのリンク付きの画像クレジットが、すべての画面のフッターに表示されます。"
+          ]
+        },
+        "de": {
+          "title": "Der Bildschirm bleibt stehen",
+          "changes": [
+            "📌 Nach dem Markieren einer Zahlung, dem Speichern von Regeln, Markierungen oder Sets und beim Wechsel von Filter oder Zeitraum bleibt die Hunt offen und der Bildschirm an derselben Stelle. Im Lootsplit verschwindet die markierte Hunt nicht sofort aus dem Filter.",
+            "📚 Der Bildnachweis mit Link zu TibiaWiki BR steht jetzt in der Fußzeile jeder Seite."
+          ]
+        },
+        "pl": {
+          "title": "Ekran zostaje na miejscu",
+          "changes": [
+            "📌 Po oznaczeniu płatności, zapisaniu zasad, oznaczeń lub setu albo zmianie filtra lub okresu hunt zostaje otwarty, a ekran w tym samym miejscu. W Lootsplicie oznaczony hunt nie znika od razu z filtra.",
+            "📚 Informacja o źródle obrazów, z linkiem do TibiaWiki BR, jest teraz w stopce każdego ekranu."
+          ]
+        },
+        "fr": {
+          "title": "L'écran reste en place",
+          "changes": [
+            "📌 Après avoir marqué un paiement, enregistré des règles, des marques ou un set, ou changé de filtre ou de période, la hunt reste ouverte et l'écran ne bouge pas. Dans le Lootsplit, la hunt marquée ne disparaît pas tout de suite du filtre.",
+            "📚 Le crédit des images, avec un lien vers TibiaWiki BR, figure désormais au bas de tous les écrans."
+          ]
+        },
+        "ru": {
+          "title": "Экран остаётся на месте",
+          "changes": [
+            "📌 После отметки платежа, сохранения правил, отметок или сета, а также смены фильтра или периода хант остаётся открытым, а экран — на том же месте. В Lootsplit отмеченный хант не исчезает из фильтра сразу.",
+            "📚 Указание источника изображений со ссылкой на TibiaWiki BR теперь есть внизу каждого экрана."
+          ]
+        }
+      }
+    },
+    {
+      "version": "0.33.3",
+      "date": "2026-11-27",
+      "title": "Histórico e Tudo com bosses",
+      "changes": [
+        "📜 Novos menus Minhas hunts e Meus bosses: escolha um dos seus personagens, busque por data, nome ou jogador e abra o que foi enviado, separado por mês. Dá para compartilhar, e criar ou cancelar o link, também nos lootsplits antigos.",
+        "📑 Nos Relatórios, Tudo agora soma também os bosses, e a nova aba Party + Solo soma só as hunts. A aba Boss passa a contar os lootsplits de bosses. O mesmo envio feito como hunt e como boss conta uma vez.",
+        "⚔️ O gasto invisível agora só aparece: ele não desconta mais do lucro da hunt nem vai no texto e no card de resumo. Logo abaixo dele você vê o Lucro deduzido do gasto invisível."
+      ],
+      "tr": {
+        "en": {
+          "title": "History and bosses in All",
+          "changes": [
+            "📜 New My hunts and My bosses menus: pick one of your characters, search by date, name or player and open what was sent, grouped by month. You can share, and create or cancel the link, on older lootsplits too.",
+            "📑 In Reports, All now adds up the bosses too, and the new Party + Solo tab adds up only hunts. The Boss tab now counts boss lootsplits. The same upload sent as hunt and as boss counts once.",
+            "⚔️ The hidden cost is now only shown: it no longer reduces the hunt profit and is left out of the summary text and card. Right below it you see the Profit after hidden cost."
+          ]
+        },
+        "es": {
+          "title": "Historial y bosses en Todo",
+          "changes": [
+            "📜 Nuevos menús Mis hunts y Mis bosses: elige uno de tus personajes, busca por fecha, nombre o jugador y abre lo enviado, agrupado por mes. También puedes compartir, y crear o cancelar el enlace, en los lootsplits antiguos.",
+            "📑 En Informes, Todo ahora suma también los bosses, y la nueva pestaña Party + Solo suma solo las hunts. La pestaña Boss cuenta los lootsplits de bosses. El mismo envío hecho como hunt y como boss cuenta una vez.",
+            "⚔️ El gasto invisible ahora solo se muestra: ya no se descuenta del beneficio de la hunt ni va en el texto y la tarjeta de resumen. Justo debajo ves el Beneficio descontado el gasto invisible."
+          ]
+        },
+        "ja": {
+          "title": "履歴と「すべて」にボス追加",
+          "changes": [
+            "📜 新しいメニュー「自分の狩り」と「自分のボス」：自分のキャラクターを選び、日付・名前・プレイヤーで検索して、月ごとに送信内容を開けます。過去のlootsplitでも共有やリンクの作成・取り消しができます。",
+            "📑 レポートの「すべて」にボスも含まれるようになり、新しい「パーティー＋ソロ」タブは狩りだけを合計します。「ボス」タブはボスのlootsplitも数えます。同じ内容を狩りとボスの両方で送っても1回だけ数えます。",
+            "⚔️ 見えない出費は表示だけになりました。狩りの利益から差し引かれず、まとめのテキストとカードにも入りません。そのすぐ下に「見えない出費を差し引いた利益」が表示されます。"
+          ]
+        },
+        "de": {
+          "title": "Verlauf und Bosse in Alles",
+          "changes": [
+            "📜 Neue Menüs Meine Hunts und Meine Bosse: Wähle einen deiner Charaktere, suche nach Datum, Name oder Spieler und öffne das Gesendete, nach Monaten gruppiert. Auch bei alten Lootsplits kannst du teilen und den Link erstellen oder widerrufen.",
+            "📑 In den Berichten zählt Alles jetzt auch die Bosse, und der neue Tab Party + Solo zählt nur Hunts. Der Boss-Tab zählt Boss-Lootsplits mit. Derselbe Upload als Hunt und als Boss zählt einmal.",
+            "⚔️ Die unsichtbaren Kosten werden nur noch angezeigt: Sie mindern den Hunt-Gewinn nicht mehr und stehen nicht im Zusammenfassungstext und auf der Karte. Direkt darunter siehst du den Gewinn abzüglich unsichtbarer Kosten."
+          ]
+        },
+        "pl": {
+          "title": "Historia i bossowie w Wszystko",
+          "changes": [
+            "📜 Nowe menu Moje hunty i Moi bossowie: wybierz jedną ze swoich postaci, szukaj po dacie, nazwie lub graczu i otwieraj przesłane wpisy pogrupowane miesiącami. W starszych lootsplitach też można udostępniać oraz tworzyć i anulować link.",
+            "📑 W raportach karta Wszystko sumuje teraz także bossów, a nowa karta Party + Solo tylko hunty. Karta Boss liczy lootsplity bossów. To samo przesłane jako hunt i jako boss liczy się raz.",
+            "⚔️ Ukryty koszt jest teraz tylko pokazywany: nie zmniejsza zysku z hunta i nie trafia do tekstu ani karty podsumowania. Tuż pod nim widać Zysk po odjęciu ukrytego kosztu."
+          ]
+        },
+        "fr": {
+          "title": "Historique et boss dans Tout",
+          "changes": [
+            "📜 Nouveaux menus Mes hunts et Mes boss : choisissez l'un de vos personnages, cherchez par date, nom ou joueur et ouvrez les envois, groupés par mois. Vous pouvez aussi partager, et créer ou annuler le lien, sur les anciens lootsplits.",
+            "📑 Dans les rapports, Tout additionne désormais aussi les boss, et le nouvel onglet Party + Solo seulement les hunts. L'onglet Boss compte les lootsplits des boss. Un même envoi fait comme hunt et comme boss compte une fois.",
+            "⚔️ Le coût invisible est désormais seulement affiché : il ne réduit plus le bénéfice de la hunt et n'apparaît pas dans le texte ni la carte de résumé. Juste en dessous, vous voyez le Bénéfice après coût invisible."
+          ]
+        },
+        "ru": {
+          "title": "История и боссы во «Всё»",
+          "changes": [
+            "📜 Новые меню «Мои ханты» и «Мои боссы»: выберите своего персонажа, ищите по дате, названию или игроку и открывайте отправленное по месяцам. В старых лутсплитах тоже можно поделиться, создать или отменить ссылку.",
+            "📑 В отчётах «Всё» теперь суммирует и боссов, а новая вкладка «Пати + Соло» — только ханты. Вкладка «Босс» учитывает лутсплиты боссов. Одна и та же отправка как хант и как босс считается один раз.",
+            "⚔️ Скрытые расходы теперь только показываются: они не уменьшают прибыль ханта и не попадают в текст и карточку сводки. Прямо под ними видна прибыль за вычетом скрытых расходов."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.33.2",
       "date": "2026-11-27",
       "title": "Períodos nos Relatórios e link de bosses",

@@ -250,7 +250,7 @@ class EquipamentosApiTests(unittest.TestCase):
         self.assertGreater(a["cost"], 0)
         s = self.client.get("/api/stacker/Hilay", headers=h).json()["sessions"][0]
         self.assertEqual(s["gear_cost"], a["cost"])
-        self.assertEqual(s["net_profit"], before - a["cost"])
+        self.assertEqual(s["net_profit"], before)  # 0.33.3: o gasto invisível aparece, mas não desconta do lucro
         self.assertEqual(s["gear"]["set_name"], "Set Crypts")
         # pausa desconta do tempo; trocar de set refaz a conta sem acumular
         full = a["hours"]

@@ -484,6 +484,7 @@
               font-size: 12px; color: var(--muted); line-height: 1.45; }
   .sitefoot p { margin: 4px 0 0; max-width: 470px; }
   .sitefoot .link { font-size: 12px; padding: 0; }
+  .sitefoot p a { color: var(--accent); }
   .sf-marks { display: flex; gap: 8px; }
   .sf-mark { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 7px; text-decoration: none;
              font: 800 13px/1 var(--logo); letter-spacing: .06em; color: var(--gold); border: 1px solid rgba(242, 201, 76, .35);
@@ -648,7 +649,16 @@
   #gearTabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 13px; line-height: 1.2; min-width: 0; }
   #gearTabs .pill { margin-left: 0; }
   /* 0.33.0: 📑 Relatórios */
-  .rep-tabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .rep-tabs { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 8px 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  @media (max-width: 480px) { .rep-tabs { grid-template-columns: repeat(3, 1fr); position: static; } }
+  /* 0.33.3: lucro deduzido do gasto invisível e histórico */
+  .deducted { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; width: 100%; margin-top: 6px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--line); font-size: 14px; }
+  .deducted b { font-variant-numeric: tabular-nums; }
+  .hi-search { width: 100%; margin: 0 0 8px; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
+  #historyResult select { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
+  .hi-month { margin-top: 16px; }
+  .gear-msg { position: sticky; top: 70px; z-index: 6; background: var(--card); border-radius: 10px; padding: 8px 10px; }
+  .hi-bosses { font-size: 13px; color: var(--gold); margin: 8px 2px 2px; }
   .rep-tabs button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; font-size: 13px; min-width: 0; }
   #reportsResult select { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--card2); color: var(--text); font: inherit; }
   /* 0.33.2: períodos dos Relatórios (botões, comparação e panorama) */
@@ -1015,6 +1025,9 @@
     </div>
     <!-- 0.23.0: alguém jogou no seu personagem (link de envio / jogador autorizado) -->
     <button class="item" data-page="subs"><span class="ic">🤝</span>Substituições <span class="badge hidden" id="subsBadge" title="Envios novos pelo seu link"></span></button>
+    <div class="group">Histórico</div>
+    <button class="item" data-page="myhunts"><span class="ic">📜</span>Minhas hunts</button>
+    <button class="item" data-page="mybosses"><span class="ic">💀</span>Meus bosses</button>
     <div class="group">Progresso</div>
     <button class="item" data-page="rank"><span class="ic">🥇</span>Rankings</button>
     <button class="item hidden" id="gearItem" data-page="gear"><span class="ic">⚔️</span>Equipamentos</button>
@@ -1063,6 +1076,11 @@
       <div id="stackResult"></div>
     </div>
 
+    <div id="pageHistory" class="hidden">
+      <h1 id="historyTitle">Minhas hunts</h1>
+      <div id="historyResult"></div>
+    </div>
+
     <div id="pageReports" class="hidden">
       <h1>📑 Relatórios</h1>
       <p class="muted" style="margin-top:-4px">Tudo sobre as suas hunts, bosses e drops, com o gasto invisível, gráficos, cards para compartilhar e Excel.</p>
@@ -1071,7 +1089,7 @@
 
     <div id="pageGear" class="hidden">
       <h1>Equipamentos e gastos invisíveis</h1>
-      <p class="muted" style="margin-top:-4px">Imbuements, anéis e amuletos entram no lucro líquido das suas hunts.</p>
+      <p class="muted" style="margin-top:-4px">Imbuements, anéis e amuletos aparecem como gasto invisível, sem mudar o lucro das suas hunts.</p>
       <div id="gearResult"></div>
     </div>
 
@@ -1331,6 +1349,7 @@
       <a class="sf-mark cip" href="https://www.cipsoft.com/en/" target="_blank" rel="noopener" title="CipSoft GmbH" aria-label="CipSoft GmbH">CipSoft</a>
     </div>
     <p>Tibia é uma marca registrada da CipSoft GmbH. Tibia e todo o conteúdo do jogo (imagens, músicas e textos) têm copyright da CipSoft GmbH.</p>
+    <p><span>📚 Imagens de itens, bosses e criaturas:</span> <a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></p>
     <p>O 4rt3mi5 é um projeto de fã, sem vínculo com a CipSoft. <button class="link" id="openCredits" type="button">Créditos</button></p>
   </div>
   <div class="sf-right">Created by <button class="link sf-author" id="openContact" type="button" title="Contato com o administrador">Hilay</button></div>

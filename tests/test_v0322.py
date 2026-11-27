@@ -96,7 +96,7 @@ class ImbuementsNaPartyTests(unittest.TestCase):
         # entra no saldo dele (Início) e na hunt dele; o Hilay não tem set e não paga nada
         s = self.client.get("/api/stacker/Jioe?source=party", headers=j).json()["sessions"][0]
         self.assertGreater(s["gear_cost"], 0)
-        self.assertEqual(s["net_profit"], s["profit_each"] - s["gear_cost"])
+        self.assertEqual(s["net_profit"], s["profit_each"])  # 0.33.3: o gasto invisível não desconta
         mine = next(x for x in self.client.get("/api/hunts/Jioe", headers=j).json()["hunts"] if x["id"] == hunt["id"])
         self.assertEqual(mine["my_gear"][0]["cost"], s["gear_cost"])
         self.assertEqual(server.store.session_gear_one("Hilay", "hunt", hunt["id"]), None)  # quem não tem set não paga
@@ -106,7 +106,7 @@ class ImbuementsNaPartyTests(unittest.TestCase):
         w = rep["weeks"][0]
         self.assertEqual(w["hunts"], 1)
         self.assertEqual(w["gear_cost"], s["gear_cost"])
-        self.assertEqual(w["net"], w["profit"] - w["gear_cost"])
+        self.assertEqual((w["net"], w["deducted"]), (w["profit"], w["profit"] - w["gear_cost"]))
         self.assertTrue(w["mates"])
         # escolher outro set à mão vale mais que o automático (e sem set tira o custo)
         self.client.post("/api/gear/Jioe/assign", json={"kind": "hunt", "ref_id": hunt["id"], "set_id": None}, headers=j)

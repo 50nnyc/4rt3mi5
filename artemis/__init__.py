@@ -1,4 +1,4 @@
 ﻿"""4rt3mi5 - companheiro de hunt (divisão de loot e histórico de sessões)."""
 
-__version__ = "0.33.2"
+__version__ = "0.33.4"
 APP_NAME = "4rt3mi5"

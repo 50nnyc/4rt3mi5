@@ -204,7 +204,7 @@ async function loadStatus() {
 const PAGE_PT = { home: "🏠 Início", loot: "💰 Lootsplit", stack: "📈 Hunt Session Stacker", boss: "👑 Rotação de bosses", hunts: "🗺️ Hunts",
                   rank: "🥇 Ranking", ach: "🏆 Conquistas", chars: "👤 Meus personagens", news: "📰 Novidades", settings: "⚙️ Configurações",
                   download: "💻 App para Windows", subs: "🤝 Substituições", parties: "🛡️ Minhas parties e cofre", gear: "⚔️ Equipamentos",
-                  reports: "📑 Relatórios", vip: "⭐ VIP List", tnews: "📰 Novidades do Tibia", cms: "💬 CMs", cal: "📅 Calendário" };
+                  reports: "📑 Relatórios", vip: "⭐ VIP List", tnews: "📰 Novidades do Tibia", cms: "💬 CMs", cal: "📅 Calendário", myhunts: "📜 Minhas hunts", mybosses: "💀 Meus bosses" };
 
 /* ---------- 0.21.0: mensagens da tela de contato ---------- */
 async function loadContacts() {

@@ -75,8 +75,11 @@ class RelatoriosTests(unittest.TestCase):
         self.assertFalse(solo_r["empty"])
         self.assertEqual(solo_r["totals"]["n"], 2)
         self.assertEqual(party_r["totals"]["n"], 1)
-        self.assertEqual(all_r["totals"]["n"], 3)  # 2 sessões solo + 1 lootsplit
-        self.assertEqual(all_r["totals"]["n"], solo_r["totals"]["n"] + party_r["totals"]["n"])
+        hunts_r, boss_r = self._rep("hunts"), self._rep("boss")
+        self.assertEqual(hunts_r["totals"]["n"], 3)  # 2 sessões solo + 1 lootsplit
+        self.assertEqual(hunts_r["totals"]["n"], solo_r["totals"]["n"] + party_r["totals"]["n"])
+        for key in ("n", "net", "xp"):  # 0.33.3: Tudo = Party + Solo + Boss
+            self.assertEqual(all_r["totals"][key], hunts_r["totals"][key] + boss_r["totals"][key], key)
         for r in (solo_r, party_r, all_r):
             self.assertEqual(r["totals"]["net"], sum(d["net"] for d in r["daily"]))
             self.assertTrue(r["highlights"])
@@ -108,7 +111,8 @@ class RelatoriosTests(unittest.TestCase):
         self.assertGreater(solo_g["total"], 0)
         self.assertGreater(party_g["total"], 0)
         self.assertGreater(boss_g["total"], 0)
-        self.assertEqual(solo_g["total"] + party_g["total"], g["total"])
+        self.assertEqual(solo_g["total"] + party_g["total"], self._rep("hunts")["gear"]["total"])
+        self.assertEqual(solo_g["total"] + party_g["total"] + boss_g["total"], g["total"])
 
     def test_periodo_filtra(self):
         self._seed()
