@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "0.34.2",
+      "date": "2026-11-27",
+      "title": "Textos copiados no seu idioma",
+      "changes": [
+        "📤 O \"Resumo para Discord/WhatsApp\" do lootsplit e o convite por WhatsApp agora saem no idioma escolhido no site."
+      ],
+      "tr": {
+        "en": { "title": "Copied texts in your language", "changes": ["📤 The lootsplit \"Summary for Discord/WhatsApp\" and the WhatsApp invite are now written in the language you chose on the site."] },
+        "es": { "title": "Textos copiados en tu idioma", "changes": ["📤 El \"Resumen para Discord/WhatsApp\" del lootsplit y la invitación por WhatsApp ahora salen en el idioma elegido en el sitio."] },
+        "ja": { "title": "コピーする文章もあなたの言語で", "changes": ["📤 lootsplitの「Discord/WhatsApp用のまとめ」とWhatsAppの招待文が、サイトで選んだ言語で作られるようになりました。"] },
+        "de": { "title": "Kopierte Texte in deiner Sprache", "changes": ["📤 Die „Zusammenfassung für Discord/WhatsApp“ des Lootsplits und die WhatsApp-Einladung erscheinen jetzt in der auf der Seite gewählten Sprache."] },
+        "pl": { "title": "Kopiowane teksty w twoim języku", "changes": ["📤 „Podsumowanie na Discord/WhatsApp” z lootsplitu i zaproszenie przez WhatsApp powstają teraz w języku wybranym na stronie."] },
+        "fr": { "title": "Textes copiés dans votre langue", "changes": ["📤 Le « Résumé pour Discord/WhatsApp » du lootsplit et l'invitation WhatsApp sont désormais rédigés dans la langue choisie sur le site."] },
+        "ru": { "title": "Копируемые тексты на вашем языке", "changes": ["📤 «Сводка для Discord/WhatsApp» по лутсплиту и приглашение в WhatsApp теперь составляются на языке, выбранном на сайте."] }
+      }
+    },
+    {
       "version": "0.34.1",
       "date": "2026-11-27",
       "title": "Textos revisados",

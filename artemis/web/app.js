@@ -2059,11 +2059,12 @@ function quickTransfers(h) {
 }
 /** Resumo do lootsplit para colar no Discord ou no WhatsApp (texto simples, sem depender do app). */
 function splitSummary(h) {
-  const lines = [`${h.kind === "boss" ? "👑 Lootsplit de bosses" : "🏹 Lootsplit"}${h.place ? " · " + h.place.name : ""}`,
-    `⏱️ ${dur(h.duration_seconds)} · ${h.players_count} jogadores`,
-    `💰 Cada um: ${fmt(h.profit_each)} gp (${fmt(h.profit_each_per_hour)} gp/h)`, ""];
-  if (h.transfers.length) lines.push("💸 Quem transfere para quem:", ...h.transfers.map((t) => `• ${t.payer} → ${t.receiver}: ${fmt(t.amount)} gp`));
-  else lines.push("✅ Ninguém precisa transferir.");
+  // 0.34.2: o texto vai copiado para fora da tela: cada frase já sai no idioma escolhido
+  const lines = [`${h.kind === "boss" ? T("👑 Lootsplit de bosses") : "🏹 Lootsplit"}${h.place ? " · " + h.place.name : ""}`,
+    tf("⏱️ {0} · {1} jogadores", dur(h.duration_seconds), h.players_count),
+    tf("💰 Cada um: {0} gp ({1} gp/h)", fmt(h.profit_each), fmt(h.profit_each_per_hour)), ""];
+  if (h.transfers.length) lines.push(T("💸 Quem transfere para quem:"), ...h.transfers.map((t) => `• ${t.payer} → ${t.receiver}: ${fmt(t.amount)} gp`));
+  else lines.push(T("✅ Ninguém precisa transferir."));
   return lines.join("\n");
 }
 /** Texto pronto para mandar no chat do jogo para quem paga e não tem o app. */
@@ -7244,8 +7245,8 @@ function vipEntryCard(e, scopes) {
 // 0.27.1: quando o personagem adicionado não tem cadastro no site, oferece convidar pelo WhatsApp.
 // O DDD e o número são usados só para montar o link wa.me na hora; nada é guardado nem enviado pelo site.
 function inviteMessage(nome) {
-  return `Oi! Estou usando o 4rt3mi5 (artemishunt.com.br) para acompanhar hunts e XP no Tibia. ` +
-    `Faz o seu cadastro e vincula o seu personagem ${nome}, assim a gente consegue ver as hunts juntos. Bora?`;
+  // 0.34.2: a caixa de texto não é traduzida pela tela, então a mensagem já nasce no idioma escolhido
+  return tf("Oi! Estou usando o 4rt3mi5 (artemishunt.com.br) para acompanhar hunts e XP no Tibia. Faz o seu cadastro e vincula o seu personagem {0}, assim a gente consegue ver as hunts juntos. Bora?", nome);
 }
 
 function closeInviteBox() {
