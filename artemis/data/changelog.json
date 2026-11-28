@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "0.34.1",
+      "date": "2026-11-27",
+      "title": "Textos revisados",
+      "changes": [
+        "🌐 Textos revisados nos 8 idiomas: correções de escrita e termos iguais em todas as telas. Em francês, o tratamento agora é sempre formal."
+      ],
+      "tr": {
+        "en": { "title": "Proofread texts", "changes": ["🌐 Texts proofread in all 8 languages: wording fixes and the same terms on every screen. In French, the site now always uses the formal form."] },
+        "es": { "title": "Textos revisados", "changes": ["🌐 Textos revisados en los 8 idiomas: correcciones de redacción y los mismos términos en todas las pantallas. En francés, ahora siempre se usa el trato formal."] },
+        "ja": { "title": "テキストを見直しました", "changes": ["🌐 8言語のテキストを見直し、表現を修正して用語を統一しました。フランス語は常に丁寧な呼び方になりました。"] },
+        "de": { "title": "Texte überarbeitet", "changes": ["🌐 Texte in allen 8 Sprachen überarbeitet: bessere Formulierungen und einheitliche Begriffe auf allen Seiten. Auf Französisch wird jetzt immer gesiezt."] },
+        "pl": { "title": "Poprawione teksty", "changes": ["🌐 Poprawione teksty w 8 językach: lepsze sformułowania i te same pojęcia na wszystkich ekranach. Po francusku strona zawsze używa teraz formy grzecznościowej."] },
+        "fr": { "title": "Textes relus", "changes": ["🌐 Textes relus dans les 8 langues : formulations corrigées et mêmes termes sur tous les écrans. En français, le site vouvoie désormais partout."] },
+        "ru": { "title": "Тексты проверены", "changes": ["🌐 Проверены тексты на 8 языках: исправлены формулировки, термины одинаковы на всех экранах. На французском теперь везде обращение на «вы»."] }
+      }
+    },
+    {
       "version": "0.34.0",
       "date": "2026-11-27",
       "title": "Links no seu idioma e cards",

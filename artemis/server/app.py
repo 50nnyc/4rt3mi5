@@ -4484,7 +4484,7 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
                 rows.append([str(h["started_at"])[:16].replace("T", " "), pl["name"] if pl else None, h.get("players_count"),
                              _mins(h.get("duration_seconds")), h.get("profit_each"), mine, g["cost"] if g else 0,
                              mine - (g["cost"] if g else 0), ", ".join(p["name"] for p in h["players"])])
-            out.append(("Lootsplits", ["Data", "Hunt", "Jogadores", "Duração (min)", "Profit por pessoa (gp)", "Seu rateio (gp)",
+            out.append(("Lootsplits", ["Data", "Hunt", "Jogadores", "Duração (min)", "Lucro por pessoa (gp)", "Seu rateio (gp)",
                                        "Imbuements (gp)", "Lucro deduzido do gasto invisível (gp)", "Quem jogou"], rows))
         elif sec == "party_weekly":
             out.append(("Party por semana", ["Semana (segunda)", "Hunts", "Horas", "Seu rateio (gp)", "Imbuements (gp)",
@@ -4502,7 +4502,7 @@ def _export_sheets(name: str, access: dict, sections: list[str], tr: dict | None
                           b["supplies"]] for b in reversed(store.boss_sessions_for(name))
                          if not since or str(b["started_at"])[:10] >= since]))
         elif sec == "boss_party":
-            out.append(("Lootsplits de bosses", ["Data", "Jogadores", "Duração (min)", "Profit por pessoa (gp)", "Seu rateio (gp)",
+            out.append(("Lootsplits de bosses", ["Data", "Jogadores", "Duração (min)", "Lucro por pessoa (gp)", "Seu rateio (gp)",
                                                  "Quem jogou"],
                         [[str(h["started_at"])[:16].replace("T", " "), h.get("players_count"), _mins(h.get("duration_seconds")),
                           h.get("profit_each"), profit_of(h, name), ", ".join(p["name"] for p in h["players"])]

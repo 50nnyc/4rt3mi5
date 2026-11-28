@@ -941,7 +941,7 @@ async function loadSavedLang() {
 // O que cada tipo é (aparece ao passar o mouse e na escolha da criação da conta).
 const PTYPES = {
   hardcore: { ic: "🔥", label: "Player Hardcore",
-    desc: "Acesso free. Você quer compartilhar todas as informações possíveis para melhorar o seu estilo de jogo, as hunts, os locais de caça, o profit e a XP: do Hunt Analyser ao lootsplit, o local de hunt, o Input Analyser, a Wheel of Destiny, quando fez o último imbuimento e quanto gastou nos imbuimentos." },
+    desc: "Acesso free. Você quer compartilhar todas as informações possíveis para melhorar o seu estilo de jogo, as hunts, os locais de caça, o lucro e a XP: do Hunt Analyser ao lootsplit, o local de hunt, o Input Analyser, a Wheel of Destiny, quando fez o último imbuement e quanto gastou em imbuements." },
   comum: { ic: "⚔️", label: "Player Comum",
     desc: "Acesso free. Você não se considera mais um novato e quer compartilhar, às vezes, algumas informações mais precisas, como o local de hunt e o Input Analyser." },
   novato: { ic: "🌱", label: "Player Novato",
@@ -1957,7 +1957,7 @@ async function loadHome() {
     ${streak ? streakTeaser(streak) : ""}
     ${hunts.length ? `<h2>Totais</h2>
     ${sparkline(hunts.map((h) => h.profit_each_per_hour).reverse(), "Gp/h por pessoa, da mais antiga para a mais recente")}
-    ${statGrid([["Hunts", n(hunts.length)], ["Profit total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
+    ${statGrid([["Hunts", n(hunts.length)], ["Lucro total", n(total, " gp"), total >= 0 ? "gold" : "neg"],
                 ["Tempo de hunt", dur(secs)], ["Média por hora", n(secs ? Math.round(total * 3600 / secs) : 0, " gp")],
                 ["Total transferido", n(toPay, " gp"), toPay ? "neg" : ""], ["Total recebido", n(toGet, " gp"), toGet ? "pos" : ""]])}
     ${recapCard("party", hunts.map((h) => ({ at: h.started_at, secs: h.duration_seconds, value: view(h, S.nick).profit, perHour: h.profit_each_per_hour,
