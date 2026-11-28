@@ -19,6 +19,14 @@ class TextosCopiadosTests(unittest.TestCase):
                 self.assertIn(frase, ingles)
                 self.assertNotEqual(ingles[frase], frase)
 
+    def test_convite_usa_o_pais_escolhido(self):
+        # 0.34.3: o link do WhatsApp não fixa o código do Brasil
+        js = (WEB / "app.js").read_text(encoding="utf-8")
+        corpo = re.search(r"function openInviteBox\(.*?\n}", js, re.S).group(0)
+        self.assertIn('phoneField(box.querySelector("#invPhone"))', corpo)
+        self.assertIn("https://wa.me/${full}?text=", corpo)
+        self.assertNotIn("wa.me/55", js)
+
 
 if __name__ == "__main__":
     unittest.main()

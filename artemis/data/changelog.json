@@ -1,6 +1,23 @@
 {
   "releases": [
     {
+      "version": "0.34.3",
+      "date": "2026-11-28",
+      "title": "Convite para qualquer país",
+      "changes": [
+        "🌍 VIP List: no convite por WhatsApp, escolha o país pela bandeira. Agora dá para convidar números de fora do Brasil."
+      ],
+      "tr": {
+        "en": { "title": "Invites to any country", "changes": ["🌍 VIP List: in the WhatsApp invite, pick the country by its flag. You can now invite numbers from outside Brazil."] },
+        "es": { "title": "Invitaciones a cualquier país", "changes": ["🌍 VIP List: en la invitación por WhatsApp, elige el país por su bandera. Ahora puedes invitar números de fuera de Brasil."] },
+        "ja": { "title": "どの国にも招待できます", "changes": ["🌍 VIP List：WhatsAppの招待で国旗から国を選べるようになりました。ブラジル以外の番号も招待できます。"] },
+        "de": { "title": "Einladungen in jedes Land", "changes": ["🌍 VIP List: Wähle bei der WhatsApp-Einladung das Land über die Flagge. Jetzt kannst du auch Nummern außerhalb Brasiliens einladen."] },
+        "pl": { "title": "Zaproszenia do każdego kraju", "changes": ["🌍 VIP List: w zaproszeniu przez WhatsApp wybierz kraj po fladze. Teraz możesz zapraszać numery spoza Brazylii."] },
+        "fr": { "title": "Invitations vers tous les pays", "changes": ["🌍 VIP List : dans l'invitation WhatsApp, choisissez le pays grâce à son drapeau. Vous pouvez désormais inviter des numéros hors du Brésil."] },
+        "ru": { "title": "Приглашения в любую страну", "changes": ["🌍 VIP List: в приглашении через WhatsApp выберите страну по флагу. Теперь можно приглашать номера не из Бразилии."] }
+      }
+    },
+    {
       "version": "0.34.2",
       "date": "2026-11-27",
       "title": "Textos copiados no seu idioma",

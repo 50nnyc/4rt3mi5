@@ -7243,7 +7243,7 @@ function vipEntryCard(e, scopes) {
 }
 
 // 0.27.1: quando o personagem adicionado não tem cadastro no site, oferece convidar pelo WhatsApp.
-// O DDD e o número são usados só para montar o link wa.me na hora; nada é guardado nem enviado pelo site.
+// O país e o número são usados só para montar o link wa.me na hora; nada é guardado nem enviado pelo site.
 function inviteMessage(nome) {
   // 0.34.2: a caixa de texto não é traduzida pela tela, então a mensagem já nasce no idioma escolhido
   return tf("Oi! Estou usando o 4rt3mi5 (artemishunt.com.br) para acompanhar hunts e XP no Tibia. Faz o seu cadastro e vincula o seu personagem {0}, assim a gente consegue ver as hunts juntos. Bora?", nome);
@@ -7267,10 +7267,7 @@ function openInviteBox(nome) {
       </div>
       <div data-inv-step="phone" class="hidden" style="margin-top:12px">
         <label class="muted" style="font-size:13px">Celular com WhatsApp</label>
-        <div class="row" style="gap:8px;margin-top:4px">
-          <input id="invDdd" inputmode="numeric" maxlength="2" placeholder="DDD" style="width:72px">
-          <input id="invNum" inputmode="numeric" maxlength="11" placeholder="Número" class="grow">
-        </div>
+        <div id="invPhone" style="margin-top:4px"></div>
         <div class="err hidden" id="invErr" style="margin-top:6px"></div>
         <label class="muted" style="font-size:13px;display:block;margin-top:12px">Mensagem pronta (pode editar)</label>
         <textarea id="invMsg" rows="4" style="width:100%;margin-top:4px">${esc(inviteMessage(nome))}</textarea>
@@ -7281,12 +7278,13 @@ function openInviteBox(nome) {
         <p class="hint" style="white-space:normal;margin-top:8px">O WhatsApp abre com a mensagem pronta; você confere e envia por lá.</p>
       </div>
     </div>`;
+  const phone = phoneField(box.querySelector("#invPhone"));  // 0.34.3: bandeira do país, como na recuperação de conta
   box.addEventListener("click", (ev) => {
     if (ev.target === box || ev.target.closest("[data-inv-close]")) return closeInviteBox();
     if (ev.target.closest("[data-inv-yes]")) {
       box.querySelector('[data-inv-step="ask"]').classList.add("hidden");
       box.querySelector('[data-inv-step="phone"]').classList.remove("hidden");
-      return box.querySelector("#invDdd").focus();
+      return phone.focus();
     }
     if (ev.target.closest("[data-inv-copy]")) {
       const txt = box.querySelector("#invMsg").value;
@@ -7296,17 +7294,19 @@ function openInviteBox(nome) {
       return;
     }
     if (ev.target.closest("[data-inv-wa]")) {
-      const ddd = box.querySelector("#invDdd").value.replace(/\D/g, "");
-      const num = box.querySelector("#invNum").value.replace(/\D/g, "");
+      const full = phone.value();  // código do país + número, só dígitos
       const err = box.querySelector("#invErr");
-      if (!/^\d{2}$/.test(ddd) || !/^\d{8,9}$/.test(num)) {
-        err.textContent = "Informe o DDD (2 números) e o celular (8 ou 9 números).";
+      // Brasil (+55): DDD com 2 números e celular com 8 ou 9; nos outros países só o tamanho geral de um telefone
+      const brazil = full.startsWith("55");
+      if (brazil ? !/^55\d{10,11}$/.test(full) : !phone.nationalOk() || full.length > 15) {
+        err.textContent = brazil ? "Informe o DDD (2 números) e o celular (8 ou 9 números)."
+          : "Escolha o país pela bandeira e digite o WhatsApp com DDD, só números.";
         err.classList.remove("hidden");
         return;
       }
       err.classList.add("hidden");
       const texto = encodeURIComponent(box.querySelector("#invMsg").value);
-      window.open(`https://wa.me/55${ddd}${num}?text=${texto}`, "_blank", "noopener");
+      window.open(`https://wa.me/${full}?text=${texto}`, "_blank", "noopener");
     }
   });
   document.body.appendChild(box);
