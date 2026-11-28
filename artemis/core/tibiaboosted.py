@@ -9,6 +9,7 @@ import urllib.request
 CREATURES_URL = "https://api.tibiadata.com/v4/creatures"
 BOSSES_URL = "https://api.tibiadata.com/v4/boostablebosses"
 _NAME = re.compile(r"[A-Za-z][A-Za-z '\-.,]{1,60}")  # nome de criatura/boss: só o que o Tibia usa
+_IMAGE = re.compile(r"https://static\.tibia\.com/images/(?:[A-Za-z0-9_\-]+/)*[A-Za-z0-9_\-]+\.(?:gif|png)")
 
 
 class TibiaBoostedError(RuntimeError):
@@ -29,23 +30,31 @@ def _clean(name) -> str | None:
     return s if _NAME.fullmatch(s) else None
 
 
+def _image(url) -> str | None:
+    s = str(url or "")
+    return s if _IMAGE.fullmatch(s) else None
+
+
 def parse_boosted(creatures: dict, bosses: dict) -> dict:
-    """Extrai {"creature": nome|None, "boss": nome|None} das duas respostas. Nome fora do padrão vira None."""
-    c = ((creatures.get("creatures") or {}).get("boosted") or {}).get("name")
-    b = ((bosses.get("boostable_bosses") or {}).get("boosted") or {}).get("name")
-    return {"creature": _clean(c), "boss": _clean(b)}
+    """Extrai nome e imagem oficial da criatura e do boss das duas respostas. Valor fora do padrão vira None."""
+    c = (creatures.get("creatures") or {}).get("boosted") or {}
+    b = (bosses.get("boostable_bosses") or {}).get("boosted") or {}
+    return {"creature": _clean(c.get("name")), "creature_image": _image(c.get("image_url")),
+            "boss": _clean(b.get("name")), "boss_image": _image(b.get("image_url"))}
 
 
 def fetch_boosted(timeout: float = 15) -> dict:
     """Criatura e boss boosted de hoje. Falha de uma das fontes não derruba a outra."""
-    out = {"creature": None, "boss": None}
+    out = parse_boosted({}, {})
     errors = 0
     try:
-        out["creature"] = parse_boosted(_get_json(CREATURES_URL, timeout), {})["creature"]
+        found = parse_boosted(_get_json(CREATURES_URL, timeout), {})
+        out.update(creature=found["creature"], creature_image=found["creature_image"])
     except TibiaBoostedError:
         errors += 1
     try:
-        out["boss"] = parse_boosted({}, _get_json(BOSSES_URL, timeout))["boss"]
+        found = parse_boosted({}, _get_json(BOSSES_URL, timeout))
+        out.update(boss=found["boss"], boss_image=found["boss_image"])
     except TibiaBoostedError:
         errors += 1
     if errors == 2:

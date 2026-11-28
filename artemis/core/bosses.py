@@ -33,6 +33,17 @@ def boss_info(creature: str) -> dict | None:
     return _data()[0].get(item_key(creature))
 
 
+def creature_loot(creature: str) -> list[str]:
+    """Itens que a criatura comum dropa, segundo a TibiaWiki em inglês."""
+    return sorted(_data()[1].get(item_key(creature), ()))
+
+
+def known_names() -> list[str]:
+    """Nomes de todas as criaturas e bosses conhecidos."""
+    bosses, creatures = _data()
+    return sorted(set(bosses) | set(creatures))
+
+
 def bosses_in(kills: list[tuple[str, int]]) -> list[dict]:
     """Bosses mortos numa sessão: [{key, name, class, count}]."""
     out = []

@@ -15,7 +15,7 @@ PH = re.compile(r"\{\d+\}")
 SAME = {"4rt3mi5", "Lootsplit", "Hunt Session Stacker", "Hunts", "Solo", "Party", "XP", "XP/h", "☰", "←",
         "⚙️", "🔉", "hunt companion", "SENHA-XXXXX-XXXXX", "ART-XXXX-XXXX", "Gold/h", "Bosses",
         # 0.21.0: marcas e o nick do criador (rodapé e créditos)
-        "Tibia", "CipSoft", "CipSoft GmbH", "TibiaWiki BR", "TibiaMaps.io", "TibiaData", "Hilay", "Created by",
+        "Tibia", "tibia.com", "CipSoft","CipSoft GmbH", "TibiaWiki BR", "TibiaMaps.io", "TibiaData", "Hilay", "Created by",
         # 0.28.0: nomes das vocações no filtro de hunts
         "Knight", "Paladin", "Druid", "Sorcerer", "Monk"}
 

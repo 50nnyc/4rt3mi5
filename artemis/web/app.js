@@ -5,6 +5,7 @@ document.addEventListener("error", (e) => {
   const img = e.target;
   if (!(img instanceof HTMLImageElement) || !img.dataset.err) return;
   if (img.dataset.err === "hide") img.style.visibility = "hidden";
+  else if (img.dataset.err === "gone") img.style.display = "none";  // 0.34.0: pode ganhar outro endereço depois
   else img.remove();
 }, true);
 const MSG_INVALID_KEY = "Chave de acesso inválida, envie mensagem ao criador.";
@@ -1353,13 +1354,24 @@ async function afterHuntChange(h) {
   h.kind = h.kind || (S.page === "boss" ? "boss" : undefined);
   if (inHistory()) return loadHistory({ quiet: true });
   if (S.page === "home") return loadHome();
-  if (S.page === "boss") return loadBoss({ quiet: true });
+  if (S.page === "boss") { paintBossSplit(h); return loadBoss({ quiet: true }); }
   if (S.page === "loot") {
     HL.pin = h.id;  // quem estava no filtro "A acertar" continua na tela depois de marcado
     const top = $("#lootResult");
     if (top.firstElementChild && S.lastHunts && S.lastHunts[0] && S.lastHunts[0].id === h.id) { S.lastHunts = [h]; renderLoot(h); }
     loadLootList();
   }
+}
+/** 0.34.0: o resultado do lootsplit de boss recém-enviado fica fora da lista (#bossAsk): é redesenhado aqui, com
+    quem paga quem e as mensagens, que mudam com as regras de divisão. */
+function paintBossSplit(h) {
+  const box = $("#bossAsk"), card = box.querySelector(`[data-k="card:boss:${h.id}"]`);
+  if (!card) return;
+  const quick = box.querySelector(".card.quick"), messages = box.querySelector("[data-boss-messages]");
+  card.outerHTML = huntCard(h, S.nick, "Lootsplit do boss");
+  if (quick) quick.outerHTML = quickTransfers(h);
+  if (messages) messages.innerHTML = partyMessages(h);
+  countUp(box); paintVocations(box);
 }
 document.addEventListener("change", (e) => {
   const sel = e.target.closest("[data-rule-mode]");
@@ -2487,8 +2499,6 @@ const WIKI_FILE = (name) => {
   return S.api ? "https://www.tibiawiki.com.br/wiki/Especial:Redirecionar/file/" + file : "/img/wiki/" + file;
 };
 const MAP_TILE = (x, y, z) => `https://tibiamaps.github.io/tibia-map-data/mapper/Minimap_Color_${x}_${y}_${z}.png`;
-// 0.21.0: crédito no lugar onde o conteúdo de outro site aparece
-const WIKI_CREDIT = `<div class="credit">📚 Imagens e dados de itens, criaturas e NPCs: <a href="https://www.tibiawiki.com.br/" target="_blank" rel="noopener">TibiaWiki BR</a></div>`;
 S.prices = {}; S.period = 7;
 
 /** "dragon lord" -> "Dragon Lord", como a TibiaWiki BR nomeia páginas e imagens. 0.29.0: "Unaz The Mean" -> "Unaz the Mean" */
@@ -2574,18 +2584,67 @@ function WIKI_PAGE(name) {
   const title = WIKI_BY_KEY.get((Object.prototype.hasOwnProperty.call(WIKI_ALIAS, key) ? WIKI_ALIAS[key] : key).toLowerCase());
   return title ? "https://www.tibiawiki.com.br/wiki/" + encodeURIComponent(title.replace(/ /g, "_")) : "";
 }
-/** `html` já escapado. Sem página, devolve o próprio conteúdo, sem link. */
-function wikiLink(name, html = esc(name), attrs = 'class="wiki-link"') {
-  const url = WIKI_PAGE(name);
-  if (!url) return attrs.includes("chip") ? `<span ${attrs}>${html}</span>` : html;
-  return `<a ${attrs} href="${esc(url)}" target="_blank" rel="noopener">${html}</a>`;
+/* 0.34.0: o link principal segue o idioma do site; o card mostra as outras opções.
+   Português: TibiaWiki BR. Inglês: tibia.fandom.com. Outros: tibia.com (só criaturas têm página própria) e, sem ela,
+   o fandom. Só entra opção que existe. */
+const SITES = { wikibr: "TibiaWiki BR", fandom: "TibiaWiki (tibia.fandom.com)", tibiacom: "tibia.com © CipSoft" };
+const FANDOM_BY_KEY = new Map(FANDOM_TITLES.map((t) => [t.toLowerCase(), t]));
+function FANDOM_PAGE(name) {
+  const title = FANDOM_BY_KEY.get(String(name || "").trim().toLowerCase());
+  return title ? "https://tibia.fandom.com/wiki/" + encodeURIComponent(title.replace(/ /g, "_")) : "";
 }
+const nameKey = (name) => String(name || "").trim().replace(/\s+/g, " ").toLowerCase();
+S.official = { images: {}, pages: {} };  // imagem e página do tibia.com por nome de criatura/boss
+const officialOf = (map, name) => {
+  const key = nameKey(name);
+  return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : map[key.replace(/^the /, "")] || "";
+};
+const TIBIACOM_PAGE = (race) => race ? "https://www.tibia.com/library/?subtopic=creatures&race=" + encodeURIComponent(race) : "";
+/** [{site, url}] na ordem do idioma; a primeira é o link principal. */
+function linkOptions(name, tibiacom = "") {
+  const race = officialOf(S.official.pages, name);
+  const urls = { wikibr: WIKI_PAGE(name), fandom: FANDOM_PAGE(name), tibiacom: tibiacom || TIBIACOM_PAGE(race) };
+  const order = I18N.lang === "pt-BR" ? ["wikibr", "fandom", "tibiacom"]
+    : I18N.lang === "en" ? ["fandom", "tibiacom", "wikibr"] : ["tibiacom", "fandom", "wikibr"];
+  return order.filter((site) => urls[site]).map((site) => ({ site, url: urls[site] }));
+}
+/** `html` já escapado. `kind`: item, creature, npc ou hunt (define o card). Sem página, o nome continua com card. */
+function wikiLink(name, html = esc(name), attrs = 'class="wiki-link"', kind = "item") {
+  const data = `data-card="${kind}" data-card-name="${esc(name)}"`;
+  const main = linkOptions(name)[0];
+  if (!main) return `<span ${attrs} ${data} tabindex="0">${html}</span>`;
+  return `<a ${attrs} ${data} href="${esc(main.url)}" target="_blank" rel="noopener">${html}</a>`;
+}
+/** Idioma trocado ou páginas do tibia.com carregadas: refaz o destino dos links já desenhados. */
+function refreshLinks() {
+  document.querySelectorAll("a[data-card]").forEach((a) => {
+    if (a.closest("#pop")) return;
+    const main = linkOptions(a.dataset.cardName)[0];
+    if (main) a.href = main.url;
+  });
+}
+I18N.onChange(() => refreshLinks());
 /** Criaturas e bosses chegam em minúsculas ou com "The" maiúsculo: acerta o nome antes do link. */
-const creatureLink = (name, html = esc(name)) => wikiLink(wikiTitle(name || ""), html);
-/** Hunt da wiki vira link; as criadas pelos jogadores não têm página. */
+const creatureLink = (name, html = esc(name)) => wikiLink(wikiTitle(name || ""), html, 'class="wiki-link"', "creature");
+/** Hunt da wiki vira link com card; as criadas pelos jogadores não têm página. */
 function placeLink(name) {
   const wiki = (S.places || []).some((p) => p.source === "wiki" && p.name === name);  // lista ainda não carregada: sem link
-  return wiki ? wikiLink(name) : esc(name);
+  return wiki ? wikiLink(name, esc(name), 'class="wiki-link"', "hunt") : esc(name);
+}
+let officialLoad = null;
+/** Imagens oficiais de criaturas e bosses (uma vez por abertura). Troca as que já estavam na tela. */
+function ensureOfficial() {
+  if (officialLoad || !S.token) return officialLoad || Promise.resolve();
+  officialLoad = api("GET", "/api/tibia/images").then((d) => {
+    S.official = { images: d.images || {}, pages: d.pages || {} };
+    if (!Object.keys(S.official.images).length) officialLoad = null;
+    document.querySelectorAll("img[data-creature]").forEach((img) => {
+      const url = officialOf(S.official.images, img.dataset.creature);
+      if (url && img.src !== url) { img.referrerPolicy = "no-referrer"; img.style.display = ""; img.src = url; }
+    });
+    refreshLinks();
+  }).catch(() => { officialLoad = null; });
+  return officialLoad;
 }
 
 function itemImg(name, size = 28) {
@@ -2608,11 +2667,12 @@ function itemList(items, limit = 8) {
   return `<div class="items">${head}${rest.length ? `<details><summary class="link">Ver todos os itens (${items.length})</summary>${rest.map(itemRow).join("")}</details>` : ""}</div>`;
 }
 function killChips(kills) {
-  return `<div class="chips">${kills.map((k) => wikiLink(k.key, `${creatureImg(k.key)}${fmt(k.count)}x ${esc(k.key)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"')).join("")}</div>`;
+  return `<div class="chips">${kills.map((k) => wikiLink(k.key, `${creatureImg(k.key)}${fmt(k.count)}x ${esc(k.key)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"', "creature")).join("")}</div>`;
 }
-/** Imagem da criatura na TibiaWiki BR ("dragon lord" -> Dragon_Lord.gif). Some se não existir. */
-function creatureImg(name, size = 24) {
-  return `<img src="${WIKI_FILE(wikiTitle(name))}" alt="" width="${size}" height="${size}" loading="lazy" style="image-rendering:pixelated; flex:none; object-fit:contain" data-err="remove">`;
+/** Imagem da criatura: a oficial do tibia.com; sem ela, a da TibiaWiki BR ("dragon lord" -> Dragon_Lord.gif).
+    0.34.0: a que não carregar fica escondida, para poder ser trocada quando a oficial chegar. */
+function creatureImg(name, size = 24, url = officialOf(S.official.images, name)) {
+  return `<img src="${url ? esc(url) : WIKI_FILE(wikiTitle(name))}" alt="" width="${size}" height="${size}" loading="lazy"${url ? ' referrerpolicy="no-referrer"' : ""} style="image-rendering:pixelated; flex:none; object-fit:contain" data-creature="${esc(name)}" data-err="gone">`;
 }
 function itemsChart(items) {
   const top = items.filter((i) => i.value > 0).slice(0, 10);
@@ -3072,7 +3132,7 @@ function bossTag(b) {
     + `${b.class ? `<span class="boss-class ${BOSS_CLASS[b.class] || ""}">${esc(b.class)}</span>` : ""}</span>`;
 }
 function bossChips(list) {
-  return list.length ? `<div class="chips">${list.map((b) => wikiLink(wikiTitle(b.name), `${creatureImg(b.key || b.name)}${fmt(b.count)}x ${esc(b.name)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"')).join("")}</div>`
+  return list.length ? `<div class="chips">${list.map((b) => wikiLink(wikiTitle(b.name), `${creatureImg(b.key || b.name)}${fmt(b.count)}x ${esc(b.name)}`, 'class="chip wiki-link" style="display:inline-flex; align-items:center; gap:6px"', "creature")).join("")}</div>`
     : `<span class="muted">nenhum boss reconhecido</span>`;
 }
 function bossTable(list) {
@@ -3929,7 +3989,7 @@ async function bossPartySplit(raw) {
         : r.created ? "Lootsplit de boss salvo ✔ Já aparece para todos da PT." : "Esse lootsplit já estava salvo ✔"}</div>
         ${r.linked > 1 ? `<div class="hint">${r.linked} sessões da PT foram juntadas.</div>` : ""}
         ${r.switched_from ? `<div class="hint">🔁 ${esc(`Salvo em ${r.saved_as}, que estava na PT (você estava em ${r.switched_from}).`)}</div>` : ""}</div>
-      ${quickTransfers(r.hunt)}${partyMessages(r.hunt)}
+      ${quickTransfers(r.hunt)}<div data-boss-messages>${partyMessages(r.hunt)}</div>
       <details class="card"><summary class="link">＋ Juntar o meu Hunt Analyser desta luta (opcional) ▾</summary>
         <p class="muted" style="margin:6px 0 0">Assim os bosses, itens e criaturas da luta entram no seu histórico de bosses.</p>
         <textarea id="bossMineText" spellcheck="false" style="margin-top:6px" placeholder="Session data: From ... to ...&#10;Killed Monsters:&#10;  1x ..."></textarea>
@@ -4004,7 +4064,7 @@ document.addEventListener("click", async (e) => {
   } catch (err) { if (err.status !== 401) alert(err.message); del.disabled = false; }
 });
 
-function npcWhere(b) { return b ? `${wikiLink(b.npc)}${b.city ? " <span data-i18n-skip>(" + esc(b.city) + ")</span>" : ""} <span>por ${fmt(b.price)} gp cada</span>` : "nenhum NPC compra (veja o preço médio)"; }
+function npcWhere(b) { return b ? `${wikiLink(b.npc, esc(b.npc), 'class="wiki-link"', "npc")}${b.city ? " <span data-i18n-skip>(" + esc(b.city) + ")</span>" : ""} <span>por ${fmt(b.price)} gp cada</span>` : "nenhum NPC compra (veja o preço médio)"; }
 function alertsBlock(d) {
   return d.alerts.map((a) => {
     const p = S.prices[a.key] || { name: a.key };
@@ -4107,6 +4167,7 @@ document.addEventListener("click", async (e) => {
 /* ---------- seletor de hunt: digita e filtra; pode criar uma nova ---------- */
 const norm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 async function ensurePlaces(force) {
+  ensureOfficial();  // 0.34.0: imagens e páginas do tibia.com, sem atrasar a tela
   if (!S.places || force) S.places = await api("GET", "/api/places").catch(() => S.places || []);
   return S.places;
 }
@@ -4323,11 +4384,10 @@ function itemPopover(key) {
     body = `<div class="muted">Melhor preço de NPC: <b style="color:var(--text)">${fmt(p.npc_price)} gp</b></div>
       ${p.buyers.slice(0, 4).map((b, i) => `<div class="npc" data-npc="${i}">
           <img src="${WIKI_FILE(b.npc)}" alt="" width="40" height="40" style="image-rendering:pixelated" data-err="hide">
-          <span><b>${wikiLink(b.npc)}</b><br><span class="muted">${esc(b.city || "")}</span></span></div>
+          <span><b>${wikiLink(b.npc, esc(b.npc), 'class="wiki-link"', "npc")}</b><br><span class="muted">${esc(b.city || "")}</span></span></div>
         <div class="npc-where hidden" data-npc-where="${i}">${esc(b.location || "")}${b.coords ? minimap(b.coords) : ""}</div>`).join("")}
       ${p.buyers.length > 4 ? `<div class="muted">+${p.buyers.length - 4} NPCs pagam o mesmo preço.</div>` : ""}
-      <div class="hint">Passe o mouse (ou toque) na imagem do NPC para ver onde ele fica.</div>
-      ${WIKI_CREDIT}`;
+      <div class="hint">Passe o mouse (ou toque) na imagem do NPC para ver onde ele fica.</div>`;
   } else if (p.source === "moeda") {
     body = `<div class="muted">Moeda: vale ${fmt(p.npc_price)} gp.</div>`;
   } else {
@@ -4340,38 +4400,155 @@ function itemPopover(key) {
       <div class="hint">Seu preço: ${p.my_price ? fmt(p.my_price) + " gp" : "não informado"}. Ele entra na média de todos.</div>`;
   }
   const unit = p.my_price || p.npc_price || p.avg_price || p.unit_price || 0;  // 0.32.2: o mesmo valor em Tibia Coin
-  return `<div class="pop-head">${wikiLink(p.name, `${itemImg(p.name, 32)}<b>${esc(p.name)}</b>`)}</div>${tcBox(unit, "preço")}${body}
-    ${WIKI_PAGE(p.name) ? `<div class="credit">${wikiLink(p.name, "Ver na TibiaWiki BR ↗", "")}</div>` : ""}`;
+  const options = linkOptions(p.name);
+  return `${cardHead(options)}${cardTitle(itemImg(p.name, 32), p.name)}${tcBox(unit, "preço")}
+    <div class="card-source">${cardSource("wikibr")}</div>${body}${cardMore(options)}
+    <div class="credit">Imagem: TibiaWiki BR</div>`;
+}
+/* ---------- 0.34.0: card de detalhes (item, criatura, boss, NPC e hunt) ---------- */
+const CARD_ROWS = { class: "Classe", hp: "Vida (HP)", exp: "Experiência", summon_mana: "Mana para invocar",
+  convince_mana: "Mana para convencer", paralysable: "Pode ser paralisada", sees_invisible: "Vê invisíveis",
+  city: "Cidade", location: "Localização", level: "Level recomendado", premium: "Premium", buys_total: "Itens que compra" };
+const CARD_LISTS = { weakness: "Fraca contra", strong: "Resistente a", immune: "Imune a", healed: "Curada por",
+  loot: "Loot", rare: "Loot raro", buys: "O que compra (maiores preços)" };
+const CARD_SOURCES = { wikibr: "Dados: TibiaWiki BR", fandom: "Dados: TibiaWiki (tibia.fandom.com), CC BY-SA",
+  tibiacom: "Dados: tibia.com © CipSoft, trazidos pelo TibiaData" };
+const outLink = (url, html, cls) => `<a class="${cls}" href="${esc(url)}" target="_blank" rel="noopener">${html}</a>`;
+/** Cabeçalho: em destaque, o site do link principal (a quem damos o crédito no idioma escolhido). */
+function cardHead(options) {
+  if (!options.length) return `<div class="card-head"><span class="card-kicker">Sem página nos sites de consulta</span></div>`;
+  return `<div class="card-head"><span class="card-kicker">Página principal e crédito</span>
+    ${outLink(options[0].url, `<span data-i18n-skip>📚 ${esc(SITES[options[0].site])} ↗</span>`, "card-site")}</div>`;
+}
+/** Segunda e terceira opção, só quando a página existe. */
+function cardMore(options) {
+  const rest = options.slice(1);
+  if (!rest.length) return "";
+  return `<div class="card-more"><span class="muted">Abrir também em:</span>${rest.map((o) =>
+    outLink(o.url, `<span data-i18n-skip>${esc(SITES[o.site])}</span>${o.list ? " <span>(lista de bosses)</span>" : ""} ↗`, "card-alt")).join("")}</div>`;
+}
+const cardSource = (source) => `<span>${CARD_SOURCES[source]}</span>`;
+const cardTitle = (img, name) => `<div class="pop-head">${img}<b data-i18n-skip>${esc(name)}</b></div>`;
+function cardValue(key, v) {
+  if (v === true || v === false) return `<span>${v ? "Sim" : "Não"}</span>`;
+  if (typeof v === "number") return `<span data-i18n-skip>${key === "level" ? fmt(v) + "+" : fmt(v)}</span>`;
+  return key === "city" && String(v).startsWith("Viaja") ? `<span>${esc(v)}</span>` : `<span data-i18n-skip>${esc(v)}</span>`;
+}
+function cardList(key, list) {
+  const items = key === "buys" ? list.map(([name, price]) => `${name} (${fmt(price)} gp)`) : list;
+  const text = `<span data-i18n-skip>${esc(items.join(", "))}</span>`;
+  if (items.length <= 12) return `<div class="card-list"><b>${CARD_LISTS[key]}</b>: ${text}</div>`;
+  return `<details class="card-list"><summary><b>${CARD_LISTS[key]}</b> <span data-i18n-skip>(${items.length})</span></summary>${text}</details>`;
+}
+/** Texto longo vem em inglês do tibia.com: aberto no site em inglês, recolhido e avisado nos outros idiomas. */
+function cardTexts(t) {
+  if (!t) return "";
+  const body = [t.behaviour, t.description].filter(Boolean).map((x) => `<p data-i18n-skip lang="en" style="white-space:pre-line">${esc(x)}</p>`).join("");
+  return `<details class="card-list"${I18N.lang === "en" ? " open" : ""}><summary><b>Descrição</b>${I18N.lang === "en" ? "" : ' <span class="muted">(texto em inglês)</span>'}</summary>
+    <div class="card-source">${cardSource(t.source)}</div>${body}</details>`;
+}
+function detailCard(d) {
+  const options = linkOptions(d.name, d.tibiacom && !d.tibiacom.list ? d.tibiacom.url : "");
+  if (d.tibiacom && d.tibiacom.list) options.push({ site: "tibiacom", url: d.tibiacom.url, list: true });  // boss: só a lista geral
+  const official = d.image || "";
+  const img = d.kind === "creature" || d.kind === "boss" ? creatureImg(d.name, official ? 64 : 40, official || undefined)
+    : d.kind === "npc" ? `<img src="${WIKI_FILE(d.name)}" alt="" width="40" height="40" style="image-rendering:pixelated" data-err="hide">` : "";
+  const blocks = d.blocks.map((b) => `<div class="card-source">${cardSource(b.source)}</div>
+    ${b.rows.map(([k, v]) => `<div class="card-row"><span class="muted">${CARD_ROWS[k]}</span>${cardValue(k, v)}</div>`).join("")}
+    ${b.lists.map(([k, v]) => cardList(k, v)).join("")}`).join("");
+  return `${cardHead(options)}${cardTitle(img, wikiTitle(d.name))}${blocks}${cardTexts(d.texts)}
+    ${d.coords ? minimap(d.coords) : ""}${cardMore(options)}
+    ${img ? `<div class="credit">${official ? "Imagem: tibia.com © CipSoft, trazida pelo TibiaData" : "Imagem: TibiaWiki BR"}</div>` : ""}`;
+}
+/** Sem detalhes no site: ainda assim o card mostra o nome e os links que existem. */
+function bareCard(name, note) {
+  const options = linkOptions(name);
+  return `${cardHead(options)}${cardTitle("", name)}<div class="muted">${note}</div>${cardMore(options)}`;
 }
 const pop = Object.assign(document.createElement("div"), { id: "pop", className: "pop hidden" });
 document.body.appendChild(pop);
 let popKey = null, popHideT = null;
+function placePop(anchor) {
+  pop.style.left = pop.style.top = "0px";  // na posição antiga ele podia alargar a tela do celular antes da medida
+  pop.classList.remove("hidden");
+  const screen = document.documentElement.clientWidth;
+  const r = anchor.getBoundingClientRect(), w = Math.min(320, screen - 24);
+  pop.style.width = w + "px";
+  pop.style.left = Math.max(12, Math.min(r.left, screen - w - 12)) + window.scrollX + "px";
+  // abre para o lado com mais espaço; o que não couber rola dentro do card
+  const below = window.innerHeight - r.bottom - 12, above = r.top - 12;
+  const up = below < 320 && above > below;
+  pop.style.maxHeight = Math.max(180, up ? above : below) + "px";
+  pop.style.top = (up ? Math.max(8, r.top - 4 - pop.offsetHeight) : r.bottom + 4) + window.scrollY + "px";
+}
+function closePop() { clearTimeout(popHideT); clearTimeout(popOpenT); pop.classList.add("hidden"); popKey = null; }
 function showPop(row) {
   clearTimeout(popHideT);
-  const key = row.dataset.item;
-  if (popKey !== key) { pop.innerHTML = itemPopover(key); popKey = key; }
-  pop.classList.remove("hidden");
-  const r = row.getBoundingClientRect(), w = Math.min(300, window.innerWidth - 24);
-  pop.style.width = w + "px";
-  pop.style.left = Math.max(12, Math.min(r.left, window.innerWidth - w - 12)) + window.scrollX + "px";
-  pop.style.top = r.bottom + window.scrollY + 4 + "px";
+  const key = "item:" + row.dataset.item;
+  if (popKey !== key) { pop.innerHTML = itemPopover(row.dataset.item); popKey = key; pop.scrollTop = 0; }
+  placePop(row);
 }
-function hidePopSoon() { clearTimeout(popHideT); popHideT = setTimeout(() => { pop.classList.add("hidden"); popKey = null; }, 250); }
+let popOpenT = null, lastPointer = "mouse";
+const cardCache = new Map();
+async function showCard(el) {
+  clearTimeout(popHideT);
+  if (!S.token) return;  // sem conta (Lootsplit aberto): fica só o link
+  const kind = el.dataset.card, name = el.dataset.cardName, key = `${kind}:${nameKey(name)}`;
+  if (popKey === key) return placePop(el);
+  popKey = key; pop.scrollTop = 0;
+  let d = cardCache.get(key);
+  if (d === undefined) {
+    pop.innerHTML = bareCard(name, "Carregando detalhes…");
+    placePop(el);
+    try {
+      await ensureOfficial();
+      d = await api("GET", `/api/card?kind=${kind}&name=${encodeURIComponent(name)}`);
+      if (kind !== "creature" && kind !== "item") cardCache.set(key, d);  // preço muda; criatura é refeita pelo servidor
+    } catch (err) {
+      d = null;
+      if (err.status !== 404) { if (popKey === key) { pop.innerHTML = bareCard(name, "Não foi possível carregar os detalhes agora."); placePop(el); } return; }
+    }
+    if (popKey !== key) return;  // a pessoa já foi para outro nome
+  }
+  if (d && d.kind === "item") { S.prices[d.price.key] = d.price; pop.innerHTML = itemPopover(d.price.key); }
+  else pop.innerHTML = d ? detailCard(d) : bareCard(name, "Ainda não há detalhes para este nome.");
+  placePop(el);
+}
+/** Nome com card, fora do próprio card (dentro dele os links só abrem a página). */
+const cardTarget = (el) => { const t = el.closest && el.closest("[data-card]"); return t && !t.closest("#pop") ? t : null; };
+function hidePopSoon() { clearTimeout(popHideT); popHideT = setTimeout(closePop, 350); }
+document.addEventListener("pointerdown", (e) => { lastPointer = e.pointerType || "mouse"; }, true);
 document.addEventListener("mouseover", (e) => {
+  if (lastPointer !== "mouse") return;  // no toque quem abre é o clique
+  clearTimeout(popOpenT);
+  const card = cardTarget(e.target);
+  if (card) { clearTimeout(popHideT); popOpenT = setTimeout(() => showCard(card), 250); return; }
   const row = e.target.closest("[data-item]");
   if (row) return showPop(row);
   if (e.target.closest("#pop")) { clearTimeout(popHideT); const n = e.target.closest("[data-npc]"); if (n) toggleWhere(n.dataset.npc, true); return; }
   if (!pop.classList.contains("hidden") && !pop.contains(document.activeElement)) hidePopSoon();
 });
+document.addEventListener("focusin", (e) => { const card = cardTarget(e.target); if (card && card.matches(":focus-visible")) showCard(card); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
+I18N.onChange(() => closePop());
 function toggleWhere(i, show) {
   pop.querySelectorAll("[data-npc-where]").forEach((w) => w.classList.toggle("hidden", !(w.dataset.npcWhere === String(i) && show)));
 }
 document.addEventListener("click", async (e) => {
+  const card = cardTarget(e.target);
+  if (card) {
+    clearTimeout(popOpenT);
+    // toque: o 1º abre o card (os links ficam nele). Mouse e teclado: o clique no link vai para a página principal.
+    const touch = e.detail !== 0 && lastPointer !== "mouse";
+    if (!card.matches("a") || (touch && S.token)) { e.preventDefault(); showCard(card); }
+    else closePop();
+    return;
+  }
   const row = e.target.closest("[data-item]");
   if (row) { if (!e.target.closest("a")) showPop(row); return; }
   const npc = e.target.closest("#pop [data-npc]");
-  if (npc) { toggleWhere(npc.dataset.npc, true); return; }  // toque no celular: mostra o local deste NPC
-  if (!e.target.closest("#pop")) { pop.classList.add("hidden"); popKey = null; }
+  if (npc && !e.target.closest("a")) { toggleWhere(npc.dataset.npc, true); return; }  // toque no celular: mostra o local deste NPC
+  if (!e.target.closest("#pop")) closePop();
   const per = e.target.closest("[data-period]");
   if (per) { S.period = +per.dataset.period; loadStack(); }
   const lc = e.target.closest("[data-loot-chart]");
@@ -4384,7 +4561,7 @@ document.addEventListener("submit", async (e) => {
   const v = f.querySelector("input").value.trim();
   try {
     S.prices[f.dataset.priceItem] = await api("POST", "/api/items/price", { item: f.dataset.priceItem, price: v === "" ? null : parseInt(v, 10) });
-    pop.classList.add("hidden"); popKey = null;
+    closePop();
     await (S.page === "boss" ? loadBoss() : loadStack());
   } catch (err) { if (err.status !== 401) alert(err.message); }
 });
@@ -6488,12 +6665,13 @@ function achProgress(a) {
 /** Início: criatura e boss do dia (boosted). Sem dado, não mostra nada. */
 function boostedCard(b) {
   if (!b || (!b.creature && !b.boss)) return "";
-  const one = (label, name, hint) => name ? `<div style="display:flex;align-items:center;gap:8px;min-width:0">${creatureImg(name, 32)}
+  // 0.34.0: imagem oficial do tibia.com (endereço vem do TibiaData); sem ela, tenta a da wiki
+  const one = (label, name, url) => name ? `<div style="display:flex;align-items:center;gap:8px;min-width:0">${creatureImg(name, url ? 48 : 32, url || undefined)}
     <span style="min-width:0"><span class="muted" style="font-size:12px;display:block">${label}</span>${creatureLink(name, `<b data-i18n-skip>${esc(name)}</b>`)}</span></div>` : "";
   return `<div class="card"><b>🔥 Boost de hoje</b>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:8px">
-      ${one("Criatura", b.creature)}${one("Boss", b.boss)}</div>
-    <div class="hint"><span>Criatura boosted dá mais XP e loot; boss boosted, mais chance de loot. Vale até o próximo server save.</span> <span>${TN_CREDIT}</span></div>${WIKI_CREDIT}</div>`;
+      ${one("Criatura", b.creature, b.creature_image)}${one("Boss", b.boss, b.boss_image)}</div>
+    <div class="hint"><span>Criatura boosted dá mais XP e loot; boss boosted, mais chance de loot. Vale até o próximo server save.</span> <span>${TN_CREDIT}</span></div></div>`;
 }
 /** Início: resumo de conquistas e a próxima mais perto de sair. Falha em silêncio (não atrapalha a tela). */
 function achievementsFor(nick) {

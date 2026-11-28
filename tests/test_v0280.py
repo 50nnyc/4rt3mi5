@@ -1,5 +1,6 @@
 """0.28.0: filtro por vocação no ranking de hunts e criatura/boss do dia (boosted) no Início."""
 import unittest
+from pathlib import Path
 from unittest import mock
 
 import tests  # noqa: F401  # isola o banco: precisa vir antes de importar o servidor
@@ -49,7 +50,33 @@ class BoostedTests(unittest.TestCase):
     def test_parse_boosted(self):
         r = tibiaboosted.parse_boosted({"creatures": {"boosted": {"name": "Hyaena"}}},
                                        {"boostable_bosses": {"boosted": {"name": "Unaz The Mean"}}})
-        self.assertEqual(r, {"creature": "Hyaena", "boss": "Unaz The Mean"})
+        self.assertEqual(r, {"creature": "Hyaena", "creature_image": None, "boss": "Unaz The Mean", "boss_image": None})
+
+    def test_parse_aceita_so_imagem_do_tibia_com(self):
+        url = "https://static.tibia.com/images/global/header/monsters/hyaena.gif"
+        r = tibiaboosted.parse_boosted({"creatures": {"boosted": {"name": "Hyaena", "image_url": url}}}, {})
+        self.assertEqual(r["creature_image"], url)
+        for ruim in ("http://static.tibia.com/images/a.gif", "https://static.tibia.com.exemplo.com/images/a.gif",
+                     "https://static.tibia.com/images/../a.gif", 'https://static.tibia.com/images/a.gif" x="',
+                     "javascript:alert(1)"):
+            r = tibiaboosted.parse_boosted({}, {"boostable_bosses": {"boosted": {"name": "Hyaena", "image_url": ruim}}})
+            self.assertIsNone(r["boss_image"], ruim)
+
+    def test_fonte_fora_nao_apaga_a_outra(self):
+        url = "https://static.tibia.com/images/global/header/monsters/hyaena.gif"
+
+        def responder(endereco, timeout):
+            if endereco == tibiaboosted.BOSSES_URL:
+                raise tibiaboosted.TibiaBoostedError("fora")
+            return {"creatures": {"boosted": {"name": "Hyaena", "image_url": url}}}
+
+        with mock.patch.object(tibiaboosted, "_get_json", side_effect=responder):
+            self.assertEqual(tibiaboosted.fetch_boosted(),
+                             {"creature": "Hyaena", "creature_image": url, "boss": None, "boss_image": None})
+
+    def test_csp_libera_a_imagem_oficial(self):
+        html = (Path(server.WEB_DIR) / "index.html").read_text(encoding="utf-8")
+        self.assertIn(" https://static.tibia.com/images/;", html)
 
     def test_parse_rejeita_nome_estranho(self):
         r = tibiaboosted.parse_boosted({"creatures": {"boosted": {"name": "<script>alert(1)</script>"}}}, {})

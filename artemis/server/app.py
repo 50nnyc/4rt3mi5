@@ -50,7 +50,7 @@ from artemis.core.parser import ParseError
 from artemis.core.report import profit_of, report_from_text
 from artemis.core.session import item_key, parse_solo_session
 from artemis.core.levels import level_for_xp, xp_at, xp_to_next_level
-from artemis.core import tibiacal, tibianews, tibiaboosted
+from artemis.core import tibiacal, tibianews, tibiaboosted, tibialibrary
 from artemis.core import translate as translate_core
 from artemis.core import rankscan
 from artemis.core import vocation as vocation_core
@@ -678,6 +678,124 @@ def tibia_boosted(_: dict = Depends(require_session)):
         return _BOOSTED_CACHE["data"]  # último valor conhecido (ou None)
     _BOOSTED_CACHE.update(at=now, data=data)
     return data
+
+
+# ------------------------------------------------------------------ 0.34.0: imagens oficiais e card de detalhes
+_LIBRARY_CACHE: dict = {"at": 0.0, "tried": 0.0, "data": None}
+_CREATURE_CACHE: dict[str, tuple[float, dict]] = {}  # no máximo uma entrada por criatura do catálogo
+_LIBRARY_TTL = 86400      # catálogo e detalhes mudam só em atualização do jogo
+_LIBRARY_RETRY = 600      # TibiaData fora do ar: espera antes de tentar de novo
+
+
+def _library() -> dict | None:
+    now = time.time()
+    if _LIBRARY_CACHE["data"] is not None and now - _LIBRARY_CACHE["at"] < _LIBRARY_TTL:
+        return _LIBRARY_CACHE["data"]
+    if now - _LIBRARY_CACHE["tried"] < _LIBRARY_RETRY:
+        return _LIBRARY_CACHE["data"]
+    _LIBRARY_CACHE["tried"] = now
+    try:
+        _LIBRARY_CACHE.update(data=tibialibrary.fetch_catalog(), at=now)
+    except tibialibrary.TibiaLibraryError:
+        pass  # fica o último catálogo (ou nenhum)
+    return _LIBRARY_CACHE["data"]
+
+
+def _creature_detail(race: str) -> dict | None:
+    now = time.time()
+    hit = _CREATURE_CACHE.get(race)
+    if hit and now - hit[0] < _LIBRARY_TTL:
+        return hit[1]
+    try:
+        data = tibialibrary.fetch_creature(race)
+    except tibialibrary.TibiaLibraryError:
+        return hit[1] if hit else None
+    _CREATURE_CACHE[race] = (now, data)
+    return data
+
+
+@app.get("/api/tibia/images")
+def tibia_images(_: dict = Depends(require_session)):
+    """Imagem oficial (tibia.com, via TibiaData) de cada criatura e boss conhecidos, pelo nome em minúsculas."""
+    lib = _library()
+    if lib is None:
+        return {"images": {}, "pages": {}}
+    images, pages = {}, {}
+    for name in boss_core.known_names():
+        if boss_core.boss_info(name):
+            url = tibialibrary.find_boss(lib, name)
+        else:
+            race = tibialibrary.find_race(lib, name)
+            url = lib["races"].get(race) if race else None
+            if race:
+                pages[name] = race
+        if url:
+            images[name] = url
+    return {"images": images, "pages": pages}
+
+
+def _card_creature(name: str) -> dict | None:
+    """Criatura ou boss: o que vem do tibia.com e o que vem da TibiaWiki em inglês, cada bloco com a sua fonte."""
+    lib = _library()
+    boss = boss_core.boss_info(name)
+    if boss:
+        image = tibialibrary.find_boss(lib, name) if lib else None
+        rows = [[k, v] for k, v in (("class", boss.get("class")), ("hp", boss.get("hp")), ("exp", boss.get("exp"))) if v]
+        lists = [[k, v] for k, v in (("loot", sorted(boss["loot"])), ("rare", sorted(boss["rare"]))) if v]
+        blocks = [{"source": "fandom", "rows": rows, "lists": lists}] if rows or lists else []
+        return {"kind": "boss", "name": boss["name"], "image": image, "blocks": blocks,
+                "tibiacom": {"url": tibialibrary.BOSSES_PAGE, "list": True} if image else None}
+    loot = boss_core.creature_loot(name)
+    race = tibialibrary.find_race(lib, name) if lib else None
+    detail = _creature_detail(race) if race else None
+    if not (loot or race):
+        return None
+    blocks, texts = [], None
+    if detail:
+        rows = [[k, detail[k]] for k in ("hp", "exp", "summon_mana", "convince_mana") if detail[k]]
+        rows += [["paralysable", detail["paralysable"]], ["sees_invisible", detail["sees_invisible"]]]
+        lists = [[k, detail[k]] for k in ("weakness", "strong", "immune", "healed", "loot") if detail[k]]
+        blocks.append({"source": "tibiacom", "rows": rows, "lists": lists})
+        if detail["description"] or detail["behaviour"]:
+            texts = {"source": "tibiacom", "behaviour": detail["behaviour"], "description": detail["description"]}
+    if loot:
+        blocks.append({"source": "fandom", "rows": [], "lists": [["loot", loot]]})
+    return {"kind": "creature", "name": name, "image": lib["races"].get(race) if race else None, "blocks": blocks,
+            "texts": texts, "tibiacom": {"url": tibialibrary.CREATURE_PAGE.format(race), "list": False} if race else None}
+
+
+@app.get("/api/card")
+def detail_card(kind: str = Query(..., pattern="^(item|creature|npc|hunt)$"), name: str = Query(..., min_length=1, max_length=80),
+                access: dict = Depends(require_session)):
+    """Card que aparece ao passar o mouse (ou tocar) num item, criatura, boss, NPC ou hunt."""
+    name = " ".join(name.split())
+    if kind == "item":
+        key = store.resolve_item(item_key(name))
+        price = store.price_info([key], access["key"])[key]
+        card = {"kind": "item", "name": price["name"], "price": price} if price.get("source") == "moeda" or price["type"] or price["npc_price"] else None
+    elif kind == "creature":
+        card = _card_creature(name)
+    elif kind == "npc":
+        npc = store.npc_card(name)
+        card = None
+        if npc:
+            rows = [[k, v] for k, v in (("city", npc["city"]), ("location", npc["location"]),
+                                        ("buys_total", npc["buys_total"])) if v]
+            lists = [["buys", npc["buys"]]] if npc["buys"] else []
+            card = {"kind": "npc", "name": npc["name"], "coords": npc["coords"],
+                    "blocks": [{"source": "wikibr", "rows": rows, "lists": lists}]}
+    else:
+        p = store.wiki_place(name)
+        card = None
+        if p:
+            rows = [[k, v] for k, v in (("city", p["city"]), ("location", p["location"]), ("level", p["level"])) if v]
+            rows += [["premium", True]] if p["premium"] else []
+            card = {"kind": "hunt", "name": p["name"],
+                    "coords": [p["x"], p["y"], p["z"]] if p["x"] is not None else None,
+                    "blocks": [{"source": "wikibr", "rows": rows, "lists": []}]}
+    if card is None:
+        raise HTTPException(404, "Ainda não há detalhes para este nome.")
+    return card
 
 
 @app.get("/api/tibia/archive")
@@ -6173,6 +6291,12 @@ def app_script():
 def wiki_pages_script():
     """0.33.1: títulos de página conferidos; o site só cria link para nome que está nessa lista."""
     return FileResponse(WEB_DIR / "wiki-pages.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/fandom-pages.js", include_in_schema=False)
+def fandom_pages_script():
+    """0.34.0: títulos conferidos na TibiaWiki em inglês."""
+    return FileResponse(WEB_DIR / "fandom-pages.js", media_type="text/javascript", headers={"Cache-Control": "no-cache"})
 
 
 # ------------------------------------------------------------------ site

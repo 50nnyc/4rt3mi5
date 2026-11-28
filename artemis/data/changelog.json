@@ -1,6 +1,90 @@
 {
   "releases": [
     {
+      "version": "0.34.0",
+      "date": "2026-11-27",
+      "title": "Links no seu idioma e cards",
+      "changes": [
+        "🌐 O link dos nomes segue o idioma do site: TibiaWiki BR em português, TibiaWiki (tibia.fandom.com) em inglês e, nos outros idiomas, tibia.com para criaturas e o fandom para o resto. Só vira link a página que existe.",
+        "🃏 Passe o mouse num item, criatura, boss, NPC ou hunt (no celular, toque) para abrir um card com os detalhes disponíveis, como preços, loot, fraquezas, level e mapa.",
+        "📚 O topo do card destaca o site da página principal, cada bloco diz de onde vieram os dados e, quando há outra página, há um botão para abrir.",
+        "🖼️ Criaturas e bosses usam a imagem oficial do tibia.com quando ela existe, também no boost do dia.",
+        "👑 Bosses: no resultado do lootsplit que você acabou de enviar, \"Já paguei\", \"Recebi\" e a confirmação do líder agora atualizam a tela na hora."
+      ],
+      "tr": {
+        "en": {
+          "title": "Links in your language and cards",
+          "changes": [
+            "🌐 Links on names follow the site language: TibiaWiki BR in Portuguese, TibiaWiki (tibia.fandom.com) in English and, in other languages, tibia.com for creatures and fandom for the rest. Only existing pages get a link.",
+            "🃏 Hover over an item, creature, boss, NPC or hunting place (on a phone, tap it) to open a card with the details available, such as prices, loot, weaknesses, level and map.",
+            "📚 The top of the card highlights the main page's site, each block says where the data came from and, when there is another page, there is a button to open it.",
+            "🖼️ Creatures and bosses use the official tibia.com image when it exists, including in today's boost.",
+            "👑 Bosses: in the result of the lootsplit you have just sent, \"I've paid\", \"Received\" and the leader's confirmation now update the screen right away."
+          ]
+        },
+        "es": {
+          "title": "Enlaces en tu idioma y tarjetas",
+          "changes": [
+            "🌐 El enlace de los nombres sigue el idioma del sitio: TibiaWiki BR en portugués, TibiaWiki (tibia.fandom.com) en inglés y, en los demás idiomas, tibia.com para criaturas y fandom para el resto. Solo hay enlace cuando la página existe.",
+            "🃏 Pasa el mouse sobre un ítem, criatura, boss, NPC o lugar de caza (en el celular, toca) para abrir una tarjeta con los detalles disponibles, como precios, loot, debilidades, level y mapa.",
+            "📚 La parte superior de la tarjeta destaca el sitio de la página principal, cada bloque dice de dónde vienen los datos y, cuando hay otra página, hay un botón para abrirla.",
+            "🖼️ Criaturas y bosses usan la imagen oficial de tibia.com cuando existe, también en el boost del día.",
+            "👑 Bosses: en el resultado del lootsplit que acabas de enviar, \"Ya pagué\", \"Recibido\" y la confirmación del líder ahora actualizan la pantalla al instante."
+          ]
+        },
+        "ja": {
+          "title": "言語に合わせたリンクとカード",
+          "changes": [
+            "🌐 名前のリンク先はサイトの言語に合わせます：ポルトガル語はTibiaWiki BR、英語はTibiaWiki (tibia.fandom.com)、その他の言語はクリーチャーがtibia.com、それ以外はfandomです。ページがある場合のみリンクになります。",
+            "🃏 アイテム、クリーチャー、ボス、NPC、狩場にマウスを合わせる（スマホではタップ）と、価格、ルート、弱点、レベル、地図など、利用できる詳細のカードが開きます。",
+            "📚 カードの上部にはメインページのサイトを強調表示し、各ブロックにデータの出典を示します。他のページがあれば開くボタンが表示されます。",
+            "🖼️ クリーチャーとボスは、今日のブーストも含め、tibia.comの公式画像がある場合はそれを使います。",
+            "👑 ボス：送信した直後のlootsplitの結果で、支払い済み・受け取り済み・リーダーの確認を押すと、画面がすぐに更新されるようになりました。"
+          ]
+        },
+        "de": {
+          "title": "Links in deiner Sprache und Karten",
+          "changes": [
+            "🌐 Der Link auf Namen folgt der Sprache der Seite: TibiaWiki BR auf Portugiesisch, TibiaWiki (tibia.fandom.com) auf Englisch und in anderen Sprachen tibia.com für Kreaturen, fandom für alles andere. Verlinkt wird nur, wenn die Seite existiert.",
+            "🃏 Fahre mit der Maus über ein Item, eine Kreatur, einen Boss, NPC oder Jagdort (am Handy tippen), um eine Karte mit den verfügbaren Details zu öffnen, etwa Preise, Loot, Schwächen, Level und Karte.",
+            "📚 Oben auf der Karte ist die Seite der Hauptquelle hervorgehoben, jeder Block nennt die Herkunft der Daten, und gibt es eine weitere Seite, öffnet sie ein Knopf.",
+            "🖼️ Kreaturen und Bosse zeigen das offizielle Bild von tibia.com, wenn es eines gibt, auch im Boost von heute.",
+            "👑 Bosse: Im Ergebnis des gerade gesendeten Lootsplits aktualisieren „Ich habe bezahlt“, „Erhalten“ und die Bestätigung des Leaders den Bildschirm jetzt sofort."
+          ]
+        },
+        "pl": {
+          "title": "Linki w twoim języku i karty",
+          "changes": [
+            "🌐 Link przy nazwach zależy od języka strony: TibiaWiki BR po portugalsku, TibiaWiki (tibia.fandom.com) po angielsku, a w innych językach tibia.com dla stworzeń i fandom dla reszty. Link pojawia się tylko, gdy strona istnieje.",
+            "🃏 Najedź na przedmiot, stworzenie, bossa, NPC lub miejsce polowań (na telefonie dotknij), aby otworzyć kartę z dostępnymi szczegółami, takimi jak ceny, łup, słabości, poziom i mapa.",
+            "📚 U góry karty wyróżniona jest witryna strony głównej, każdy blok podaje źródło danych, a gdy jest inna strona, otwiera ją przycisk.",
+            "🖼️ Stworzenia i bossowie mają oficjalny obrazek z tibia.com, jeśli istnieje, także w boostzie na dziś.",
+            "👑 Bossowie: w wyniku właśnie wysłanego lootsplitu przyciski „Zapłaciłem”, „Otrzymałem” i potwierdzenie lidera od razu aktualizują ekran."
+          ]
+        },
+        "fr": {
+          "title": "Liens dans votre langue et fiches",
+          "changes": [
+            "🌐 Le lien des noms suit la langue du site : TibiaWiki BR en portugais, TibiaWiki (tibia.fandom.com) en anglais et, dans les autres langues, tibia.com pour les créatures et fandom pour le reste. Il n'y a de lien que si la page existe.",
+            "🃏 Survolez un objet, une créature, un boss, un PNJ ou un lieu de chasse (sur téléphone, touchez-le) pour ouvrir une fiche avec les détails disponibles : prix, butin, faiblesses, niveau et carte.",
+            "📚 Le haut de la fiche met en avant le site de la page principale, chaque bloc indique l'origine des données et, s'il existe une autre page, un bouton permet de l'ouvrir.",
+            "🖼️ Les créatures et les boss utilisent l'image officielle de tibia.com quand elle existe, y compris dans le boost du jour.",
+            "👑 Boss : dans le résultat du lootsplit que vous venez d'envoyer, « J'ai payé », « Reçu » et la confirmation du leader mettent désormais l'écran à jour immédiatement."
+          ]
+        },
+        "ru": {
+          "title": "Ссылки на вашем языке и карточки",
+          "changes": [
+            "🌐 Ссылка на названии зависит от языка сайта: TibiaWiki BR на португальском, TibiaWiki (tibia.fandom.com) на английском, а на других языках tibia.com для существ и fandom для остального. Ссылка есть только на существующую страницу.",
+            "🃏 Наведите курсор на предмет, существо, босса, NPC или место охоты (на телефоне коснитесь), чтобы открыть карточку с доступными подробностями: цены, добыча, слабости, уровень и карта.",
+            "📚 Вверху карточки выделен сайт основной страницы, в каждом блоке указан источник данных, а если есть другая страница, её открывает кнопка.",
+            "🖼️ Для существ и боссов используется официальное изображение с tibia.com, если оно есть, в том числе в бусте дня.",
+            "👑 Боссы: в результате только что отправленного лутсплита кнопки «Оплатил», «Получил» и подтверждение лидера теперь сразу обновляют экран."
+          ]
+        }
+      }
+    },
+    {
       "version": "0.33.4",
       "date": "2026-11-27",
       "title": "A tela não fecha nem sobe",

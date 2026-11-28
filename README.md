@@ -124,6 +124,10 @@ na 0.23.0: agora o 4rt3mi5 é só o site.
 - **Imagens no banco:** o site pede `/img/wiki/<Nome>.gif`; o servidor busca na TibiaWiki BR só na primeira vez e
   guarda em `wiki_images`. Itens, preços, NPCs, hunts e bosses já ficam no projeto/banco; a wiki só é consultada
   para imagens novas. (No app desktop as imagens ainda vêm direto da wiki, por causa do CSP da página local.)
+- **Links e card por idioma:** português leva à TibiaWiki BR, inglês ao tibia.fandom.com e os outros idiomas ao
+  tibia.com (criaturas) ou ao fandom. Só vira link a página das listas `wiki-pages.js` e `fandom-pages.js` (a segunda
+  é gerada por `tools/check_fandom_titles.py`). Passar o mouse ou tocar no nome abre um card, que diz a fonte de cada
+  bloco. Imagens e detalhes de criaturas vêm do TibiaData (tibia.com © CipSoft), com cache no servidor.
 
 ## Backup e vigia do site
 
@@ -387,7 +391,7 @@ entra com o código `ART-DEMO-TEST` + nick `Bobeek`. Serve para conferir telas e
 - **Anti-abuso (0.9.0):** limite por IP (240 leituras/min, 40 alterações/min, 30 envios/10 min),
   corpo máximo de 512 KB, campos validados (tamanho, formato, faixas de valores), no máximo 30 hunts
   criadas por código, nomes impossíveis nem consultam o TibiaData, CORS só para o app local,
-  CSP no site (só carrega imagens da TibiaWiki/tibiamaps, fontes do Google e áudio de `static.tibia.com`), container Docker
+  CSP no site (só carrega imagens da TibiaWiki/tibiamaps e de criaturas e bosses em `static.tibia.com`, fontes do Google e áudio de `static.tibia.com`), container Docker
   sem root e sem cabeçalho de versão do servidor. Um teste garante que o código de acesso de um
   usuário nunca aparece nas respostas vistas por outro.
 - **Atualizações do app:** só aceita manifesto e instalador das Releases oficiais

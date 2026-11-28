@@ -1811,6 +1811,24 @@ class Store:
                 return cand
         return key
 
+    def npc_card(self, name: str) -> dict | None:
+        """NPC da TibiaWiki BR e os itens que ele compra (os de maior preço primeiro)."""
+        npc = self._conn.execute("SELECT * FROM wiki_npcs WHERE name = ? COLLATE NOCASE", (name,)).fetchone()
+        if npc is None:
+            return None
+        rows = self._conn.execute(
+            "SELECT i.name, b.price FROM wiki_item_buyers b JOIN wiki_items i ON i.item_key = b.item_key "
+            "WHERE b.npc = ? ORDER BY b.price DESC, i.name", (npc["name"],)).fetchall()
+        return {"name": npc["name"], "city": npc["city"], "location": npc["location"],
+                "coords": [npc["x"], npc["y"], npc["z"]] if npc["x"] is not None else None,
+                "buys_total": len(rows), "buys": [[r["name"], r["price"]] for r in rows[:12]]}
+
+    def wiki_place(self, name: str) -> dict | None:
+        """Hunt importada da TibiaWiki BR, pelo nome."""
+        row = self._conn.execute(
+            f"SELECT {self._PLACE_COLS} FROM hunt_places WHERE name = ? COLLATE NOCASE AND source = 'wiki'", (name,)).fetchone()
+        return dict(row) if row else None
+
     def price_info(self, keys: list[str], access_key: str) -> dict[str, dict]:
         """Preço de cada item: NPC que paga mais (todos empatados no maior preço) ou média dos usuários."""
         out = {}
